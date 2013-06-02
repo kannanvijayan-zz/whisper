@@ -1,7 +1,7 @@
 #ifndef WHISPER__COMMON_HPP
 #define WHISPER__COMMON_HPP
 
-#include <cstdint>
+#include <inttypes.h>
 #include "config.h"
 
 // Exactly one of ARCH_BITS_32 or ARCH_BITS_64 should be defined.

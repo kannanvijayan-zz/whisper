@@ -9,15 +9,22 @@ AC_LANG([C++])
 
 AC_ARG_ENABLE(debug, [  --enable-debug          Enable debugging.])
 
-AC_CHECK_HEADER([cstdint],
-                [AC_DEFINE([HAVE_CSTDINT], [1],
-                    [Define to 1 if <cstdint> is available])],
-                [AC_MSG_ERROR([<cstdint> not found])])
+AC_CHECK_HEADER([inttypes.h],
+                [AC_DEFINE([HAVE_INTTYPES_H], [1],
+                    [Define to 1 if <inttypes.h> is available])],
+                [AC_MSG_ERROR([<inttypes.h> not found])])
 
 AC_CHECK_HEADER([iostream],
-                [AC_DEFINE([HAVE_CSTDINT], [1],
+                [AC_DEFINE([HAVE_IOSTREAM], [1],
                     [Define to 1 if <iostream> is available])],
                 [AC_MSG_ERROR([<iostream> not found])])
+
+AC_CHECK_HEADER([sys/mman.h],
+                [AC_DEFINE([HAVE_SYS_MMAN_H], [1],
+                    [Define to 1 if <sys/mman.h> is available])],
+                [AC_MSG_ERROR([<sys/mman.h> not found])])
+
+AC_FUNC_MMAP
 
 AC_CONFIG_HEADERS([config.h])
 
