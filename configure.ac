@@ -13,9 +13,7 @@ AC_CHECK_HEADER([cstdint],
                     [Define to 1 if you have <cstdint>])],
                 [AC_MSG_ERROR([<cstdint> not found])])
 
-AC_CONFIG_HEADERS([
-    src/config.h
-])
+AC_CONFIG_HEADERS([config.h])
 
 AC_CONFIG_FILES([
     Makefile
