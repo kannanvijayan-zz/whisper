@@ -2,6 +2,8 @@
 #define WHISPER__COMMON_HPP
 
 #include <inttypes.h>
+#include <stddef.h>
+#include <limits.h>
 #include "config.h"
 
 // Exactly one of ARCH_BITS_32 or ARCH_BITS_64 should be defined.

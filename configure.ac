@@ -24,6 +24,16 @@ AC_CHECK_HEADER([sys/mman.h],
                     [Define to 1 if <sys/mman.h> is available])],
                 [AC_MSG_ERROR([<sys/mman.h> not found])])
 
+AC_CHECK_HEADER([stddef.h]
+                [AC_DEFINE([HAVE_STDDEF_H], [1],
+                    [Define to 1 if <stddef.h> is available])],
+                [AC_MSG_ERROR([<stddef.h> not found])])
+
+AC_CHECK_HEADER([limits.h]
+                [AC_DEFINE([HAVE_LIMITS_H], [1],
+                    [Define to 1 if <limits.h> is available])],
+                [AC_MSG_ERROR([<limits.h> not found])])
+
 AC_FUNC_MMAP
 
 AC_CONFIG_HEADERS([config.h])
