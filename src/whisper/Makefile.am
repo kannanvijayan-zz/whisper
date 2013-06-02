@@ -1,3 +1,3 @@
 
 bin_PROGRAMS = whisper
-whisper_SOURCES = whisper.cpp
+whisper_SOURCES = debug.cpp whisper.cpp
