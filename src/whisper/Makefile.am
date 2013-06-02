@@ -1,3 +1,6 @@
 
 bin_PROGRAMS = whisper
-whisper_SOURCES = debug.cpp whisper.cpp
+whisper_SOURCES = \
+    whisper.cpp \
+    debug.cpp \
+    memalloc.cpp
