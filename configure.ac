@@ -60,6 +60,7 @@ esac
 if test "$enable_debug" == "yes"; then
     AC_DEFINE([ENABLE_DEBUG], [],
                 [Define to enable debugging.])
+    CXXFLAGS="$CXXFLAGS -g"
 fi
 
 AC_OUTPUT

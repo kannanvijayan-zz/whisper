@@ -1,6 +1,8 @@
 #ifndef WHISPER__DEBUG_HPP
 #define WHISPER__DEBUG_HPP
 
+#include "common.hpp"
+
 namespace Whisper {
 
 
