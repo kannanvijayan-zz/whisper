@@ -1,8 +1,6 @@
 #ifndef WHISPER__PARSER__CODE_SOURCE_HPP
 #define WHISPER__PARSER__CODE_SOURCE_HPP
 
-#include <fstream>
-#include <algorithm>
 #include <limits>
 #include "common.hpp"
 #include "debug.hpp"
