@@ -119,7 +119,7 @@ FileCodeSource::read(uint8_t *buf, size_t size, size_t *bytesRead)
 }
 
 bool
-FileCodeSource::rewind(size_t toPos)
+FileCodeSource::rewindTo(size_t toPos)
 {
 #if defined(ENABLE_DEBUG)
     WH_ASSERT(marked_);
@@ -163,7 +163,7 @@ SourceStream::readByteSlow()
 bool
 SourceStream::rewindSlow(size_t pos)
 {
-    if (!source_.rewind(pos))
+    if (!source_.rewindTo(pos))
         return false;
     bufferStartPos_ = pos;
     if (!advance())

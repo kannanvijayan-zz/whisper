@@ -32,6 +32,9 @@ int main(int argc, char **argv) {
     }
 
     // Read data from input file.
+    size_t extent = 4;
+    size_t extLeft = extent;
+    inputStream.mark();
     for (;;) {
         // Read next byte.
         int byte = inputStream.readByte();
@@ -42,6 +45,15 @@ int main(int argc, char **argv) {
         if (byte == SourceStream::End)
             break;
         std::cout << (char) byte;
+
+        extLeft--;
+        if (extLeft == 0) {
+            size_t seekBack = extent / 2;
+            std::cout << '|' << std::endl << "--- seekBack " << seekBack << std::endl;
+            inputStream.rewindTo(inputStream.position() - seekBack);
+            extent *= 2;
+            extLeft = extent;
+        }
     }
     std::cout << std::endl;
 

@@ -48,7 +48,7 @@ class CodeSource
     virtual bool read(uint8_t *buf, size_t size, size_t *bytesRead) = 0;
 
     // Rewind to an earlier position.
-    virtual bool rewind(size_t toPos) = 0;
+    virtual bool rewindTo(size_t toPos) = 0;
 };
 
 //
@@ -87,7 +87,7 @@ class FileCodeSource : public CodeSource
 
     bool read(uint8_t *buf, size_t size, size_t *bytesRead) override;
 
-    bool rewind(size_t toPos) override;
+    bool rewindTo(size_t toPos) override;
 };
 
 //
@@ -106,7 +106,7 @@ class SourceStream
   private:
     CodeSource &source_;
 
-    static constexpr unsigned BufferSize = 1024;
+    static constexpr unsigned BufferSize = /*1024*/8;
     uint8_t buffer_[BufferSize];
 
     uint8_t *bufferEnd_ = nullptr;
@@ -154,7 +154,7 @@ class SourceStream
         return readByteSlow();
     }
 
-    inline bool rewind(size_t pos) {
+    inline bool rewindTo(size_t pos) {
         WH_ASSERT(!atEnd_);
         WH_ASSERT(bufferCur_ <= bufferEnd_);
         WH_ASSERT(pos <= position());
