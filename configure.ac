@@ -9,11 +9,6 @@ AC_LANG([C++])
 
 AC_ARG_ENABLE(debug, [  --enable-debug          Enable debugging.])
 
-AC_CHECK_HEADER([inttypes.h],
-                [AC_DEFINE([HAVE_INTTYPES_H], [1],
-                    [Define to 1 if <inttypes.h> is available])],
-                [AC_MSG_ERROR([<inttypes.h> not found])])
-
 AC_CHECK_HEADER([iostream],
                 [AC_DEFINE([HAVE_IOSTREAM], [1],
                     [Define to 1 if <iostream> is available])],
@@ -24,15 +19,11 @@ AC_CHECK_HEADER([sys/mman.h],
                     [Define to 1 if <sys/mman.h> is available])],
                 [AC_MSG_ERROR([<sys/mman.h> not found])])
 
-AC_CHECK_HEADER([stddef.h]
-                [AC_DEFINE([HAVE_STDDEF_H], [1],
-                    [Define to 1 if <stddef.h> is available])],
-                [AC_MSG_ERROR([<stddef.h> not found])])
-
-AC_CHECK_HEADER([limits.h]
-                [AC_DEFINE([HAVE_LIMITS_H], [1],
-                    [Define to 1 if <limits.h> is available])],
-                [AC_MSG_ERROR([<limits.h> not found])])
+AC_CHECK_LIB([unistring], [uc_is_general_category],
+                [AC_DEFINE([HAVE_LIBUNISTRING], [1],
+                    [Define to 1 if libunistring is available]),
+                 LIBS="$LIBS -lunistring"],
+                [AC_MSG_ERROR([libunistring not found])])
 
 AC_FUNC_MMAP
 
@@ -60,7 +51,7 @@ esac
 if test "$enable_debug" == "yes"; then
     AC_DEFINE([ENABLE_DEBUG], [],
                 [Define to enable debugging.])
-    CXXFLAGS="$CXXFLAGS -g"
+    AM_CONDITIONAL(DEBUG, test x"$enable_debug" = x"yes")
 fi
 
 AC_OUTPUT

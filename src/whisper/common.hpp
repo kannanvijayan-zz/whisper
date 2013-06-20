@@ -29,18 +29,22 @@ constexpr unsigned WordBits = 64;
 constexpr unsigned WordBytes = 8;
 typedef uint64_t word_t;
 typedef int64_t sword_t;
-
 #endif
 
+// NOTE: Maximal allowed character is 0x10FFFF
+// See ECMA-262 Edition 6, Clause 6.
+typedef int32_t unic_t;
+constexpr unic_t InvalidUnicode = -1;
+constexpr unic_t MaxUnicode = 0x10FFFFu;
 
 // Casting between pointers and words.
 template <typename T>
 constexpr inline word_t PtrToWord(T *ptr) {
-    return static_cast<word_t>(ptr);
+    return reinterpret_cast<word_t>(ptr);
 }
 template <typename T>
 constexpr inline T *WordToPtr(word_t word) {
-    return static_cast<word_t>(word);
+    return reinterpret_cast<T *>(word);
 }
 
 

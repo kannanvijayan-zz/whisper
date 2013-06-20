@@ -4,4 +4,5 @@ whisper_SOURCES = \
     whisper.cpp \
     debug.cpp \
     memalloc.cpp \
-    parser/code_source.cpp
+    parser/code_source.cpp \
+    parser/tokenizer.cpp

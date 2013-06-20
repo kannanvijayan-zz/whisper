@@ -6,6 +6,11 @@
 
 namespace Whisper {
 
+// Check if an integer type is a power of two.
+template <typename IntT>
+inline bool IsPowerOfTwo(IntT value) {
+    return (value & (value - 1)) == 0;
+}
 
 // Align integer types
 template <typename IntT>
@@ -28,9 +33,20 @@ inline PtrT *AlignPtrDown(PtrT *ptr, IntT align) {
 }
 
 template <typename PtrT, typename IntT>
-inline IntT AlignPtrUp(PtrT *ptr, IntT align) {
+inline PtrT *AlignPtrUp(PtrT *ptr, IntT align) {
     WH_ASSERT(IsPowerOfTwo(align));
     return WordToPtr<PtrT>(AlignIntUp<word_t>(PtrToWord(ptr), align));
+}
+
+// Max of two integers.
+template <typename IntT>
+inline IntT Max(IntT a, IntT b) {
+    return (a >= b) ? a : b;
+}
+
+template <typename IntT>
+inline IntT Min(IntT a, IntT b) {
+    return (a <= b) ? a : b;
 }
 
 

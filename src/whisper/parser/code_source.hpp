@@ -16,7 +16,7 @@ namespace Whisper {
 //
 // CodeSource
 //
-// Abstract base class representing the code source interface.
+// Represents 
 // All methods on this class are pure virtual.
 //
 // Code sources do not provide general random access, but they
@@ -28,25 +28,34 @@ namespace Whisper {
 class CodeSource
 {
   protected:
-    inline CodeSource() {}
+    const char *name_;
+
+    const uint8_t *data_;
+    const uint8_t *dataEnd_;
+    uint32_t dataSize_;
+
+    inline CodeSource(const char *name)
+      : name_(name)
+    {}
+
     inline ~CodeSource() {}
 
   public:
-    // The name of the source.
-    virtual const uint8_t *name() = 0;
+    inline const char *name() const {
+        return name_;
+    }
 
-    // The current position within the source.
-    virtual size_t position() = 0;
+    inline const uint8_t *data() const {
+        return data_;
+    }
 
-    // Set and erase marks.
-    virtual void mark() = 0;
-    virtual void erase() = 0;
+    inline uint32_t dataSize() const {
+        return dataSize_;
+    }
 
-    // Read some data from the source.
-    virtual bool read(uint8_t *buf, size_t size, size_t *bytesRead) = 0;
-
-    // Rewind to an earlier position.
-    virtual bool rewindTo(size_t toPos) = 0;
+    inline const uint8_t *dataEnd() const {
+        return dataEnd_;
+    }
 };
 
 //
@@ -57,35 +66,19 @@ class CodeSource
 class FileCodeSource : public CodeSource
 {
   private:
-    const char *filename_;
     int fd_ = -1;
-    const uint8_t *data_ = nullptr;
-    size_t size_ = 0;
-    size_t pos_ = 0;
-#if defined(ENABLE_DEBUG)
-    size_t mark_ = 0;
-    bool marked_ = false;
-#endif
 
   public:
-    FileCodeSource(const char *filename);
-    ~FileCodeSource();
+    inline FileCodeSource(const char *filename) : CodeSource(filename) {}
+
+    inline ~FileCodeSource() {
+        finalize();
+    }
 
     void finalize();
 
   public:
     bool initialize();
-
-    const uint8_t *name() override;
-
-    size_t position() override;
-
-    void mark() override;
-    void erase() override;
-
-    bool read(uint8_t *buf, size_t size, size_t *bytesRead) override;
-
-    bool rewindTo(size_t toPos) override;
 };
 
 //
@@ -97,78 +90,51 @@ class FileCodeSource : public CodeSource
 //
 class SourceStream
 {
-  public:
-    static constexpr int End = std::numeric_limits<int>::max();
-    static constexpr int Error = -1;
-
   private:
     CodeSource &source_;
-
-    static constexpr unsigned BufferSize = /*1024*/8;
-    uint8_t buffer_[BufferSize];
-
-    uint8_t *bufferEnd_ = nullptr;
-    uint8_t *bufferCur_ = nullptr;
-
-    size_t bufferStartPos_ = 0;
-
-    unsigned markDepth_ = 0;
-
-    bool atEnd_ = false;
+    const uint8_t *cursor_;
 
   public:
-    inline SourceStream(CodeSource &source) : source_(source) {}
+    inline SourceStream(CodeSource &source)
+        : source_(source),
+          cursor_(source_.data())
+    {}
 
-    bool initialize();
+    inline CodeSource &source() const {
+        return source_;
+    }
 
-    inline size_t position() const {
-        return bufferStartPos_ + (bufferCur_ - &buffer_[0]);
+    inline const uint8_t *cursor() const {
+        return cursor_;
+    }
+
+    inline uint32_t positionOf(const uint8_t *ptr) const {
+        WH_ASSERT(ptr >= source_.data() && ptr <= source_.dataEnd());
+        return ptr - source_.data();
+    }
+    inline uint32_t position() const {
+        return positionOf(cursor_);
     }
 
     inline bool atEnd() const {
-        return atEnd_;
+        return cursor_ == source_.dataEnd();
     }
 
-    inline void mark() {
-        if (markDepth_ == 0)
-            source_.mark();
-        markDepth_++;
-    }
-
-    inline void erase() {
-        markDepth_--;
-        if (markDepth_ == 0)
-            source_.erase();
-    }
-
-    inline int readByte() {
+    inline uint8_t readByte() {
         // readByte() should never be called on an EOLed stream.
-        WH_ASSERT(!atEnd_);
-        WH_ASSERT(bufferCur_ <= bufferEnd_);
-
-        if (bufferCur_ < bufferEnd_)
-            return *bufferCur_++;
-
-        return readByteSlow();
+        WH_ASSERT(!atEnd());
+        return *cursor_++;
     }
 
-    inline bool rewindTo(size_t pos) {
-        WH_ASSERT(!atEnd_);
-        WH_ASSERT(bufferCur_ <= bufferEnd_);
+    inline void rewindTo(uint32_t pos) {
         WH_ASSERT(pos <= position());
-
-        if (pos >= bufferStartPos_) {
-            bufferCur_ = buffer_ + (pos - bufferStartPos_);
-            return true;
-        }
-
-        return rewindSlow(pos);
+        cursor_ = source_.data() + pos;
     }
 
-  private:
-    int readByteSlow();
-    bool rewindSlow(size_t pos);
-    bool advance();
+    inline void rewindBy(uint32_t count) {
+        WH_ASSERT(count <= position());
+        cursor_ -= count;
+    }
 };
 
 

@@ -3,6 +3,10 @@
 
 #include <new>
 
+// DELETEME
+#include <cstdio>
+// DELETEME
+
 #include "common.hpp"
 #include "debug.hpp"
 #include "helpers.hpp"
@@ -14,75 +18,6 @@
 
 namespace Whisper {
 
-
-//
-// WrapAllocator
-//
-// Allocates memory using an indirect pointer to another allocator.
-// This is for situations where the destruction of the original
-// allocator performs cleanup, and thus the original allocator cannot be
-// copied.
-//
-template <typename T, template <typename X> class A>
-class WrapAllocator
-{
-  public:
-    typedef typename A<T>::size_type           size_type;
-    typedef typename A<T>::difference_type     difference_type;
-    typedef typename A<T>::pointer             pointer;
-    typedef typename A<T>::const_pointer       const_pointer;
-    typedef typename A<T>::reference           reference;
-    typedef typename A<T>::const_reference     const_reference;
-    typedef typename A<T>::value_type          value_type;
-    template <class U> struct rebind {
-        typedef WrapAllocator<U, A> other;
-    };
-
-  private:
-    A<T> &wrapped_;
-
-  public:
-    inline WrapAllocator(A<T> &wrapped) throw()
-      : wrapped_(wrapped) {}
-
-    inline WrapAllocator(const WrapAllocator &other) throw()
-      : wrapped_(other.wrapped_) {}
-
-    template <class U>
-    inline WrapAllocator(const WrapAllocator<U, A> &other) throw()
-      : wrapped_(A<U>(other.wrapped_))
-    {}
-
-    inline ~WrapAllocator() {}
-
-    inline pointer address(reference x) const {
-        return A<T>::address(x);
-    }
-    inline const_pointer address(const_reference x) const {
-        return A<T>::address(x);
-    }
-
-    inline pointer allocate(size_type sz,
-                            typename A<void>::const_pointer hint = nullptr)
-    {
-        return wrapped_.allocate(sz, hint);
-    }
-
-    inline void deallocate(pointer p, size_type n) {
-        return wrapped_.deallocate(p, n);
-    }
-
-    inline size_type max_size() const throw() {
-        return wrapped_.max_size();
-    }
-
-    inline void construct(pointer p, const value_type &val) {
-        wrapped_.construct(p, val);
-    }
-    inline void destroy(pointer p) {
-        wrapped_.destroy(p);
-    }
-};
 
 //
 // BumpAllocator
@@ -97,39 +32,16 @@ class WrapAllocator
 // Within a chunk, allocation happens from high-to-low, similar to stack
 // allocation.
 //
-template <typename T> class BumpAllocator;
-
-template <>
-class BumpAllocator<void>
-{
+// This allocator is not a proper STL allocator.  See STLAllocator
+// below.
+//
+class BumpAllocatorError {
   public:
-    typedef void *          pointer;
-    typedef const void *    const_pointer;
-    typedef void            value_type;
-    template <class U> struct rebind {
-        typedef BumpAllocator<U> other;
-    };
+    BumpAllocatorError() {}
 };
 
-template <typename T>
 class BumpAllocator
 {
-  public:
-    typedef size_t              size_type;
-    typedef ptrdiff_t           difference_type;
-    typedef T *                 pointer;
-    typedef const T *           const_pointer;
-    typedef T &                 reference;
-    typedef const T &           const_reference;
-    typedef T                   value_type;
-    template <class U> struct rebind {
-        typedef BumpAllocator<U> other;
-    };
-
-    class Error {
-        Error() {}
-    };
-
   private:
     struct Chain {
         void *addr;
@@ -167,22 +79,19 @@ class BumpAllocator
         pushNewChunk(chunkSize_);
     }
 
-    inline pointer address(reference x) const {
-        return &x;
-    }
-    inline const_pointer address(const_reference x) const {
-        return &x;
-    }
-
-    inline pointer allocate(size_type sz, void *hint = nullptr)
+    inline void *allocate(size_t sz, unsigned align)
     {
+        align = Max(align, BasicAlignment);
+
         // ignore hint, just allocate sz bytes, aligned to BasicAlignment
-        uint8_t *result = AlignPtrDown(allocTop_ - sz, BasicAlignment);
-        if (result >= allocBottom_ && result <= allocTop_)
-            return static_cast<pointer>(result);
+        uint8_t *result = AlignPtrDown(allocTop_ - sz, align);
+        if (result >= allocBottom_ && result <= allocTop_) {
+            allocTop_ = result;
+            return result;
+        }
 
         // Otherwise, allocate new chunk.  First, determine if
-        // new chunk should be standard size of custom oversized.
+        // new chunk should be standard size or custom oversized.
         size_t newChunkSize = chunkSize_;
         if (sz > (chunkSize_ - MinOverhead))
             newChunkSize = sz + MinOverhead;
@@ -192,30 +101,14 @@ class BumpAllocator
         pushNewChunk(newChunkSize);
         result = AlignPtrDown(allocTop_ - sz, BasicAlignment);
         WH_ASSERT(result >= allocBottom_ && result <= allocTop_);
-        return static_cast<pointer>(result);
-    }
-
-    inline void deallocate(pointer p, size_type n) {
-        // Deallocation is a no-op.
-        return;
-    }
-
-    inline size_type max_size() const throw() {
-        return SIZE_MAX;
-    }
-
-    inline void construct(pointer p, const value_type &val) {
-        new (p) value_type(val);
-    }
-    inline void destroy(pointer p) {
-        p->~value_type();
+        return result;
     }
 
   private:
     void pushNewChunk(size_t size) {
         void *mem = AllocateMemory(size);
         if (!mem)
-            throw Error();
+            throw BumpAllocatorError();
 
         uint8_t *memu8 = static_cast<uint8_t *>(mem);
 
@@ -226,6 +119,8 @@ class BumpAllocator
         // Set up allocTop and allocBottom
         allocBottom_ = chainAddr + sizeof(Chain);
         allocTop_ = memu8 + size;
+        fprintf(stderr, "CHUNK Mem=%p memu8=%p chain=%p bot=%p top=%p\n",
+                mem, memu8, chainEnd_, allocBottom_, allocTop_);
     }
 
     void popChunk() {
@@ -238,6 +133,92 @@ class BumpAllocator
     void releaseChunks() {
         while (chainEnd_)
             popChunk();
+    }
+};
+
+//
+// STLBumpAllocator
+//
+// STL allocator which wraps BumpAllocator.
+// bump allocation is used to allocate smaller chunks.
+//
+// The allocator keeps a linked list (chain) of memory chunks that
+// are used for successive allocations.  The linked list is embedded
+// within the chain.
+//
+// Within a chunk, allocation happens from high-to-low, similar to stack
+// allocation.
+//
+template <typename T> class STLBumpAllocator;
+
+template <>
+class STLBumpAllocator<void>
+{
+  public:
+    typedef void *          pointer;
+    typedef const void *    const_pointer;
+    typedef void            value_type;
+    template <class U> struct rebind {
+        typedef STLBumpAllocator<U> other;
+    };
+};
+
+template <typename T>
+class STLBumpAllocator
+{
+    template <typename U>
+    friend class STLBumpAllocator;
+
+  public:
+    typedef size_t              size_type;
+    typedef ptrdiff_t           difference_type;
+    typedef T *                 pointer;
+    typedef const T *           const_pointer;
+    typedef T &                 reference;
+    typedef const T &           const_reference;
+    typedef T                   value_type;
+    template <class U> struct rebind {
+        typedef STLBumpAllocator<U> other;
+    };
+
+  private:
+    BumpAllocator &base_;
+
+  public:
+    inline STLBumpAllocator(BumpAllocator &base) : base_(base) {}
+
+    inline STLBumpAllocator(const STLBumpAllocator &other) throw ()
+      : base_(other.base_) {}
+
+    template <typename U>
+    inline STLBumpAllocator(const STLBumpAllocator<U> &other) throw ()
+      : base_(other.base_) {}
+
+    inline pointer address(reference x) const {
+        return &x;
+    }
+    inline const_pointer address(const_reference x) const {
+        return &x;
+    }
+
+    inline pointer allocate(size_type n, void *hint = nullptr)
+    {
+        return static_cast<pointer>(base_.allocate(n * sizeof(T), alignof(T)));
+    }
+
+    inline void deallocate(pointer p, size_type n) {
+        // Deallocation is a no-op.
+    }
+
+    inline size_type max_size() const throw() {
+        return SIZE_MAX;
+    }
+
+    inline void construct(pointer p, const value_type &val) {
+        new (p) value_type(val);
+    }
+    inline void destroy(pointer p) {
+        p->~value_type();
     }
 };
 
