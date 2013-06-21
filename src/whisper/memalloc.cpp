@@ -14,7 +14,7 @@ AllocateMemory(size_t bytes)
 }
 
 void
-Release(void *ptr)
+ReleaseMemory(void *ptr)
 {
     free(ptr);
 }
@@ -37,7 +37,7 @@ AllocateMappedMemory(size_t bytes, bool allowExec)
 }
 
 bool
-ReleaseAligned(void *ptr, size_t bytes)
+ReleaseMappedMemory(void *ptr, size_t bytes)
 {
     return munmap(ptr, bytes) == 0;
 }

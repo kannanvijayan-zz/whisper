@@ -125,6 +125,9 @@ class Tokenizer
     // Error message.
     const char *error_ = nullptr;
 
+    // Flag indicating that a token has been pushed back.
+    bool pushedBack_ = false;
+
   public:
     Tokenizer(const STLBumpAllocator<uint8_t> &allocator, CodeSource &source)
       : allocator_(allocator),
@@ -186,8 +189,14 @@ class Tokenizer
 
     const Token &readHexIntegerLiteral();
 
+    const Token &readStringLiteral(unic_t quoteChar);
+    void consumeStringEscapeSequence();
+
     inline const Token &emitToken(Token::Type type);
     const Token &emitError(const char *msg);
+
+    void rewindToToken(const Token &tok);
+    void pushbackImplicitSemicolon();
 
     static constexpr unic_t End = INT32_MAX;
     static constexpr unic_t Error = -1;

@@ -4,7 +4,6 @@
 #include "allocators.hpp"
 #include "parser/code_source.hpp"
 #include "parser/tokenizer.hpp"
-#include "parser/tokenizer_inline.hpp"
 
 using namespace Whisper;
 

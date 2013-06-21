@@ -65,6 +65,7 @@
     /* Literals. */             \
     _(RegularExpressionLiteral) \
     _(NumericLiteral)           \
+    _(StringLiteral)            \
     \
     /* Idents. */               \
     _(IdentifierName)
