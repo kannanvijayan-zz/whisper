@@ -1,5 +1,7 @@
 
 #include <unictype.h>
+#include <string.h>
+#include <algorithm>
 #include "parser/tokenizer.hpp"
 
 
@@ -23,8 +25,136 @@ Token::TypeString(Type type)
     return "INVALID_UNKNOWN";
 }
 
+//
+// KeywordTable implementation.
+// 
+struct KeywordTableEntry
+{
+    Token::Type token;
+    const char *keywordString;
+    uint32_t lastBytesPacked;
+    uint8_t priority;
+    uint8_t length;
+    bool futureReserved;
+    bool strictFutureReserved;
+};
+#define KW_TABSZ_(tokId,name,prio) +1
+static constexpr unsigned KEYWORD_TABLE_SIZE = 0
+        WHISPER_DEFN_KEYWORDS(KW_TABSZ_);
+#undef KW_TABSZ_
+
+static KeywordTableEntry KEYWORD_TABLE[KEYWORD_TABLE_SIZE];
+static bool KEYWORD_TABLE_INITIALIZED = false;
+
+// Array storing ofsets into keyword table for keywords of length 3-7
+// Sections: 2,3,4,5,6,7,8+
+// Total 7 sections.
+// Extra (8th) terminal section points to end of table.
+static unsigned KEYWORD_TABLE_SECTIONS[8];
+static constexpr unsigned KEYWORD_TABLE_SECTION_LAST = 6;
+static constexpr unsigned KEYWORD_MAX_LENGTH = 10;
+
+static uint32_t
+ComputeLastBytesPacked(const char *str, uint8_t length)
+{
+    if (length == 2) {
+        return (static_cast<uint32_t>(str[0]) << 8)
+             | (static_cast<uint32_t>(str[1]) << 0);
+    }
+
+    if (length == 3) {
+        return (static_cast<uint32_t>(str[0]) << 16)
+             | (static_cast<uint32_t>(str[1]) << 8)
+             | (static_cast<uint32_t>(str[2]) << 0);
+    }
+
+
+    str += length - 4;
+    return (static_cast<uint32_t>(str[0]) << 24)
+         | (static_cast<uint32_t>(str[1]) << 16)
+         | (static_cast<uint32_t>(str[2]) << 8)
+         | (static_cast<uint32_t>(str[3]) << 0);
+}
+
+void InitializeKeywordTable()
+{
+    WH_ASSERT(!KEYWORD_TABLE_INITIALIZED);
+
+    // Write out the keyword table entries in order.
+    // Initially, use lastBytesPacked to store priority.
+    // Later overwrite it with the actual packed last bytes of the keyword.
+    unsigned idx = 0;
+#define KW_ADDENT_(tokId,name,prio) \
+    KEYWORD_TABLE[idx].keywordString = name; \
+    KEYWORD_TABLE[idx].priority = prio; \
+    KEYWORD_TABLE[idx].length = strlen(name); \
+    KEYWORD_TABLE[idx].lastBytesPacked = \
+        ComputeLastBytesPacked(name, KEYWORD_TABLE[idx].length); \
+    KEYWORD_TABLE[idx].futureReserved = \
+        (prio == WHISPER_KEYWORD_FUTURE_RESERVED_PRIO); \
+    KEYWORD_TABLE[idx].strictFutureReserved = \
+        (prio == WHISPER_KEYWORD_STRICT_FUTURE_RESERVED_PRIO); \
+    idx += 1;
+    WHISPER_DEFN_KEYWORDS(KW_ADDENT_);
+#undef KW_ADDENT_
+
+    // Sort the table for easy lookup.
+    // Sort methodology:
+    //  1. Keywords of length <= 7 are sorted by (length, priority)
+    //  2. Longer keywords are treated as having same length, but sorted
+    //     by priority.
+    struct Less {
+        inline Less() {}
+        inline bool operator ()(const KeywordTableEntry &a,
+                                const KeywordTableEntry &b)
+        {
+            // Handle case where both enries are for keywords of length <= 7
+            if (a.length <= 7 && b.length <= 7) {
+                if (a.length < b.length)
+                    return true;
+                if (a.length > b.length)
+                    return false;
+                return a.priority < b.priority;
+            }
+
+            // Otherwise, if a.length <= 7, then b.length must be >7.
+            if (a.length <= 7)
+                return true;
+
+            // Otherwise, both a and b keywords have length > 7
+            return a.priority < b.priority;
+        }
+    };
+    std::sort(&KEYWORD_TABLE[0], &KEYWORD_TABLE[KEYWORD_TABLE_SIZE], Less());
+
+    // Scan and store the section offests.
+    unsigned seclen = 2;
+    for (unsigned i = 0; i < KEYWORD_TABLE_SIZE; i++) {
+        unsigned kwlen = KEYWORD_TABLE[i].length;
+        if ((seclen <= 7 && kwlen == seclen) ||
+            (seclen == 8 && kwlen >= 8))
+        {
+            KEYWORD_TABLE_SECTIONS[seclen - 2] = i;
+            WH_ASSERT_IF(seclen == 2, KEYWORD_TABLE_SECTIONS[0] == 0);
+            WH_ASSERT_IF(seclen > 2,
+                         KEYWORD_TABLE_SECTIONS[seclen - 2] >
+                         KEYWORD_TABLE_SECTIONS[seclen - 3]);
+            seclen++;
+            if (seclen > 8)
+                break;
+        }
+    }
+    KEYWORD_TABLE_SECTIONS[7] = KEYWORD_TABLE_SIZE;
+    KEYWORD_TABLE_INITIALIZED = true;
+}
+
+
+//
+// Tokenizer implementation.
+//
+
 inline const Token &
-Tokenizer::readInputElement(InputElementKind iek)
+Tokenizer::readInputElement(InputElementKind iek, bool checkKeywords)
 {
     if (pushedBack_) {
         pushedBack_ = false;
@@ -32,14 +162,14 @@ Tokenizer::readInputElement(InputElementKind iek)
     }
 
     try {
-        return readInputElementImpl(iek);
+        return readInputElementImpl(iek, checkKeywords);
     } catch(TokenizerError err) {
         return emitToken(Token::Error);
     }
 }
 
 const Token &
-Tokenizer::readInputElementImpl(InputElementKind iek)
+Tokenizer::readInputElementImpl(InputElementKind iek, bool checkKeywords)
 {
     WH_ASSERT(!hasError());
 
@@ -53,7 +183,13 @@ Tokenizer::readInputElementImpl(InputElementKind iek)
     if (IsWhitespace(ch))
         return readWhitespace();
 
-    if (IsSimpleIdentifierStart(ch))
+    if (IsKeywordChar(ch)) {
+        if (checkKeywords)
+            return readIdentifier(ch);
+        return readIdentifierName();
+    }
+
+    if (IsNonKeywordSimpleIdentifierStart(ch))
         return readIdentifierName();
 
     if (IsDigit(ch))
@@ -440,6 +576,89 @@ Tokenizer::readIdentifierName()
     return emitToken(Token::IdentifierName);
 }
 
+const Token &
+Tokenizer::readIdentifier(unic_t firstChar)
+{
+    WH_ASSERT(IsKeywordChar(firstChar));
+    uint32_t lastBytesPacked = firstChar;
+
+    for (;;) {
+        unic_t ch = readChar();
+
+        if (IsKeywordChar(ch)) {
+            lastBytesPacked <<= 8;
+            lastBytesPacked |= ch;
+            continue;
+        }
+
+        // Common case: simple identifier continuation.
+        if (IsNonKeywordSimpleIdentifierContinue(ch))
+            return readIdentifierName();
+
+        // Unicode escape in identifier means its not a keyword.
+        if (ch == '\\') {
+            consumeUnicodeEscapeSequence();
+            return readIdentifierName();
+        }
+
+        // Any other ASCII char means end of identifier.
+        // Check this first because it's more likely than
+        // a complex identifier continue char.
+        if (IsAscii(ch)) {
+            WH_ASSERT(!IsComplexIdentifierContinue(ch));
+            unreadChar(ch);
+            break;
+        }
+
+        // Check for complex identifier continue char.
+        // If found, it cannot be a keyword.
+        if (IsComplexIdentifierContinue(ch))
+            return readIdentifierName();
+
+        // Any other char means end of identifier
+        unreadChar(ch);
+        break;
+    }
+
+    // Check for keyword.  Use the token length to search.
+    WH_ASSERT(KEYWORD_TABLE_INITIALIZED);
+
+    unsigned tokenLength = stream_.cursor() - tokStart_;
+    WH_ASSERT(tokenLength >= 1);
+
+    // Single letter identifiers are common, and can't be keywords.
+    // Very long identifiers also can't be keywords
+    if (tokenLength < 2 || tokenLength > KEYWORD_MAX_LENGTH)
+        return emitToken(Token::IdentifierName);
+
+    unsigned tableIdx = tokenLength - 2;
+    if (tableIdx > KEYWORD_TABLE_SECTION_LAST)
+        tableIdx = KEYWORD_TABLE_SECTION_LAST;
+
+    unsigned startIdx = KEYWORD_TABLE_SECTIONS[tableIdx];
+    unsigned endIdx = KEYWORD_TABLE_SECTIONS[tableIdx+1];
+
+    // Check for keyword by scanning keyword table by length.
+    for (unsigned i = startIdx; i < endIdx; i++) {
+        KeywordTableEntry &ent = KEYWORD_TABLE[i];
+        WH_ASSERT_IF(ent.length <= 7, ent.length == tokenLength);
+
+        if (ent.lastBytesPacked != lastBytesPacked)
+            continue;
+
+        if (ent.length <= 4)
+            return emitToken(ent.token);
+
+        if (ent.length <= 7 || ent.length == tokenLength) {
+            if (memcmp(ent.keywordString, tokStart_, tokenLength-4) == 0)
+                return emitToken(ent.token);
+        }
+    }
+
+    // No keywords matched.
+    return emitToken(Token::IdentifierName);
+}
+
 void
 Tokenizer::consumeUnicodeEscapeSequence()
 {
@@ -795,7 +1014,7 @@ Tokenizer::IsLineTerminatorSlow(unic_t ch)
 /* static */ bool
 Tokenizer::IsComplexIdentifierStart(unic_t ch)
 {
-    WH_ASSERT(!IsAsciiLetter(ch) && !(CharIn<'$', '_'>(ch)) && (ch != '\\'));
+    WH_ASSERT(!IsSimpleIdentifierStart(ch) && (ch != '\\'));
 
     return uc_is_property(ch, UC_PROPERTY_ID_START);
 }
@@ -803,8 +1022,7 @@ Tokenizer::IsComplexIdentifierStart(unic_t ch)
 /* static */ bool
 Tokenizer::IsComplexIdentifierContinue(unic_t ch)
 {
-    WH_ASSERT(!IsAsciiLetter(ch) && !IsDigit(ch) && !(CharIn<'$', '_'>(ch)) &&
-              (ch != '\\'));
+    WH_ASSERT(!IsSimpleIdentifierContinue(ch) && (ch != '\\'));
 
     constexpr unic_t ZWNJ = 0x200C;
     constexpr unic_t ZWJ  = 0x200D;

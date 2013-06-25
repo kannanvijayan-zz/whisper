@@ -1,5 +1,5 @@
-#ifndef WHISPER__PARSER__TOKENIZER_HPP
-#define WHISPER__PARSER__TOKENIZER_HPP
+#ifndef WHISPER__PARSER__PARSER_HPP
+#define WHISPER__PARSER__PARSER_HPP
 
 #include <list>
 #include "common.hpp"
@@ -93,38 +93,6 @@ class Token
     WHISPER_DEFN_TOKENS(DEF_CHECKER_)
 #undef DEF_CHECKER_
 };
-
-
-//
-// TypedToken
-//
-// A typed token class that only instantiates from tokens of the
-// matching type.
-//
-template <Token::Type... TYPES>
-class TypedToken : public Token
-{
-  private:
-    template <Token::Type TP>
-    static bool CheckType(Token::Type tp) {
-        return tp == TP;
-    }
-    template <Token::Type TP1, Token::Type TP2, Token::Type... TPS>
-    static bool CheckType(Token::Type tp) {
-        return tp == TP1 || CheckType<TP2, TPS...>(tp);
-    }
-
-  public:
-    explicit TypedToken(const Token &token)
-      : Token(token)
-    {
-        WH_ASSERT(CheckType<TYPES...>(type_));
-    }
-};
-
-#define DEF_TYPEDEF_(tok)   typedef TypedToken<Token::tok> tok##Token;
-        WHISPER_DEFN_TOKENS(DEF_TYPEDEF_)
-#undef DEF_TYPEDEF_
 
 
 //
@@ -373,4 +341,4 @@ class Tokenizer
 
 } // namespace Whisper
 
-#endif // WHISPER__PARSER__TOKENIZER_HPP
+#endif // WHISPER__PARSER__PARSER_HPP
