@@ -8,6 +8,14 @@
 namespace Whisper {
 namespace AST {
 
+enum NodeType : uint8_t
+{
+    INVALID,
+#define DEF_ENUM_(node)   node,
+    WHISPER_DEFN_SYNTAX_NODES(DEF_ENUM_)
+#undef DEF_ENUM_
+    LIMIT
+};
 
 //
 // Base syntax element.
@@ -15,15 +23,6 @@ namespace AST {
 class BaseNode
 {
   public:
-    enum Type : uint8_t
-    {
-        INVALID,
-#define DEF_ENUM_(node)   node,
-        WHISPER_DEFN_SYNTAX_NODES(DEF_ENUM_)
-#undef DEF_ENUM_
-        LIMIT
-    };
-
     template <typename T>
     using Allocator = STLBumpAllocator<T>;
 
@@ -33,15 +32,29 @@ class BaseNode
     using List = std::list<T, Allocator<T>>;
 
   protected:
-    Type type_;
+    NodeType type_;
 
-    BaseNode(Type type) : type_(type) {}
+    BaseNode(NodeType type) : type_(type) {}
 
   public:
-    inline Type type() const {
+    inline NodeType type() const {
         return type_;
     }
+
+#define DEF_CHECK_(node) \
+    inline bool is##node() const { \
+        return type_ == node; \
+    }
+    WHISPER_DEFN_SYNTAX_NODES(DEF_CHECK_)
+#undef DEF_CHECK_
 };
+
+inline constexpr bool
+IsValidAssignmentExpressionType(NodeType type)
+{
+    return (type >= WHISPER_SYNTAX_ASSIGN_MIN) &&
+           (type <= WHISPER_SYNTAX_ASSIGN_MAX);
+}
 
 ///////////////////////////////////////
 //                                   //
@@ -52,42 +65,37 @@ class BaseNode
 class SourceElementNode : public BaseNode
 {
   protected:
-    SourceElementNode(Type type) : BaseNode(type) {}
+    SourceElementNode(NodeType type) : BaseNode(type) {}
 };
 
 class StatementNode : public SourceElementNode
 {
   protected:
-    StatementNode(Type type) : SourceElementNode(type) {}
+    StatementNode(NodeType type) : SourceElementNode(type) {}
 };
 
-class IterationStatementNode : public StatementNode
-{
-  protected:
-    IterationStatementNode(Type type) : StatementNode(type) {}
-};
 
 class ExpressionNode : public BaseNode
 {
   protected:
-    ExpressionNode(Type type) : BaseNode(type) {}
+    ExpressionNode(NodeType type) : BaseNode(type) {}
 };
 
 class LiteralExpressionNode : public ExpressionNode
 {
   protected:
-    LiteralExpressionNode(Type type) : ExpressionNode(type) {}
+    LiteralExpressionNode(NodeType type) : ExpressionNode(type) {}
 };
 
 class VariableDeclaration
 {
   public:
     IdentifierNameToken name_;
-    StatementNode *initialiser_;
+    ExpressionNode *initialiser_;
 
   public:
     VariableDeclaration(const IdentifierNameToken &name,
-                        StatementNode *initialiser)
+                        ExpressionNode *initialiser)
       : name_(name),
         initialiser_(initialiser)
     {}
@@ -95,38 +103,8 @@ class VariableDeclaration
     inline const IdentifierNameToken &name() const {
         return name_;
     }
-    inline StatementNode *initaliser() const {
+    inline ExpressionNode *initaliser() const {
         return initialiser_;
-    }
-};
-
-//
-// FunctionBase provides base elements for both
-// FunctionDeclaration and FunctionExpression syntax nodes.
-//
-class FunctionBase
-{
-  public:
-    typedef BaseNode::List<IdentifierNameToken> FormalParameterList;
-    typedef BaseNode::List<SourceElementNode *> SourceElementList;
-
-  private:
-    FormalParameterList formalParameters_;
-    SourceElementList functionBody_;
-
-  public:
-    FunctionBase(FormalParameterList &&formalParameters,
-                 SourceElementList &&functionBody)
-      : formalParameters_(formalParameters),
-        functionBody_(functionBody)
-    {}
-
-    inline const FormalParameterList &formalParameters() const {
-        return formalParameters_;
-    }
-
-    inline const SourceElementList &functionBody() const {
-        return functionBody_;
     }
 };
 
@@ -510,29 +488,45 @@ class ParenthesizedExpressionNode : public ExpressionNode
 //
 // FunctionExpression syntax element
 //
-class FunctionExpressionNode : public ExpressionNode, public FunctionBase
+class FunctionExpressionNode : public ExpressionNode
 {
+  public:
+    typedef BaseNode::List<IdentifierNameToken> FormalParameterList;
+    typedef BaseNode::List<SourceElementNode *> SourceElementList;
+
   private:
     Maybe<IdentifierNameToken> name_;
+    FormalParameterList formalParameters_;
+    SourceElementList functionBody_;
 
   public:
     FunctionExpressionNode(FormalParameterList &&formalParameters,
                            SourceElementList &&functionBody)
       : ExpressionNode(FunctionExpression),
-        FunctionBase(std::move(formalParameters), std::move(functionBody)),
-        name_()
+        name_(),
+        formalParameters_(formalParameters),
+        functionBody_(functionBody)
     {}
 
     FunctionExpressionNode(const IdentifierNameToken &name,
                            FormalParameterList &&formalParameters,
                            SourceElementList &&functionBody)
       : ExpressionNode(FunctionExpression),
-        FunctionBase(std::move(formalParameters), std::move(functionBody)),
-        name_(name)
+        name_(name),
+        formalParameters_(formalParameters),
+        functionBody_(functionBody)
     {}
 
     inline const Maybe<IdentifierNameToken> &name() const {
         return name_;
+    }
+
+    inline const FormalParameterList &formalParameters() const {
+        return formalParameters_;
+    }
+
+    inline const SourceElementList &functionBody() const {
+        return functionBody_;
     }
 };
 
@@ -647,7 +641,7 @@ class CallExpressionNode : public ExpressionNode
 //
 // UnaryExpression syntax element
 //
-template <BaseNode::Type TYPE>
+template <NodeType TYPE>
 class UnaryExpressionNode : public ExpressionNode
 {
     static_assert(TYPE == PostIncrementExpression ||
@@ -656,9 +650,10 @@ class UnaryExpressionNode : public ExpressionNode
                   TYPE == PreDecrementExpression ||
                   TYPE == DeleteExpression ||
                   TYPE == VoidExpression ||
+                  TYPE == TypeOfExpression ||
                   TYPE == PositiveExpression ||
                   TYPE == NegativeExpression ||
-                  TYPE == ComplementExpression ||
+                  TYPE == BitNotExpression ||
                   TYPE == LogicalNotExpression,
                   "Invalid IncDecExpressionNode type.");
   private:
@@ -674,58 +669,60 @@ class UnaryExpressionNode : public ExpressionNode
         return subexpression_;
     }
 };
-typedef UnaryExpressionNode<BaseNode::PostIncrementExpression>
+typedef UnaryExpressionNode<PostIncrementExpression>
         PostIncrementExpressionNode;
-typedef UnaryExpressionNode<BaseNode::PreIncrementExpression>
+typedef UnaryExpressionNode<PreIncrementExpression>
         PreIncrementExpressionNode;
-typedef UnaryExpressionNode<BaseNode::PostDecrementExpression>
+typedef UnaryExpressionNode<PostDecrementExpression>
         PostDecrementExpressionNode;
-typedef UnaryExpressionNode<BaseNode::PreDecrementExpression>
+typedef UnaryExpressionNode<PreDecrementExpression>
         PreDecrementExpressionNode;
 
-typedef UnaryExpressionNode<BaseNode::DeleteExpression>
+typedef UnaryExpressionNode<DeleteExpression>
         DeleteExpressionNode;
-typedef UnaryExpressionNode<BaseNode::VoidExpression>
+typedef UnaryExpressionNode<VoidExpression>
         VoidExpressionNode;
-typedef UnaryExpressionNode<BaseNode::PositiveExpression>
+typedef UnaryExpressionNode<TypeOfExpression>
+        TypeOfExpressionNode;
+typedef UnaryExpressionNode<PositiveExpression>
         PositiveExpressionNode;
-typedef UnaryExpressionNode<BaseNode::NegativeExpression>
+typedef UnaryExpressionNode<NegativeExpression>
         NegativeExpressionNode;
-typedef UnaryExpressionNode<BaseNode::ComplementExpression>
-        ComplementExpressionNode;
-typedef UnaryExpressionNode<BaseNode::LogicalNotExpression>
+typedef UnaryExpressionNode<BitNotExpression>
+        BitNotExpressionNode;
+typedef UnaryExpressionNode<LogicalNotExpression>
         LogicalNotExpressionNode;
 
 //
 // BinaryExpression syntax element
 //
-template <BaseNode::Type TYPE>
+template <NodeType TYPE>
 class BinaryExpressionNode : public ExpressionNode
 {
-    static_assert(TYPE == BaseNode::MultiplyExpression ||
-                  TYPE == BaseNode::DivideExpression ||
-                  TYPE == BaseNode::ModuloExpression ||
-                  TYPE == BaseNode::AddExpression ||
-                  TYPE == BaseNode::SubtractExpression ||
-                  TYPE == BaseNode::LeftShiftExpression ||
-                  TYPE == BaseNode::RightShiftExpression ||
-                  TYPE == BaseNode::UnsignedRightShiftExpression ||
-                  TYPE == BaseNode::LessThanExpression ||
-                  TYPE == BaseNode::GreaterThanExpression ||
-                  TYPE == BaseNode::LessEqualExpression ||
-                  TYPE == BaseNode::GreaterEqualExpression ||
-                  TYPE == BaseNode::InstanceofExpression ||
-                  TYPE == BaseNode::InExpression ||
-                  TYPE == BaseNode::EqualExpression ||
-                  TYPE == BaseNode::NotEqualExpression ||
-                  TYPE == BaseNode::StrictEqualExpression ||
-                  TYPE == BaseNode::StrictNotEqualExpression ||
-                  TYPE == BaseNode::BitAndExpression ||
-                  TYPE == BaseNode::BitXorExpression ||
-                  TYPE == BaseNode::BitOrExpression ||
-                  TYPE == BaseNode::LogicalAndExpression ||
-                  TYPE == BaseNode::LogicalOrExpression ||
-                  TYPE == BaseNode::CommaExpression,
+    static_assert(TYPE == MultiplyExpression ||
+                  TYPE == DivideExpression ||
+                  TYPE == ModuloExpression ||
+                  TYPE == AddExpression ||
+                  TYPE == SubtractExpression ||
+                  TYPE == LeftShiftExpression ||
+                  TYPE == RightShiftExpression ||
+                  TYPE == UnsignedRightShiftExpression ||
+                  TYPE == LessThanExpression ||
+                  TYPE == GreaterThanExpression ||
+                  TYPE == LessEqualExpression ||
+                  TYPE == GreaterEqualExpression ||
+                  TYPE == InstanceofExpression ||
+                  TYPE == InExpression ||
+                  TYPE == EqualExpression ||
+                  TYPE == NotEqualExpression ||
+                  TYPE == StrictEqualExpression ||
+                  TYPE == StrictNotEqualExpression ||
+                  TYPE == BitAndExpression ||
+                  TYPE == BitXorExpression ||
+                  TYPE == BitOrExpression ||
+                  TYPE == LogicalAndExpression ||
+                  TYPE == LogicalOrExpression ||
+                  TYPE == CommaExpression,
                   "Invalid IncDecExpressionNode type.");
   private:
     ExpressionNode *lhs_;
@@ -747,53 +744,53 @@ class BinaryExpressionNode : public ExpressionNode
     }
 };
 
-typedef BinaryExpressionNode<BaseNode::MultiplyExpression>
+typedef BinaryExpressionNode<MultiplyExpression>
         MultiplyExpressionNode;
-typedef BinaryExpressionNode<BaseNode::DivideExpression>
+typedef BinaryExpressionNode<DivideExpression>
         DivideExpressionNode;
-typedef BinaryExpressionNode<BaseNode::ModuloExpression>
+typedef BinaryExpressionNode<ModuloExpression>
         ModuloExpressionNode;
-typedef BinaryExpressionNode<BaseNode::AddExpression>
+typedef BinaryExpressionNode<AddExpression>
         AddExpressionNode;
-typedef BinaryExpressionNode<BaseNode::SubtractExpression>
+typedef BinaryExpressionNode<SubtractExpression>
         SubtractExpressionNode;
-typedef BinaryExpressionNode<BaseNode::LeftShiftExpression>
+typedef BinaryExpressionNode<LeftShiftExpression>
         LeftShiftExpressionNode;
-typedef BinaryExpressionNode<BaseNode::RightShiftExpression>
+typedef BinaryExpressionNode<RightShiftExpression>
         RightShiftExpressionNode;
-typedef BinaryExpressionNode<BaseNode::UnsignedRightShiftExpression>
+typedef BinaryExpressionNode<UnsignedRightShiftExpression>
         UnsignedRightShiftExpressionNode;
-typedef BinaryExpressionNode<BaseNode::LessThanExpression>
+typedef BinaryExpressionNode<LessThanExpression>
         LessThanExpressionNode;
-typedef BinaryExpressionNode<BaseNode::GreaterThanExpression>
+typedef BinaryExpressionNode<GreaterThanExpression>
         GreaterThanExpressionNode;
-typedef BinaryExpressionNode<BaseNode::LessEqualExpression>
+typedef BinaryExpressionNode<LessEqualExpression>
         LessEqualExpressionNode;
-typedef BinaryExpressionNode<BaseNode::GreaterEqualExpression>
+typedef BinaryExpressionNode<GreaterEqualExpression>
         GreaterEqualExpressionNode;
-typedef BinaryExpressionNode<BaseNode::InstanceofExpression>
+typedef BinaryExpressionNode<InstanceofExpression>
         InstanceofExpressionNode;
-typedef BinaryExpressionNode<BaseNode::InExpression>
+typedef BinaryExpressionNode<InExpression>
         InExpressionNode;
-typedef BinaryExpressionNode<BaseNode::EqualExpression>
+typedef BinaryExpressionNode<EqualExpression>
         EqualExpressionNode;
-typedef BinaryExpressionNode<BaseNode::NotEqualExpression>
+typedef BinaryExpressionNode<NotEqualExpression>
         NotEqualExpressionNode;
-typedef BinaryExpressionNode<BaseNode::StrictEqualExpression>
+typedef BinaryExpressionNode<StrictEqualExpression>
         StrictEqualExpressionNode;
-typedef BinaryExpressionNode<BaseNode::StrictNotEqualExpression>
+typedef BinaryExpressionNode<StrictNotEqualExpression>
         StrictNotEqualExpressionNode;
-typedef BinaryExpressionNode<BaseNode::BitAndExpression>
+typedef BinaryExpressionNode<BitAndExpression>
         BitAndExpressionNode;
-typedef BinaryExpressionNode<BaseNode::BitXorExpression>
+typedef BinaryExpressionNode<BitXorExpression>
         BitXorExpressionNode;
-typedef BinaryExpressionNode<BaseNode::BitOrExpression>
+typedef BinaryExpressionNode<BitOrExpression>
         BitOrExpressionNode;
-typedef BinaryExpressionNode<BaseNode::LogicalAndExpression>
+typedef BinaryExpressionNode<LogicalAndExpression>
         LogicalAndExpressionNode;
-typedef BinaryExpressionNode<BaseNode::LogicalOrExpression>
+typedef BinaryExpressionNode<LogicalOrExpression>
         LogicalOrExpressionNode;
-typedef BinaryExpressionNode<BaseNode::CommaExpression>
+typedef BinaryExpressionNode<CommaExpression>
         CommaExpressionNode;
 
 //
@@ -832,30 +829,26 @@ class ConditionalExpressionNode : public ExpressionNode
 //
 // AssignmentExpression syntax element
 //
-template <BaseNode::Type TYPE>
 class AssignmentExpressionNode : public ExpressionNode
 {
-    static_assert(TYPE == BaseNode::AssignExpression ||
-                  TYPE == BaseNode::PlusAssignExpression ||
-                  TYPE == BaseNode::MinusAssignExpression ||
-                  TYPE == BaseNode::StarAssignExpression ||
-                  TYPE == BaseNode::PercentAssignExpression ||
-                  TYPE == BaseNode::ShiftLeftAssignExpression ||
-                  TYPE == BaseNode::ShiftRightAssignExpression ||
-                  TYPE == BaseNode::ShiftUnsignedRightAssignExpression ||
-                  TYPE == BaseNode::BitAndAssignExpression ||
-                  TYPE == BaseNode::BitOrAssignExpression ||
-                  TYPE == BaseNode::BitXorAssignExpression ||
-                  TYPE == BaseNode::DivideAssignExpression,
-                  "Invalid IncDecExpressionNode type.");
+  protected:
+    AssignmentExpressionNode(NodeType type) : ExpressionNode(type) {}
+};
+
+template <NodeType TYPE>
+class BaseAssignExpressionNode : public AssignmentExpressionNode
+{
+    static_assert(IsValidAssignmentExpressionType(TYPE),
+                  "Invalid AssignmentExpressionNode type.");
+
   private:
     ExpressionNode *lhs_;
     ExpressionNode *rhs_;
 
   public:
-    AssignmentExpressionNode(ExpressionNode *lhs,
+    BaseAssignExpressionNode(ExpressionNode *lhs,
                              ExpressionNode *rhs)
-      : ExpressionNode(TYPE),
+      : AssignmentExpressionNode(TYPE),
         lhs_(lhs),
         rhs_(rhs)
     {}
@@ -868,29 +861,29 @@ class AssignmentExpressionNode : public ExpressionNode
         return rhs_;
     }
 };
-typedef AssignmentExpressionNode<BaseNode::AssignExpression>
+typedef BaseAssignExpressionNode<AssignExpression>
         AssignExpressionNode;
-typedef AssignmentExpressionNode<BaseNode::PlusAssignExpression>
+typedef BaseAssignExpressionNode<PlusAssignExpression>
         PlusAssignExpressionNode;
-typedef AssignmentExpressionNode<BaseNode::MinusAssignExpression>
+typedef BaseAssignExpressionNode<MinusAssignExpression>
         MinusAssignExpressionNode;
-typedef AssignmentExpressionNode<BaseNode::StarAssignExpression>
+typedef BaseAssignExpressionNode<StarAssignExpression>
         StarAssignExpressionNode;
-typedef AssignmentExpressionNode<BaseNode::PercentAssignExpression>
+typedef BaseAssignExpressionNode<PercentAssignExpression>
         PercentAssignExpressionNode;
-typedef AssignmentExpressionNode<BaseNode::ShiftLeftAssignExpression>
+typedef BaseAssignExpressionNode<ShiftLeftAssignExpression>
         ShiftLeftAssignExpressionNode;
-typedef AssignmentExpressionNode<BaseNode::ShiftRightAssignExpression>
+typedef BaseAssignExpressionNode<ShiftRightAssignExpression>
         ShiftRightAssignExpressionNode;
-typedef AssignmentExpressionNode<BaseNode::ShiftUnsignedRightAssignExpression>
+typedef BaseAssignExpressionNode<ShiftUnsignedRightAssignExpression>
         ShiftUnsignedRightAssignExpressionNode;
-typedef AssignmentExpressionNode<BaseNode::BitAndAssignExpression>
+typedef BaseAssignExpressionNode<BitAndAssignExpression>
         BitAndAssignExpressionNode;
-typedef AssignmentExpressionNode<BaseNode::BitOrAssignExpression>
+typedef BaseAssignExpressionNode<BitOrAssignExpression>
         BitOrAssignExpressionNode;
-typedef AssignmentExpressionNode<BaseNode::BitXorAssignExpression>
+typedef BaseAssignExpressionNode<BitXorAssignExpression>
         BitXorAssignExpressionNode;
-typedef AssignmentExpressionNode<BaseNode::DivideAssignExpression>
+typedef BaseAssignExpressionNode<DivideAssignExpression>
         DivideAssignExpressionNode;
 
 
@@ -1003,6 +996,15 @@ class IfStatementNode : public StatementNode
     inline StatementNode *falseBody() const {
         return falseBody_;
     }
+};
+
+//
+// Base class for all iteration statements.
+//
+class IterationStatementNode : public StatementNode
+{
+  protected:
+    IterationStatementNode(NodeType type) : StatementNode(type) {}
 };
 
 //
@@ -1147,22 +1149,22 @@ class ForLoopVarStatementNode : public IterationStatementNode
 class ForInStatementNode : public IterationStatementNode
 {
   private:
-    ExpressionNode *var_;
+    IdentifierNameToken name_;
     ExpressionNode *object_;
     StatementNode *body_;
 
   public:
-    ForInStatementNode(ExpressionNode *var,
+    ForInStatementNode(const IdentifierNameToken &name,
                        ExpressionNode *object,
                        StatementNode *body)
       : IterationStatementNode(ForInStatement),
-        var_(var),
+        name_(name),
         object_(object),
         body_(body)
     {}
 
-    inline ExpressionNode *var() const {
-        return var_;
+    inline const IdentifierNameToken &name() const {
+        return name_;
     }
 
     inline ExpressionNode *object() const {
@@ -1180,22 +1182,22 @@ class ForInStatementNode : public IterationStatementNode
 class ForInVarStatementNode : public IterationStatementNode
 {
   private:
-    VariableDeclaration var_;
+    IdentifierNameToken name_;
     ExpressionNode *object_;
     StatementNode *body_;
 
   public:
-    ForInVarStatementNode(const VariableDeclaration &var,
+    ForInVarStatementNode(const IdentifierNameToken &name,
                           ExpressionNode *object,
                           StatementNode *body)
       : IterationStatementNode(ForInVarStatement),
-        var_(var),
+        name_(name),
         object_(object),
         body_(body)
     {}
 
-    inline const VariableDeclaration &var() const {
-        return var_;
+    inline const IdentifierNameToken &name() const {
+        return name_;
     }
 
     inline ExpressionNode *object() const {
@@ -1407,10 +1409,21 @@ class ThrowStatementNode : public StatementNode
     }
 };
 
+
+//
+// Base helper class for all try/catch?/finally? statements.
+//
+class TryStatementNode : public StatementNode
+{
+  protected:
+    TryStatementNode(NodeType type) : StatementNode(type) {}
+};
+
+
 //
 // TryCatchStatement syntax element
 //
-class TryCatchStatementNode : public StatementNode
+class TryCatchStatementNode : public TryStatementNode
 {
   private:
     BlockNode *tryBlock_;
@@ -1421,7 +1434,7 @@ class TryCatchStatementNode : public StatementNode
     TryCatchStatementNode(BlockNode *tryBlock,
                           const IdentifierNameToken &catchName,
                           BlockNode *catchBlock)
-      : StatementNode(TryCatchStatement),
+      : TryStatementNode(TryCatchStatement),
         tryBlock_(tryBlock),
         catchName_(catchName),
         catchBlock_(catchBlock)
@@ -1443,7 +1456,7 @@ class TryCatchStatementNode : public StatementNode
 //
 // TryFinallyStatement syntax element
 //
-class TryFinallyStatementNode : public StatementNode
+class TryFinallyStatementNode : public TryStatementNode
 {
   private:
     BlockNode *tryBlock_;
@@ -1452,7 +1465,7 @@ class TryFinallyStatementNode : public StatementNode
   public:
     TryFinallyStatementNode(BlockNode *tryBlock,
                             BlockNode *finallyBlock)
-      : StatementNode(TryFinallyStatement),
+      : TryStatementNode(TryFinallyStatement),
         tryBlock_(tryBlock),
         finallyBlock_(finallyBlock)
     {}
@@ -1469,7 +1482,7 @@ class TryFinallyStatementNode : public StatementNode
 //
 // TryCatchFinallyStatement syntax element
 //
-class TryCatchFinallyStatementNode : public StatementNode
+class TryCatchFinallyStatementNode : public TryStatementNode
 {
   private:
     BlockNode *tryBlock_;
@@ -1482,7 +1495,7 @@ class TryCatchFinallyStatementNode : public StatementNode
                                  const IdentifierNameToken &catchName,
                                  BlockNode *catchBlock,
                                  BlockNode *finallyBlock)
-      : StatementNode(TryCatchFinallyStatement),
+      : TryStatementNode(TryCatchFinallyStatement),
         tryBlock_(tryBlock),
         catchName_(catchName),
         catchBlock_(catchBlock),
@@ -1526,22 +1539,21 @@ class DebuggerStatementNode : public StatementNode
 //
 // FunctionDeclaration syntax element
 //
-class FunctionDeclarationNode : public SourceElementNode, public FunctionBase
+class FunctionDeclarationNode : public SourceElementNode
 {
   private:
-    IdentifierNameToken name_;
+    FunctionExpressionNode *func_;
 
   public:
-    FunctionDeclarationNode(const IdentifierNameToken &name,
-                            FormalParameterList &&formalParameters,
-                            SourceElementList &&functionBody)
+    FunctionDeclarationNode(FunctionExpressionNode *func)
       : SourceElementNode(FunctionDeclaration),
-        FunctionBase(std::move(formalParameters), std::move(functionBody)),
-        name_(name)
-    {}
+        func_(func)
+    {
+        WH_ASSERT(func->name());
+    }
 
-    inline const IdentifierNameToken &name() const {
-        return name_;
+    inline FunctionExpressionNode *func() const {
+        return func_;
     }
 };
 
@@ -1566,6 +1578,24 @@ class ProgramNode : public BaseNode
         return sourceElements_;
     }
 };
+
+/////////////////////////////
+//                         //
+//  BaseNode Cating Funcs  //
+//                         //
+/////////////////////////////
+
+#define DEF_CAST_(node) \
+    inline const node##Node * To##node(const BaseNode *n) { \
+        WH_ASSERT(n->is##node()); \
+        return reinterpret_cast<const node##Node *>(n); \
+    } \
+    inline node##Node * To##node(BaseNode *n) { \
+        WH_ASSERT(n->is##node()); \
+        return reinterpret_cast<node##Node *>(n); \
+    }
+    WHISPER_DEFN_SYNTAX_NODES(DEF_CAST_)
+#undef DEF_CAST_
 
 
 } // namespace AST

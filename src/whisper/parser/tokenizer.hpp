@@ -36,9 +36,19 @@ class Token
         return (type > INVALID) && (type < LIMIT);
     }
 
+    inline static bool IsKeywordType(Type type) {
+        return (type >= WHISPER_FIRST_KEYWORD_TOKEN) &&
+               (type <= WHISPER_LAST_KEYWORD_TOKEN);
+    }
+
+    inline static bool IsStrictKeywordType(Type type) {
+        return (type >= WHISPER_FIRST_STRICT_KEYWORD_TOKEN) &&
+               (type <= WHISPER_LAST_STRICT_KEYWORD_TOKEN);
+    }
+
     static const char *TypeString(Type type);
 
-  private:
+  protected:
     Type type_ = INVALID;
     uint32_t offset_ = 0;
     uint32_t length_ = 0;
@@ -47,15 +57,65 @@ class Token
     uint32_t endLine_ = 0;
     uint32_t endLineOffset_ = 0;
 
+    // Tokens returned from the tokenizer are actually references to
+    // a repeatedly used token contained within the tokenizer.
+    // These debug variables track whether a token returned by
+    // readToken() has been properly used (via a copy to another Token
+    // value, or an explicit call to debug_markUsed()), before the next call
+    // to readToken().
+    mutable DebugVal<bool> debug_used_;
+    mutable DebugVal<bool> debug_pushedBack_;
+
   public:
-    Token() {}
+    Token() : debug_used_(true), debug_pushedBack_(false) {}
+
     Token(Type type, uint32_t offset, uint32_t length,
           uint32_t startLine, uint32_t startLineOffset,
           uint32_t endLine, uint32_t endLineOffset)
       : type_(type), offset_(offset), length_(length),
         startLine_(startLine), startLineOffset_(startLineOffset),
-        endLine_(endLine), endLineOffset_(endLineOffset)
+        endLine_(endLine), endLineOffset_(endLineOffset),
+        debug_used_(false), debug_pushedBack_(false)
     {}
+
+    Token(const Token &other)
+      : type_(other.type_), offset_(other.offset_), length_(other.length_),
+        startLine_(other.startLine_), startLineOffset_(other.startLineOffset_),
+        endLine_(other.endLine_), endLineOffset_(other.endLineOffset_),
+        debug_used_(false), debug_pushedBack_(false)
+    {
+        WH_ASSERT(other.debug_used_ == false);
+        WH_ASSERT(other.debug_pushedBack_ == false);
+        other.debug_used_ = true;
+    }
+
+    enum PreserveDebugUsed {
+        Preserve
+    };
+    Token(const Token &other, PreserveDebugUsed preserve)
+      : type_(other.type_), offset_(other.offset_), length_(other.length_),
+        startLine_(other.startLine_), startLineOffset_(other.startLineOffset_),
+        endLine_(other.endLine_), endLineOffset_(other.endLineOffset_),
+        debug_used_(other.debug_used_),
+        debug_pushedBack_(other.debug_pushedBack_)
+    {
+        WH_ASSERT(other.debug_used_ == false);
+        WH_ASSERT(other.debug_pushedBack_ == false);
+    }
+
+    Token &operator =(const Token &other)
+    {
+        type_ = other.type_;
+        offset_ = other.offset_;
+        length_ = other.length_;
+        startLine_ = other.startLine_;
+        startLineOffset_ = other.startLineOffset_;
+        endLine_ = other.endLine_;
+        endLineOffset_ = other.endLineOffset_;
+        debug_used_ = other.debug_used_;
+        debug_pushedBack_ = other.debug_pushedBack_;
+        other.debug_used_ = true;
+    }
 
     inline Type type() const {
         return type_;
@@ -85,6 +145,10 @@ class Token
         return endLineOffset_;
     }
 
+    inline bool newlineOccursBefore(const Token &other) {
+        return endLine_ < other.startLine_;
+    }
+
     // Define type check methods
 #define DEF_CHECKER_(tok) \
     inline bool is##tok() const { \
@@ -92,6 +156,32 @@ class Token
     }
     WHISPER_DEFN_TOKENS(DEF_CHECKER_)
 #undef DEF_CHECKER_
+
+    inline bool isKeyword(bool strict) const {
+        return strict ? IsKeywordType(type_) : IsStrictKeywordType(type_);
+    }
+
+    // explicitly mark this token as being used.
+    // This is a no-op in production code.
+    inline bool debug_markUsed() const {
+        debug_used_ = true;
+    }
+
+    inline bool debug_isUsed() const {
+        return debug_used_;
+    }
+    inline void debug_clearUsed() const {
+        debug_used_ = false;
+    }
+    inline bool debug_isPushedBack() const {
+        return debug_pushedBack_;
+    }
+    inline void debug_markPushedBack() const {
+        debug_pushedBack_ = true;
+    }
+    inline void debug_clearPushedBack() const {
+        debug_pushedBack_ = false;
+    }
 };
 
 
@@ -120,6 +210,8 @@ class TypedToken : public Token
     {
         WH_ASSERT(CheckType<TYPES...>(type_));
     }
+
+    TypedToken() : Token() {}
 };
 
 #define DEF_TYPEDEF_(tok)   typedef TypedToken<Token::tok> tok##Token;
@@ -146,6 +238,48 @@ class TokenizerError {
     inline TokenizerError() {}
 };
 
+class TokenizerMark {
+  private:
+    uint32_t position_;
+    uint32_t line_;
+    uint32_t lineOffset_;
+    bool strict_;
+    Token tok_;
+
+  public:
+    inline TokenizerMark(uint32_t position,
+                         uint32_t line,
+                         uint32_t lineOffset,
+                         bool strict,
+                         const Token &tok)
+      : position_(position),
+        line_(line),
+        lineOffset_(lineOffset),
+        strict_(strict),
+        tok_(tok, Token::Preserve)
+    {}
+
+    inline uint32_t position() const {
+        return position_;
+    }
+
+    inline uint32_t line() const {
+        return line_;
+    }
+
+    inline uint32_t lineOffset() const {
+        return lineOffset_;
+    }
+
+    inline bool strict() const {
+        return strict_;
+    }
+
+    inline const Token &token() const {
+        return tok_;
+    }
+};
+
 class Tokenizer
 {
   private:
@@ -169,8 +303,8 @@ class Tokenizer
     // Flag indicating strict parsing mode.
     bool strict_ = false;
 
-    // Flag indicating that a token has been pushed back.
-    bool pushedBack_ = false;
+    // Flag indicating pushed-back token.
+    bool pushedBackToken_ = false;
 
   public:
     Tokenizer(const STLBumpAllocator<uint8_t> &allocator, CodeSource &source)
@@ -182,20 +316,22 @@ class Tokenizer
 
     inline ~Tokenizer() {}
 
+    const STLBumpAllocator<uint8_t> &allocator() const {
+        return allocator_;
+    }
+
     inline CodeSource &source() const {
         return source_;
     }
 
-    inline uint32_t position() const {
-        return stream_.position();
+    inline const Token &lastToken() const {
+        return tok_;
     }
 
-    inline uint32_t line() const {
-        return line_;
-    }
-    inline uint32_t lineOffset() const {
-        return stream_.cursor() - lineStart_;
-    }
+    TokenizerMark mark() const;
+    void gotoMark(const TokenizerMark &mark);
+    Token getAutomaticSemicolon() const;
+    void pushBackLastToken();
 
     inline bool hasError() const {
         return error_ != nullptr;
@@ -209,10 +345,9 @@ class Tokenizer
         InputElement_Div,
         InputElement_RegExp
     };
-    const Token &readInputElementImpl(InputElementKind iek,
-                                      bool checkKeywords);
-    inline const Token &readInputElement(InputElementKind iek,
-                                         bool checkKeywords);
+    const Token &readTokenImpl(InputElementKind iek, bool checkKeywords);
+    const Token &readToken(InputElementKind iek, bool checkKeywords);
+    void rewindToToken(const Token &tok);
 
     inline bool isStrict() const {
         return strict_;
@@ -247,9 +382,6 @@ class Tokenizer
 
     inline const Token &emitToken(Token::Type type);
     const Token &emitError(const char *msg);
-
-    void rewindToToken(const Token &tok);
-    void pushbackImplicitSemicolon();
 
     static constexpr unic_t End = INT32_MAX;
     static constexpr unic_t Error = -1;

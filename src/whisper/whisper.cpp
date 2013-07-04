@@ -5,6 +5,7 @@
 #include "parser/code_source.hpp"
 #include "parser/tokenizer.hpp"
 #include "parser/syntax_tree.hpp"
+#include "parser/parser.hpp"
 
 using namespace Whisper;
 

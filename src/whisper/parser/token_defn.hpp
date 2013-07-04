@@ -121,6 +121,11 @@
     _(StaticStrictFutureWord)               \
     _(YieldStrictFutureWord)
 
+#define WHISPER_FIRST_KEYWORD_TOKEN             BreakKeyword
+#define WHISPER_LAST_KEYWORD_TOKEN              SuperFutureWord
+
+#define WHISPER_FIRST_STRICT_KEYWORD_TOKEN      BreakKeyword
+#define WHISPER_LAST_STRICT_KEYWORD_TOKEN       YieldStrictFutureWord
 
 #define WHISPER_DEFN_KEYWORDS(_) \
     /* TokenId                     String           Priority            */ \

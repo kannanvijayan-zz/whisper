@@ -153,23 +153,63 @@ void InitializeKeywordTable()
 // Tokenizer implementation.
 //
 
-inline const Token &
-Tokenizer::readInputElement(InputElementKind iek, bool checkKeywords)
+TokenizerMark
+Tokenizer::mark() const
 {
-    if (pushedBack_) {
-        pushedBack_ = false;
+    return TokenizerMark(stream_.position(),
+                         line_,
+                         stream_.cursor() - lineStart_,
+                         strict_,
+                         tok_);
+}
+
+void
+Tokenizer::gotoMark(const TokenizerMark &mark)
+{
+    stream_.rewindTo(mark.position());
+    line_ = mark.line();
+    lineStart_ = stream_.cursor() - mark.lineOffset();
+    WH_ASSERT(strict_ == mark.strict());
+    tok_ = mark.token();
+}
+
+Token
+Tokenizer::getAutomaticSemicolon() const
+{
+    uint32_t lineOffset = stream_.cursor() - lineStart_;
+    return Token(Token::Semicolon, stream_.position(), 0,
+                 line_, lineOffset, line_, lineOffset);
+}
+
+void
+Tokenizer::pushBackLastToken()
+{
+    WH_ASSERT(!pushedBackToken_);
+    WH_ASSERT(!tok_.debug_isPushedBack());
+    WH_ASSERT(!tok_.isError());
+    pushedBackToken_ = true;
+    tok_.debug_markPushedBack();
+}
+
+const Token &
+Tokenizer::readToken(InputElementKind iek, bool checkKeywords)
+{
+    if (pushedBackToken_) {
+        WH_ASSERT(tok_.debug_isPushedBack());
+        pushedBackToken_ = false;
+        tok_.debug_clearPushedBack();
         return tok_;
     }
 
     try {
-        return readInputElementImpl(iek, checkKeywords);
-    } catch(TokenizerError err) {
+        return readTokenImpl(iek, checkKeywords);
+    } catch (TokenizerError exc) {
         return emitToken(Token::Error);
     }
 }
 
 const Token &
-Tokenizer::readInputElementImpl(InputElementKind iek, bool checkKeywords)
+Tokenizer::readTokenImpl(InputElementKind iek, bool checkKeywords)
 {
     WH_ASSERT(!hasError());
 
@@ -423,6 +463,15 @@ Tokenizer::readInputElementImpl(InputElementKind iek, bool checkKeywords)
         return emitToken(Token::End);
 
     return emitError("Unrecognized character.");
+}
+
+void
+Tokenizer::rewindToToken(const Token &tok)
+{
+    // Find the stream position to rewind to.
+    stream_.rewindTo(tok.offset());
+    line_ = tok.startLine();
+    lineStart_ = stream_.cursor() - tok.startLineOffset();
 }
 
 const Token &
@@ -844,14 +893,16 @@ Tokenizer::consumeStringEscapeSequence()
 inline const Token &
 Tokenizer::emitToken(Token::Type type)
 {
-    WH_ASSERT(!pushedBack_);
     WH_ASSERT(Token::IsValidType(type));
+
+    // Previously emitted token must have been used.
+    WH_ASSERT(tok_.debug_isUsed());
 
     tok_ = Token(type,
                  stream_.positionOf(tokStart_),
                  stream_.cursor() - tokStart_,
                  tokStartLine_, tokStartLineOffset_,
-                 line_, lineOffset());
+                 line_, stream_.cursor() - lineStart_);
     return tok_;
 }
 
@@ -861,27 +912,6 @@ Tokenizer::emitError(const char *msg)
     WH_ASSERT(!error_);
     error_ = msg;
     throw TokenizerError();
-}
-
-void
-Tokenizer::rewindToToken(const Token &tok)
-{
-    // Find the stream position to rewind to.
-    stream_.rewindTo(tok.offset());
-    line_ = tok.startLine();
-    lineStart_ = stream_.cursor() - tok.startLineOffset();
-}
-
-void
-Tokenizer::pushbackImplicitSemicolon()
-{
-    WH_ASSERT(!pushedBack_);
-
-    tok_ = Token(Token::Semicolon,
-                 stream_.position(), 0,
-                 line_, lineOffset(),
-                 line_, lineOffset());
-    pushedBack_ = true;
 }
 
 unic_t

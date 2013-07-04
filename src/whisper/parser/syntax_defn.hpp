@@ -30,9 +30,10 @@
     _(PreDecrementExpression)               \
     _(DeleteExpression)                     \
     _(VoidExpression)                       \
+    _(TypeOfExpression)                     \
     _(PositiveExpression)                   \
     _(NegativeExpression)                   \
-    _(ComplementExpression)                 \
+    _(BitNotExpression)                     \
     _(LogicalNotExpression)                 \
     /* Binary Expressions. */               \
     _(MultiplyExpression)                   \
@@ -99,5 +100,7 @@
     _(TryCatchFinallyStatement)             \
     _(DebuggerStatement)
 
+#define WHISPER_SYNTAX_ASSIGN_MIN       AssignExpression
+#define WHISPER_SYNTAX_ASSIGN_MAX       DivideAssignExpression
 
 #endif // WHISPER__PARSER__SYNTAX_DEFN_HPP

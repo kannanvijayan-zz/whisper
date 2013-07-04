@@ -1,12 +1,10 @@
 #ifndef WHISPER__PARSER__PARSER_HPP
 #define WHISPER__PARSER__PARSER_HPP
 
-#include <list>
-#include "common.hpp"
-#include "debug.hpp"
-#include "parser/code_source.hpp"
-#include "parser/token_defn.hpp"
+#include <new>
 #include "allocators.hpp"
+#include "parser/tokenizer.hpp"
+#include "parser/syntax_tree.hpp"
 
 //
 // The tokenizer parses a code source into a series of tokens.
@@ -14,327 +12,217 @@
 
 namespace Whisper {
 
+using namespace AST;
 
 //
-// Token
+// Parser
 //
-// Represents a token.
-//
-class Token
-{
-  public:
-    enum Type : uint8_t
-    {
-        INVALID = 0,
-#define DEF_ENUM_(tok)   tok,
-        WHISPER_DEFN_TOKENS(DEF_ENUM_)
-#undef DEF_ENUM_
-        LIMIT
-    };
-
-    inline static bool IsValidType(Type type) {
-        return (type > INVALID) && (type < LIMIT);
-    }
-
-    static const char *TypeString(Type type);
-
+class ParserError {
+  friend class Parser;
   private:
-    Type type_ = INVALID;
-    uint32_t offset_ = 0;
-    uint32_t length_ = 0;
-    uint32_t startLine_ = 0;
-    uint32_t startLineOffset_ = 0;
-    uint32_t endLine_ = 0;
-    uint32_t endLineOffset_ = 0;
-
-  public:
-    Token() {}
-    Token(Type type, uint32_t offset, uint32_t length,
-          uint32_t startLine, uint32_t startLineOffset,
-          uint32_t endLine, uint32_t endLineOffset)
-      : type_(type), offset_(offset), length_(length),
-        startLine_(startLine), startLineOffset_(startLineOffset),
-        endLine_(endLine), endLineOffset_(endLineOffset)
-    {}
-
-    inline Type type() const {
-        return type_;
-    }
-    inline const char *typeString() const {
-        return TypeString(type_);
-    }
-
-    inline uint32_t offset() const {
-        return offset_;
-    }
-    inline uint32_t length() const {
-        return length_;
-    }
-
-    inline uint32_t startLine() const {
-        return startLine_;
-    }
-    inline uint32_t startLineOffset() const {
-        return startLineOffset_;
-    }
-
-    inline uint32_t endLine() const {
-        return endLine_;
-    }
-    inline uint32_t endLineOffset() const {
-        return endLineOffset_;
-    }
-
-    // Define type check methods
-#define DEF_CHECKER_(tok) \
-    inline bool is##tok() const { \
-        return type_ == tok; \
-    }
-    WHISPER_DEFN_TOKENS(DEF_CHECKER_)
-#undef DEF_CHECKER_
+    inline ParserError() {}
 };
 
-
-//
-// KeywordTable
-//
-// Keeps an ordered table of keywords which can be used to do quick
-// lookups of identifiers which may be keywords.
-//
-void InitializeKeywordTable();
-
-//
-// Tokenizer
-//
-// Parses tokens from a source stream.
-//
-class TokenizerError {
-  friend class Tokenizer;
-  private:
-    inline TokenizerError() {}
-};
-
-class Tokenizer
+class Parser
 {
   private:
-    STLBumpAllocator<uint8_t> allocator_;
-    CodeSource &source_;
-    SourceStream stream_;
-    Token tok_;
-
-    // Parsing state.
-    uint32_t line_ = 0;
-    const uint8_t *lineStart_ = 0;
-
-    // Current token state.
-    const uint8_t *tokStart_ = nullptr;
-    uint32_t tokStartLine_ = 0;
-    uint32_t tokStartLineOffset_ = 0;
+    Tokenizer &tokenizer_;
 
     // Error message.
     const char *error_ = nullptr;
 
-    // Flag indicating strict parsing mode.
+    // Strict mode.
     bool strict_ = false;
 
-    // Flag indicating that a token has been pushed back.
-    bool pushedBack_ = false;
+    // Marks the existence of a pushed-back implicit semicolon.
+    Token automaticSemicolon_;
+    bool hasAutomaticSemicolon_ = false;
 
   public:
-    Tokenizer(const STLBumpAllocator<uint8_t> &allocator, CodeSource &source)
-      : allocator_(allocator),
-        source_(source),
-        stream_(source_),
-        tok_()
+    Parser(Tokenizer &tokenizer)
+      : tokenizer_(tokenizer),
+        automaticSemicolon_()
     {}
 
-    inline ~Tokenizer() {}
+    inline ~Parser() {}
 
-    inline CodeSource &source() const {
-        return source_;
-    }
-
-    inline uint32_t position() const {
-        return stream_.position();
-    }
-
-    inline uint32_t line() const {
-        return line_;
-    }
-    inline uint32_t lineOffset() const {
-        return stream_.cursor() - lineStart_;
-    }
-
-    inline bool hasError() const {
-        return error_ != nullptr;
-    }
-    inline const char *error() const {
-        WH_ASSERT(hasError());
-        return error_;
-    }
-
-    enum InputElementKind {
-        InputElement_Div,
-        InputElement_RegExp
-    };
-    const Token &readInputElementImpl(InputElementKind iek,
-                                      bool checkKeywords);
-    inline const Token &readInputElement(InputElementKind iek,
-                                         bool checkKeywords);
-
-    inline bool isStrict() const {
-        return strict_;
-    }
-    inline void setStrict(bool strict) {
-        strict_ = strict;
-    }
+    ProgramNode *parseProgram();
 
   private:
-    const Token &readWhitespace();
-    const Token &readLineTerminatorSequence(unic_t ch);
-    const Token &readMultiLineComment();
-    const Token &readSingleLineComment();
-    const Token &readDivPunctuator(unic_t ch);
+    SourceElementNode *tryParseSourceElement();
+    StatementNode *tryParseStatement();
 
-    const Token &readRegularExpressionLiteral(unic_t ch);
-    inline void consumeRegularExpressionBackslashSequence();
-    void consumeRegularExpressionCharacterClass();
+    VariableStatementNode *parseVariableStatement();
+    VariableDeclaration parseVariableDeclaration();
 
-    const Token &readIdentifierName();
-    const Token &readIdentifier(unic_t firstChar);
-    void consumeUnicodeEscapeSequence();
+    IfStatementNode *parseIfStatement();
+    IterationStatementNode *parseForStatement();
+    BlockNode *tryParseBlock();
+    IterationStatementNode *parseWhileStatement();
+    IterationStatementNode *parseDoWhileStatement();
+    ReturnStatementNode *parseReturnStatement();
+    BreakStatementNode *parseBreakStatement();
+    ContinueStatementNode *parseContinueStatement();
+    SwitchStatementNode *parseSwitchStatement();
+    TryStatementNode *parseTryStatement();
+    ThrowStatementNode *parseThrowStatement();
+    DebuggerStatementNode *parseDebuggerStatement();
+    WithStatementNode *parseWithStatement();
 
-    const Token &readNumericLiteral(bool startsWithZero);
-    const Token &readNumericLiteralFraction();
-    const Token &readNumericLiteralExponent();
+    ExpressionStatementNode *tryParseExpressionStatement();
+    LabelledStatementNode *tryParseLabelledStatement();
 
-    const Token &readHexIntegerLiteral();
+    // Precedences, from low to high
+    enum Precedence
+    {
+        Prec_Comma = 0,
+        Prec_Assignment,    // =, +=, *=, ...
+        Prec_Conditional,   // ?:
+        Prec_LogicalOr,     // ||
+        Prec_LogicalAnd,    // &&
+        Prec_BitwiseOr,     // |
+        Prec_BitwiseXor,    // ^
+        Prec_BitwiseAnd,    // &
+        Prec_Equality,      // ==, ===, !=, !==
+        Prec_Relation,      // <, >, >=, <=, instanceof, in
+        Prec_Shift,         // <<, >>, >>>
+        Prec_Additive,      // +, -
+        Prec_Multiplicative,// *, /, %
+        Prec_Unary,         // delete, void, typeof, ++, --, +, -, ~, !
+        Prec_Postfix,       // ++, --
+        Prec_Call,
+        Prec_New,
+        Prec_Member
+    };
 
-    const Token &readStringLiteral(unic_t quoteChar);
-    void consumeStringEscapeSequence();
+    ExpressionNode *tryParseExpression(bool forbidIn, Precedence prec);
 
-    inline const Token &emitToken(Token::Type type);
-    const Token &emitError(const char *msg);
-
-    void rewindToToken(const Token &tok);
-    void pushbackImplicitSemicolon();
-
-    static constexpr unic_t End = INT32_MAX;
-    static constexpr unic_t Error = -1;
-
-    inline void startToken() {
-        tokStart_ = stream_.cursor();
-        tokStartLine_ = line_;
-        tokStartLineOffset_ = tokStart_ - lineStart_;
+    inline ExpressionNode *tryParseExpression(bool forbidIn) {
+        return tryParseExpression(forbidIn, Prec_Comma);
+    }
+    inline ExpressionNode *tryParseExpression() {
+        return tryParseExpression(/*forbidIn=*/false);
     }
 
-    inline void startNewLine() {
-        line_++;
-        lineStart_ = stream_.cursor();
+    inline AssignmentExpressionNode *
+        tryParseAssignmentExpression(bool forbidIn)
+    {
+        ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Assignment);
+        WH_ASSERT_IF(expr, IsValidAssignmentExpressionType(expr->type()));
+        return reinterpret_cast<AssignmentExpressionNode *>(expr);
+    }
+    inline AssignmentExpressionNode *tryParseAssignmentExpression() {
+        return tryParseAssignmentExpression(/*forbidIn=*/false);
     }
 
-    inline unic_t readChar() {
-        if (stream_.atEnd())
-            return End;
+    ArrayLiteralNode *tryParseArrayLiteral();
+    ObjectLiteralNode *tryParseObjectLiteral();
+    FunctionExpressionNode *tryParseFunction();
 
-        uint8_t b = stream_.readByte();
-        if (b <= 0x7Fu)
-            return b;
+    void parseArguments(NewExpressionNode::ExpressionList &list);
 
-        return readCharSlow(b);
+    // Push back token.
+
+    void pushBackAutomaticSemicolon();
+
+    // Read next token.
+
+    const Token &nextToken(Tokenizer::InputElementKind kind,
+                           bool checkKeywords);
+
+    inline const Token &nextToken(bool checkKeywords) {
+        return nextToken(Tokenizer::InputElement_Div, checkKeywords);
     }
-    inline unic_t readNonEndChar() {
-        unic_t ch = readChar();
-        if (ch == End)
-            emitError("Unexpected end of input.");
-        return ch;
-    }
-    unic_t readCharSlow(unic_t firstByte);
-    uint8_t readCharNextByte();
 
-    inline void unreadChar(unic_t ch) {
-        if (ch <= 0x7f)
-            stream_.rewindBy(1);
-        else
-            slowUnreadChar(ch);
+    inline const Token &nextToken() {
+        return nextToken(Tokenizer::InputElement_Div, false);
     }
-    void slowUnreadChar(unic_t ch);
 
-    inline void finishLineTerminator(unic_t ch) {
-        if (ch == '\r') {
-            unic_t ch2 = readChar();
-            if (ch2 != '\n')
-                unreadChar(ch2);
+    // Check to see if upcoming token matches expected type,
+    // but also return the token that was checked for.
+
+    template <Token::Type TYPE>
+    inline static bool TestTokenType(Token::Type type) {
+        return (type == TYPE);
+    }
+    template <Token::Type T1, Token::Type T2, Token::Type... TS>
+    inline static bool TestTokenType(Token::Type type) {
+        return (type == T1) || TestTokenType<T2, TS...>(type);
+    }
+
+    template <Token::Type... TYPES>
+    inline const Token *checkGetNextToken(Tokenizer::InputElementKind kind,
+                                          bool checkKw)
+    {
+        const Token &tok = nextToken(kind, checkKw);
+        if (TestTokenType<TYPES...>(tok.type()))
+            return &tok;
+        tokenizer_.pushBackLastToken();
+        return nullptr;
+    }
+
+    template <Token::Type... TYPES>
+    inline const Token *checkGetNextToken(bool checkKw) {
+        return checkGetNextToken<TYPES...>(Tokenizer::InputElement_Div,
+                                           checkKw);
+    }
+
+    template <Token::Type... TYPES>
+    inline const Token *checkGetNextToken() {
+        return checkGetNextToken<TYPES...>(Tokenizer::InputElement_Div, false);
+    }
+
+    template <Token::Type... TYPES>
+    inline const Token *checkGetNextKeywordToken() {
+        return checkGetNextToken<TYPES...>(Tokenizer::InputElement_Div, true);
+    }
+
+    // Check to see if upcoming token matches expected type.
+
+    template <Token::Type... TYPES>
+    inline bool checkNextToken(Tokenizer::InputElementKind kind, bool checkKw) {
+        const Token *tok = checkGetNextToken<TYPES...>(kind, checkKw);
+        if (tok)
+            tok->debug_markUsed();
+        return tok;
+    }
+
+    template <Token::Type... TYPES>
+    inline bool checkNextToken(bool checkKw) {
+        return checkNextToken<TYPES...>(Tokenizer::InputElement_Div, checkKw);
+    }
+
+    template <Token::Type... TYPES>
+    inline bool checkNextToken() {
+        return checkNextToken<TYPES...>(Tokenizer::InputElement_Div, false);
+    }
+
+    template <Token::Type... TYPES>
+    inline bool checkNextKeywordToken() {
+        return checkNextToken<TYPES...>(Tokenizer::InputElement_Div, true);
+    }
+
+    // Emit a parser error.
+
+    struct MorphError {
+        // MorphError can convert to any type.
+        template <typename T> inline operator T() {
+            // This should NEVER be reached.
+            WH_UNREACHABLE("MorphError");
+            throw false;
         }
+    };
+    MorphError emitError(const char *msg);
+
+    template <typename T>
+    inline STLBumpAllocator<T> allocatorFor() const {
+        return STLBumpAllocator<T>(tokenizer_.allocator());
     }
 
-
-    template <unic_t Char0>
-    inline static bool CharIn(unic_t ch) {
-        return ch == Char0;
-    }
-
-    template <unic_t Char0, unic_t Char1, unic_t... Rest>
-    inline static bool CharIn(unic_t ch) {
-        return ch == Char0 || CharIn<Char1, Rest...>(ch);
-    }
-
-    template <unic_t From, unic_t To>
-    inline static bool CharInRange(unic_t ch) {
-        return (ch >= From) && (ch <= To);
-    }
-
-    inline static bool IsWhitespace(unic_t ch) {
-        return CharIn<' ','\t'>(ch) || IsWhitespaceSlow(ch);
-    }
-    static bool IsWhitespaceSlow(unic_t ch);
-
-    inline static bool IsLineTerminator(unic_t ch) {
-        return CharIn<'\r','\n'>(ch) || IsLineTerminatorSlow(ch);
-    }
-    static bool IsLineTerminatorSlow(unic_t ch);
-
-    inline static bool IsAscii(unic_t ch) {
-        return (ch <= 0x7f);
-    }
-    inline static bool IsAsciiLetter(unic_t ch) {
-        return CharInRange<'a','z'>(ch) || CharInRange<'A','Z'>(ch);
-    }
-
-    inline static bool IsKeywordChar(unic_t ch) {
-        return CharIn<'a','z'>(ch);
-    }
-    inline static bool IsNonKeywordSimpleIdentifierStart(unic_t ch) {
-        WH_ASSERT(!IsKeywordChar(ch));
-        return CharIn<'A','Z'>(ch) || CharIn<'$','_'>(ch);
-    }
-    inline static bool IsSimpleIdentifierStart(unic_t ch) {
-        return IsKeywordChar(ch) || IsNonKeywordSimpleIdentifierStart(ch);
-    }
-    static bool IsComplexIdentifierStart(unic_t ch);
-
-    inline static bool IsNonKeywordSimpleIdentifierContinue(unic_t ch) {
-        WH_ASSERT(!IsKeywordChar(ch));
-        return CharIn<'A','Z'>(ch) || IsDigit(ch) || CharIn<'$','_'>(ch);
-    }
-    inline static bool IsSimpleIdentifierContinue(unic_t ch) {
-        return IsKeywordChar(ch) || IsNonKeywordSimpleIdentifierContinue(ch);
-    }
-    inline static bool IsComplexIdentifierContinue(unic_t ch);
-
-
-    inline static bool IsHexDigit(unic_t ch) {
-        return CharInRange<'0', '9'>(ch) ||
-               CharInRange<'A', 'F'>(ch) ||
-               CharInRange<'a', 'f'>(ch);
-    }
-
-    inline static bool IsDigit(unic_t ch) {
-        return CharInRange<'0', '9'>(ch);
-    }
-
-    inline static bool IsBinaryDigit(unic_t ch) {
-        return CharIn<'0', '1'>(ch);
+    template <typename T, typename... ARGS>
+    inline T *make(ARGS... args) {
+        return new (allocatorFor<T>().allocate(1)) T(
+            std::forward<ARGS>(args)...);
     }
 };
 
