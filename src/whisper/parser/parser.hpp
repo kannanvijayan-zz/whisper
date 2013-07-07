@@ -49,6 +49,16 @@ class Parser
 
     ProgramNode *parseProgram();
 
+    inline bool hasError() const {
+        return error_;
+    }
+
+    inline const char *error() const {
+        WH_ASSERT(error_);
+        return error_;
+    }
+        
+
   private:
     SourceElementNode *tryParseSourceElement();
     StatementNode *tryParseStatement();

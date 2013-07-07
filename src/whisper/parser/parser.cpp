@@ -11,21 +11,25 @@ namespace Whisper {
 ProgramNode *
 Parser::parseProgram()
 {
-    SourceElementList sourceElements(allocatorFor<SourceElementNode *>());
+    try {
+        SourceElementList sourceElements(allocatorFor<SourceElementNode *>());
 
-    // Read zero or more source elements.
-    for (;;) {
-        SourceElementNode *sourceElem = tryParseSourceElement();
-        if (!sourceElem)
-            break;
-        sourceElements.push_back(sourceElem);
+        // Read zero or more source elements.
+        for (;;) {
+            SourceElementNode *sourceElem = tryParseSourceElement();
+            if (!sourceElem)
+                break;
+            sourceElements.push_back(sourceElem);
+        }
+
+        // Next token must be end of input.
+        if (!checkNextToken<Token::End>())
+            emitError("Invalid source element.");
+
+        return make<ProgramNode>(std::move(sourceElements));
+    } catch (ParserError err) {
+        return nullptr;
     }
-
-    // Next token must be end of input.
-    if (!checkNextToken<Token::End>())
-        emitError("Invalid source element.");
-
-    return make<ProgramNode>(std::move(sourceElements));
 }
 
 SourceElementNode *
@@ -961,6 +965,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
             emitError("Could not parse expression within parenthesis.");
         curExpr = make<ParenthesizedExpressionNode>(subexpr);
 
+        // Consume the close parenthesis.
+        if (!checkNextToken<Token::CloseParen>())
+            emitError("Expected close parenthesis.");
+
     } else if (tok.isOpenBracket()) {
         // Parse an array literal.
         curExpr = tryParseArrayLiteral();
@@ -1496,6 +1504,8 @@ Parser::tryParseArrayLiteral()
         const Token *tok = checkGetNextToken<Token::Comma,
                                              Token::CloseBracket>();
         if (tok) {
+            tok->debug_markUsed();
+
             if (tok->isComma()) {
                 // Elision.
                 exprList.push_back(nullptr);

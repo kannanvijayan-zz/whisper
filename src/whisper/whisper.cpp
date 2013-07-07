@@ -40,7 +40,13 @@ int main(int argc, char **argv) {
     InitializeKeywordTable();
     Tokenizer tokenizer(wrappedAllocator, inputFile);
     Parser parser(tokenizer);
+
     ProgramNode *program = parser.parseProgram();
+    if (!program) {
+        WH_ASSERT(parser.hasError());
+        std::cerr << "Parse error: " << parser.error() << std::endl;
+        return 1;
+    }
 
     Printer pr;
     PrintNode(tokenizer.source(), program, pr, 0);
