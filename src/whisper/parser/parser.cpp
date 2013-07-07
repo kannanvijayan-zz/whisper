@@ -38,7 +38,7 @@ Parser::tryParseSourceElement()
     // Try to parse a statement.
     StatementNode *stmt = tryParseStatement();
     if (!stmt) {
-        if (checkNextToken<Token::End>()) {
+        if (checkNextToken<Token::CloseBrace, Token::End>()) {
             pushBackLastToken();
             return nullptr;
         }
@@ -1132,8 +1132,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
         // PlusPlus or MinusMinus: Increment/Decrement operation
         // (precedence: Postfix)
         if (tok2.isPlusPlus() || tok2.isMinusMinus()) {
-            if (prec > Prec_Postfix)
+            if (prec > Prec_Postfix) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             Token::Type type = tok2.type();
 
@@ -1150,8 +1152,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
         // Star,Percent,Divide: Multiplicative
         if (tok2.isStar() || tok2.isPercent() || tok2.isDivide()) {
-            if (prec > Prec_Multiplicative)
+            if (prec > Prec_Multiplicative) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             Token::Type type = tok2.type();
 
@@ -1172,8 +1176,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
         // Plus,Minus: Additive
         if (tok2.isPlus() || tok2.isMinus()) {
-            if (prec > Prec_Additive)
+            if (prec > Prec_Additive) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             Token::Type type = tok2.type();
 
@@ -1195,8 +1201,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
         if (tok2.isShiftLeft() || tok2.isShiftRight() ||
             tok2.isShiftUnsignedRight())
         {
-            if (prec > Prec_Shift)
+            if (prec > Prec_Shift) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             Token::Type type = tok2.type();
 
@@ -1227,8 +1235,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
             tok2.isGreaterThan() || tok2.isGreaterEqual() ||
             tok2.isInstanceOfKeyword() || tok2.isInKeyword())
         {
-            if (prec > Prec_Relational)
+            if (prec > Prec_Relational) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             Token::Type type = tok2.type();
 
@@ -1259,8 +1269,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
         if (tok2.isEqual() || tok2.isNotEqual() ||
             tok2.isStrictEqual() || tok2.isStrictNotEqual())
         {
-            if (prec > Prec_Equality)
+            if (prec > Prec_Equality) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             Token::Type type = tok2.type();
 
@@ -1285,8 +1297,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
         // Bitwise And
         if (tok2.isBitAnd()) {
-            if (prec > Prec_BitwiseAnd)
+            if (prec > Prec_BitwiseAnd) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
@@ -1302,8 +1316,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
         // Bitwise Xor
         if (tok2.isBitXor()) {
-            if (prec > Prec_BitwiseXor)
+            if (prec > Prec_BitwiseXor) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
@@ -1319,8 +1335,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
         // Bitwise Or
         if (tok2.isBitOr()) {
-            if (prec > Prec_BitwiseOr)
+            if (prec > Prec_BitwiseOr) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
@@ -1336,8 +1354,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
         // Logical And
         if (tok2.isLogicalAnd()) {
-            if (prec > Prec_LogicalAnd)
+            if (prec > Prec_LogicalAnd) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
@@ -1353,8 +1373,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
         // Logical Or
         if (tok2.isLogicalOr()) {
-            if (prec > Prec_LogicalOr)
+            if (prec > Prec_LogicalOr) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
@@ -1370,8 +1392,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
         // Conditional
         if (tok2.isQuestion()) {
-            if (prec > Prec_Conditional)
+            if (prec > Prec_Conditional) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             // Parse true expression
             ExpressionNode *trueExpr = tryParseExpression(forbidIn,
@@ -1402,8 +1426,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
             tok2.isBitAndAssign() || tok2.isBitXorAssign() ||
             tok2.isBitOrAssign())
         {
-            if (prec > Prec_Assignment)
+            if (prec > Prec_Assignment) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             Token::Type type = tok2.type();
 
@@ -1448,8 +1474,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
         // Comma
         if (tok2.isComma()) {
-            if (prec > Prec_Comma)
+            if (prec > Prec_Comma) {
+                tokenizer_.pushBackLastToken();
                 break;
+            }
 
             // Parse rhs expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
@@ -1677,7 +1705,10 @@ Parser::tryParseFunction()
 
     // Check for immediate close paren.
     const Token &tok1 = nextToken(Tokenizer::InputElement_Div, true);
-    if (!tok1.isCloseParen()) {
+    if (tok1.isCloseParen()) {
+        tok1.debug_markUsed();
+
+    } else {
         for (;;) {
             if (tok1.isKeyword(strict_))
                 emitError("Function formal can't be a keyword.");
@@ -1687,12 +1718,14 @@ Parser::tryParseFunction()
 
             params.push_back(IdentifierNameToken(tok1));
 
-            const Token &tok1 = nextToken(Tokenizer::InputElement_Div, false);
+            const Token &tok2 = nextToken(Tokenizer::InputElement_Div, false);
 
-            if (tok1.isCloseParen())
+            if (tok2.isCloseParen()) {
+                tok2.debug_markUsed();
                 break;
+            }
 
-            if (!tok1.isComma())
+            if (!tok2.isComma())
                 emitError("Bad token following function formal argument.");
         }
     }
