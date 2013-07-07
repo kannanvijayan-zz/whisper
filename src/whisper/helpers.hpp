@@ -96,15 +96,11 @@ class Maybe
         return *(ptr());
     }
 
-    inline explicit operator bool() const {
-        return hasValue();
-    }
-
     inline operator const T *() const {
-        return &value();
+        return hasValue_ ? &value() : nullptr;
     }
     inline operator T *() {
-        return &value();
+        return hasValue_ ? &value() : nullptr;
     }
 
     inline const T *operator ->() const {
@@ -122,10 +118,12 @@ class Maybe
     }
 
     inline const T &operator =(const T &val) {
-        if (hasValue_)
+        if (hasValue_) {
             *ptr() = val;
-        else
+        } else {
             new (ptr()) T(val);
+            hasValue_ = true;
+        }
         return val;
     }
 };
