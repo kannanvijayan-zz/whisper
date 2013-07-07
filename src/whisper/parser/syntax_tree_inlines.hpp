@@ -393,11 +393,13 @@ PrintBinaryExpression(const CodeSource &src,
                       Printer pr, int tabDepth,
                       const char *op)
 {
+    pr("(");
     PrintNode(src, lhs, pr, tabDepth);
     pr(" ");
     pr(op);
     pr(" ");
     PrintNode(src, rhs, pr, tabDepth);
+    pr(")");
 }
 
 template <typename Printer>
