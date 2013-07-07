@@ -70,8 +70,8 @@ class BumpAllocator
     BumpAllocator(size_t chunkSize)
       : chunkSize_(chunkSize),
         chainEnd_(nullptr),
-        allocTop_(nullptr),
-        allocBottom_(nullptr)
+        allocBottom_(nullptr),
+        allocTop_(nullptr)
     {
         WH_ASSERT(chunkSize >= 256);
 

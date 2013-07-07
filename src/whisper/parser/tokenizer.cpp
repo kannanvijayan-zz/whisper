@@ -160,6 +160,7 @@ Tokenizer::mark() const
                          line_,
                          stream_.cursor() - lineStart_,
                          strict_,
+                         pushedBackToken_,
                          tok_);
 }
 
@@ -170,6 +171,8 @@ Tokenizer::gotoMark(const TokenizerMark &mark)
     line_ = mark.line();
     lineStart_ = stream_.cursor() - mark.lineOffset();
     WH_ASSERT(strict_ == mark.strict());
+    WH_ASSERT(mark.pushedBackToken() == mark.token().debug_isPushedBack());
+    pushedBackToken_ = mark.pushedBackToken();
     tok_ = mark.token();
 }
 
@@ -188,6 +191,7 @@ Tokenizer::pushBackLastToken()
     WH_ASSERT(!tok_.debug_isPushedBack());
     WH_ASSERT(!tok_.isError());
     pushedBackToken_ = true;
+    rewindToToken(tok_);
     tok_.debug_markPushedBack();
 }
 
@@ -198,6 +202,8 @@ Tokenizer::readToken(InputElementKind iek, bool checkKeywords)
         WH_ASSERT(tok_.debug_isPushedBack());
         pushedBackToken_ = false;
         tok_.debug_clearPushedBack();
+        tok_.debug_clearUsed();
+        advancePastToken(tok_);
         return tok_;
     }
 
@@ -472,6 +478,15 @@ Tokenizer::rewindToToken(const Token &tok)
     stream_.rewindTo(tok.offset());
     line_ = tok.startLine();
     lineStart_ = stream_.cursor() - tok.startLineOffset();
+}
+
+void
+Tokenizer::advancePastToken(const Token &tok)
+{
+    // Find the stream position to advance to.
+    stream_.advanceTo(tok.endOffset());
+    line_ = tok.endLine();
+    lineStart_ = stream_.cursor() - tok.endLineOffset();
 }
 
 const Token &
@@ -1060,6 +1075,22 @@ Tokenizer::IsComplexIdentifierContinue(unic_t ch)
         return true;
 
     return uc_is_property(ch, UC_PROPERTY_ID_CONTINUE);
+}
+
+
+bool
+TokenHasAsciiText(const CodeSource &source, const Token &tok,
+                  const char *str, uint32_t length)
+{
+    if (tok.length() != length)
+        return false;
+
+    const uint8_t *text = tok.text(source);
+    for (uint32_t i = 0; i < length; i++) {
+        if (text[i] != str[i])
+            return false;
+    }
+    return true;
 }
 
 

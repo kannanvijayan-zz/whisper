@@ -84,7 +84,6 @@ class Token
         endLine_(other.endLine_), endLineOffset_(other.endLineOffset_),
         debug_used_(false), debug_pushedBack_(false)
     {
-        WH_ASSERT(other.debug_used_ == false);
         WH_ASSERT(other.debug_pushedBack_ == false);
         other.debug_used_ = true;
     }
@@ -99,8 +98,6 @@ class Token
         debug_used_(other.debug_used_),
         debug_pushedBack_(other.debug_pushedBack_)
     {
-        WH_ASSERT(other.debug_used_ == false);
-        WH_ASSERT(other.debug_pushedBack_ == false);
     }
 
     Token &operator =(const Token &other)
@@ -115,6 +112,7 @@ class Token
         debug_used_ = other.debug_used_;
         debug_pushedBack_ = other.debug_pushedBack_;
         other.debug_used_ = true;
+        return *this;
     }
 
     inline Type type() const {
@@ -129,6 +127,9 @@ class Token
     }
     inline uint32_t length() const {
         return length_;
+    }
+    inline uint32_t endOffset() const {
+        return offset_ + length_;
     }
 
     inline uint32_t startLine() const {
@@ -145,7 +146,11 @@ class Token
         return endLineOffset_;
     }
 
-    inline bool newlineOccursBefore(const Token &other) {
+    inline const uint8_t *text(const CodeSource &src) const {
+        return src.data() + offset_;
+    }
+
+    inline bool newlineOccursBefore(const Token &other) const {
         return endLine_ < other.startLine_;
     }
 
@@ -163,7 +168,7 @@ class Token
 
     // explicitly mark this token as being used.
     // This is a no-op in production code.
-    inline bool debug_markUsed() const {
+    inline void debug_markUsed() const {
         debug_used_ = true;
     }
 
@@ -244,6 +249,7 @@ class TokenizerMark {
     uint32_t line_;
     uint32_t lineOffset_;
     bool strict_;
+    bool pushedBackToken_;
     Token tok_;
 
   public:
@@ -251,11 +257,13 @@ class TokenizerMark {
                          uint32_t line,
                          uint32_t lineOffset,
                          bool strict,
+                         bool pushedBackToken,
                          const Token &tok)
       : position_(position),
         line_(line),
         lineOffset_(lineOffset),
         strict_(strict),
+        pushedBackToken_(pushedBackToken),
         tok_(tok, Token::Preserve)
     {}
 
@@ -273,6 +281,10 @@ class TokenizerMark {
 
     inline bool strict() const {
         return strict_;
+    }
+
+    inline bool pushedBackToken() const {
+        return pushedBackToken_;
     }
 
     inline const Token &token() const {
@@ -312,7 +324,10 @@ class Tokenizer
         source_(source),
         stream_(source_),
         tok_()
-    {}
+    {
+        // Mark the initial token used.
+        tok_.debug_markUsed();
+    }
 
     inline ~Tokenizer() {}
 
@@ -324,8 +339,8 @@ class Tokenizer
         return source_;
     }
 
-    inline const Token &lastToken() const {
-        return tok_;
+    inline uint32_t line() const {
+        return line_;
     }
 
     TokenizerMark mark() const;
@@ -348,6 +363,7 @@ class Tokenizer
     const Token &readTokenImpl(InputElementKind iek, bool checkKeywords);
     const Token &readToken(InputElementKind iek, bool checkKeywords);
     void rewindToToken(const Token &tok);
+    void advancePastToken(const Token &tok);
 
     inline bool isStrict() const {
         return strict_;
@@ -466,11 +482,11 @@ class Tokenizer
     }
 
     inline static bool IsKeywordChar(unic_t ch) {
-        return CharIn<'a','z'>(ch);
+        return CharInRange<'a','z'>(ch);
     }
     inline static bool IsNonKeywordSimpleIdentifierStart(unic_t ch) {
         WH_ASSERT(!IsKeywordChar(ch));
-        return CharIn<'A','Z'>(ch) || CharIn<'$','_'>(ch);
+        return CharInRange<'A','Z'>(ch) || CharIn<'$','_'>(ch);
     }
     inline static bool IsSimpleIdentifierStart(unic_t ch) {
         return IsKeywordChar(ch) || IsNonKeywordSimpleIdentifierStart(ch);
@@ -479,7 +495,7 @@ class Tokenizer
 
     inline static bool IsNonKeywordSimpleIdentifierContinue(unic_t ch) {
         WH_ASSERT(!IsKeywordChar(ch));
-        return CharIn<'A','Z'>(ch) || IsDigit(ch) || CharIn<'$','_'>(ch);
+        return CharInRange<'A','Z'>(ch) || IsDigit(ch) || CharIn<'$','_'>(ch);
     }
     inline static bool IsSimpleIdentifierContinue(unic_t ch) {
         return IsKeywordChar(ch) || IsNonKeywordSimpleIdentifierContinue(ch);
@@ -501,6 +517,20 @@ class Tokenizer
         return CharIn<'0', '1'>(ch);
     }
 };
+
+
+bool TokenHasAsciiText(const CodeSource &source, const Token &tok,
+                       const char *str, uint32_t length);
+
+inline bool IsGetToken(const CodeSource &source, const Token &tok) {
+    WH_ASSERT(tok.isIdentifierName());
+    return TokenHasAsciiText(source, tok, "get", 3);
+}
+
+inline bool IsSetToken(const CodeSource &source, const Token &tok) {
+    WH_ASSERT(tok.isIdentifierName());
+    return TokenHasAsciiText(source, tok, "set", 3);
+}
 
 
 } // namespace Whisper

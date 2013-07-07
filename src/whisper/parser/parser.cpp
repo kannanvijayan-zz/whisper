@@ -11,8 +11,7 @@ namespace Whisper {
 ProgramNode *
 Parser::parseProgram()
 {
-    ProgramNode::SourceElementList sourceElements(
-                            allocatorFor<SourceElementNode *>());
+    SourceElementList sourceElements(allocatorFor<SourceElementNode *>());
 
     // Read zero or more source elements.
     for (;;) {
@@ -36,7 +35,7 @@ Parser::tryParseSourceElement()
     StatementNode *stmt = tryParseStatement();
     if (!stmt) {
         if (checkNextToken<Token::End>()) {
-            tokenizer_.pushBackLastToken();
+            pushBackLastToken();
             return nullptr;
         }
         return emitError("Could not parse source element.");
@@ -45,11 +44,9 @@ Parser::tryParseSourceElement()
     // If the statement is actually a ExpressionStatement, and
     // the ExpressionStatement is a FunctionExpression with
     // a non-empty name, treat the expression as a FunctionDeclaration.
-    if (stmt->isExpressionStatement()) {
-        ExpressionNode *expr = ToExpressionStatement(stmt)->expression();
-        if (expr->isFunctionExpression() && ToFunctionExpression(expr)->name())
-            return make<FunctionDeclarationNode>(ToFunctionExpression(expr));
-    }
+    FunctionExpressionNode *funExpr = MaybeToNamedFunction(stmt);
+    if (funExpr)
+        return make<FunctionDeclarationNode>(funExpr);
 
     return stmt;
 }
@@ -101,19 +98,22 @@ Parser::tryParseStatement()
     // Return statement.
     else if (tok0.isReturnKeyword()) {
         tok0.debug_markUsed();
-        return parseReturnStatement();
+        Token retToken(tok0);
+        return parseReturnStatement(retToken);
     }
 
     // Break statement.
     else if (tok0.isBreakKeyword()) {
         tok0.debug_markUsed();
-        return parseBreakStatement();
+        Token breakToken(tok0);
+        return parseBreakStatement(breakToken);
     }
 
     // Continue statement.
     else if (tok0.isContinueKeyword()) {
         tok0.debug_markUsed();
-        return parseContinueStatement();
+        Token continueToken(tok0);
+        return parseContinueStatement(continueToken);
     }
 
     // Switch statement.
@@ -153,19 +153,22 @@ Parser::tryParseStatement()
     }
 
     // Push back token and try parsing an expression or labelled statement.
-    tokenizer_.pushBackLastToken();
+    pushBackLastToken();
 
     // Expression statement.
-    ExpressionStatementNode *exprStmt = tryParseExpressionStatement();
-    if (exprStmt)
-        return exprStmt;
+    // Also indicates if a label-form was seen.
+    bool sawLabel = false;
+    ExpressionNode *expr = tryParseExpressionStatement(sawLabel);
+    WH_ASSERT_IF(sawLabel, expr && expr->isIdentifier());
 
-    // Labelled statement.
-    LabelledStatementNode *labStmt = tryParseLabelledStatement();
-    if (labStmt)
-        return labStmt;
+    if (!sawLabel && expr)
+        return make<ExpressionStatementNode>(expr);
 
-    return nullptr;
+    if (!expr)
+        return nullptr;
+
+    // Saw a labelled statement.
+    return tryParseLabelledStatement(ToIdentifier(expr)->token());
 }
 
 VariableStatementNode *
@@ -173,8 +176,7 @@ Parser::parseVariableStatement()
 {
     // Var token already encountered.
 
-    VariableStatementNode::DeclarationList declarations(
-                            allocatorFor<VariableDeclaration>());
+    DeclarationList declarations(allocatorFor<VariableDeclaration>());
     for (;;) {
         // Always parse a VariableDeclaration
         VariableDeclaration decl = parseVariableDeclaration();
@@ -208,7 +210,8 @@ Parser::parseVariableDeclaration()
 
     const Token &tok1 = nextToken();
     if (tok1.isAssign()) {
-        AssignmentExpressionNode *expr = tryParseAssignmentExpression();
+        ExpressionNode *expr = tryParseExpression(Prec_Assignment,
+                                                  /*expectSemicolon=*/true);
         if (!expr)
             emitError("Expected expression in variable declaration.");
 
@@ -224,7 +227,7 @@ Parser::parseVariableDeclaration()
     // Otherwise, if next token is on different line from current one, insert
     // automatic semicolon.
     if (name.newlineOccursBefore(tok1)) {
-        tokenizer_.rewindToToken(tok1);
+        pushBackLastToken();
         pushBackAutomaticSemicolon();
         return VariableDeclaration(IdentifierNameToken(name), nullptr);
     }
@@ -274,7 +277,6 @@ Parser::parseForStatement()
     // whether it's a "for in" for regular for statement.
     TokenizerMark markFor = tokenizer_.mark();
     IdentifierNameToken varName;
-    ExpressionNode *expr = nullptr;
     bool isForIn = false;
     bool isInitVarDecl = false;
     bool isEmptyVarDecl = false;
@@ -328,13 +330,12 @@ Parser::parseForStatement()
         WH_ASSERT_IF(isEmptyVarDecl, !isInitVarDecl && !isEmptyLastVarDecl);
         WH_ASSERT_IF(isEmptyLastVarDecl, !isInitVarDecl && !isEmptyVarDecl);
 
-        VariableStatementNode::DeclarationList declarations(
-                                allocatorFor<VariableDeclaration>());
-        AssignmentExpressionNode *initExpr = nullptr;
+        DeclarationList declarations(allocatorFor<VariableDeclaration>());
+        ExpressionNode *initExpr = nullptr;
 
         bool moreVars = true;
         if (isInitVarDecl) {
-            initExpr = tryParseAssignmentExpression();
+            initExpr = tryParseExpression(Prec_Assignment);
             if (!initExpr)
                 emitError("Failed to parse for-loop var initializer.");
 
@@ -373,7 +374,7 @@ Parser::parseForStatement()
 
                 initExpr = nullptr;
                 if (tok3->isAssign()) {
-                    initExpr = tryParseAssignmentExpression();
+                    initExpr = tryParseExpression(Prec_Assignment);
                     if (!initExpr)
                         emitError("Failed to parse for-loop var initializer.");
 
@@ -447,6 +448,20 @@ Parser::parseForStatement()
         if (!init)
             emitError("Invalid condition expression in for loop.");
 
+        const Token *tok5 = checkGetNextToken<Token::Semicolon,
+                                              Token::InKeyword>();
+        if (!tok5) {
+            emitError("Expected semicolon or 'in' keyword after init in "
+                      "for loop.");
+        }
+        tok5->debug_markUsed();
+
+        if (tok5->isInKeyword()) {
+            if (!IsLeftHandSideExpression(init))
+                emitError("Invalid left-hand side in for..in.");
+            
+        }
+
         // Expect semicolon.
         if (!checkNextToken<Token::Semicolon>())
             emitError("Expected semicolon after init in for loop.");
@@ -491,7 +506,7 @@ Parser::tryParseBlock()
     // Open brace token already encountered.
 
     // Read statements within block.
-    BlockNode::SourceElementList list(allocatorFor<SourceElementNode *>());
+    SourceElementList list(allocatorFor<SourceElementNode *>());
     for (;;) {
         if (checkNextToken<Token::CloseBrace>())
             break;
@@ -556,16 +571,14 @@ Parser::parseDoWhileStatement()
 }
 
 ReturnStatementNode *
-Parser::parseReturnStatement()
+Parser::parseReturnStatement(const Token &retToken)
 {
-    Token retToken = tokenizer_.lastToken();
-
     // Return keyword already encountered.
     const Token &tok = nextToken();
 
-    if (retToken.newlineOccursBefore(tok)) {
+    if (tok.isEnd() || retToken.newlineOccursBefore(tok)) {
         // Implicit semicolon.
-        tokenizer_.pushBackLastToken();
+        pushBackLastToken();
         return make<ReturnStatementNode>(nullptr);
     }
 
@@ -575,25 +588,27 @@ Parser::parseReturnStatement()
     }
 
     // Parse return expression.
-    tokenizer_.pushBackLastToken();
-    ExpressionNode *node = tryParseExpression();
+    pushBackLastToken();
+    ExpressionNode *node = tryParseExpression(Prec_Comma,
+                                              /*expectSemicolon=*/true);
     if (!node)
         emitError("Invalid return expression.");
+
+    if (!checkNextToken<Token::Semicolon>())
+        emitError("Return statement not terminated properly.");
 
     return make<ReturnStatementNode>(node);
 }
 
 BreakStatementNode *
-Parser::parseBreakStatement()
+Parser::parseBreakStatement(const Token &breakToken)
 {
-    Token breakToken = tokenizer_.lastToken();
-
     // Break keyword already encountered.
     const Token &tok = nextToken();
 
-    if (breakToken.newlineOccursBefore(tok)) {
+    if (tok.isEnd() || breakToken.newlineOccursBefore(tok)) {
         // Implicit semicolon.
-        tokenizer_.pushBackLastToken();
+        pushBackLastToken();
         return make<BreakStatementNode>();
     }
 
@@ -605,8 +620,8 @@ Parser::parseBreakStatement()
     if (tok.isIdentifierName()) {
         IdentifierNameToken ident(tok);
         const Token &tok2 = nextToken();
-        if (ident.newlineOccursBefore(tok2)) {
-            tokenizer_.pushBackLastToken();
+        if (tok2.isEnd() || ident.newlineOccursBefore(tok2)) {
+            pushBackLastToken();
             return make<BreakStatementNode>(ident);
         }
 
@@ -620,16 +635,14 @@ Parser::parseBreakStatement()
 }
 
 ContinueStatementNode *
-Parser::parseContinueStatement()
+Parser::parseContinueStatement(const Token &continueToken)
 {
-    Token continueToken = tokenizer_.lastToken();
-
     // Continue keyword already encountered.
     const Token &tok = nextToken();
 
-    if (continueToken.newlineOccursBefore(tok)) {
+    if (tok.isEnd() || continueToken.newlineOccursBefore(tok)) {
         // Implicit semicolon.
-        tokenizer_.pushBackLastToken();
+        pushBackLastToken();
         return make<ContinueStatementNode>();
     }
 
@@ -641,8 +654,8 @@ Parser::parseContinueStatement()
     if (tok.isIdentifierName()) {
         IdentifierNameToken ident(tok);
         const Token &tok2 = nextToken();
-        if (ident.newlineOccursBefore(tok2)) {
-            tokenizer_.pushBackLastToken();
+        if (tok2.isEnd() || ident.newlineOccursBefore(tok2)) {
+            pushBackLastToken();
             return make<ContinueStatementNode>(ident);
         }
 
@@ -658,22 +671,163 @@ Parser::parseContinueStatement()
 SwitchStatementNode *
 Parser::parseSwitchStatement()
 {
-    /* TODO: Implement. */
-    return emitError("Switch statement not implemented yet.");
+    // Switch keyword already encountered.
+
+    if (!checkNextToken<Token::OpenParen>())
+        emitError("Expected open paren after switch.");
+
+    ExpressionNode *value = tryParseExpression();
+    if (!value)
+        emitError("Error parsing switch value expression.");
+
+    if (!checkNextToken<Token::CloseParen>())
+        emitError("Expected close paren after switch value expression.");
+
+    if (!checkNextToken<Token::OpenBrace>())
+        emitError("Expected open brace for switch block.");
+
+    bool gotDefault = false;
+
+    // Parse case clauses
+    SwitchStatementNode::CaseClauseList caseClauses(
+                            allocatorFor<SwitchStatementNode::CaseClause>());
+    for (;;) {
+        const Token *tok = checkGetNextToken<Token::CloseBrace,
+                                             Token::CaseKeyword,
+                                             Token::DefaultKeyword>();
+        if (!tok)
+            emitError("Expected '}' or 'case'.");
+        tok->debug_markUsed();
+
+        if (tok->isCloseBrace())
+            break;
+
+        ExpressionNode *expr = nullptr;
+
+        // Got case or default keyword.
+        if (tok->isDefaultKeyword()) {
+            if (gotDefault)
+                emitError("Duplicate default case class.");
+            gotDefault = true;
+        } else {
+            expr = tryParseExpression();
+            if (!expr)
+                emitError("Invalid expression for case value.");
+        }
+
+        // Expect colon.
+        if (!checkNextToken<Token::Colon>())
+            emitError("Expected colon after case value expression.");
+
+        // Parse statements.
+        StatementList stmts(allocatorFor<StatementNode *>());
+
+        for (;;) {
+            StatementNode *stmt = tryParseStatement();
+            if (!stmt)
+                break;
+
+            stmts.push_back(stmt);
+        }
+
+        // Add case clause.
+        caseClauses.push_back(SwitchStatementNode::CaseClause(
+                                            expr, std::move(stmts)));
+    }
+
+    return make<SwitchStatementNode>(value, std::move(caseClauses));
 }
 
 TryStatementNode *
 Parser::parseTryStatement()
 {
-    /* TODO: Implement. */
-    return emitError("Try statement not implemented yet.");
+    // Try keyword already encountered.
+
+    if (!checkNextToken<Token::OpenBrace>())
+        emitError("Expected '{' after try.");
+
+    BlockNode *tryBlock = tryParseBlock();
+    if (!tryBlock)
+        emitError("Error parsing try block.");
+
+    const Token *nextTok = checkGetNextToken<Token::CatchKeyword,
+                                             Token::FinallyKeyword>();
+    if (!nextTok)
+        emitError("Expected catch or finally block after try.");
+
+    nextTok->debug_markUsed();
+
+    if (nextTok->isFinallyKeyword()) {
+        if (!checkNextToken<Token::OpenBrace>())
+            emitError("Expected '{' for finally block.");
+
+        BlockNode *finallyBlock = tryParseBlock();
+        if (!finallyBlock)
+            emitError("Error parsing finally block.");
+
+        return make<TryFinallyStatementNode>(tryBlock, finallyBlock);
+    }
+
+    // Catch or Catch+Finally
+    if (!checkNextToken<Token::OpenParen>())
+        emitError("Expected '(' after catch.");
+
+    const Token *nameTok = checkGetNextToken<Token::IdentifierName>();
+    if (!nameTok)
+        emitError("Expected catch argument name.");
+
+    IdentifierNameToken catchName(*nameTok);
+
+    if (!checkNextToken<Token::CloseParen>())
+        emitError("Expected ')' after catch argument name.");
+
+    if (!checkNextToken<Token::OpenBrace>())
+        emitError("Expected '{' for catch block.");
+
+    BlockNode *catchBlock = tryParseBlock();
+    if (!catchBlock)
+        emitError("Error parsing catch block.");
+
+    BlockNode *finallyBlock = nullptr;
+    if (checkNextToken<Token::FinallyKeyword>()) {
+        if (!checkNextToken<Token::OpenBrace>())
+            emitError("Expected '{' for finally block.");
+
+        finallyBlock = tryParseBlock();
+        if (!finallyBlock)
+            emitError("Error parsing finally block.");
+    }
+
+    if (!finallyBlock)
+        return make<TryCatchStatementNode>(tryBlock, catchName, catchBlock);
+
+    return make<TryCatchFinallyStatementNode>(tryBlock, catchName, catchBlock,
+                                              finallyBlock);
 }
 
 ThrowStatementNode *
 Parser::parseThrowStatement()
 {
-    /* TODO: Implement. */
-    return emitError("Throw statement not implemented yet.");
+    // Throw keyword already encountered.
+    const Token &tok = nextToken();
+
+    if (tok.isEnd())
+        emitError("Invalid throw statement.");
+
+    if (tok.newlineOccursBefore(tok))
+        emitError("Newline not allowed between throw and expression.");
+
+    // Parse throw expression.
+    pushBackLastToken();
+    ExpressionNode *expr = tryParseExpression(Prec_Comma,
+                                              /*expectSemicolon=*/true);
+    if (!expr)
+        emitError("Invalid throw expression.");
+
+    if (!checkNextToken<Token::Semicolon>())
+        emitError("Throw statement not terminated properly.");
+
+    return make<ThrowStatementNode>(expr);
 }
 
 WithStatementNode *
@@ -701,192 +855,634 @@ Parser::parseWithStatement()
 DebuggerStatementNode *
 Parser::parseDebuggerStatement()
 {
-    /* TODO: Implement. */
-    return emitError("Debugger statement not implemented yet.");
-}
+    // Debugger keyword already encountered.
+    const Token &tok = nextToken();
 
-LabelledStatementNode *
-Parser::tryParseLabelledStatement()
-{
-    /* TODO: Implement. */
-    return emitError("Labelled statement not implemented yet.");
-}
+    if (tok.isEnd() || tok.newlineOccursBefore(tok)) {
+        // Implicit semicolon.
+        pushBackLastToken();
+        return make<DebuggerStatementNode>();
+    }
 
-ExpressionStatementNode *
-Parser::tryParseExpressionStatement()
-{
-    ExpressionNode *expr = tryParseExpression();
-    if (!expr)
-        return nullptr;
+    if (tok.isSemicolon()) {
+        tok.debug_markUsed();
+        return make<DebuggerStatementNode>();
+    }
 
-    return make<ExpressionStatementNode>(expr);
+    return emitError("Invalid debugger statement.");
 }
 
 ExpressionNode *
-Parser::tryParseExpression(bool forbidIn, Precedence prec)
+Parser::tryParseExpressionStatement(bool &sawLabel)
+{
+    WH_ASSERT(!sawLabel);
+
+    ExpressionNode *expr = tryParseExpression(/*forbidIn=*/false,
+                                              /*prec=*/Prec_Comma,
+                                              /*expectSemicolon=*/true);
+    if (!expr)
+        return nullptr;
+
+    const Token &tok = nextToken();
+
+    // If the expression is a raw identifier, and the following token
+    // is a colon, then we are parsing a labelled statement.  Note that
+    // for caller.
+    if (expr->isIdentifier() && tok.isColon()) {
+        sawLabel = true;
+        tok.debug_markUsed();
+        return expr;
+    }
+
+    // Otherwise, expression statement must be terminated with semicolon.
+    // tryParseExpression will add an automatic semicolon to the token
+    // stream if appropriate.
+    if (tok.isSemicolon()) {
+        tok.debug_markUsed();
+        return expr;
+    }
+
+    return emitError("Expression statement not properly terminated.");
+}
+
+LabelledStatementNode *
+Parser::tryParseLabelledStatement(const IdentifierNameToken &label)
+{
+    StatementNode *stmt = tryParseStatement();
+    if (!stmt)
+        emitError("No statement after label.");
+
+    return make<LabelledStatementNode>(label, stmt);
+}
+
+ExpressionNode *
+Parser::tryParseExpression(bool forbidIn, Precedence prec,
+                           bool expectSemicolon)
 {
     TokenizerMark markExpr = tokenizer_.mark();
 
+    // Read first token.
+    // Allow RegExps and keywords.
+    const Token &tok = nextToken(Tokenizer::InputElement_RegExp, true);
+    tok.debug_markUsed();
+
+    ExpressionNode *curExpr = nullptr;
+
+    // Parse initial "starter" expression.
+    if (tok.isIdentifierName()) {
+        curExpr = make<IdentifierNode>(IdentifierNameToken(tok));
+
+    } else if (tok.isNumericLiteral()) {
+        curExpr = make<NumericLiteralNode>(NumericLiteralToken(tok));
+
+    } else if (tok.isStringLiteral()) {
+        curExpr = make<StringLiteralNode>(StringLiteralToken(tok));
+
+    } else if (tok.isFalseLiteral()) {
+        curExpr = make<BooleanLiteralNode>(FalseLiteralToken(tok));
+
+    } else if (tok.isTrueLiteral()) {
+        curExpr = make<BooleanLiteralNode>(TrueLiteralToken(tok));
+
+    } else if (tok.isNullLiteral()) {
+        curExpr = make<NullLiteralNode>(NullLiteralToken(tok));
+
+    } else if (tok.isRegularExpressionLiteral()) {
+        curExpr = make<RegularExpressionLiteralNode>(
+                        RegularExpressionLiteralToken(tok));
+
+    } else if (tok.isThisKeyword()) {
+        curExpr = make<ThisNode>(ThisKeywordToken(tok));
+
+    } else if (tok.isOpenParen()) {
+        // Parse sub-expression
+        ExpressionNode *subexpr = tryParseExpression();
+        if (!subexpr)
+            emitError("Could not parse expression within parenthesis.");
+        curExpr = make<ParenthesizedExpressionNode>(subexpr);
+
+    } else if (tok.isOpenBracket()) {
+        // Parse an array literal.
+        curExpr = tryParseArrayLiteral();
+        if (!curExpr)
+            emitError("Could not parse array literal.");
+
+    } else if (tok.isOpenBrace()) {
+        // Parse object literal.  This can't be a block statement because
+        // that has already been tried before.
+        curExpr = tryParseObjectLiteral();
+        if (!curExpr)
+            emitError("Could not parse object literal.");
+
+    } else if (tok.isFunctionKeyword()) {
+        // Parse function literal.
+        curExpr = tryParseFunction();
+        if (!curExpr)
+            emitError("Could not parse function literal.");
+
+    } else if (tok.isNewKeyword()) {
+        ExpressionNode *cons = tryParseExpression(forbidIn, Prec_Member);
+        if (!cons)
+            emitError("Could not parse new expression.");
+
+        ExpressionList args(allocatorFor<ExpressionNode *>());
+        if (checkNextToken<Token::OpenParen>())
+            parseArguments(args);
+
+        curExpr = make<NewExpressionNode>(cons, args);
+
+    } else if (tok.isLogicalNot()) {
+        ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
+        if (!expr)
+            emitError("Error parsing unary expression.");
+
+        curExpr = make<LogicalNotExpressionNode>(expr);
+
+    } else if (tok.isMinus()) {
+        ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
+        if (!expr)
+            emitError("Error parsing unary expression.");
+
+        curExpr = make<NegativeExpressionNode>(expr);
+
+    } else if (tok.isPlus()) {
+        ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
+        if (!expr)
+            emitError("Error parsing unary expression.");
+
+        curExpr = make<PositiveExpressionNode>(expr);
+
+    } else if (tok.isTilde()) {
+        ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
+        if (!expr)
+            emitError("Error parsing unary expression.");
+
+        curExpr = make<BitNotExpressionNode>(expr);
+
+    } else if (tok.isPlusPlus()) {
+        ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
+        if (!expr)
+            emitError("Error parsing unary expression.");
+
+        if (!IsLeftHandSideExpression(expr))
+            emitError("Expected lvalue for pre-increment expression.");
+
+        curExpr = make<PreIncrementExpressionNode>(expr);
+
+    } else if (tok.isMinusMinus()) {
+        ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
+        if (!expr)
+            emitError("Error parsing unary expression.");
+
+        if (!IsLeftHandSideExpression(expr))
+            emitError("Expected lvalue for pre-decrement expression.");
+
+        curExpr = make<PreDecrementExpressionNode>(expr);
+
+    } else if (tok.isDeleteKeyword()) {
+        ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
+        if (!expr)
+            emitError("Error parsing unary expression.");
+
+        if (!IsLeftHandSideExpression(expr))
+            emitError("Expected lvalue for delete expression.");
+
+        curExpr = make<DeleteExpressionNode>(expr);
+
+    } else if (tok.isVoidKeyword()) {
+        ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
+        if (!expr)
+            emitError("Error parsing unary expression.");
+
+        curExpr = make<VoidExpressionNode>(expr);
+
+    } else if (tok.isTypeOfKeyword()) {
+        ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
+        if (!expr)
+            emitError("Error parsing unary expression.");
+
+        curExpr = make<TypeOfExpressionNode>(expr);
+
+    } else {
+        // No expression possible, return.
+        tokenizer_.gotoMark(markExpr);
+        return nullptr;
+    }
+
+    // Read and fold operators while within precedence scope.
     for (;;) {
-        // Read first token.
-        // Allow RegExps and keywords.
-        const Token &tok = nextToken(Tokenizer::InputElement_RegExp, true);
-        tok.debug_markUsed();
-
-        // Handle most common tokens first: identifiers, literals, etc..
-        // Which are themselves atomic expressions.
-        ExpressionNode *atom = nullptr;
-        if (tok.isIdentifierName()) {
-            atom = make<IdentifierNode>(IdentifierNameToken(tok));
-
-        } else if (tok.isNumericLiteral()) {
-            atom = make<NumericLiteralNode>(NumericLiteralToken(tok));
-
-        } else if (tok.isStringLiteral()) {
-            atom = make<StringLiteralNode>(StringLiteralToken(tok));
-
-        } else if (tok.isFalseLiteral()) {
-            atom = make<BooleanLiteralNode>(FalseLiteralToken(tok));
-
-        } else if (tok.isTrueLiteral()) {
-            atom = make<BooleanLiteralNode>(TrueLiteralToken(tok));
-
-        } else if (tok.isNullLiteral()) {
-            atom = make<NullLiteralNode>(NullLiteralToken(tok));
-
-        } else if (tok.isRegularExpressionLiteral()) {
-            atom = make<RegularExpressionLiteralNode>(
-                            RegularExpressionLiteralToken(tok));
-
-        } else if (tok.isThisKeyword()) {
-            atom = make<ThisNode>(ThisKeywordToken(tok));
-
-        } else if (tok.isOpenParen()) {
-            // Parse sub-expression
-            ExpressionNode *subexpr = tryParseExpression();
-            if (!subexpr)
-                emitError("Could not parse expression within parenthesis.");
-            atom = make<ParenthesizedExpressionNode>(subexpr);
-
-        } else if (tok.isOpenBracket()) {
-            // Parse an array literal.
-            atom = tryParseArrayLiteral();
-            if (!atom)
-                emitError("Could not parse array literal.");
-
-        } else if (tok.isOpenBrace()) {
-            // Parse object literal.  This can't be a block statement because
-            // that has already been tried before.
-            atom = tryParseObjectLiteral();
-            if (!atom)
-                emitError("Could not parse object literal.");
-
-        } else if (tok.isFunctionKeyword()) {
-            // Parse function literal.
-            atom = tryParseFunction();
-            if (!atom)
-                emitError("Could not parse function literal.");
-
-        } else if (tok.isNewKeyword()) {
-            ExpressionNode *cons = tryParseExpression(forbidIn, Prec_New);
-            if (!cons)
-                emitError("Could not parse new expression.");
-
-            NewExpressionNode::ExpressionList args(
-                                allocatorFor<ExpressionNode *>());
-            if (checkNextToken<Token::OpenParen>())
-                parseArguments(args);
-
-            atom = make<NewExpressionNode>(cons, args);
-
-        } else if (tok.isLogicalNot()) {
-            ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
-            if (!expr)
-                emitError("Error parsing unary expression.");
-
-            atom = make<LogicalNotExpressionNode>(expr);
-
-        } else if (tok.isMinus()) {
-            ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
-            if (!expr)
-                emitError("Error parsing unary expression.");
-
-            atom = make<NegativeExpressionNode>(expr);
-
-        } else if (tok.isPlus()) {
-            ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
-            if (!expr)
-                emitError("Error parsing unary expression.");
-
-            atom = make<PositiveExpressionNode>(expr);
-
-        } else if (tok.isTilde()) {
-            ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
-            if (!expr)
-                emitError("Error parsing unary expression.");
-
-            atom = make<BitNotExpressionNode>(expr);
-
-        } else if (tok.isPlusPlus()) {
-            ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
-            if (!expr)
-                emitError("Error parsing unary expression.");
-
-            atom = make<PreIncrementExpressionNode>(expr);
-
-        } else if (tok.isMinusMinus()) {
-            ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
-            if (!expr)
-                emitError("Error parsing unary expression.");
-
-            atom = make<PreDecrementExpressionNode>(expr);
-
-        } else if (tok.isDeleteKeyword()) {
-            ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
-            if (!expr)
-                emitError("Error parsing unary expression.");
-
-            atom = make<DeleteExpressionNode>(expr);
-
-        } else if (tok.isVoidKeyword()) {
-            ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
-            if (!expr)
-                emitError("Error parsing unary expression.");
-
-            atom = make<VoidExpressionNode>(expr);
-
-        } else if (tok.isTypeOfKeyword()) {
-            ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Unary);
-            if (!expr)
-                emitError("Error parsing unary expression.");
-
-            atom = make<TypeOfExpressionNode>(expr);
-
-        } else {
-            // No expression possible, return.
-            tokenizer_.gotoMark(markExpr);
-            return nullptr;
-        }
+        // Note the current line.
+        uint32_t preOperatorLine = tokenizer_.line();
 
         // Check next token.
         const Token &tok2 = nextToken(Tokenizer::InputElement_Div, true);
+        tok2.debug_markUsed();
 
-        // If next token is within predecence, then fold into atom.
-        // Check for:
-        //      OpenBracket         - GET_ELEMENT
-        //      Dot                 - GET_PROPERTY
-        //      OpenParen           - CALL
-        //      PlusPlus            - INCREMENT
-        //      MinusMinus          - DECREMENT
-        //      Star,Percent,Divide - MULTIPLICATIVE
-        //      Plus,Minus          - ADDITIVE
-        //      ShiftLeft,ShiftRight,ShiftUnsignedRight - SHIFT
-        //      ... FIXME HERE
+        WH_ASSERT(prec <= Prec_Member);
+        WH_ASSERT(prec >= Prec_Comma);
 
+        // OpenBracket: GetElement operation (precedence: Member)
+        if (tok2.isOpenBracket()) {
+            // Parse a sub-expression at lowest predecence.
+            ExpressionNode *idxExpr = tryParseExpression();
+            if (!idxExpr)
+                emitError("Could not parse GetElement sub-expression.");
+
+            // Subsequent token must be a ']'
+            if (!checkNextToken<Token::CloseBracket>())
+                emitError("Missing close bracket for GetElement.");
+
+            curExpr = make<GetElementExpressionNode>(curExpr, idxExpr);
+            continue;
+        }
+
+        // Dot: GetProperty operation (precedence: Member)
+        if (tok2.isDot()) {
+            // Must be followed by identifier.
+            const Token *name = checkGetNextToken<Token::IdentifierName>(
+                                                        /*checkKw=*/false);
+            if (!name)
+                emitError("No identifier after GetProperty notation.");
+
+            curExpr = make<GetPropertyExpressionNode>(
+                                    curExpr, IdentifierNameToken(*name));
+            continue;
+        }
+
+        // OpenParen: Call operation (precedence: Member)
+        if (tok2.isOpenParen()) {
+            // Parse arguments.
+
+            ExpressionList args(allocatorFor<ExpressionNode *>());
+            parseArguments(args);
+
+            curExpr = make<CallExpressionNode>(curExpr, args);
+            continue;
+        }
+
+        // PlusPlus or MinusMinus: Increment/Decrement operation
+        // (precedence: Postfix)
+        if (tok2.isPlusPlus() || tok2.isMinusMinus()) {
+            if (prec > Prec_Postfix)
+                break;
+
+            Token::Type type = tok2.type();
+
+            if (!IsLeftHandSideExpression(curExpr))
+                emitError("Expected lvalue for post-increment/decrement.");
+
+            if (type == Token::PlusPlus)
+                curExpr = make<PostIncrementExpressionNode>(curExpr);
+            else
+                curExpr = make<PostDecrementExpressionNode>(curExpr);
+
+            continue;
+        }
+
+        // Star,Percent,Divide: Multiplicative
+        if (tok2.isStar() || tok2.isPercent() || tok2.isDivide()) {
+            if (prec > Prec_Multiplicative)
+                break;
+
+            Token::Type type = tok2.type();
+
+            // Parse next expression
+            ExpressionNode *nextExpr = tryParseExpression(forbidIn, Prec_Unary);
+            if (!nextExpr)
+                emitError("Could not parse multiplicative subexpression.");
+
+            if (type == Token::Star)
+                curExpr = make<MultiplyExpressionNode>(curExpr, nextExpr);
+            else if (type == Token::Percent)
+                curExpr = make<ModuloExpressionNode>(curExpr, nextExpr);
+            else
+                curExpr = make<DivideExpressionNode>(curExpr, nextExpr);
+
+            continue;
+        }
+
+        // Plus,Minus: Additive
+        if (tok2.isPlus() || tok2.isMinus()) {
+            if (prec > Prec_Additive)
+                break;
+
+            Token::Type type = tok2.type();
+
+            // Parse next expression
+            ExpressionNode *nextExpr = tryParseExpression(forbidIn,
+                                                          Prec_Multiplicative);
+            if (!nextExpr)
+                emitError("Could not parse additive subexpression.");
+
+            if (type == Token::Plus)
+                curExpr = make<AddExpressionNode>(curExpr, nextExpr);
+            else
+                curExpr = make<SubtractExpressionNode>(curExpr, nextExpr);
+
+            continue;
+        }
+
+        // Shift
+        if (tok2.isShiftLeft() || tok2.isShiftRight() ||
+            tok2.isShiftUnsignedRight())
+        {
+            if (prec > Prec_Shift)
+                break;
+
+            Token::Type type = tok2.type();
+
+            // Parse next expression
+            ExpressionNode *nextExpr = tryParseExpression(forbidIn,
+                                                          Prec_Additive);
+            if (!nextExpr)
+                emitError("Could not parse shift subexpression.");
+
+            if (type == Token::ShiftLeft) {
+                curExpr = make<LeftShiftExpressionNode>(curExpr, nextExpr);
+            } else if (type == Token::ShiftRight) {
+                curExpr = make<RightShiftExpressionNode>(curExpr, nextExpr);
+            } else {
+                curExpr = make<UnsignedRightShiftExpressionNode>(curExpr,
+                                                                 nextExpr);
+            }
+
+            continue;
+        }
+
+        // If 'in' is forbidden, but seen, terminate expression here.
+        if (forbidIn && tok2.isInKeyword())
+            break;
+
+        // Relational
+        if (tok2.isLessThan() || tok2.isLessEqual() ||
+            tok2.isGreaterThan() || tok2.isGreaterEqual() ||
+            tok2.isInstanceOfKeyword() || tok2.isInKeyword())
+        {
+            if (prec > Prec_Relational)
+                break;
+
+            Token::Type type = tok2.type();
+
+            // Parse next expression
+            ExpressionNode *nextExpr = tryParseExpression(forbidIn,
+                                                          Prec_Shift);
+            if (!nextExpr)
+                emitError("Could not parse relational subexpression.");
+
+            if (type == Token::LessThan)
+                curExpr = make<LessThanExpressionNode>(curExpr, nextExpr);
+            else if (type == Token::LessEqual)
+                curExpr = make<LessEqualExpressionNode>(curExpr, nextExpr);
+            else if (type == Token::GreaterThan)
+                curExpr = make<GreaterThanExpressionNode>(curExpr, nextExpr);
+            else if (type == Token::GreaterEqual)
+                curExpr = make<GreaterEqualExpressionNode>(curExpr, nextExpr);
+            else if (type == Token::InstanceOfKeyword)
+                curExpr = make<InstanceOfExpressionNode>(curExpr, nextExpr);
+            else
+                curExpr = make<InExpressionNode>(curExpr, nextExpr);
+
+            continue;
+            
+        }
+
+        // Equality
+        if (tok2.isEqual() || tok2.isNotEqual() ||
+            tok2.isStrictEqual() || tok2.isStrictNotEqual())
+        {
+            if (prec > Prec_Equality)
+                break;
+
+            Token::Type type = tok2.type();
+
+            // Parse next expression
+            ExpressionNode *nextExpr = tryParseExpression(forbidIn,
+                                                          Prec_Relational);
+            if (!nextExpr)
+                emitError("Could not parse equality subexpression.");
+
+            if (type == Token::Equal)
+                curExpr = make<EqualExpressionNode>(curExpr, nextExpr);
+            else if (type == Token::NotEqual)
+                curExpr = make<NotEqualExpressionNode>(curExpr, nextExpr);
+            else if (type == Token::StrictEqual)
+                curExpr = make<StrictEqualExpressionNode>(curExpr, nextExpr);
+            else
+                curExpr = make<StrictNotEqualExpressionNode>(curExpr, nextExpr);
+
+            continue;
+            
+        }
+
+        // Bitwise And
+        if (tok2.isBitAnd()) {
+            if (prec > Prec_BitwiseAnd)
+                break;
+
+            // Parse next expression
+            ExpressionNode *nextExpr = tryParseExpression(forbidIn,
+                                                          Prec_Equality);
+            if (!nextExpr)
+                emitError("Could not parse bitwise-and subexpression.");
+
+            curExpr = make<BitAndExpressionNode>(curExpr, nextExpr);
+
+            continue;
+            
+        }
+
+        // Bitwise Xor
+        if (tok2.isBitXor()) {
+            if (prec > Prec_BitwiseXor)
+                break;
+
+            // Parse next expression
+            ExpressionNode *nextExpr = tryParseExpression(forbidIn,
+                                                          Prec_BitwiseAnd);
+            if (!nextExpr)
+                emitError("Could not parse bitwise-xor subexpression.");
+
+            curExpr = make<BitXorExpressionNode>(curExpr, nextExpr);
+
+            continue;
+            
+        }
+
+        // Bitwise Or
+        if (tok2.isBitOr()) {
+            if (prec > Prec_BitwiseOr)
+                break;
+
+            // Parse next expression
+            ExpressionNode *nextExpr = tryParseExpression(forbidIn,
+                                                          Prec_BitwiseXor);
+            if (!nextExpr)
+                emitError("Could not parse bitwise-or subexpression.");
+
+            curExpr = make<BitOrExpressionNode>(curExpr, nextExpr);
+
+            continue;
+            
+        }
+
+        // Logical And
+        if (tok2.isLogicalAnd()) {
+            if (prec > Prec_LogicalAnd)
+                break;
+
+            // Parse next expression
+            ExpressionNode *nextExpr = tryParseExpression(forbidIn,
+                                                          Prec_BitwiseOr);
+            if (!nextExpr)
+                emitError("Could not parse logical-and subexpression.");
+
+            curExpr = make<LogicalAndExpressionNode>(curExpr, nextExpr);
+
+            continue;
+            
+        }
+
+        // Logical Or
+        if (tok2.isLogicalOr()) {
+            if (prec > Prec_LogicalOr)
+                break;
+
+            // Parse next expression
+            ExpressionNode *nextExpr = tryParseExpression(forbidIn,
+                                                          Prec_LogicalAnd);
+            if (!nextExpr)
+                emitError("Could not parse logical-or subexpression.");
+
+            curExpr = make<LogicalOrExpressionNode>(curExpr, nextExpr);
+
+            continue;
+            
+        }
+
+        // Conditional
+        if (tok2.isQuestion()) {
+            if (prec > Prec_Conditional)
+                break;
+
+            // Parse true expression
+            ExpressionNode *trueExpr = tryParseExpression(forbidIn,
+                                                          Prec_Assignment);
+            if (!trueExpr)
+                emitError("Could not parse conditional subexpression.");
+
+            if (!checkNextToken<Token::Colon>())
+                emitError("Expected colon in conditional.");
+
+            // Parse false expression
+            ExpressionNode *falseExpr = tryParseExpression(forbidIn,
+                                                           Prec_Assignment);
+            if (!falseExpr)
+                emitError("Could not parse conditional subexpression.");
+
+            curExpr = make<ConditionalExpressionNode>(curExpr, trueExpr,
+                                                      falseExpr);
+            continue;
+        }
+
+        // Assignment
+        if (tok2.isStarAssign() || tok2.isDivideAssign() ||
+            tok2.isPercentAssign() ||
+            tok2.isPlusAssign() || tok2.isMinusAssign() ||
+            tok2.isShiftLeftAssign() || tok2.isShiftRightAssign() || 
+            tok2.isShiftUnsignedRightAssign() ||
+            tok2.isBitAndAssign() || tok2.isBitXorAssign() ||
+            tok2.isBitOrAssign())
+        {
+            if (prec > Prec_Assignment)
+                break;
+
+            Token::Type type = tok2.type();
+
+            if (!IsLeftHandSideExpression(curExpr))
+                emitError("Expected lvalue for assignment.");
+
+            // Parse rhs expression
+            ExpressionNode *rhsExpr = tryParseExpression(forbidIn,
+                                                         Prec_Assignment);
+            if (!rhsExpr)
+                emitError("Could not parse assignment rhs.");
+
+            if (type == Token::StarAssign) {
+                curExpr = make<MultiplyAssignExpressionNode>(curExpr, rhsExpr);
+            } else if (type == Token::DivideAssign) {
+                curExpr = make<DivideAssignExpressionNode>(curExpr, rhsExpr);
+            } else if (type == Token::PercentAssign) {
+                curExpr = make<ModuloAssignExpressionNode>(curExpr, rhsExpr);
+            } else if (type == Token::PlusAssign) {
+                curExpr = make<AddAssignExpressionNode>(curExpr, rhsExpr);
+            } else if (type == Token::MinusAssign) {
+                curExpr = make<SubtractAssignExpressionNode>(curExpr, rhsExpr);
+            } else if (type == Token::ShiftLeftAssign) {
+                curExpr = make<LeftShiftAssignExpressionNode>(curExpr,
+                                                              rhsExpr);
+            } else if (type == Token::ShiftRightAssign) {
+                curExpr = make<RightShiftAssignExpressionNode>(curExpr,
+                                                               rhsExpr);
+            } else if (type == Token::ShiftUnsignedRightAssign) {
+                curExpr = make<UnsignedRightShiftAssignExpressionNode>(
+                                                            curExpr, rhsExpr);
+            } else if (type == Token::BitAndAssign) {
+                curExpr = make<BitAndAssignExpressionNode>(curExpr, rhsExpr);
+            } else if (type == Token::BitXorAssign) {
+                curExpr = make<BitXorAssignExpressionNode>(curExpr, rhsExpr);
+            } else {
+                curExpr = make<BitOrAssignExpressionNode>(curExpr, rhsExpr);
+            }
+
+            continue;
+        }
+
+        // Comma
+        if (tok2.isComma()) {
+            if (prec > Prec_Comma)
+                break;
+
+            // Parse rhs expression
+            ExpressionNode *nextExpr = tryParseExpression(forbidIn,
+                                                          Prec_Assignment);
+            if (!nextExpr)
+                emitError("Could not parse comma sub-expression.");
+
+            curExpr = make<CommaExpressionNode>(curExpr, nextExpr);
+
+            continue;
+        }
+
+        // If not expecting a semicolon to terminate this expression,
+        // just stop parsing here.
+        if (!expectSemicolon) {
+            pushBackLastToken();
+            break;
+        }
+
+        // At this point, any other operator is not an acceptable
+        // continuation of the expression.
+        // However, if expecting a semicolon, a semicolon may be expected
+        // to terminate the expression parsing.  Or, an implicit semicolon
+        // may be assumed if a new line follows, or if this is the end of the
+        // token stream.
+        if (tok2.isSemicolon()) {
+            pushBackLastToken();
+            break;
+        }
+
+        if (tok2.isEnd() || tok2.startLine() > preOperatorLine) {
+            pushBackLastToken();
+            pushBackAutomaticSemicolon();
+            break;
+        }
+
+        // Otherwise, return the expression.  tryParseExpressionStatement
+        // may fail (if it doesn't find a labelled statement).
+        break;
     }
 
-    /* TODO: Implement. */
-    return nullptr;
+    return curExpr;
 }
 
 ArrayLiteralNode *
@@ -894,8 +1490,30 @@ Parser::tryParseArrayLiteral()
 {
     // NOTE: Open bracket already read.
 
-    /* TODO: Implement. */
-    return emitError("Array literal parsing not yet implemented.");
+    ExpressionList exprList(allocatorFor<ExpressionNode *>());
+
+    for (;;) {
+        const Token *tok = checkGetNextToken<Token::Comma,
+                                             Token::CloseBracket>();
+        if (tok) {
+            if (tok->isComma()) {
+                // Elision.
+                exprList.push_back(nullptr);
+                continue;
+            }
+
+            WH_ASSERT(tok->isCloseBracket());
+            break;
+        }
+
+        ExpressionNode *expr = tryParseExpression(Prec_Assignment);
+        if (!expr)
+            emitError("Expected expression in array literal.");
+
+        exprList.push_back(expr);
+    }
+
+    return make<ArrayLiteralNode>(exprList);
 }
 
 ObjectLiteralNode *
@@ -903,8 +1521,123 @@ Parser::tryParseObjectLiteral()
 {
     // NOTE: Open brace already read.
 
-    /* TODO: Implement. */
-    return emitError("Object literal parsing not yet implemented.");
+    ObjectLiteralNode::PropertyDefinitionList props(
+                        allocatorFor<ObjectLiteralNode::PropertyDefinition>());
+
+    for (;;) {
+        const Token *name = checkGetNextToken<Token::IdentifierName,
+                                              Token::StringLiteral,
+                                              Token::NumericLiteral,
+                                              Token::CloseBrace>(
+                                                        /*checkKw=*/false);
+        if (!name)
+            emitError("Expected property definition name.");
+
+        if (name->isCloseBrace())
+            break;
+
+        bool isGetter = false;
+        bool isSetter = false;
+        Token nameToken(*name);
+
+        if (name->isIdentifierName()) {
+            if (IsGetToken(tokenizer_.source(), *name)) {
+                name = checkGetNextToken<Token::IdentifierName,
+                                         Token::StringLiteral,
+                                         Token::NumericLiteral,
+                                         Token::Colon>();
+                if (!name)
+                    emitError("Expected name or colon after 'get'.");
+                name->debug_markUsed();
+
+                if (!name->isColon()) {
+                    isGetter = true;
+                    nameToken = *name;
+                }
+            } else if (IsSetToken(tokenizer_.source(), *name)) {
+                name = checkGetNextToken<Token::IdentifierName,
+                                         Token::StringLiteral,
+                                         Token::NumericLiteral,
+                                         Token::Colon>();
+                if (!name)
+                    emitError("Expected name or colon after 'set'.");
+                name->debug_markUsed();
+
+                if (!name->isColon()) {
+                    isSetter = true;
+                    nameToken = *name;
+                }
+            } else {
+                if (!checkNextToken<Token::Colon>())
+                    emitError("Expected colon after object literal name.");
+            }
+        } else {
+            if (!checkNextToken<Token::Colon>())
+                emitError("Expected colon after object literal name.");
+        }
+
+        ObjectLiteralNode::PropertyDefinition *propDef = nullptr;
+
+        // Handle getters and setters.
+        if (isGetter) {
+            if (!checkNextToken<Token::OpenParen>())
+                emitError("Expected open paren in getter definition.");
+
+            if (!checkNextToken<Token::CloseParen>())
+                emitError("Expected close paren in getter definition.");
+
+            if (!checkNextToken<Token::OpenBrace>())
+                emitError("Expected open brace in getter definition.");
+
+            // Parse function body.
+            SourceElementList body(allocatorFor<SourceElementNode *>());
+            parseFunctionBody(body);
+
+            propDef = make<ObjectLiteralNode::GetterDefinition>(
+                                                nameToken, std::move(body));
+        } else if (isSetter) {
+            if (!checkNextToken<Token::OpenParen>())
+                emitError("Expected open paren in getter definition.");
+
+            const Token *arg = checkGetNextToken<Token::IdentifierName>();
+            if (!arg)
+                emitError("Expected argument name in setter definition.");
+            IdentifierNameToken argName(*arg);
+
+            if (!checkNextToken<Token::CloseParen>())
+                emitError("Expected close paren in getter definition.");
+
+            if (!checkNextToken<Token::OpenBrace>())
+                emitError("Expected open brace in getter definition.");
+
+            // Parse function body.
+            SourceElementList body(allocatorFor<SourceElementNode *>());
+            parseFunctionBody(body);
+
+            propDef = make<ObjectLiteralNode::SetterDefinition>(
+                                        nameToken, argName, std::move(body));
+        } else {
+            // Value property definition.
+            ExpressionNode *expr = tryParseExpression(Prec_Assignment);
+            if (!expr)
+                emitError("Expected object literal slot value expression.");
+
+            propDef = make<ObjectLiteralNode::ValueDefinition>(
+                                                        nameToken, expr);
+        }
+        props.push_back(propDef);
+
+        // After this, expect close brace or comma.
+        const Token *close = checkGetNextToken<Token::Comma,
+                                               Token::CloseBrace>();
+        if (!close)
+            emitError("Expected ',' or '}' after object literal expression.");
+
+        if (close->isCloseBrace())
+            break;
+    }
+
+    return make<ObjectLiteralNode>(props);
 }
 
 FunctionExpressionNode *
@@ -958,18 +1691,8 @@ Parser::tryParseFunction()
         emitError("No open brace after function signature.");
 
     // Now parse function body.
-    FunctionExpressionNode::SourceElementList body(
-                            allocatorFor<SourceElementNode *>());
-    for (;;) {
-        SourceElementNode *node = tryParseSourceElement();
-        if (!node)
-            break;
-
-        body.push_back(node);
-    }
-
-    if (!checkNextToken<Token::CloseBrace>())
-        emitError("Invalid function body statement.");
+    SourceElementList body(allocatorFor<SourceElementNode *>());
+    parseFunctionBody(body);
 
     if (name) {
         return make<FunctionExpressionNode>(*name,
@@ -981,9 +1704,39 @@ Parser::tryParseFunction()
 }
 
 void
-Parser::parseArguments(NewExpressionNode::ExpressionList &list)
+Parser::parseFunctionBody(SourceElementList &body)
 {
-    // FIXME TODO: Implement
+    for (;;) {
+        SourceElementNode *node = tryParseSourceElement();
+        if (!node)
+            break;
+
+        body.push_back(node);
+    }
+
+    if (!checkNextToken<Token::CloseBrace>())
+        emitError("Invalid function body.");
+}
+
+void
+Parser::parseArguments(ExpressionList &list)
+{
+    if (checkNextToken<Token::CloseParen>())
+        return;
+    for (;;) {
+        ExpressionNode *expr = tryParseExpression(Prec_Assignment);
+        if (!expr)
+            emitError("Expected argument expression.");
+        list.push_back(expr);
+        const Token *tok = checkGetNextToken<Token::CloseParen,
+                                             Token::Comma>();
+        if (!tok)
+            emitError("Expected comma or close paren after arg expression.");
+
+        tok->debug_markUsed();
+        if (tok->isCloseParen())
+            break;
+    }
 }
 
 void
@@ -994,17 +1747,32 @@ Parser::pushBackAutomaticSemicolon()
     hasAutomaticSemicolon_ = true;
 }
 
+void
+Parser::pushBackLastToken()
+{
+    WH_ASSERT(!hasAutomaticSemicolon_);
+    if (justReadAutomaticSemicolon_) {
+        hasAutomaticSemicolon_ = true;
+        justReadAutomaticSemicolon_ = false;
+        return;
+    }
+    tokenizer_.pushBackLastToken();
+}
+
 const Token &
 Parser::nextToken(Tokenizer::InputElementKind kind, bool checkKeywords)
 {
     if (hasAutomaticSemicolon_) {
         hasAutomaticSemicolon_ = false;
+        justReadAutomaticSemicolon_ = true;
         return automaticSemicolon_;
     }
+    justReadAutomaticSemicolon_ = false;
 
     // Read next valid token.
     for (;;) {
         const Token &tok = tokenizer_.readToken(kind, checkKeywords);
+        tok.debug_markUsed();
         if (tok.isWhitespace())
             continue;
 
@@ -1019,6 +1787,7 @@ Parser::nextToken(Tokenizer::InputElementKind kind, bool checkKeywords)
             throw ParserError();
         }
 
+        tok.debug_clearUsed();
         return tok;
     }
 }

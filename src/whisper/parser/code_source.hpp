@@ -131,6 +131,11 @@ class SourceStream
         cursor_ = source_.data() + pos;
     }
 
+    inline void advanceTo(uint32_t pos) {
+        WH_ASSERT(pos >= position());
+        cursor_ = source_.data() + pos;
+    }
+
     inline void rewindBy(uint32_t count) {
         WH_ASSERT(count <= position());
         cursor_ -= count;

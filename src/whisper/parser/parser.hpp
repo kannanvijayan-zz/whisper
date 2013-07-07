@@ -37,6 +37,7 @@ class Parser
     // Marks the existence of a pushed-back implicit semicolon.
     Token automaticSemicolon_;
     bool hasAutomaticSemicolon_ = false;
+    bool justReadAutomaticSemicolon_ = false;
 
   public:
     Parser(Tokenizer &tokenizer)
@@ -60,17 +61,18 @@ class Parser
     BlockNode *tryParseBlock();
     IterationStatementNode *parseWhileStatement();
     IterationStatementNode *parseDoWhileStatement();
-    ReturnStatementNode *parseReturnStatement();
-    BreakStatementNode *parseBreakStatement();
-    ContinueStatementNode *parseContinueStatement();
+    ReturnStatementNode *parseReturnStatement(const Token &retToken);
+    BreakStatementNode *parseBreakStatement(const Token &breakToken);
+    ContinueStatementNode *parseContinueStatement(const Token &continueToken);
     SwitchStatementNode *parseSwitchStatement();
     TryStatementNode *parseTryStatement();
     ThrowStatementNode *parseThrowStatement();
     DebuggerStatementNode *parseDebuggerStatement();
     WithStatementNode *parseWithStatement();
 
-    ExpressionStatementNode *tryParseExpressionStatement();
-    LabelledStatementNode *tryParseLabelledStatement();
+    ExpressionNode *tryParseExpressionStatement(bool &sawLabel);
+    LabelledStatementNode *tryParseLabelledStatement(
+                            const IdentifierNameToken &label);
 
     // Precedences, from low to high
     enum Precedence
@@ -84,46 +86,44 @@ class Parser
         Prec_BitwiseXor,    // ^
         Prec_BitwiseAnd,    // &
         Prec_Equality,      // ==, ===, !=, !==
-        Prec_Relation,      // <, >, >=, <=, instanceof, in
+        Prec_Relational,    // <, >, >=, <=, instanceof, in
         Prec_Shift,         // <<, >>, >>>
         Prec_Additive,      // +, -
         Prec_Multiplicative,// *, /, %
         Prec_Unary,         // delete, void, typeof, ++, --, +, -, ~, !
         Prec_Postfix,       // ++, --
-        Prec_Call,
-        Prec_New,
         Prec_Member
     };
 
-    ExpressionNode *tryParseExpression(bool forbidIn, Precedence prec);
+    ExpressionNode *tryParseExpression(bool forbidIn,
+                                       Precedence prec,
+                                       bool expectSemicolon=false);
 
-    inline ExpressionNode *tryParseExpression(bool forbidIn) {
-        return tryParseExpression(forbidIn, Prec_Comma);
+    inline ExpressionNode *tryParseExpression(bool forbidIn,
+                                              bool expectSemicolon=false)
+    {
+        return tryParseExpression(forbidIn, Prec_Comma, expectSemicolon);
+    }
+    inline ExpressionNode *tryParseExpression(Precedence prec,
+                                              bool expectSemicolon=false)
+    {
+        return tryParseExpression(/*forbidIn=*/false, prec, expectSemicolon);
     }
     inline ExpressionNode *tryParseExpression() {
         return tryParseExpression(/*forbidIn=*/false);
     }
 
-    inline AssignmentExpressionNode *
-        tryParseAssignmentExpression(bool forbidIn)
-    {
-        ExpressionNode *expr = tryParseExpression(forbidIn, Prec_Assignment);
-        WH_ASSERT_IF(expr, IsValidAssignmentExpressionType(expr->type()));
-        return reinterpret_cast<AssignmentExpressionNode *>(expr);
-    }
-    inline AssignmentExpressionNode *tryParseAssignmentExpression() {
-        return tryParseAssignmentExpression(/*forbidIn=*/false);
-    }
-
     ArrayLiteralNode *tryParseArrayLiteral();
     ObjectLiteralNode *tryParseObjectLiteral();
     FunctionExpressionNode *tryParseFunction();
+    void parseFunctionBody(SourceElementList &body);
 
-    void parseArguments(NewExpressionNode::ExpressionList &list);
+    void parseArguments(ExpressionList &list);
 
     // Push back token.
 
     void pushBackAutomaticSemicolon();
+    void pushBackLastToken();
 
     // Read next token.
 

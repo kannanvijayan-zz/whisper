@@ -48,7 +48,7 @@
     _(GreaterThanExpression)                \
     _(LessEqualExpression)                  \
     _(GreaterEqualExpression)               \
-    _(InstanceofExpression)                 \
+    _(InstanceOfExpression)                 \
     _(InExpression)                         \
     _(EqualExpression)                      \
     _(NotEqualExpression)                   \
@@ -64,13 +64,13 @@
     _(ConditionalExpression)                \
     /* Assignment Expressions. */           \
     _(AssignExpression)                     \
-    _(PlusAssignExpression)                 \
-    _(MinusAssignExpression)                \
-    _(StarAssignExpression)                 \
-    _(PercentAssignExpression)              \
-    _(ShiftLeftAssignExpression)            \
-    _(ShiftRightAssignExpression)           \
-    _(ShiftUnsignedRightAssignExpression)   \
+    _(AddAssignExpression)                  \
+    _(SubtractAssignExpression)             \
+    _(MultiplyAssignExpression)             \
+    _(ModuloAssignExpression)               \
+    _(LeftShiftAssignExpression)            \
+    _(RightShiftAssignExpression)           \
+    _(UnsignedRightShiftAssignExpression)   \
     _(BitAndAssignExpression)               \
     _(BitOrAssignExpression)                \
     _(BitXorAssignExpression)               \

@@ -5,9 +5,20 @@
 #include "parser/code_source.hpp"
 #include "parser/tokenizer.hpp"
 #include "parser/syntax_tree.hpp"
+#include "parser/syntax_tree_inlines.hpp"
 #include "parser/parser.hpp"
 
 using namespace Whisper;
+
+struct Printer {
+    void operator ()(const char *s) {
+        std::cerr << s;
+    }
+    void operator ()(const uint8_t *s, uint32_t len) {
+        for (size_t i = 0; i < len; i++)
+            std::cerr << static_cast<char>(s[i]);
+    }
+};
 
 int main(int argc, char **argv) {
     std::cout << "Whisper says hello." << std::endl;
@@ -26,7 +37,13 @@ int main(int argc, char **argv) {
     }
     BumpAllocator allocator;
     STLBumpAllocator<uint8_t> wrappedAllocator(allocator);
+    InitializeKeywordTable();
     Tokenizer tokenizer(wrappedAllocator, inputFile);
+    Parser parser(tokenizer);
+    ProgramNode *program = parser.parseProgram();
+
+    Printer pr;
+    PrintNode(tokenizer.source(), program, pr, 0);
 
     return 0;
 }

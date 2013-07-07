@@ -17,6 +17,8 @@ enum NodeType : uint8_t
     LIMIT
 };
 
+const char *NodeTypeString(NodeType nodeType);
+
 //
 // Base syntax element.
 //
@@ -48,6 +50,10 @@ class BaseNode
     WHISPER_DEFN_SYNTAX_NODES(DEF_CHECK_)
 #undef DEF_CHECK_
 };
+
+template <typename Printer>
+void PrintNode(const CodeSource &source, const BaseNode *node, Printer printer,
+               int tabDepth);
 
 inline constexpr bool
 IsValidAssignmentExpressionType(NodeType type)
@@ -103,10 +109,15 @@ class VariableDeclaration
     inline const IdentifierNameToken &name() const {
         return name_;
     }
-    inline ExpressionNode *initaliser() const {
+    inline ExpressionNode *initialiser() const {
         return initialiser_;
     }
 };
+
+typedef BaseNode::List<ExpressionNode *> ExpressionList;
+typedef BaseNode::List<StatementNode *> StatementList;
+typedef BaseNode::List<SourceElementNode *> SourceElementList;
+typedef BaseNode::List<VariableDeclaration> DeclarationList;
 
 ///////////////////
 //               //
@@ -262,9 +273,6 @@ class RegularExpressionLiteralNode : public LiteralExpressionNode
 //
 class ArrayLiteralNode : public LiteralExpressionNode
 {
-  public:
-    typedef List<ExpressionNode *> ExpressionList;
-
   private:
     ExpressionList elements_;
 
@@ -285,56 +293,76 @@ class ArrayLiteralNode : public LiteralExpressionNode
 class ObjectLiteralNode : public LiteralExpressionNode
 {
   public:
-    typedef OneOf<IdentifierNameToken, StringLiteralToken, NumericLiteralToken>
-            PropertyName;
+    enum SlotKind { Value, Getter, Setter };
 
-    class SlotDefinition
+    class PropertyDefinition
     {
       private:
-        PropertyName name_;
-        ExpressionNode *value_;
+        SlotKind kind_;
+        Token name_;
 
       public:
-        SlotDefinition(const IdentifierNameToken &name, ExpressionNode *value)
-          : name_(PropertyName::Make<0>(name)),
-            value_(value)
-        {}
+        PropertyDefinition(SlotKind kind, const Token &name)
+          : kind_(kind), name_(name)
+        {
+            WH_ASSERT(name_.isIdentifierName() ||
+                      name_.isStringLiteral() ||
+                      name_.isNumericLiteral());
+        }
 
-        SlotDefinition(const StringLiteralToken &name, ExpressionNode *value)
-          : name_(PropertyName::Make<1>(name)),
-            value_(value)
-        {}
+        inline SlotKind kind() const {
+            return kind_;
+        }
 
-        SlotDefinition(const NumericLiteralToken &name, ExpressionNode *value)
-          : name_(PropertyName::Make<2>(name)),
-            value_(value)
-        {}
+        inline bool isValueSlot() const {
+            return kind_ == Value;
+        }
+
+        inline bool isGetterSlot() const {
+            return kind_ == Getter;
+        }
+
+        inline bool isSetterSlot() const {
+            return kind_ == Setter;
+        }
 
         inline bool hasIdentifierName() const {
-            return name_.isNth(0);
+            return name_.isIdentifierName();
         }
 
         inline bool hasStringName() const {
-            return name_.isNth(1);
+            return name_.isStringLiteral();
         }
 
         inline bool hasNumericName() const {
-            return name_.isNth(2);
+            return name_.isNumericLiteral();
         }
 
         inline const IdentifierNameToken &identifierName() const {
             WH_ASSERT(hasIdentifierName());
-            return name_.nthValue<0>();
+            return reinterpret_cast<const IdentifierNameToken &>(name_);
         }
 
         inline const StringLiteralToken &stringName() const {
             WH_ASSERT(hasStringName());
-            return name_.nthValue<1>();
+            return reinterpret_cast<const StringLiteralToken &>(name_);
         }
 
         inline const NumericLiteralToken &numericName() const {
             WH_ASSERT(hasNumericName());
-            return name_.nthValue<2>();
+            return reinterpret_cast<const NumericLiteralToken &>(name_);
+        }
+    };
+
+    class ValueDefinition : public PropertyDefinition
+    {
+      private:
+        ExpressionNode *value_;
+
+      public:
+        ValueDefinition(const Token &name, ExpressionNode *value)
+          : PropertyDefinition(Value, name), value_(value)
+        {
         }
 
         inline ExpressionNode *value() const {
@@ -342,58 +370,16 @@ class ObjectLiteralNode : public LiteralExpressionNode
         }
     };
 
-    class AccessorDefinition
+    class AccessorDefinition : public PropertyDefinition
     {
       protected:
-        PropertyName name_;
-        typedef BaseNode::List<SourceElementNode *> SourceElementList;
         SourceElementList body_;
 
       public:
-        AccessorDefinition(const IdentifierNameToken &name,
+        AccessorDefinition(SlotKind kind, const Token &name,
                            SourceElementList &&body)
-          : name_(PropertyName::Make<0>(name)),
-            body_(body)
+          : PropertyDefinition(kind, name), body_(body)
         {}
-
-        AccessorDefinition(const StringLiteralToken &name,
-                           SourceElementList &&body)
-          : name_(PropertyName::Make<1>(name)),
-            body_(body)
-        {}
-
-        AccessorDefinition(const NumericLiteralToken &name,
-                           SourceElementList &&body)
-          : name_(PropertyName::Make<2>(name)),
-            body_(body)
-        {}
-
-        inline bool hasIdentifierName() const {
-            return name_.isNth(0);
-        }
-
-        inline bool hasStringName() const {
-            return name_.isNth(1);
-        }
-
-        inline bool hasNumericName() const {
-            return name_.isNth(2);
-        }
-
-        inline const IdentifierNameToken &identifierName() const {
-            WH_ASSERT(hasIdentifierName());
-            return name_.nthValue<0>();
-        }
-
-        inline const StringLiteralToken &stringName() const {
-            WH_ASSERT(hasStringName());
-            return name_.nthValue<1>();
-        }
-
-        inline const NumericLiteralToken &numericName() const {
-            WH_ASSERT(hasNumericName());
-            return name_.nthValue<2>();
-        }
 
         inline const SourceElementList &body() const {
             return body_;
@@ -403,19 +389,8 @@ class ObjectLiteralNode : public LiteralExpressionNode
     class GetterDefinition : public AccessorDefinition
     {
       public:
-        GetterDefinition(const IdentifierNameToken &name,
-                         SourceElementList &&body)
-          : AccessorDefinition(name, std::move(body))
-        {}
-
-        GetterDefinition(const StringLiteralToken &name,
-                         SourceElementList &&body)
-          : AccessorDefinition(name, std::move(body))
-        {}
-
-        GetterDefinition(const NumericLiteralToken &name,
-                         SourceElementList &&body)
-          : AccessorDefinition(name, std::move(body))
+        GetterDefinition(const Token &name, SourceElementList &&body)
+          : AccessorDefinition(Getter, name, std::move(body))
         {}
     };
 
@@ -425,32 +400,15 @@ class ObjectLiteralNode : public LiteralExpressionNode
         IdentifierNameToken parameter_;
 
       public:
-        SetterDefinition(const IdentifierNameToken &name,
+        SetterDefinition(const Token &name,
                          const IdentifierNameToken &parameter,
                          SourceElementList &&body)
-          : AccessorDefinition(name, std::move(body)),
-            parameter_(parameter)
-        {}
-
-        SetterDefinition(const StringLiteralToken &name,
-                         const IdentifierNameToken &parameter,
-                         SourceElementList &&body)
-          : AccessorDefinition(name, std::move(body)),
-            parameter_(parameter)
-        {}
-
-        SetterDefinition(const NumericLiteralToken &name,
-                         const IdentifierNameToken &parameter,
-                         SourceElementList &&body)
-          : AccessorDefinition(name, std::move(body)),
+          : AccessorDefinition(Setter, name, std::move(body)),
             parameter_(parameter)
         {}
     };
 
-    typedef OneOf<SlotDefinition, GetterDefinition, SetterDefinition>
-            PropertyDefinition;
-
-    typedef List<PropertyDefinition> PropertyDefinitionList;
+    typedef List<PropertyDefinition *> PropertyDefinitionList;
 
   private:
     PropertyDefinitionList propertyDefinitions_;
@@ -492,7 +450,6 @@ class FunctionExpressionNode : public ExpressionNode
 {
   public:
     typedef BaseNode::List<IdentifierNameToken> FormalParameterList;
-    typedef BaseNode::List<SourceElementNode *> SourceElementList;
 
   private:
     Maybe<IdentifierNameToken> name_;
@@ -587,9 +544,6 @@ class GetPropertyExpressionNode : public ExpressionNode
 //
 class NewExpressionNode : public ExpressionNode
 {
-  public:
-    typedef List<ExpressionNode *> ExpressionList;
-
   private:
     ExpressionNode *constructor_;
     ExpressionList arguments_;
@@ -615,9 +569,6 @@ class NewExpressionNode : public ExpressionNode
 //
 class CallExpressionNode : public ExpressionNode
 {
-  public:
-    typedef List<ExpressionNode *> ExpressionList;
-
   private:
     ExpressionNode *function_;
     ExpressionList arguments_;
@@ -711,7 +662,7 @@ class BinaryExpressionNode : public ExpressionNode
                   TYPE == GreaterThanExpression ||
                   TYPE == LessEqualExpression ||
                   TYPE == GreaterEqualExpression ||
-                  TYPE == InstanceofExpression ||
+                  TYPE == InstanceOfExpression ||
                   TYPE == InExpression ||
                   TYPE == EqualExpression ||
                   TYPE == NotEqualExpression ||
@@ -768,8 +719,8 @@ typedef BinaryExpressionNode<LessEqualExpression>
         LessEqualExpressionNode;
 typedef BinaryExpressionNode<GreaterEqualExpression>
         GreaterEqualExpressionNode;
-typedef BinaryExpressionNode<InstanceofExpression>
-        InstanceofExpressionNode;
+typedef BinaryExpressionNode<InstanceOfExpression>
+        InstanceOfExpressionNode;
 typedef BinaryExpressionNode<InExpression>
         InExpressionNode;
 typedef BinaryExpressionNode<EqualExpression>
@@ -863,20 +814,20 @@ class BaseAssignExpressionNode : public AssignmentExpressionNode
 };
 typedef BaseAssignExpressionNode<AssignExpression>
         AssignExpressionNode;
-typedef BaseAssignExpressionNode<PlusAssignExpression>
-        PlusAssignExpressionNode;
-typedef BaseAssignExpressionNode<MinusAssignExpression>
-        MinusAssignExpressionNode;
-typedef BaseAssignExpressionNode<StarAssignExpression>
-        StarAssignExpressionNode;
-typedef BaseAssignExpressionNode<PercentAssignExpression>
-        PercentAssignExpressionNode;
-typedef BaseAssignExpressionNode<ShiftLeftAssignExpression>
-        ShiftLeftAssignExpressionNode;
-typedef BaseAssignExpressionNode<ShiftRightAssignExpression>
-        ShiftRightAssignExpressionNode;
-typedef BaseAssignExpressionNode<ShiftUnsignedRightAssignExpression>
-        ShiftUnsignedRightAssignExpressionNode;
+typedef BaseAssignExpressionNode<AddAssignExpression>
+        AddAssignExpressionNode;
+typedef BaseAssignExpressionNode<SubtractAssignExpression>
+        SubtractAssignExpressionNode;
+typedef BaseAssignExpressionNode<MultiplyAssignExpression>
+        MultiplyAssignExpressionNode;
+typedef BaseAssignExpressionNode<ModuloAssignExpression>
+        ModuloAssignExpressionNode;
+typedef BaseAssignExpressionNode<LeftShiftAssignExpression>
+        LeftShiftAssignExpressionNode;
+typedef BaseAssignExpressionNode<RightShiftAssignExpression>
+        RightShiftAssignExpressionNode;
+typedef BaseAssignExpressionNode<UnsignedRightShiftAssignExpression>
+        UnsignedRightShiftAssignExpressionNode;
 typedef BaseAssignExpressionNode<BitAndAssignExpression>
         BitAndAssignExpressionNode;
 typedef BaseAssignExpressionNode<BitOrAssignExpression>
@@ -898,9 +849,6 @@ typedef BaseAssignExpressionNode<DivideAssignExpression>
 //
 class BlockNode : public StatementNode
 {
-  public:
-    typedef List<SourceElementNode *> SourceElementList;
-
   private:
     SourceElementList sourceElements_;
 
@@ -920,9 +868,6 @@ class BlockNode : public StatementNode
 //
 class VariableStatementNode : public StatementNode
 {
-  public:
-    typedef List<VariableDeclaration> DeclarationList;
-
   private:
     DeclarationList declarations_;
 
@@ -1105,7 +1050,6 @@ class ForLoopStatementNode : public IterationStatementNode
 class ForLoopVarStatementNode : public IterationStatementNode
 {
   private:
-    typedef List<VariableDeclaration> DeclarationList;
     DeclarationList initial_;
     ExpressionNode *condition_;
     ExpressionNode *update_;
@@ -1149,22 +1093,22 @@ class ForLoopVarStatementNode : public IterationStatementNode
 class ForInStatementNode : public IterationStatementNode
 {
   private:
-    IdentifierNameToken name_;
+    ExpressionNode *lhs_;
     ExpressionNode *object_;
     StatementNode *body_;
 
   public:
-    ForInStatementNode(const IdentifierNameToken &name,
+    ForInStatementNode(ExpressionNode *lhs,
                        ExpressionNode *object,
                        StatementNode *body)
       : IterationStatementNode(ForInStatement),
-        name_(name),
+        lhs_(lhs),
         object_(object),
         body_(body)
     {}
 
-    inline const IdentifierNameToken &name() const {
-        return name_;
+    inline ExpressionNode *lhs() const {
+        return lhs_;
     }
 
     inline ExpressionNode *object() const {
@@ -1228,7 +1172,7 @@ class ContinueStatementNode : public StatementNode
         label_(label)
     {}
 
-    inline const Maybe<IdentifierNameToken> &label() {
+    inline const Maybe<IdentifierNameToken> &label() const {
         return label_;
     }
 };
@@ -1252,7 +1196,7 @@ class BreakStatementNode : public StatementNode
         label_(label)
     {}
 
-    inline const Maybe<IdentifierNameToken> &label() {
+    inline const Maybe<IdentifierNameToken> &label() const {
         return label_;
     }
 };
@@ -1308,8 +1252,6 @@ class WithStatementNode : public StatementNode
 class SwitchStatementNode : public StatementNode
 {
   public:
-    typedef List<StatementNode *> StatementList;
-
     class CaseClause
     {
       private:
@@ -1562,9 +1504,6 @@ class FunctionDeclarationNode : public SourceElementNode
 //
 class ProgramNode : public BaseNode
 {
-  public:
-    typedef List<SourceElementNode *> SourceElementList;
-
   private:
     SourceElementList sourceElements_;
 
@@ -1578,6 +1517,7 @@ class ProgramNode : public BaseNode
         return sourceElements_;
     }
 };
+
 
 /////////////////////////////
 //                         //
@@ -1596,6 +1536,29 @@ class ProgramNode : public BaseNode
     }
     WHISPER_DEFN_SYNTAX_NODES(DEF_CAST_)
 #undef DEF_CAST_
+
+inline FunctionExpressionNode *MaybeToNamedFunction(BaseNode *node)
+{
+    FunctionExpressionNode *fun = nullptr;
+    if (node->isFunctionExpression()) {
+        fun = ToFunctionExpression(fun);
+    } else if (node->isExpressionStatement()) {
+        ExpressionStatementNode *exprStmt = ToExpressionStatement(node);
+        if (exprStmt->expression()->isFunctionExpression())
+            fun = ToFunctionExpression(exprStmt->expression());
+    }
+
+    if (fun && fun->name())
+        return fun;
+
+    return nullptr;
+}
+
+inline bool IsLeftHandSideExpression(BaseNode *node)
+{
+    return node->isIdentifier() || node->isGetElementExpression() ||
+           node->isGetPropertyExpression();
+}
 
 
 } // namespace AST
