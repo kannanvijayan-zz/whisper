@@ -46,13 +46,12 @@ static constexpr unsigned KEYWORD_TABLE_SIZE = 0
 static KeywordTableEntry KEYWORD_TABLE[KEYWORD_TABLE_SIZE];
 static bool KEYWORD_TABLE_INITIALIZED = false;
 
-// Array storing ofsets into keyword table for keywords of length 3-7
-// Sections: 2,3,4,5,6,7,8+
-// Total 7 sections.
-// Extra (8th) terminal section points to end of table.
-static unsigned KEYWORD_TABLE_SECTIONS[8];
-static constexpr unsigned KEYWORD_TABLE_SECTION_LAST = 6;
+// Array storing ofsets into keyword table for keywords of particular
+// lengths.  Max keyword length is 10.  There are 12 entries in the
+// array to allow for a "zero" entry for length 0, and
+// "final" entry that points to the end of the keyword list.
 static constexpr unsigned KEYWORD_MAX_LENGTH = 10;
+static unsigned KEYWORD_TABLE_SECTIONS[KEYWORD_MAX_LENGTH+2];
 
 static uint32_t
 ComputeLastBytesPacked(const char *str, uint8_t length)
@@ -74,6 +73,18 @@ ComputeLastBytesPacked(const char *str, uint8_t length)
          | (static_cast<uint32_t>(str[1]) << 16)
          | (static_cast<uint32_t>(str[2]) << 8)
          | (static_cast<uint32_t>(str[3]) << 0);
+}
+
+unsigned InitializeKeywordSection(unsigned len, unsigned start)
+{
+    for (unsigned i = start; i < KEYWORD_TABLE_SIZE; i++) {
+        if (KEYWORD_TABLE[i].length >= len) {
+            KEYWORD_TABLE_SECTIONS[len] = i;
+            return i;
+        }
+    }
+    WH_UNREACHABLE("Unreachable.");
+    return 0;
 }
 
 void InitializeKeywordTable()
@@ -100,52 +111,27 @@ void InitializeKeywordTable()
 #undef KW_ADDENT_
 
     // Sort the table for easy lookup.
-    // Sort methodology:
-    //  1. Keywords of length <= 7 are sorted by (length, priority)
-    //  2. Longer keywords are treated as having same length, but sorted
-    //     by priority.
+    // Keywords are sorted by (length, priority)
     struct Less {
         inline Less() {}
         inline bool operator ()(const KeywordTableEntry &a,
                                 const KeywordTableEntry &b)
         {
-            // Handle case where both enries are for keywords of length <= 7
-            if (a.length <= 7 && b.length <= 7) {
-                if (a.length < b.length)
-                    return true;
-                if (a.length > b.length)
-                    return false;
-                return a.priority < b.priority;
-            }
-
-            // Otherwise, if a.length <= 7, then b.length must be >7.
-            if (a.length <= 7)
+            if (a.length < b.length)
                 return true;
-
-            // Otherwise, both a and b keywords have length > 7
+            if (a.length > b.length)
+                return false;
             return a.priority < b.priority;
         }
     };
     std::sort(&KEYWORD_TABLE[0], &KEYWORD_TABLE[KEYWORD_TABLE_SIZE], Less());
 
     // Scan and store the section offests.
-    unsigned seclen = 2;
-    for (unsigned i = 0; i < KEYWORD_TABLE_SIZE; i++) {
-        unsigned kwlen = KEYWORD_TABLE[i].length;
-        if ((seclen <= 7 && kwlen == seclen) ||
-            (seclen == 8 && kwlen >= 8))
-        {
-            KEYWORD_TABLE_SECTIONS[seclen - 2] = i;
-            WH_ASSERT_IF(seclen == 2, KEYWORD_TABLE_SECTIONS[0] == 0);
-            WH_ASSERT_IF(seclen > 2,
-                         KEYWORD_TABLE_SECTIONS[seclen - 2] >
-                         KEYWORD_TABLE_SECTIONS[seclen - 3]);
-            seclen++;
-            if (seclen > 8)
-                break;
-        }
-    }
-    KEYWORD_TABLE_SECTIONS[7] = KEYWORD_TABLE_SIZE;
+    unsigned offset = 0;
+    for (unsigned i = 0; i < KEYWORD_MAX_LENGTH; i++)
+        offset = InitializeKeywordSection(i, offset);
+
+    KEYWORD_TABLE_SECTIONS[KEYWORD_MAX_LENGTH+1] = KEYWORD_TABLE_SIZE;
     KEYWORD_TABLE_INITIALIZED = true;
 }
 
@@ -696,12 +682,8 @@ Tokenizer::readIdentifier(unic_t firstChar)
     if (tokenLength < 2 || tokenLength > KEYWORD_MAX_LENGTH)
         return emitToken(Token::IdentifierName);
 
-    unsigned tableIdx = tokenLength - 2;
-    if (tableIdx > KEYWORD_TABLE_SECTION_LAST)
-        tableIdx = KEYWORD_TABLE_SECTION_LAST;
-
-    unsigned startIdx = KEYWORD_TABLE_SECTIONS[tableIdx];
-    unsigned endIdx = KEYWORD_TABLE_SECTIONS[tableIdx+1];
+    unsigned startIdx = KEYWORD_TABLE_SECTIONS[tokenLength];
+    unsigned endIdx = KEYWORD_TABLE_SECTIONS[tokenLength+1];
 
     // Check for keyword by scanning keyword table by length.
     for (unsigned i = startIdx; i < endIdx; i++) {
