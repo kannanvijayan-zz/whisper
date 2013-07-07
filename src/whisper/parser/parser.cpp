@@ -184,6 +184,7 @@ Parser::parseVariableStatement()
     for (;;) {
         // Always parse a VariableDeclaration
         VariableDeclaration decl = parseVariableDeclaration();
+        declarations.push_back(decl);
 
         const Token *tok = checkGetNextToken<Token::Comma, Token::Semicolon>();
         if (!tok) {
@@ -198,7 +199,6 @@ Parser::parseVariableStatement()
 
         WH_ASSERT(tok->isComma());
         tok->debug_markUsed();
-        declarations.push_back(decl);
     }
 
     return make<VariableStatementNode>(declarations);
@@ -214,6 +214,7 @@ Parser::parseVariableDeclaration()
 
     const Token &tok1 = nextToken();
     if (tok1.isAssign()) {
+        tok1.debug_markUsed();
         ExpressionNode *expr = tryParseExpression(Prec_Assignment,
                                                   /*expectSemicolon=*/true);
         if (!expr)

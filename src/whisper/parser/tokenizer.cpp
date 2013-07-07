@@ -85,6 +85,7 @@ void InitializeKeywordTable()
     // Later overwrite it with the actual packed last bytes of the keyword.
     unsigned idx = 0;
 #define KW_ADDENT_(tokId,name,prio) \
+    KEYWORD_TABLE[idx].token = Token::tokId; \
     KEYWORD_TABLE[idx].keywordString = name; \
     KEYWORD_TABLE[idx].priority = prio; \
     KEYWORD_TABLE[idx].length = strlen(name); \
