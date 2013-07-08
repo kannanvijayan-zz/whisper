@@ -832,7 +832,7 @@ PrintDoWhileStatement(const CodeSource &src, const DoWhileStatementNode *node,
                       Printer pr, int tabDepth)
 {
     pr("do\n");
-    PrintTabDepth(tabDepth, pr);
+    PrintTabDepth(tabDepth+1, pr);
     PrintNode(src, node->body(), pr, tabDepth+1);
     pr("while (");
     PrintNode(src, node->condition(), pr, tabDepth+1);
@@ -846,8 +846,8 @@ PrintWhileStatement(const CodeSource &src, const WhileStatementNode *node,
 {
     pr("while (");
     PrintNode(src, node->condition(), pr, tabDepth+1);
-    pr(") {\n");
-    PrintTabDepth(tabDepth, pr);
+    pr(")\n");
+    PrintTabDepth(tabDepth+1, pr);
     PrintNode(src, node->body(), pr, tabDepth+1);
 }
 
@@ -865,8 +865,8 @@ PrintForLoopStatement(const CodeSource &src, const ForLoopStatementNode *node,
     pr("; ");
     if (node->update())
         PrintNode(src, node->update(), pr, tabDepth+1);
-    pr(") {\n");
-    PrintTabDepth(tabDepth, pr);
+    pr(")\n");
+    PrintTabDepth(tabDepth+1, pr);
     PrintNode(src, node->body(), pr, tabDepth+1);
 }
 
@@ -884,8 +884,8 @@ PrintForLoopVarStatement(const CodeSource &src,
     pr("; ");
     if (node->update())
         PrintNode(src, node->update(), pr, tabDepth+1);
-    pr(") {\n");
-    PrintTabDepth(tabDepth, pr);
+    pr(")\n");
+    PrintTabDepth(tabDepth+1, pr);
     PrintNode(src, node->body(), pr, tabDepth+1);
 }
 
@@ -898,8 +898,8 @@ PrintForInStatement(const CodeSource &src, const ForInStatementNode *node,
     PrintNode(src, node->lhs(), pr, tabDepth);
     pr(" in ");
     PrintNode(src, node->object(), pr, tabDepth);
-    pr(") {\n");
-    PrintTabDepth(tabDepth, pr);
+    pr(")\n");
+    PrintTabDepth(tabDepth+1, pr);
     PrintNode(src, node->body(), pr, tabDepth+1);
 }
 
@@ -909,12 +909,12 @@ PrintForInVarStatement(const CodeSource &src,
                        const ForInVarStatementNode *node,
                        Printer pr, int tabDepth)
 {
-    pr("for (");
+    pr("for (var ");
     PrintToken(src, node->name(), pr);
     pr(" in ");
     PrintNode(src, node->object(), pr, tabDepth);
-    pr(") {\n");
-    PrintTabDepth(tabDepth, pr);
+    pr(")\n");
+    PrintTabDepth(tabDepth+1, pr);
     PrintNode(src, node->body(), pr, tabDepth+1);
 }
 
@@ -1078,6 +1078,7 @@ PrintFunctionDeclaration(const CodeSource &src,
                          const FunctionDeclarationNode *node,
                          Printer pr, int tabDepth)
 {
+    pr("DECL:");
     PrintNode(src, node->func(), pr, tabDepth);
     pr("\n");
 }
