@@ -160,10 +160,22 @@ class Parser
         return (type == T1) || TestTokenType<T2, TS...>(type);
     }
 
+    template <Token::Type TYPE>
+    inline static bool ContainsKeywordType() {
+        return Token::IsKeywordType(TYPE);
+    }
+    template <Token::Type T1, Token::Type T2, Token::Type... TS>
+    inline static bool ContainsKeywordType() {
+        return Token::IsKeywordType(T1) ||
+               ContainsKeywordType<T2, TS...>();
+    }
+
     template <Token::Type... TYPES>
     inline const Token *checkGetNextToken(Tokenizer::InputElementKind kind,
                                           bool checkKw)
     {
+        WH_ASSERT_IF(!checkKw, !ContainsKeywordType<TYPES...>());
+
         const Token &tok = nextToken(kind, checkKw);
         if (TestTokenType<TYPES...>(tok.type()))
             return &tok;

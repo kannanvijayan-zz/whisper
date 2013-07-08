@@ -286,17 +286,17 @@ Parser::parseForStatement()
     bool isInitVarDecl = false;
     bool isEmptyVarDecl = false;
     bool isEmptyLastVarDecl = false;
-    if (checkNextToken<Token::VarKeyword>()) {
+    if (checkNextKeywordToken<Token::VarKeyword>()) {
         const Token *tok1 = checkGetNextToken<Token::IdentifierName>();
         if (!tok1)
             emitError("Invalid var declaration in for-loop clause.");
 
         varName = IdentifierNameToken(*tok1);
 
-        const Token *tok2 = checkGetNextToken<Token::Assign,
-                                              Token::InKeyword,
-                                              Token::Comma,
-                                              Token::Semicolon>();
+        const Token *tok2 = checkGetNextKeywordToken<Token::Assign,
+                                                     Token::InKeyword,
+                                                     Token::Comma,
+                                                     Token::Semicolon>();
         if (!tok2)
             emitError("Invalid var declaration in for-loop clause.");
         tok2->debug_markUsed();
@@ -1418,8 +1418,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
         }
 
         // Assignment
-        if (tok2.isStarAssign() || tok2.isDivideAssign() ||
-            tok2.isPercentAssign() ||
+        if (tok2.isAssign() || tok2.isStarAssign() ||
+            tok2.isDivideAssign() || tok2.isPercentAssign() ||
             tok2.isPlusAssign() || tok2.isMinusAssign() ||
             tok2.isShiftLeftAssign() || tok2.isShiftRightAssign() || 
             tok2.isShiftUnsignedRightAssign() ||
@@ -1442,7 +1442,9 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
             if (!rhsExpr)
                 emitError("Could not parse assignment rhs.");
 
-            if (type == Token::StarAssign) {
+            if (type == Token::Assign) {
+                curExpr = make<AssignExpressionNode>(curExpr, rhsExpr);
+            } else if (type == Token::StarAssign) {
                 curExpr = make<MultiplyAssignExpressionNode>(curExpr, rhsExpr);
             } else if (type == Token::DivideAssign) {
                 curExpr = make<DivideAssignExpressionNode>(curExpr, rhsExpr);
@@ -1572,8 +1574,10 @@ Parser::tryParseObjectLiteral()
         if (!name)
             emitError("Expected property definition name.");
 
-        if (name->isCloseBrace())
+        if (name->isCloseBrace()) {
+            name->debug_markUsed();
             break;
+        }
 
         bool isGetter = false;
         bool isSetter = false;
@@ -1672,8 +1676,10 @@ Parser::tryParseObjectLiteral()
         if (!close)
             emitError("Expected ',' or '}' after object literal expression.");
 
-        if (close->isCloseBrace())
+        if (close->isCloseBrace()) {
+            close->debug_markUsed();
             break;
+        }
     }
 
     return make<ObjectLiteralNode>(props);
