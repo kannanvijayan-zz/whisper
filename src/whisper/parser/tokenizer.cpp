@@ -8,23 +8,6 @@
 namespace Whisper {
 
 
-const char *
-Token::TypeString(Type type)
-{
-    switch (type) {
-#define DEF_CASE_(tok) \
-      case tok: \
-        return #tok;
-      WHISPER_DEFN_TOKENS(DEF_CASE_)
-#undef DEF_CASE_
-      case INVALID:
-        return "INVALID";
-      case LIMIT:
-        return "INVALID_LIMIT";
-    }
-    return "INVALID_UNKNOWN";
-}
-
 //
 // KeywordTable implementation.
 // 
@@ -135,6 +118,94 @@ void InitializeKeywordTable()
     KEYWORD_TABLE_INITIALIZED = true;
 }
 
+Token::Type
+CheckKeywordTable(const uint8_t *text, unsigned length,
+                  uint32_t lastBytesPacked)
+{
+    WH_ASSERT(KEYWORD_TABLE_INITIALIZED);
+    WH_ASSERT(length >= 1);
+
+    // Single letter identifiers are common, and can't be keywords.
+    // Very long identifiers also can't be keywords
+    if (length < 2 || length > KEYWORD_MAX_LENGTH)
+        return Token::INVALID;
+
+    unsigned startIdx = KEYWORD_TABLE_SECTIONS[length];
+    unsigned endIdx = KEYWORD_TABLE_SECTIONS[length+1];
+
+    // Check for keyword by scanning keyword table by length.
+    for (unsigned i = startIdx; i < endIdx; i++) {
+        KeywordTableEntry &ent = KEYWORD_TABLE[i];
+        WH_ASSERT(ent.length == length);
+
+        if (ent.lastBytesPacked == lastBytesPacked) {
+            if (length <= 4)
+                return ent.token;
+
+            if (memcmp(ent.keywordString, text, length-4) == 0)
+                return ent.token;
+        }
+    }
+    return Token::INVALID;
+}
+
+Token::Type
+CheckKeywordTable(const uint8_t *text, unsigned length)
+{
+    WH_ASSERT(KEYWORD_TABLE_INITIALIZED);
+    WH_ASSERT(length >= 1);
+
+    // Single letter identifiers are common, and can't be keywords.
+    // Very long identifiers also can't be keywords
+    if (length < 2 || length > KEYWORD_MAX_LENGTH)
+        return Token::INVALID;
+
+    unsigned startIdx = KEYWORD_TABLE_SECTIONS[length];
+    unsigned endIdx = KEYWORD_TABLE_SECTIONS[length+1];
+
+    // Check for keyword by scanning keyword table by length.
+    for (unsigned i = startIdx; i < endIdx; i++) {
+        KeywordTableEntry &ent = KEYWORD_TABLE[i];
+        WH_ASSERT(ent.length == length);
+
+        if (memcmp(ent.keywordString, text, length) == 0)
+            return ent.token;
+    }
+    return Token::INVALID;
+}
+
+
+//
+// Token implementation.
+//
+
+const char *
+Token::TypeString(Type type)
+{
+    switch (type) {
+#define DEF_CASE_(tok) \
+      case tok: \
+        return #tok;
+      WHISPER_DEFN_TOKENS(DEF_CASE_)
+#undef DEF_CASE_
+      case INVALID:
+        return "INVALID";
+      case LIMIT:
+        return "INVALID_LIMIT";
+    }
+    return "INVALID_UNKNOWN";
+}
+
+void
+Token::maybeConvertKeyword(const CodeSource &src)
+{
+    WH_ASSERT(type_ == IdentifierName);
+    const uint8_t *data = text(src);
+    Token::Type type = CheckKeywordTable(data, length_);
+    if (type != INVALID)
+        type_ = type;
+}
+
 
 //
 // Tokenizer implementation.
@@ -191,6 +262,14 @@ Tokenizer::readToken(InputElementKind iek, bool checkKeywords)
         tok_.debug_clearPushedBack();
         tok_.debug_clearUsed();
         advancePastToken(tok_);
+
+        // If token was initially read 'checkKeywords=false', then
+        // pushed back, and is now being read again with 'checkKeywords=true',
+        // then we may need to conver the IdentifierName to a Keyword token.
+        if (checkKeywords && tok_.maybeKeyword()) {
+            WH_ASSERT(tok_.isIdentifierName());
+            tok_.maybeConvertKeyword(source_);
+        }
         return tok_;
     }
 
@@ -624,7 +703,7 @@ Tokenizer::readIdentifierName()
         unreadChar(ch);
         break;
     }
-    return emitToken(Token::IdentifierName);
+    return emitIdentifierName();
 }
 
 const Token &
@@ -671,39 +750,13 @@ Tokenizer::readIdentifier(unic_t firstChar)
         break;
     }
 
-    // Check for keyword.  Use the token length to search.
-    WH_ASSERT(KEYWORD_TABLE_INITIALIZED);
-
     unsigned tokenLength = stream_.cursor() - tokStart_;
-    WH_ASSERT(tokenLength >= 1);
+    Token::Type kwType = CheckKeywordTable(tokStart_, tokenLength,
+                                           lastBytesPacked);
+    if (kwType == Token::INVALID)
+        return emitIdentifier();
 
-    // Single letter identifiers are common, and can't be keywords.
-    // Very long identifiers also can't be keywords
-    if (tokenLength < 2 || tokenLength > KEYWORD_MAX_LENGTH)
-        return emitToken(Token::IdentifierName);
-
-    unsigned startIdx = KEYWORD_TABLE_SECTIONS[tokenLength];
-    unsigned endIdx = KEYWORD_TABLE_SECTIONS[tokenLength+1];
-
-    // Check for keyword by scanning keyword table by length.
-    for (unsigned i = startIdx; i < endIdx; i++) {
-        KeywordTableEntry &ent = KEYWORD_TABLE[i];
-        WH_ASSERT_IF(ent.length <= 7, ent.length == tokenLength);
-
-        if (ent.lastBytesPacked != lastBytesPacked)
-            continue;
-
-        if (ent.length <= 4)
-            return emitToken(ent.token);
-
-        if (ent.length <= 7 || ent.length == tokenLength) {
-            if (memcmp(ent.keywordString, tokStart_, tokenLength-4) == 0)
-                return emitToken(ent.token);
-        }
-    }
-
-    // No keywords matched.
-    return emitToken(Token::IdentifierName);
+    return emitToken(kwType);
 }
 
 void
@@ -888,7 +941,7 @@ Tokenizer::consumeStringEscapeSequence()
     }
 }
 
-inline const Token &
+const Token &
 Tokenizer::emitToken(Token::Type type)
 {
     WH_ASSERT(Token::IsValidType(type));

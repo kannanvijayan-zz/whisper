@@ -56,6 +56,7 @@ class Token
     uint32_t startLineOffset_ = 0;
     uint32_t endLine_ = 0;
     uint32_t endLineOffset_ = 0;
+    bool maybeKeyword_ = false;
 
     // Tokens returned from the tokenizer are actually references to
     // a repeatedly used token contained within the tokenizer.
@@ -109,6 +110,7 @@ class Token
         startLineOffset_ = other.startLineOffset_;
         endLine_ = other.endLine_;
         endLineOffset_ = other.endLineOffset_;
+        maybeKeyword_ = other.maybeKeyword_;
         debug_used_ = other.debug_used_;
         debug_pushedBack_ = other.debug_pushedBack_;
         other.debug_used_ = true;
@@ -146,6 +148,13 @@ class Token
         return endLineOffset_;
     }
 
+    inline bool maybeKeyword() const {
+        return maybeKeyword_;
+    }
+    inline void setMaybeKeyword(bool b) {
+        maybeKeyword_ = b;
+    }
+
     inline const uint8_t *text(const CodeSource &src) const {
         return src.data() + offset_;
     }
@@ -165,6 +174,8 @@ class Token
     inline bool isKeyword(bool strict) const {
         return strict ? IsKeywordType(type_) : IsStrictKeywordType(type_);
     }
+
+    void maybeConvertKeyword(const CodeSource &src);
 
     // explicitly mark this token as being used.
     // This is a no-op in production code.
@@ -396,7 +407,15 @@ class Tokenizer
     const Token &readStringLiteral(unic_t quoteChar);
     void consumeStringEscapeSequence();
 
-    inline const Token &emitToken(Token::Type type);
+    const Token &emitToken(Token::Type type);
+    inline const Token &emitIdentifierName() {
+        emitToken(Token::IdentifierName);
+        tok_.setMaybeKeyword(true);
+        return tok_;
+    }
+    inline const Token &emitIdentifier() {
+        return emitToken(Token::IdentifierName);
+    }
     const Token &emitError(const char *msg);
 
     static constexpr unic_t End = INT32_MAX;
