@@ -388,8 +388,8 @@ PrintLogicalNotExpression(const CodeSource &src,
 template <typename Printer>
 void
 PrintBinaryExpression(const CodeSource &src,
-                      const ExpressionNode *rhs,
                       const ExpressionNode *lhs,
+                      const ExpressionNode *rhs,
                       Printer pr, int tabDepth,
                       const char *op)
 {
@@ -409,7 +409,7 @@ PrintMultiplyExpression(const CodeSource &src,
                         Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "*");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "*");
 }
 
 template <typename Printer>
@@ -419,7 +419,7 @@ PrintDivideExpression(const CodeSource &src,
                       Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "/");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "/");
 }
 
 template <typename Printer>
@@ -429,7 +429,7 @@ PrintModuloExpression(const CodeSource &src,
                       Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "%");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "%");
 }
 
 template <typename Printer>
@@ -439,7 +439,7 @@ PrintAddExpression(const CodeSource &src,
                    Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "+");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "+");
 }
 
 template <typename Printer>
@@ -449,7 +449,7 @@ PrintSubtractExpression(const CodeSource &src,
                         Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "-");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "-");
 }
 
 template <typename Printer>
@@ -459,7 +459,7 @@ PrintLeftShiftExpression(const CodeSource &src,
                          Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "<<");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "<<");
 }
 
 template <typename Printer>
@@ -469,7 +469,7 @@ PrintRightShiftExpression(const CodeSource &src,
                           Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, ">>");
+        src, node->lhs(), node->rhs(), pr, tabDepth, ">>");
 }
 
 template <typename Printer>
@@ -479,7 +479,7 @@ PrintUnsignedRightShiftExpression(const CodeSource &src,
                                   Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, ">>>");
+        src, node->lhs(), node->rhs(), pr, tabDepth, ">>>");
 }
 
 template <typename Printer>
@@ -489,7 +489,7 @@ PrintLessThanExpression(const CodeSource &src,
                         Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "<");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "<");
 }
 
 template <typename Printer>
@@ -499,7 +499,7 @@ PrintGreaterThanExpression(const CodeSource &src,
                            Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, ">");
+        src, node->lhs(), node->rhs(), pr, tabDepth, ">");
 }
 
 template <typename Printer>
@@ -509,7 +509,7 @@ PrintLessEqualExpression(const CodeSource &src,
                          Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "<=");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "<=");
 }
 
 template <typename Printer>
@@ -519,7 +519,7 @@ PrintGreaterEqualExpression(const CodeSource &src,
                             Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, ">=");
+        src, node->lhs(), node->rhs(), pr, tabDepth, ">=");
 }
 
 template <typename Printer>
@@ -529,7 +529,7 @@ PrintInstanceOfExpression(const CodeSource &src,
                           Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "instanceof");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "instanceof");
 }
 
 template <typename Printer>
@@ -539,7 +539,7 @@ PrintInExpression(const CodeSource &src,
                   Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "in");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "in");
 }
 
 template <typename Printer>
@@ -549,7 +549,7 @@ PrintEqualExpression(const CodeSource &src,
                      Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "==");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "==");
 }
 
 template <typename Printer>
@@ -559,7 +559,7 @@ PrintNotEqualExpression(const CodeSource &src,
                         Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "!=");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "!=");
 }
 
 template <typename Printer>
@@ -569,17 +569,17 @@ PrintStrictEqualExpression(const CodeSource &src,
                            Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "===");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "===");
 }
 
 template <typename Printer>
 void
 PrintStrictNotEqualExpression(const CodeSource &src,
-            const StrictNotEqualExpressionNode *node,
-            Printer pr, int tabDepth)
+                              const StrictNotEqualExpressionNode *node,
+                              Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "!==");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "!==");
 }
 
 template <typename Printer>
@@ -589,7 +589,7 @@ PrintBitAndExpression(const CodeSource &src,
                       Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "&");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "&");
 }
 
 template <typename Printer>
@@ -599,7 +599,7 @@ PrintBitXorExpression(const CodeSource &src,
                       Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "^");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "^");
 }
 
 template <typename Printer>
@@ -609,7 +609,7 @@ PrintBitOrExpression(const CodeSource &src,
                      Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "|");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "|");
 }
 
 template <typename Printer>
@@ -619,7 +619,7 @@ PrintLogicalAndExpression(const CodeSource &src,
                           Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "&&");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "&&");
 }
 
 template <typename Printer>
@@ -629,7 +629,7 @@ PrintLogicalOrExpression(const CodeSource &src,
                          Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, "||");
+        src, node->lhs(), node->rhs(), pr, tabDepth, "||");
 }
 
 template <typename Printer>
@@ -638,7 +638,7 @@ PrintCommaExpression(const CodeSource &src, const CommaExpressionNode *node,
                      Printer pr, int tabDepth)
 {
     PrintBinaryExpression<Printer>(
-        src, node->rhs(), node->lhs(), pr, tabDepth, ",");
+        src, node->lhs(), node->rhs(), pr, tabDepth, ",");
 }
 
 template <typename Printer>
