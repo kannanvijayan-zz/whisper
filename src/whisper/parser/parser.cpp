@@ -225,7 +225,7 @@ Parser::parseVariableDeclaration()
 
     // If semicolon follows var, initializer is empty.
     if (tok1.isSemicolon()) {
-        tokenizer_.rewindToToken(tok1);
+        pushBackLastToken();
         return VariableDeclaration(IdentifierNameToken(name), nullptr);
     }
 
@@ -1694,6 +1694,7 @@ Parser::tryParseFunction()
 
     const Token &tok0 = nextToken(Tokenizer::InputElement_Div, true);
     if (tok0.isOpenParen()) {
+        tok0.debug_markUsed();
         // Do nothing.
     } else if (tok0.isIdentifierName()) {
         // Token following identifiern name must be '('
