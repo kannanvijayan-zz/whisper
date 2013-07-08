@@ -885,7 +885,7 @@ Tokenizer::readStringLiteral(unic_t quoteChar)
     for (;;) {
         unic_t ch = readNonEndChar();
 
-        if (ch == quoteChar);
+        if (ch == quoteChar)
             break;
 
         if (ch == '\\')
