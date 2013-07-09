@@ -101,6 +101,7 @@ class BumpAllocator
         pushNewChunk(newChunkSize);
         result = AlignPtrDown(allocTop_ - sz, BasicAlignment);
         WH_ASSERT(result >= allocBottom_ && result <= allocTop_);
+        allocTop_ = result;
         return result;
     }
 
