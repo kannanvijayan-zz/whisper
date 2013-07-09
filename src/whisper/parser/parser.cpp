@@ -1680,6 +1680,8 @@ Parser::tryParseObjectLiteral()
             close->debug_markUsed();
             break;
         }
+
+        close->debug_markUsed();
     }
 
     return make<ObjectLiteralNode>(props);
