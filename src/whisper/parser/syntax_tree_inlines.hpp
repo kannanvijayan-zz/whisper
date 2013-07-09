@@ -85,6 +85,18 @@ PrintDeclarationList(const CodeSource &src, const DeclarationList &decls,
 
 template <typename Printer>
 void
+PrintSourceElementList(const CodeSource &src, const SourceElementList &elems,
+                       Printer pr, int tabDepth)
+{
+    for (auto elem : elems) {
+        PrintTabDepth(tabDepth, pr);
+        PrintNode(src, elem, pr, tabDepth);
+        pr("\n");
+    }
+}
+
+template <typename Printer>
+void
 PrintThis(const CodeSource &src, const ThisNode *node, Printer pr,
           int tabDepth)
 {
@@ -159,19 +171,61 @@ PrintArrayLiteral(const CodeSource &src, const ArrayLiteralNode *node,
 
 template <typename Printer>
 void
+PrintObjectSlotName(const CodeSource &src,
+                    const ObjectLiteralNode::PropertyDefinition *defn,
+                    Printer pr)
+{
+    if (defn->hasIdentifierName())
+        pr("ID:");
+    else if (defn->hasStringName())
+        pr("STR:");
+    else if (defn->hasNumericName())
+        pr("NUM:");
+    PrintToken(src, defn->name(), pr);
+}
+
+template <typename Printer>
+void
 PrintObjectLiteral(const CodeSource &src, const ObjectLiteralNode *node,
                    Printer pr, int tabDepth)
 {
     pr("{");
-    pr("FIXME_OBJECT_LITERAL");
-    /*
     bool first = true;
-    for (auto propDef : node->propertyDefinitions()) {
+    for (auto propDefn : node->propertyDefinitions()) {
         if (!first)
             pr(", ");
-        pr("FIXME_PROP");
+        pr("\n");
+        first = false;
+        PrintTabDepth(tabDepth+1, pr);
+        if (propDefn->isValueSlot()) {
+            PrintObjectSlotName(src, propDefn, pr);
+            pr(" : ");
+            const ObjectLiteralNode::ValueDefinition *valDefn =
+                propDefn->toValueSlot();
+            PrintNode(src, valDefn->value(), pr, tabDepth+2);
+        } else {
+            const ObjectLiteralNode::AccessorDefinition *accDefn = nullptr;
+            if (propDefn->isGetterSlot()) {
+                pr("get ");
+                PrintObjectSlotName(src, propDefn, pr);
+                pr(" (");
+                accDefn = propDefn->toGetterSlot();
+            } else {
+                WH_ASSERT(propDefn->isSetterSlot());
+                pr("set ");
+                PrintObjectSlotName(src, propDefn, pr);
+                pr(" (");
+                PrintToken(src, propDefn->toSetterSlot()->parameter(), pr);
+                accDefn = propDefn->toSetterSlot();
+            }
+            pr(") {\n");
+            PrintSourceElementList(src, accDefn->body(), pr, tabDepth+2);
+            PrintTabDepth(tabDepth+1, pr);
+            pr("}");
+        }
     }
-    */
+    pr("\n");
+    PrintTabDepth(tabDepth, pr);
     pr("}");
 }
 
@@ -204,11 +258,7 @@ PrintFunctionExpression(const CodeSource &src,
         first = false;
     }
     pr(") {\n");
-    for (auto sourceElem : node->functionBody()) {
-        PrintTabDepth(tabDepth+1, pr);
-        PrintNode(src, sourceElem, pr, tabDepth + 1);
-        pr("\n");
-    }
+    PrintSourceElementList(src, node->functionBody(), pr, tabDepth+1);
     PrintTabDepth(tabDepth, pr);
     pr("}");
 }
@@ -770,11 +820,7 @@ PrintBlock(const CodeSource &src, const BlockNode *node, Printer pr,
            int tabDepth)
 {
     pr("{\n");
-    for (auto elem : node->sourceElements()) {
-        PrintTabDepth(tabDepth+1, pr);
-        PrintNode(src, elem, pr, tabDepth + 1);
-        pr("\n");
-    }
+    PrintSourceElementList(src, node->sourceElements(), pr, tabDepth+1);
     PrintTabDepth(tabDepth, pr);
     pr("}\n");
 }
@@ -1088,9 +1134,7 @@ void
 PrintProgram(const CodeSource &src, const ProgramNode *node,
              Printer pr, int tabDepth)
 {
-    for (auto sourceElem : node->sourceElements()) {
-        PrintNode(src, sourceElem, pr, tabDepth);
-    }
+    PrintSourceElementList(src, node->sourceElements(), pr, tabDepth);
 }
 
 

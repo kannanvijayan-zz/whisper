@@ -295,6 +295,10 @@ class ObjectLiteralNode : public LiteralExpressionNode
   public:
     enum SlotKind { Value, Getter, Setter };
 
+    class ValueDefinition;
+    class GetterDefinition;
+    class SetterDefinition;
+
     class PropertyDefinition
     {
       private:
@@ -318,12 +322,27 @@ class ObjectLiteralNode : public LiteralExpressionNode
             return kind_ == Value;
         }
 
+        inline const ValueDefinition *toValueSlot() const {
+            WH_ASSERT(isValueSlot());
+            return reinterpret_cast<const ValueDefinition *>(this);
+        }
+
         inline bool isGetterSlot() const {
             return kind_ == Getter;
         }
 
+        inline const GetterDefinition *toGetterSlot() const {
+            WH_ASSERT(isGetterSlot());
+            return reinterpret_cast<const GetterDefinition *>(this);
+        }
+
         inline bool isSetterSlot() const {
             return kind_ == Setter;
+        }
+
+        inline const SetterDefinition *toSetterSlot() const {
+            WH_ASSERT(isSetterSlot());
+            return reinterpret_cast<const SetterDefinition *>(this);
         }
 
         inline bool hasIdentifierName() const {
@@ -351,6 +370,10 @@ class ObjectLiteralNode : public LiteralExpressionNode
         inline const NumericLiteralToken &numericName() const {
             WH_ASSERT(hasNumericName());
             return reinterpret_cast<const NumericLiteralToken &>(name_);
+        }
+
+        inline const Token &name() const {
+            return name_;
         }
     };
 
@@ -406,6 +429,10 @@ class ObjectLiteralNode : public LiteralExpressionNode
           : AccessorDefinition(Setter, name, std::move(body)),
             parameter_(parameter)
         {}
+
+        const IdentifierNameToken &parameter() const {
+            return parameter_;
+        }
     };
 
     typedef List<PropertyDefinition *> PropertyDefinitionList;
