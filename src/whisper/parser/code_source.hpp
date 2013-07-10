@@ -67,6 +67,7 @@ class FileCodeSource : public CodeSource
 {
   private:
     int fd_ = -1;
+    const char *error_ = nullptr;
 
   public:
     inline FileCodeSource(const char *filename) : CodeSource(filename) {}
@@ -79,6 +80,13 @@ class FileCodeSource : public CodeSource
 
   public:
     bool initialize();
+    inline bool hasError() {
+        return error_;
+    }
+    inline const char *error() {
+        WH_ASSERT(hasError());
+        return error_;
+    }
 };
 
 //
