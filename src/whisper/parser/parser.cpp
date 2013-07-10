@@ -1244,8 +1244,10 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
         }
 
         // If 'in' is forbidden, but seen, terminate expression here.
-        if (forbidIn && tok2.isInKeyword())
+        if (forbidIn && tok2.isInKeyword()) {
+            tokenizer_.pushBackLastToken();
             break;
+        }
 
         // Relational
         if (tok2.isLessThan() || tok2.isLessEqual() ||
