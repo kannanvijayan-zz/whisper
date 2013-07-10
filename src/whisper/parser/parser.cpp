@@ -765,7 +765,8 @@ Parser::parseTryStatement()
         emitError("Error parsing try block.");
 
     const Token *nextTok = checkGetNextToken<Token::CatchKeyword,
-                                             Token::FinallyKeyword>();
+                                             Token::FinallyKeyword>(
+                                                        /*checkKw=*/true);
     if (!nextTok)
         emitError("Expected catch or finally block after try.");
 
@@ -803,7 +804,7 @@ Parser::parseTryStatement()
         emitError("Error parsing catch block.");
 
     BlockNode *finallyBlock = nullptr;
-    if (checkNextToken<Token::FinallyKeyword>()) {
+    if (checkNextToken<Token::FinallyKeyword>(/*checkKw=*/true)) {
         if (!checkNextToken<Token::OpenBrace>())
             emitError("Expected '{' for finally block.");
 
