@@ -121,7 +121,7 @@
     _(StaticStrictFutureWord)               \
     _(YieldStrictFutureWord)
 
-#define WHISPER_FIRST_KEYWORD_TOKEN             BreakKeyword
+#define WHISPER_FIRST_KEYWORD_TOKEN             NullLiteral
 #define WHISPER_LAST_KEYWORD_TOKEN              SuperFutureWord
 
 #define WHISPER_FIRST_STRICT_KEYWORD_TOKEN      BreakKeyword

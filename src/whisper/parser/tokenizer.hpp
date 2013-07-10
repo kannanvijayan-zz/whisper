@@ -175,7 +175,7 @@ class Token
         return strict ? IsKeywordType(type_) : IsStrictKeywordType(type_);
     }
 
-    void maybeConvertKeyword(const CodeSource &src);
+    void maybeConvertKeyword(const CodeSource &src, bool strict);
 
     // explicitly mark this token as being used.
     // This is a no-op in production code.

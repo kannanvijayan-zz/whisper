@@ -165,7 +165,14 @@ PrintArrayLiteral(const CodeSource &src, const ArrayLiteralNode *node,
                   Printer pr, int tabDepth)
 {
     pr("[");
-    PrintExpressionList(src, node->elements(), pr, tabDepth);
+    bool first = true;
+    for (auto expr : node->elements()) {
+        if (!first)
+            pr(", ");
+        if (expr)
+            PrintNode(src, expr, pr, tabDepth);
+        first = false;
+    }
     pr("]");
 }
 

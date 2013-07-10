@@ -111,7 +111,7 @@ void InitializeKeywordTable()
 
     // Scan and store the section offests.
     unsigned offset = 0;
-    for (unsigned i = 0; i < KEYWORD_MAX_LENGTH; i++)
+    for (unsigned i = 0; i <= KEYWORD_MAX_LENGTH; i++)
         offset = InitializeKeywordSection(i, offset);
 
     KEYWORD_TABLE_SECTIONS[KEYWORD_MAX_LENGTH+1] = KEYWORD_TABLE_SIZE;
@@ -120,7 +120,7 @@ void InitializeKeywordTable()
 
 Token::Type
 CheckKeywordTable(const uint8_t *text, unsigned length,
-                  uint32_t lastBytesPacked)
+                  uint32_t lastBytesPacked, bool strict)
 {
     WH_ASSERT(KEYWORD_TABLE_INITIALIZED);
     WH_ASSERT(length >= 1);
@@ -137,6 +137,9 @@ CheckKeywordTable(const uint8_t *text, unsigned length,
     for (unsigned i = startIdx; i < endIdx; i++) {
         KeywordTableEntry &ent = KEYWORD_TABLE[i];
         WH_ASSERT(ent.length == length);
+
+        if (!strict && ent.strictFutureReserved)
+            continue;
 
         if (ent.lastBytesPacked == lastBytesPacked) {
             if (length <= 4)
@@ -150,7 +153,7 @@ CheckKeywordTable(const uint8_t *text, unsigned length,
 }
 
 Token::Type
-CheckKeywordTable(const uint8_t *text, unsigned length)
+CheckKeywordTable(const uint8_t *text, unsigned length, bool strict)
 {
     WH_ASSERT(KEYWORD_TABLE_INITIALIZED);
     WH_ASSERT(length >= 1);
@@ -167,6 +170,9 @@ CheckKeywordTable(const uint8_t *text, unsigned length)
     for (unsigned i = startIdx; i < endIdx; i++) {
         KeywordTableEntry &ent = KEYWORD_TABLE[i];
         WH_ASSERT(ent.length == length);
+
+        if (!strict && ent.strictFutureReserved)
+            continue;
 
         if (memcmp(ent.keywordString, text, length) == 0)
             return ent.token;
@@ -197,13 +203,17 @@ Token::TypeString(Type type)
 }
 
 void
-Token::maybeConvertKeyword(const CodeSource &src)
+Token::maybeConvertKeyword(const CodeSource &src, bool strict)
 {
     WH_ASSERT(type_ == IdentifierName);
     const uint8_t *data = text(src);
-    Token::Type type = CheckKeywordTable(data, length_);
-    if (type != INVALID)
+    Token::Type type = CheckKeywordTable(data, length_, strict);
+    if (type != INVALID) {
+        WH_ASSERT(IsKeywordType(type));
         type_ = type;
+        // Now definitely a keyword.
+        maybeKeyword_ = false;
+    }
 }
 
 
@@ -268,7 +278,7 @@ Tokenizer::readToken(InputElementKind iek, bool checkKeywords)
         // then we may need to conver the IdentifierName to a Keyword token.
         if (checkKeywords && tok_.maybeKeyword()) {
             WH_ASSERT(tok_.isIdentifierName());
-            tok_.maybeConvertKeyword(source_);
+            tok_.maybeConvertKeyword(source_, strict_);
         }
         return tok_;
     }
@@ -752,7 +762,7 @@ Tokenizer::readIdentifier(unic_t firstChar)
 
     unsigned tokenLength = stream_.cursor() - tokStart_;
     Token::Type kwType = CheckKeywordTable(tokStart_, tokenLength,
-                                           lastBytesPacked);
+                                           lastBytesPacked, strict_);
     if (kwType == Token::INVALID)
         return emitIdentifier();
 

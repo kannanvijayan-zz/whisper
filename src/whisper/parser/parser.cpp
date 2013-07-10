@@ -311,7 +311,7 @@ Parser::parseForStatement()
             isEmptyLastVarDecl = true;
     }
 
-    // handle 'for..in'
+    // handle 'for..var..in'
     if (isForIn) {
         ExpressionNode *expr = tryParseExpression();
         if (!expr)
@@ -446,59 +446,68 @@ Parser::parseForStatement()
     ExpressionNode *condition = nullptr;
     ExpressionNode *update = nullptr;
 
-    // Parse initial expression in for loop.
+    ExpressionNode *inObject = nullptr;
+
+    // Parse initial expression in for loop, if not empty.
     if (!checkNextToken<Token::Semicolon>()) {
-        // Parse the init (now that we know it's not empty)
         init = tryParseExpression(/*forbidIn=*/true);
         if (!init)
             emitError("Invalid condition expression in for loop.");
 
         const Token *tok5 = checkGetNextToken<Token::Semicolon,
-                                              Token::InKeyword>();
-        if (!tok5) {
-            emitError("Expected semicolon or 'in' keyword after init in "
-                      "for loop.");
-        }
-        tok5->debug_markUsed();
+                                              Token::InKeyword>(true);
+        if (!tok5)
+            emitError("Expected ';' or 'in' keyword.");
 
         if (tok5->isInKeyword()) {
+            tok5->debug_markUsed();
+
             if (!IsLeftHandSideExpression(init))
                 emitError("Invalid left-hand side in for..in.");
-            
+
+            // Parse right-hand side of in expression.
+            inObject = tryParseExpression();
+            if (!inObject)
+                emitError("Could not parse rhs of 'in' in 'for-in' loop");
+
+            if (!checkNextToken<Token::CloseParen>())
+                emitError("Expected ')' after for-in clause.");
+        } else {
+            WH_ASSERT(tok5->isSemicolon());
+            tok5->debug_markUsed();
+        }
+    }
+
+    // Only parse remaining for-loop clauses if this is not a for-in loop.
+    if (!inObject) {
+        // Parse condition expression in for loop, if not empty.
+        if (!checkNextToken<Token::Semicolon>()) {
+            condition = tryParseExpression();
+            if (!condition)
+                emitError("Invalid condition expression in for loop.");
+
+            if (!checkNextToken<Token::Semicolon>())
+                emitError("Expected semicolon after condition in for loop.");
         }
 
-        // Expect semicolon.
-        if (!checkNextToken<Token::Semicolon>())
-            emitError("Expected semicolon after init in for loop.");
-    }
+        // Parse the update expression in for loop, if not empty.
+        if (!checkNextToken<Token::CloseParen>()) {
+            update = tryParseExpression();
+            if (!update)
+                emitError("Invalid update expression in for loop.");
 
-    // Parse condition expression in for loop.
-    if (!checkNextToken<Token::Semicolon>()) {
-        // Parse the condition (now that we know it's not empty)
-        condition = tryParseExpression();
-        if (!condition)
-            emitError("Invalid condition expression in for loop.");
-
-        // Expect semicolon.
-        if (!checkNextToken<Token::Semicolon>())
-            emitError("Expected semicolon after condition in for loop.");
-    }
-
-    // Parse the update expression in for loop.
-    if (!checkNextToken<Token::CloseParen>()) {
-        update = tryParseExpression();
-        if (!update)
-            emitError("Invalid update expression in for loop.");
-
-        // Expect semicolon.
-        if (!checkNextToken<Token::CloseParen>())
-            emitError("Expected close paren after condition in for loop.");
+            if (!checkNextToken<Token::CloseParen>())
+                emitError("Expected close paren after condition in for loop.");
+        }
     }
 
     // Parse the for-loop body.
     StatementNode *body = tryParseStatement();
     if (!body)
         emitError("Invalid for loop body.");
+
+    if (inObject)
+        return make<ForInStatementNode>(init, inObject, body);
 
     return make<ForLoopStatementNode>(init, condition, update, body);
 }
@@ -1160,7 +1169,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
             Token::Type type = tok2.type();
 
             // Parse next expression
-            ExpressionNode *nextExpr = tryParseExpression(forbidIn, Prec_Unary);
+            ExpressionNode *nextExpr = tryParseExpression(forbidIn, Prec_Unary,
+                                                          expectSemicolon);
             if (!nextExpr)
                 emitError("Could not parse multiplicative subexpression.");
 
@@ -1185,7 +1195,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
-                                                          Prec_Multiplicative);
+                                                          Prec_Multiplicative,
+                                                          expectSemicolon);
             if (!nextExpr)
                 emitError("Could not parse additive subexpression.");
 
@@ -1210,7 +1221,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
-                                                          Prec_Additive);
+                                                          Prec_Additive,
+                                                          expectSemicolon);
             if (!nextExpr)
                 emitError("Could not parse shift subexpression.");
 
@@ -1244,7 +1256,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
-                                                          Prec_Shift);
+                                                          Prec_Shift,
+                                                          expectSemicolon);
             if (!nextExpr)
                 emitError("Could not parse relational subexpression.");
 
@@ -1278,7 +1291,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
-                                                          Prec_Relational);
+                                                          Prec_Relational,
+                                                          expectSemicolon);
             if (!nextExpr)
                 emitError("Could not parse equality subexpression.");
 
@@ -1304,7 +1318,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
-                                                          Prec_Equality);
+                                                          Prec_Equality,
+                                                          expectSemicolon);
             if (!nextExpr)
                 emitError("Could not parse bitwise-and subexpression.");
 
@@ -1323,7 +1338,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
-                                                          Prec_BitwiseAnd);
+                                                          Prec_BitwiseAnd,
+                                                          expectSemicolon);
             if (!nextExpr)
                 emitError("Could not parse bitwise-xor subexpression.");
 
@@ -1342,7 +1358,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
-                                                          Prec_BitwiseXor);
+                                                          Prec_BitwiseXor,
+                                                          expectSemicolon);
             if (!nextExpr)
                 emitError("Could not parse bitwise-or subexpression.");
 
@@ -1361,7 +1378,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
-                                                          Prec_BitwiseOr);
+                                                          Prec_BitwiseOr,
+                                                          expectSemicolon);
             if (!nextExpr)
                 emitError("Could not parse logical-and subexpression.");
 
@@ -1380,7 +1398,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             // Parse next expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
-                                                          Prec_LogicalAnd);
+                                                          Prec_LogicalAnd,
+                                                          expectSemicolon);
             if (!nextExpr)
                 emitError("Could not parse logical-or subexpression.");
 
@@ -1408,7 +1427,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             // Parse false expression
             ExpressionNode *falseExpr = tryParseExpression(forbidIn,
-                                                           Prec_Assignment);
+                                                           Prec_Assignment,
+                                                           expectSemicolon);
             if (!falseExpr)
                 emitError("Could not parse conditional subexpression.");
 
@@ -1438,7 +1458,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             // Parse rhs expression
             ExpressionNode *rhsExpr = tryParseExpression(forbidIn,
-                                                         Prec_Assignment);
+                                                         Prec_Assignment,
+                                                         expectSemicolon);
             if (!rhsExpr)
                 emitError("Could not parse assignment rhs.");
 
@@ -1483,7 +1504,8 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             // Parse rhs expression
             ExpressionNode *nextExpr = tryParseExpression(forbidIn,
-                                                          Prec_Assignment);
+                                                          Prec_Assignment,
+                                                          expectSemicolon);
             if (!nextExpr)
                 emitError("Could not parse comma sub-expression.");
 
@@ -1532,26 +1554,33 @@ Parser::tryParseArrayLiteral()
     ExpressionList exprList(allocatorFor<ExpressionNode *>());
 
     for (;;) {
-        const Token *tok = checkGetNextToken<Token::Comma,
-                                             Token::CloseBracket>();
-        if (tok) {
-            tok->debug_markUsed();
-
-            if (tok->isComma()) {
-                // Elision.
-                exprList.push_back(nullptr);
-                continue;
-            }
-
-            WH_ASSERT(tok->isCloseBracket());
-            break;
+        // Handle any leading commas.
+        while (checkNextToken<Token::Comma>()) {
+            exprList.push_back(nullptr);
+            continue;
         }
+
+        if (checkNextToken<Token::CloseBracket>())
+            break;
 
         ExpressionNode *expr = tryParseExpression(Prec_Assignment);
         if (!expr)
             emitError("Expected expression in array literal.");
 
         exprList.push_back(expr);
+
+        const Token *tok = checkGetNextToken<Token::Comma,
+                                             Token::CloseBracket>();
+        if (!tok)
+            emitError("Expected ',' or ']' after array element.");
+
+        if (tok->isCloseBracket()) {
+            tok->debug_markUsed();
+            break;
+        }
+
+        WH_ASSERT(tok->isComma());
+        tok->debug_markUsed();
     }
 
     return make<ArrayLiteralNode>(exprList);
@@ -1711,32 +1740,34 @@ Parser::tryParseFunction()
     // Parse formal parameter list.
     FunctionExpressionNode::FormalParameterList params(
                             allocatorFor<IdentifierNameToken>());
-
-    // Check for immediate close paren.
-    const Token &tok1 = nextToken(Tokenizer::InputElement_Div, true);
-    if (tok1.isCloseParen()) {
-        tok1.debug_markUsed();
-
-    } else {
-        for (;;) {
-            if (tok1.isKeyword(strict_))
-                emitError("Function formal can't be a keyword.");
-            
-            if (!tok1.isIdentifierName())
-                emitError("Function formal argument expected.");
-
-            params.push_back(IdentifierNameToken(tok1));
-
-            const Token &tok2 = nextToken(Tokenizer::InputElement_Div, false);
-
-            if (tok2.isCloseParen()) {
-                tok2.debug_markUsed();
-                break;
-            }
-
-            if (!tok2.isComma())
-                emitError("Bad token following function formal argument.");
+    for (;;) {
+        // Check for immediate close paren.
+        const Token &tok1 = nextToken(Tokenizer::InputElement_Div, true);
+        if (tok1.isCloseParen()) {
+            tok1.debug_markUsed();
+            break;
         }
+
+        if (tok1.isKeyword(strict_))
+            emitError("Function formal can't be a keyword.");
+        
+        if (!tok1.isIdentifierName())
+            emitError("Function formal argument expected.");
+
+        params.push_back(IdentifierNameToken(tok1));
+
+        const Token *tok2 = checkGetNextToken<Token::Comma,
+                                              Token::CloseParen>();
+        if (!tok2)
+            emitError("Expected ',' or ')' after function formal parameter.");
+
+        if (tok2->isCloseParen()) {
+            tok2->debug_markUsed();
+            break;
+        }
+
+        WH_ASSERT(tok2->isComma());
+        tok2->debug_markUsed();
     }
 
     // Open brace must follow.
