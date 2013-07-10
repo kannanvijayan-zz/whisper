@@ -61,7 +61,7 @@ class Parser
 
   private:
     SourceElementNode *tryParseSourceElement();
-    StatementNode *tryParseStatement();
+    StatementNode *tryParseStatement(bool *isNamedFunction = nullptr);
 
     VariableStatementNode *parseVariableStatement();
     VariableDeclaration parseVariableDeclaration();
@@ -80,7 +80,8 @@ class Parser
     DebuggerStatementNode *parseDebuggerStatement();
     WithStatementNode *parseWithStatement();
 
-    ExpressionNode *tryParseExpressionStatement(bool &sawLabel);
+    ExpressionNode *tryParseExpressionStatement(bool *sawLabel,
+                                                bool *isNamedFunction);
     LabelledStatementNode *tryParseLabelledStatement(
                             const IdentifierNameToken &label);
 

@@ -1564,21 +1564,24 @@ class ProgramNode : public BaseNode
     WHISPER_DEFN_SYNTAX_NODES(DEF_CAST_)
 #undef DEF_CAST_
 
-inline FunctionExpressionNode *MaybeToNamedFunction(BaseNode *node)
+inline bool IsNamedFunction(ExpressionNode *node)
 {
-    FunctionExpressionNode *fun = nullptr;
-    if (node->isFunctionExpression()) {
-        fun = ToFunctionExpression(fun);
-    } else if (node->isExpressionStatement()) {
-        ExpressionStatementNode *exprStmt = ToExpressionStatement(node);
-        if (exprStmt->expression()->isFunctionExpression())
-            fun = ToFunctionExpression(exprStmt->expression());
-    }
+    if (!node->isFunctionExpression())
+        return false;
+    return ToFunctionExpression(node)->name() ? true : false;
+}
 
-    if (fun && fun->name())
-        return fun;
+inline FunctionExpressionNode *StatementToNamedFunction(StatementNode *node)
+{
+    WH_ASSERT(node->isExpressionStatement());
 
-    return nullptr;
+    ExpressionStatementNode *exprStmt = ToExpressionStatement(node);
+    WH_ASSERT(exprStmt->expression()->isFunctionExpression());
+
+    FunctionExpressionNode *fun = ToFunctionExpression(exprStmt->expression());
+    WH_ASSERT(fun->name());
+
+    return fun;
 }
 
 inline bool IsLeftHandSideExpression(BaseNode *node)

@@ -36,7 +36,8 @@ SourceElementNode *
 Parser::tryParseSourceElement()
 {
     // Try to parse a statement.
-    StatementNode *stmt = tryParseStatement();
+    bool sawNamedFunction = false;
+    StatementNode *stmt = tryParseStatement(&sawNamedFunction);
     if (!stmt) {
         if (checkNextToken<Token::CloseBrace, Token::End>()) {
             pushBackLastToken();
@@ -48,15 +49,14 @@ Parser::tryParseSourceElement()
     // If the statement is actually a ExpressionStatement, and
     // the ExpressionStatement is a FunctionExpression with
     // a non-empty name, treat the expression as a FunctionDeclaration.
-    FunctionExpressionNode *funExpr = MaybeToNamedFunction(stmt);
-    if (funExpr)
-        return make<FunctionDeclarationNode>(funExpr);
+    if (sawNamedFunction)
+        return make<FunctionDeclarationNode>(StatementToNamedFunction(stmt));
 
     return stmt;
 }
 
 StatementNode *
-Parser::tryParseStatement()
+Parser::tryParseStatement(bool *sawNamedFunction)
 {
     // Many statements begin with identifiable first tokens.
     const Token &tok0 = nextToken(Tokenizer::InputElement_Div, true);
@@ -162,8 +162,13 @@ Parser::tryParseStatement()
     // Expression statement.
     // Also indicates if a label-form was seen.
     bool sawLabel = false;
-    ExpressionNode *expr = tryParseExpressionStatement(sawLabel);
+    ExpressionNode *expr = tryParseExpressionStatement(&sawLabel,
+                                                       sawNamedFunction);
     WH_ASSERT_IF(sawLabel, expr && expr->isIdentifier());
+    WH_ASSERT_IF(sawNamedFunction && *sawNamedFunction,
+                 expr && expr->isFunctionExpression());
+    // Both sawLabel and sawNamedFunction can't be flagged at the same time.
+    WH_ASSERT_IF(sawNamedFunction, !(sawLabel && *sawNamedFunction));
 
     if (!sawLabel && expr)
         return make<ExpressionStatementNode>(expr);
@@ -888,9 +893,10 @@ Parser::parseDebuggerStatement()
 }
 
 ExpressionNode *
-Parser::tryParseExpressionStatement(bool &sawLabel)
+Parser::tryParseExpressionStatement(bool *sawLabel, bool *sawNamedFunction)
 {
-    WH_ASSERT(!sawLabel);
+    WH_ASSERT(sawLabel && !*sawLabel);
+    WH_ASSERT_IF(sawNamedFunction, !*sawNamedFunction);
 
     ExpressionNode *expr = tryParseExpression(/*forbidIn=*/false,
                                               /*prec=*/Prec_Comma,
@@ -898,13 +904,20 @@ Parser::tryParseExpressionStatement(bool &sawLabel)
     if (!expr)
         return nullptr;
 
+    // If this is standalone named function, it's actually a function
+    // declaration.  Return immediately.
+    if (sawNamedFunction && IsNamedFunction(expr)) {
+        *sawNamedFunction = true;
+        return expr;
+    }
+
     const Token &tok = nextToken();
 
     // If the expression is a raw identifier, and the following token
     // is a colon, then we are parsing a labelled statement.  Note that
     // for caller.
     if (expr->isIdentifier() && tok.isColon()) {
-        sawLabel = true;
+        *sawLabel = true;
         tok.debug_markUsed();
         return expr;
     }
@@ -1521,12 +1534,15 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
             continue;
         }
 
+        // Continuation token not recognized.  Finish expression parsing.
+        // Push back just-read token first.
+        pushBackLastToken();
+        
+
         // If not expecting a semicolon to terminate this expression,
         // just stop parsing here.
-        if (!expectSemicolon) {
-            pushBackLastToken();
+        if (!expectSemicolon)
             break;
-        }
 
         // At this point, any other operator is not an acceptable
         // continuation of the expression.
@@ -1534,13 +1550,12 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
         // to terminate the expression parsing.  Or, an implicit semicolon
         // may be assumed if a new line follows, or if this is the end of the
         // token stream.
-        if (tok2.isSemicolon()) {
-            pushBackLastToken();
+        if (tok2.isSemicolon())
             break;
-        }
 
-        if (tok2.isEnd() || tok2.startLine() > preOperatorLine) {
-            pushBackLastToken();
+        if (tok2.isEnd() || tok2.isCloseBrace() ||
+            tok2.startLine() > preOperatorLine)
+        {
             pushBackAutomaticSemicolon();
             break;
         }
