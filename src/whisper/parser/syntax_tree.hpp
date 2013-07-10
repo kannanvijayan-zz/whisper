@@ -1583,8 +1583,18 @@ inline FunctionExpressionNode *MaybeToNamedFunction(BaseNode *node)
 
 inline bool IsLeftHandSideExpression(BaseNode *node)
 {
-    return node->isIdentifier() || node->isGetElementExpression() ||
-           node->isGetPropertyExpression();
+    if (node->isIdentifier() || node->isGetElementExpression() ||
+        node->isGetPropertyExpression())
+    {
+        return true;
+    }
+
+    if (node->isParenthesizedExpression()) {
+        return IsLeftHandSideExpression(
+                    ToParenthesizedExpression(node)->subexpression());
+    }
+
+    return false;
 }
 
 

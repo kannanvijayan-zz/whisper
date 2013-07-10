@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
     if (!inputFile.initialize()) {
         std::cerr << "Could not open input file " << argv[1]
                   << " for reading." << std::endl;
+        std::cerr << inputFile.error() << std::endl;
         exit(1);
     }
     BumpAllocator allocator;
