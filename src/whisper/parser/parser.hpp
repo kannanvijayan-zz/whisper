@@ -102,6 +102,7 @@ class Parser
         Prec_Multiplicative,// *, /, %
         Prec_Unary,         // delete, void, typeof, ++, --, +, -, ~, !
         Prec_Postfix,       // ++, --
+        Prec_Call,
         Prec_Member
     };
 

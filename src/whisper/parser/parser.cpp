@@ -1127,9 +1127,13 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
             continue;
         }
 
-        // OpenParen: Call operation (precedence: Member)
+        // OpenParen: Call operation (precedence: Call)
         if (tok2.isOpenParen()) {
             // Parse arguments.
+            if (prec > Prec_Call) {
+                tokenizer_.pushBackLastToken();
+                break;
+            }
 
             ExpressionList args(allocatorFor<ExpressionNode *>());
             parseArguments(args);
