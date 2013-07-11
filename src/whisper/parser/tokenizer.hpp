@@ -16,6 +16,23 @@ namespace Whisper {
 
 
 //
+// KeywordTable
+//
+// Keeps an ordered table of keywords which can be used to do quick
+// lookups of identifiers which may be keywords.
+//
+void InitializeKeywordTable();
+
+
+//
+// QuickTokenTable
+//
+// Maps ascii characters to immediately-returnable tokens.
+//
+void InitializeQuickTokenTable();
+
+
+//
 // Token
 //
 // Represents a token.
@@ -234,15 +251,6 @@ class TypedToken : public Token
         WHISPER_DEFN_TOKENS(DEF_TYPEDEF_)
 #undef DEF_TYPEDEF_
 
-
-//
-// KeywordTable
-//
-// Keeps an ordered table of keywords which can be used to do quick
-// lookups of identifiers which may be keywords.
-//
-void InitializeKeywordTable();
-
 //
 // Tokenizer
 //
@@ -384,6 +392,7 @@ class Tokenizer
     }
 
   private:
+    // Token parsing.
     const Token &readWhitespace();
     const Token &readLineTerminatorSequence(unic_t ch);
     const Token &readMultiLineComment();
@@ -407,6 +416,7 @@ class Tokenizer
     const Token &readStringLiteral(unic_t quoteChar);
     void consumeStringEscapeSequence();
 
+    // Emit methods.
     const Token &emitToken(Token::Type type);
     inline const Token &emitIdentifierName() {
         emitToken(Token::IdentifierName);
@@ -418,9 +428,7 @@ class Tokenizer
     }
     const Token &emitError(const char *msg);
 
-    static constexpr unic_t End = INT32_MAX;
-    static constexpr unic_t Error = -1;
-
+    // Token tracking during parsing.
     inline void startToken() {
         tokStart_ = stream_.cursor();
         tokStartLine_ = line_;
@@ -432,6 +440,30 @@ class Tokenizer
         lineStart_ = stream_.cursor();
     }
 
+    // Character reading.
+    static constexpr unic_t End = INT32_MAX;
+    static constexpr unic_t NonAscii = -1;
+
+    inline unic_t readAsciiChar() {
+        if (stream_.atEnd())
+            return End;
+
+        uint8_t b = stream_.readByte();
+        if (b <= 0x7Fu)
+            return b;
+
+        return NonAscii;
+    }
+    inline unic_t readAsciiNonEndChar() {
+        if (stream_.atEnd())
+            emitError("Unexpected end of input.");
+
+        uint8_t b = stream_.readByte();
+        if (b <= 0x7Fu)
+            return b;
+
+        return NonAscii;
+    }
     inline unic_t readChar() {
         if (stream_.atEnd())
             return End;
@@ -451,6 +483,12 @@ class Tokenizer
     unic_t readCharSlow(unic_t firstByte);
     uint8_t readCharNextByte();
 
+    // Character un-reading.
+    inline void unreadAsciiChar(unic_t ch) {
+        WH_ASSERT(ch == NonAscii || ch == End || (ch >= 0 && ch <= 0x7f));
+        if (ch <= 0x7f)
+            stream_.rewindBy(1);
+    }
     inline void unreadChar(unic_t ch) {
         if (ch <= 0x7f)
             stream_.rewindBy(1);
@@ -459,6 +497,7 @@ class Tokenizer
     }
     void slowUnreadChar(unic_t ch);
 
+    // Helpers.
     inline void finishLineTerminator(unic_t ch) {
         if (ch == '\r') {
             unic_t ch2 = readChar();
@@ -467,7 +506,7 @@ class Tokenizer
         }
     }
 
-
+    // Character predicates.
     template <unic_t Char0>
     inline static bool CharIn(unic_t ch) {
         return ch == Char0;
@@ -488,10 +527,18 @@ class Tokenizer
     }
     static bool IsWhitespaceSlow(unic_t ch);
 
-    inline static bool IsLineTerminator(unic_t ch) {
-        return CharIn<'\r','\n'>(ch) || IsLineTerminatorSlow(ch);
+    inline static bool IsAsciiLineTerminator(unic_t ch) {
+        return CharIn<'\r','\n'>(ch);
     }
-    static bool IsLineTerminatorSlow(unic_t ch);
+    inline static bool IsNonAsciiLineTerminator(unic_t ch) {
+        static constexpr unic_t LS = 0x2028;
+        static constexpr unic_t PS = 0x2029;
+        WH_ASSERT(!(CharIn<'\r', '\n'>(ch)));
+        return CharIn<LS, PS>(ch);
+    }
+    inline static bool IsLineTerminator(unic_t ch) {
+        return IsAsciiLineTerminator(ch) || IsNonAsciiLineTerminator(ch);
+    }
 
     inline static bool IsAscii(unic_t ch) {
         return (ch <= 0x7f);

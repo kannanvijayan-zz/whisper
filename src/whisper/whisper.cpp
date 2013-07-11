@@ -39,6 +39,7 @@ int main(int argc, char **argv) {
     BumpAllocator allocator;
     STLBumpAllocator<uint8_t> wrappedAllocator(allocator);
     InitializeKeywordTable();
+    InitializeQuickTokenTable();
     Tokenizer tokenizer(wrappedAllocator, inputFile);
     Parser parser(tokenizer);
 

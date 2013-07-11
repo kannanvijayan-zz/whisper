@@ -182,6 +182,56 @@ CheckKeywordTable(const uint8_t *text, unsigned length, bool strict)
 
 
 //
+// QuickTokenTable implementation.
+//
+struct QuickTokenEntry
+{
+    Token::Type type;
+};
+
+
+static constexpr unsigned QUICK_TOKEN_TABLE_SIZE = 128;
+QuickTokenEntry QUICK_TOKEN_TABLE[QUICK_TOKEN_TABLE_SIZE];
+
+void
+SetQuickTokenTableEntry(char ch, Token::Type tokType)
+{
+    uint8_t idx = ch;
+    WH_ASSERT(idx < 128);
+    QUICK_TOKEN_TABLE[idx].type = tokType;
+}
+
+void
+InitializeQuickTokenTable()
+{
+    for (unsigned i = 0; i < QUICK_TOKEN_TABLE_SIZE; i++)
+        QUICK_TOKEN_TABLE[i].type = Token::INVALID;
+
+    // Initialize single-character token types.
+    SetQuickTokenTableEntry('~', Token::Tilde);
+    SetQuickTokenTableEntry('(', Token::OpenParen);
+    SetQuickTokenTableEntry(')', Token::CloseParen);
+    SetQuickTokenTableEntry('{', Token::OpenBrace);
+    SetQuickTokenTableEntry('}', Token::CloseBrace);
+    SetQuickTokenTableEntry('[', Token::OpenBracket);
+    SetQuickTokenTableEntry(']', Token::CloseBracket);
+    SetQuickTokenTableEntry(':', Token::Colon);
+    SetQuickTokenTableEntry(';', Token::Semicolon);
+    SetQuickTokenTableEntry(',', Token::Comma);
+    SetQuickTokenTableEntry('?', Token::Question);
+}
+
+Token::Type
+LookupQuickToken(unic_t ch)
+{
+    unsigned idx = ch;
+    if (idx >= 0 && idx <= QUICK_TOKEN_TABLE_SIZE)
+        return QUICK_TOKEN_TABLE[idx].type;
+    return Token::INVALID;
+}
+
+
+//
 // Token implementation.
 //
 
@@ -298,7 +348,10 @@ Tokenizer::readTokenImpl(InputElementKind iek, bool checkKeywords)
     // Start the next token.
     startToken();
 
-    unic_t ch = readChar();
+    unic_t ch = readAsciiChar();
+    Token::Type quickTokenType = LookupQuickToken(ch);
+    if (quickTokenType != Token::INVALID)
+        return emitToken(quickTokenType);
 
     // Whitespace, simple identifiers, numbers, and strings will be very
     // common.  Check for them first.
@@ -322,11 +375,6 @@ Tokenizer::readTokenImpl(InputElementKind iek, bool checkKeywords)
 
     // Next, check for punctuators, ordered from an intuitive sense
     // of most common to least common.
-    if (ch == '(')
-        return emitToken(Token::OpenParen);
-
-    if (ch == ')')
-        return emitToken(Token::CloseParen);
 
     if (ch == '.') {
         // Check for decimal literal.
@@ -336,9 +384,6 @@ Tokenizer::readTokenImpl(InputElementKind iek, bool checkKeywords)
         unreadChar(ch);
         return emitToken(Token::Dot);
     }
-
-    if (ch == ',')
-        return emitToken(Token::Comma);
 
     if (ch == '=') {
         unic_t ch2 = readChar();
@@ -484,21 +529,6 @@ Tokenizer::readTokenImpl(InputElementKind iek, bool checkKeywords)
         return readRegularExpressionLiteral(ch2);
     }
 
-    if (ch == '{')
-        return emitToken(Token::OpenBrace);
-
-    if (ch == '}')
-        return emitToken(Token::CloseBrace);
-
-    if (ch == '[')
-        return emitToken(Token::OpenBracket);
-
-    if (ch == ']')
-        return emitToken(Token::CloseBracket);
-
-    if (ch == ';')
-        return emitToken(Token::Semicolon);
-
     if (ch == '^') {
         unic_t ch2 = readChar();
         if (ch2 == '=')
@@ -519,22 +549,26 @@ Tokenizer::readTokenImpl(InputElementKind iek, bool checkKeywords)
 
     // Line terminators are probably more common the the following
     // three punctuators.
-    if (IsLineTerminator(ch))
+    if (IsAsciiLineTerminator(ch))
         return readLineTerminatorSequence(ch);
 
-    if (ch == '~')
-        return emitToken(Token::Tilde);
-
-    if (ch == '?')
-        return emitToken(Token::Question);
-
-    if (ch == ':')
-        return emitToken(Token::Colon);
-
-    // Handle unicode escapes and complex identifiers last.
     if (ch == '\\') {
         consumeUnicodeEscapeSequence();
         return readIdentifierName();
+    }
+
+    WH_ASSERT(!(CharIn<'(', ')', '[', ']', '{', '}', ',', ';'>(ch)));
+    WH_ASSERT(!(CharIn<'~', '?', ':'>(ch)));
+
+    // Handle unicode escapes and complex identifiers last.
+    if (ch == NonAscii) {
+        unreadAsciiChar(ch);
+        ch = readChar();
+    }
+
+    if (IsNonAsciiLineTerminator(ch)) {
+        startNewLine();
+        return emitToken(Token::LineTerminatorSequence);
     }
 
     if (IsComplexIdentifierStart(ch))
@@ -1029,7 +1063,8 @@ Tokenizer::readCharSlow(unic_t firstByte)
 
     // firstByte >= 1111-1100
     emitError("Invalid unicode character: firstByte > 0xFB.");
-    return Error;
+    WH_UNREACHABLE("Should have thrown before this.");
+    return NonAscii;
 }
 
 uint8_t
@@ -1091,15 +1126,6 @@ Tokenizer::IsWhitespaceSlow(unic_t ch)
     WH_ASSERT(!(CharIn<' ', '\t'>(ch)));
     return CharIn<FF, VT, NBSP, BOM>(ch) ||
            uc_is_general_category(ch, UC_SPACE_SEPARATOR);
-}
-
-/* static */ bool
-Tokenizer::IsLineTerminatorSlow(unic_t ch)
-{
-    static constexpr unic_t LS = 0x2028;
-    static constexpr unic_t PS = 0x2029;
-    WH_ASSERT(!(CharIn<'\r', '\n'>(ch)));
-    return CharIn<LS, PS>(ch);
 }
 
 /* static */ bool
