@@ -39,6 +39,64 @@ inline PtrT *AlignPtrUp(PtrT *ptr, IntT align) {
     return WordToPtr<PtrT>(AlignIntUp<word_t>(PtrToWord(ptr), align));
 }
 
+// Generation of integer types corresponding to a given size
+template <unsigned Sz> struct IntTypeBySize {};
+template <> struct IntTypeBySize<8> {
+    typedef int8_t  Signed;
+    typedef uint8_t  Unsigned;
+};
+template <> struct IntTypeBySize<16> {
+    typedef int16_t  Signed;
+    typedef uint16_t  Unsigned;
+};
+template <> struct IntTypeBySize<32> {
+    typedef int32_t  Signed;
+    typedef uint32_t  Unsigned;
+};
+template <> struct IntTypeBySize<64> {
+    typedef int64_t  Signed;
+    typedef uint64_t  Unsigned;
+};
+
+// Rotate integers.
+template <typename IntT>
+inline IntT RotateLeft(IntT val, unsigned rotate) {
+    constexpr unsigned Size = sizeof(IntT);
+    WH_ASSERT(rotate < (Size * 8));
+    typedef typename IntTypeBySize<Size>::Unsigned UIntT;
+    UIntT uval = static_cast<UIntT>(val);
+    uval = (uval << rotate) | (uval >> ((Size*8) - rotate));
+    return static_cast<IntT>(uval);
+}
+
+template <typename IntT>
+inline IntT RotateRight(IntT val, unsigned rotate) {
+    constexpr unsigned Size = sizeof(IntT);
+    WH_ASSERT(rotate < (Size * 8));
+    typedef typename IntTypeBySize<Size>::Unsigned UIntT;
+    UIntT uval = static_cast<UIntT>(val);
+    uval = (uval >> rotate) | (uval << ((Size*8) - rotate));
+    return static_cast<IntT>(uval);
+}
+
+// Convert doubles to uint64_t representation and back.
+inline uint64_t DoubleToInt(double d) {
+    union {
+        double dval;
+        uint64_t ival;
+    } u;
+    u.dval = d;
+    return u.ival;
+}
+inline double IntToDouble(uint64_t i) {
+    union {
+        uint64_t ival;
+        double dval;
+    } u;
+    u.ival = i;
+    return u.dval;
+}
+
 // Max of two integers.
 template <typename IntT>
 inline constexpr IntT Max(IntT a, IntT b) {

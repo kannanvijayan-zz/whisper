@@ -7,6 +7,7 @@
 #include "parser/syntax_tree.hpp"
 #include "parser/syntax_tree_inlines.hpp"
 #include "parser/parser.hpp"
+#include "value.hpp"
 
 using namespace Whisper;
 
