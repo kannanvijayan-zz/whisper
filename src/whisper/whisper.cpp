@@ -8,6 +8,7 @@
 #include "parser/syntax_tree_inlines.hpp"
 #include "parser/parser.hpp"
 #include "value.hpp"
+#include "slab.hpp"
 
 using namespace Whisper;
 

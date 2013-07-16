@@ -15,18 +15,31 @@ inline bool IsPowerOfTwo(IntT value) {
 
 // Align integer types
 template <typename IntT>
+inline bool IsIntAligned(IntT value, IntT align) {
+    WH_ASSERT(IsPowerOfTwo(align));
+    return (value & (align - 1)) == 0;
+}
+
+template <typename IntT>
 inline IntT AlignIntDown(IntT value, IntT align) {
     WH_ASSERT(IsPowerOfTwo(align));
-    return value - (value & (align -1));
+    return value - (value & (align - 1));
 }
 
 template <typename IntT>
 inline IntT AlignIntUp(IntT value, IntT align) {
     WH_ASSERT(IsPowerOfTwo(align));
-    return value + (align - (value & (align -1)));
+    IntT vmod = value & (align - 1);
+    return value + (vmod ? (align - vmod) : 0);
 }
 
 // Align pointer types
+template <typename PtrT, typename IntT>
+inline bool IsPtrAligned(PtrT *ptr, IntT align) {
+    WH_ASSERT(IsPowerOfTwo(align));
+    return IsIntAligned<word_t>(PtrToWord(ptr), align);
+}
+
 template <typename PtrT, typename IntT>
 inline PtrT *AlignPtrDown(PtrT *ptr, IntT align) {
     WH_ASSERT(IsPowerOfTwo(align));
