@@ -28,8 +28,8 @@ namespace Whisper {
 //  Undef           - undefined value (low 60 bits are ignored).
 //  Boolean         - boolean value (low bit holds value).
 //  HeapString      - pointer to string on heap.
-//  ImmString8      - immediate ascii-range character string.
-//  ImmString16     - immediate extended-range character string.
+//  ImmString8      - immediate 8-bit character string.
+//  ImmString16     - immediate 16-bit character string.
 //  ImmDoubleLow    - immediate doubles (1.0 > value && -1.0 < value)
 //  ImmDoubleHigh   - immediate doubles (1.0 <= value || -1.0 >= value)
 //  ImmDoubleX      - immediate NaN, Inf, -Inf, and -0 (low 2 bits hold value).
@@ -59,8 +59,8 @@ namespace Whisper {
 //
 //      Characters are stored from high to low.
 //
-//      This representation allows a lexical comparison of ascii-immediate
-//      strings with other ascii-immediate strings, and of 16-bit immediate
+//      This representation allows a lexical comparison of 8-bit immediate
+//      strings with other 8-bit immediate strings, and of 16-bit immediate
 //      strings with other 16-bit immediate strings, by simply rotating
 //      the value left by 8 bits and doing an integer compare.
 //
