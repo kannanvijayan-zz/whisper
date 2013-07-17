@@ -9,6 +9,7 @@
 #include "parser/parser.hpp"
 #include "value.hpp"
 #include "slab.hpp"
+#include "vm/heap_thing.hpp"
 
 using namespace Whisper;
 
