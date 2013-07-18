@@ -121,6 +121,12 @@ inline constexpr IntT Min(IntT a, IntT b) {
     return (a <= b) ? a : b;
 }
 
+// Divide-up
+template <typename IntT>
+inline constexpr IntT DivUp(IntT a, IntT b) {
+    return (a / b) + !!(a % b);
+}
+
 // Maybe class.
 template <typename T>
 class Maybe

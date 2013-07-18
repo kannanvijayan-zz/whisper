@@ -5,10 +5,10 @@
 // Macro iterating over all heap types.
 #define WHISPER_DEFN_HEAP_TYPES(_) \
     /* Heap Doubles */             \
-    _(Double)                      \
+    _(HeapDouble)                  \
     \
     /* Heap Strings */             \
-    _(String)                      \
+    _(HeapString)                  \
     \
     /* Regular objects */          \
     _(Object)                      \

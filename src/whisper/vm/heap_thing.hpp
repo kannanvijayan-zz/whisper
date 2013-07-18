@@ -3,6 +3,7 @@
 
 #include "common.hpp"
 #include "debug.hpp"
+#include "slab.hpp"
 #include "vm/heap_type_defn.hpp"
 
 #include <limits>
@@ -83,6 +84,7 @@ IsValidHeapType(HeapType ht) {
 
 class HeapThing
 {
+  friend class HeapThingPayload;
   protected:
     uint64_t header_ = 0;
 
@@ -105,8 +107,8 @@ class HeapThing
     static constexpr uint64_t Tag = 0xFu;
     static constexpr unsigned TagShift = 60;
 
-    inline HeapThing(HeapType type, uint64_t cardNo, uint64_t size,
-                     uint64_t flags)
+    inline HeapThing(HeapType type, uint32_t cardNo, uint32_t size,
+                     uint32_t flags)
     {
         WH_ASSERT(IsValidHeapType(type));
         WH_ASSERT(cardNo <= CardNoMask);
@@ -114,10 +116,10 @@ class HeapThing
         WH_ASSERT(flags <= FlagsMask);
 
         header_ |= Tag << TagShift;
-        header_ |= flags << FlagsShift;
-        header_ |= size << SizeShift;
+        header_ |= static_cast<uint64_t>(flags) << FlagsShift;
+        header_ |= static_cast<uint64_t>(size) << SizeShift;
         header_ |= static_cast<uint64_t>(type) << TypeShift;
-        header_ |= cardNo << CardNoShift;
+        header_ |= static_cast<uint64_t>(cardNo) << CardNoShift;
     }
 
   public:
@@ -126,8 +128,8 @@ class HeapThing
         return (header_ >> CardNoShift) & CardNoMask;
     }
 
-    inline uint32_t type() const {
-        return (header_ >> TypeShift) & TypeMask;
+    inline HeapType type() const {
+        return static_cast<HeapType>((header_ >> TypeShift) & TypeMask);
     }
 
     inline uint32_t size() const {
@@ -136,6 +138,13 @@ class HeapThing
 
     inline uint32_t flags() const {
         return (header_ >> FlagsShift) & FlagsMask;
+    }
+
+  protected:
+    inline void initFlags(uint32_t fl) {
+        WH_ASSERT(fl <= FlagsMask);
+        WH_ASSERT(flags() == 0);
+        header_ |= static_cast<uint64_t>(fl) << FlagsShift;
     }
 };
 
@@ -151,7 +160,7 @@ class HeapThingWrapper : public HeapThing
 
   public:
     template <typename... T_ARGS>
-    inline HeapThingWrapper(uint64_t cardNo, uint64_t size, uint64_t flags,
+    inline HeapThingWrapper(uint32_t cardNo, uint32_t size, uint32_t flags,
                             T_ARGS... tArgs)
       : HeapThing(HT, cardNo, size, flags),
         payload_(tArgs...)
@@ -162,21 +171,55 @@ class HeapThingWrapper : public HeapThing
 // HeapThingPayload is a base class for payload classes, with protected
 // helper methods for accessing the header word.
 //
-template <typename T, HeapType HT>
 class HeapThingPayload
 {
   protected:
     inline HeapThingPayload() {};
     inline ~HeapThingPayload() {};
 
-    inline HeapThingWrapper<T, HT> *heapThingWrapper() {
-        uint64_t *thisp = static_cast<uint64_t *>(this);
-        return static_cast<HeapThingWrapper<T, HT> *>(thisp - 1);
+    template <typename PtrT>
+    inline PtrT *recastThis() {
+        return reinterpret_cast<PtrT *>(this);
     }
 
-    inline const HeapThingWrapper<T, HT> *heapThingWrapper() const {
-        const uint64_t *thisp = static_cast<const uint64_t *>(this);
-        return static_cast<const HeapThingWrapper<T, HT> *>(thisp - 1);
+    template <typename PtrT>
+    inline const PtrT *recastThis() const {
+        return reinterpret_cast<const PtrT *>(this);
+    }
+
+    inline HeapThing *header() {
+        uint64_t *thisp = recastThis<uint64_t>();
+        return reinterpret_cast<HeapThing *>(thisp - 1);
+    }
+
+    inline const HeapThing *header() const {
+        const uint64_t *thisp = recastThis<const uint64_t>();
+        return reinterpret_cast<const HeapThing *>(thisp - 1);
+    }
+
+    inline void initFlags(uint32_t flags) {
+        return header()->initFlags(flags);
+    }
+
+  public:
+    inline uint32_t cardNo() const {
+        return header()->cardNo();
+    }
+
+    inline HeapType type() const {
+        return header()->type();
+    }
+
+    inline uint32_t objectSize() const {
+        return header()->size();
+    }
+
+    inline uint32_t flags() const {
+        return header()->flags();
+    }
+
+    inline uint32_t reservedSpace() const {
+        return AlignIntUp<uint32_t>(objectSize(), Slab::AllocAlign);
     }
 };
 

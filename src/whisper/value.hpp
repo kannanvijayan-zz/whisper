@@ -104,8 +104,8 @@ namespace Whisper {
 //
 
 class Object;
-class String;
-class Double;
+class HeapString;
+class HeapDouble;
 
 // Type tag enumeration for values.
 enum class ValueTag : uint8_t
@@ -385,9 +385,9 @@ class Value
         return tagged_ & 0x1;
     }
 
-    inline String *getHeapString() const {
+    inline HeapString *getHeapString() const {
         WH_ASSERT(isHeapString());
-        return getPtr<String>();
+        return getPtr<HeapString>();
     }
 
     inline unsigned immString8Length() const {
@@ -474,9 +474,9 @@ class Value
         return isImmDoubleX() ? getImmDoubleXValue() : getImmDoubleHiLoValue();
     }
 
-    inline Double *getHeapDouble() const {
+    inline HeapDouble *getHeapDouble() const {
         WH_ASSERT(isHeapDouble());
-        return getPtr<Double>();
+        return getPtr<HeapDouble>();
     }
 
     inline Magic getMagic() const {
@@ -496,7 +496,7 @@ class Value
     friend Value NullValue();
     friend Value UndefinedValue();
     friend Value BooleanValue(bool b);
-    friend Value StringValue(String *str);
+    friend Value StringValue(HeapString *str);
     template <typename CharT>
     friend Value String8Value(unsigned length, const CharT *data);
     template <typename CharT>
@@ -505,7 +505,7 @@ class Value
     friend Value StringValue(unsigned length, const CharT *data);
     friend Value MagicValue(Magic m);
     friend Value IntegerValue(int32_t i);
-    friend Value DoubleValue(Double *d);
+    friend Value DoubleValue(HeapDouble *d);
     friend Value NaNValue();
     friend Value NegZeroValue();
     friend Value PosInfValue();
@@ -535,7 +535,7 @@ BooleanValue(bool b) {
 }
 
 inline Value
-StringValue(String *str) {
+StringValue(HeapString *str) {
     return Value::MakePtr(ValueTag::HeapString, str);
 }
 
@@ -586,7 +586,7 @@ StringValue(unsigned length, const CharT *data)
 }
 
 inline Value
-DoubleValue(Double *d) {
+DoubleValue(HeapDouble *d) {
     return Value::MakePtr(ValueTag::HeapDouble, d);
 }
 

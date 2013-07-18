@@ -10,6 +10,8 @@
 #include "value.hpp"
 #include "slab.hpp"
 #include "vm/heap_thing.hpp"
+#include "vm/double.hpp"
+#include "vm/string.hpp"
 
 using namespace Whisper;
 
