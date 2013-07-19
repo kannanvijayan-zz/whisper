@@ -21,9 +21,15 @@ AC_CHECK_HEADER([sys/mman.h],
 
 AC_CHECK_LIB([unistring], [uc_is_general_category],
                 [AC_DEFINE([HAVE_LIBUNISTRING], [1],
-                    [Define to 1 if libunistring is available]),
+                    [Define to 1 if libunistring is available])
                  LIBS="$LIBS -lunistring"],
                 [AC_MSG_ERROR([libunistring not found])])
+
+AC_CHECK_LIB([pthread], [pthread_create],
+                [AC_DEFINE([HAVE_LIBPTHREAD], [1],
+                    [Define to 1 if libpthread is available])
+                 LIBS="$LIBS -lpthread"],
+                [AC_MSG_ERROR([libpthread not found])])
 
 AC_FUNC_MMAP
 

@@ -7,4 +7,6 @@ whisper_SOURCES = \
     parser/code_source.cpp \
     parser/tokenizer.cpp \
     parser/syntax_tree.cpp \
-    parser/parser.cpp
+    parser/parser.cpp \
+    slab.cpp \
+    runtime.cpp

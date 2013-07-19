@@ -2,6 +2,7 @@
 #define WHISPER__SLAB_HPP
 
 #include "common.hpp"
+#include "helpers.hpp"
 #include "debug.hpp"
 
 #include <limits>
@@ -63,9 +64,11 @@ namespace Whisper {
 
 class Slab
 {
+  friend class SlabList;
   public:
     static constexpr uint32_t AllocAlign = sizeof(void *);
-    static constexpr uint32_t CardSize = 1024;
+    static constexpr uint32_t CardSizeLog2 = 10;
+    static constexpr uint32_t CardSize = 1 << CardSizeLog2;
     static constexpr uint32_t AlienRefSpaceSize = 512;
 
     static uint32_t PageSize();
@@ -137,28 +140,116 @@ class Slab
     }
 
     // Allocate memory from Top
-    uint8_t *allocateTop(uint32_t amount) {
+    uint8_t *allocateHead(uint32_t amount) {
         WH_ASSERT(IsIntAligned(amount, AllocAlign));
 
-        uint8_t *oldTop = allocTop_;
+        uint8_t *oldTop = headAlloc_;
         uint8_t *newTop = oldTop + amount;
         if (newTop > allocBottom_)
             return nullptr;
 
-        allocTop_ = newTop;
+        headAlloc_ = newTop;
         return oldTop;
     }
 
     // Allocate memory from Bottom
-    uint8_t *allocateBottom(uint32_t amount) {
+    uint8_t *allocateTail(uint32_t amount) {
         WH_ASSERT(IsIntAligned(amount, AllocAlign));
 
-        uint8_t *newBot = allocBottom_ - amount;
+        uint8_t *newBot = tailAlloc_ - amount;
         if (newBot < allocTop_)
             return nullptr;
 
-        allocBottom_ = newBot;
+        tailAlloc_ = newBot;
         return newBot;
+    }
+
+    inline uint32_t calculateCardNumber(uint8_t *ptr) const {
+        WH_ASSERT(ptr >= allocTop_ && ptr < allocBottom_);
+        WH_ASSERT(ptr < headAlloc_ || ptr >= tailAlloc_);
+        uint32_t diff = ptr - allocTop_;
+        return diff >> CardSizeLog2;
+    }
+};
+
+
+//
+// SlabList
+//
+// A list implementation that uses the next/forward pointers in slabs.
+//
+class SlabList
+{
+  private:
+    uint32_t numSlabs_;
+    Slab *firstSlab_;
+    Slab *lastSlab_;
+
+  public:
+    inline SlabList()
+      : numSlabs_(0),
+        firstSlab_(nullptr),
+        lastSlab_(nullptr)
+    {}
+
+    inline uint32_t numSlabs() const {
+        return numSlabs_;
+    }
+
+    inline void addSlab(Slab *slab) {
+        WH_ASSERT(slab->next_ == nullptr);
+        WH_ASSERT(slab->previous_ == nullptr);
+
+        if (numSlabs_ == 0) {
+            lastSlab_ = firstSlab_ = slab;
+        } else {
+            slab->previous_ = lastSlab_;
+            lastSlab_->next_ = slab;
+        }
+        numSlabs_++;
+    }
+
+    class Iterator
+    {
+      friend class SlabList;
+      private:
+        const SlabList &list_;
+        Slab *slab_;
+
+        inline Iterator(const SlabList &list, Slab *slab)
+          : list_(list), slab_(slab)
+        {}
+
+      public:
+        inline Slab *operator *() const {
+            WH_ASSERT(slab_);
+            return slab_;
+        }
+
+        inline bool operator ==(const Iterator &other) const {
+            return slab_ == other.slab_;
+        }
+
+        inline bool operator !=(const Iterator &other) const {
+            return slab_ != other.slab_;
+        }
+
+        inline Iterator &operator ++() {
+            slab_ = slab_->next();
+            return *this;
+        }
+        inline Iterator &operator --() {
+            WH_ASSERT(slab_ != list_.firstSlab_);
+            slab_ = slab_ ? slab_->previous() : list_.lastSlab_;
+            return *this;
+        }
+    };
+
+    Iterator begin() const {
+        return Iterator(*this, firstSlab_);
+    }
+    Iterator end() const {
+        return Iterator(*this, lastSlab_);
     }
 };
 

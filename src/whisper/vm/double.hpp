@@ -21,7 +21,7 @@ namespace VM {
 //      | Value                 |
 //      +-----------------------+
 //
-struct HeapDouble : public HeapThingPayload
+struct HeapDouble : public HeapThingPayload<HeapType::HeapDouble>
 {
   private:
     double value_;

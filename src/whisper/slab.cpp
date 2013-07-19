@@ -9,21 +9,21 @@ namespace Whisper {
 
 static uint32_t CachedSystemPageSize = 0;
 static uint32_t CachedStandardSlabCards = 0;
-static uint32_t CachedStandardHeaderCards = 0;
-static uint32_t CachedStandardDataCards = 0;
+static uint32_t CachedStandardSlabHeaderCards = 0;
+static uint32_t CachedStandardSlabDataCards = 0;
 static uint32_t CachedStandardSlabMaxObjectSize = 0;
 
 static void
-InitalizeStandardSlabInfo()
+InitializeStandardSlabInfo()
 {
 
     CachedSystemPageSize = sysconf(_SC_PAGESIZE);
 
-    WH_ASSERT(CachedSystemPageSize >= CardSize);
+    WH_ASSERT(CachedSystemPageSize >= Slab::CardSize);
     WH_ASSERT(IsPowerOfTwo(CachedSystemPageSize));
 
     uint32_t pageSize = CachedSystemPageSize;
-    uint32_t pageCards = pageSize / CardSize;
+    uint32_t pageCards = pageSize / Slab::CardSize;
 
     uint32_t maxObjectSize = pageSize / 2;
 
@@ -38,7 +38,7 @@ InitalizeStandardSlabInfo()
     uint32_t dataCards = slabCards - 1;
     uint32_t headerCards;
     do {
-        headerCards = NumHeaderCardsForDataCards(dataCards);
+        headerCards = Slab::NumHeaderCardsForDataCards(dataCards);
     } while (headerCards + dataCards > slabCards);
 
     headerCards = slabCards - dataCards;
@@ -46,12 +46,12 @@ InitalizeStandardSlabInfo()
     // If initial max object size (pageSize / 2) is smaller than
     // 1/8th of a standard slab size, choose 1/8th of a standard slab
     // size as a maximum object size.
-    if (maxObjectSize < ((slabCards * CardSize) / 8))
-        maxObjectSize = (slabCards * CardSize) / 8;
+    if (maxObjectSize < ((slabCards * Slab::CardSize) / 8))
+        maxObjectSize = (slabCards * Slab::CardSize) / 8;
 
     CachedStandardSlabCards = slabCards;
-    CachedStandardHeaderCards = headerCards;
-    CachedStandardDataCards = dataCards;
+    CachedStandardSlabHeaderCards = headerCards;
+    CachedStandardSlabDataCards = dataCards;
     CachedStandardSlabMaxObjectSize = maxObjectSize;
 }
 
@@ -131,7 +131,7 @@ Slab::NumHeaderCardsForDataCards(uint32_t dataCards)
     headerMinimum += AlignIntUp<uint32_t>(dataCards, AllocAlign);
 
     // Align final amount up to CardSize
-    return AlignIntUp<uint32_t>(headerMinimu, CardSize) / CardSize;
+    return AlignIntUp<uint32_t>(headerMinimum, CardSize) / CardSize;
 }
 
 /*static*/ Slab *
@@ -148,7 +148,6 @@ Slab::AllocateStandard()
     return new (result) Slab(result, size,
                              StandardSlabHeaderCards(),
                              StandardSlabDataCards());
-    return slab;
 }
 
 /*static*/ Slab *
@@ -183,14 +182,15 @@ Slab::Slab(void *region, uint32_t regionSize,
     headerCards_(headerCards), dataCards_(dataCards)
 {
     // Calculate allocTop.
-    uint8_t *slabBase = static_cast<uint8_t *>(this);
+    uint8_t *slabBase = reinterpret_cast<uint8_t *>(this);
 
     uint8_t *dataSpace = slabBase + (CardSize * headerCards_);
 
-    allocTop_ = dataSpace + AlignIntUp<uint32_t>(sizeof(void *), AllocAlign);
+    allocTop_ = dataSpace;
     allocBottom_ = dataSpace + (CardSize * dataCards_);
+    
 
-    headAlloc_ = allocTop_;
+    headAlloc_ = allocTop_ + AlignIntUp<uint32_t>(sizeof(void *), AllocAlign);
     tailAlloc_ = allocBottom_;
 }
 

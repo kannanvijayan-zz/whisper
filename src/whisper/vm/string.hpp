@@ -26,7 +26,7 @@ namespace VM {
 //      | ...                   |
 //      +-----------------------+
 //
-struct HeapString : public HeapThingPayload
+struct HeapString : public HeapThingPayload<HeapType::HeapString>
 {
   public:
     static constexpr uint32_t EightBitFlagMask = 0x1;

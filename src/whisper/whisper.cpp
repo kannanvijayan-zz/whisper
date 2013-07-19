@@ -12,6 +12,7 @@
 #include "vm/heap_thing.hpp"
 #include "vm/double.hpp"
 #include "vm/string.hpp"
+#include "runtime.hpp"
 
 using namespace Whisper;
 
@@ -57,6 +58,26 @@ int main(int argc, char **argv) {
 
     Printer pr;
     PrintNode(tokenizer.source(), program, pr, 0);
+
+    // Initialize a runtime.
+    Runtime runtime;
+    if (!runtime.initialize()) {
+        WH_ASSERT(runtime.hasError());
+        std::cerr << "Runtime error: " << runtime.error() << std::endl;
+        return 1;
+    }
+
+    // Create a new thread context.
+    const char *err = runtime.registerThread();
+    if (err) {
+        std::cerr << "ThreadContext error: " << err << std::endl;
+        return 1;
+    }
+    ThreadContext *thrcx = runtime.threadContext();
+
+    // Create a run context for execution.
+    RunContext cx = thrcx->makeRunContext();
+    cx.makeActive();
 
     return 0;
 }

@@ -3,19 +3,16 @@
 
 
 // Macro iterating over all heap types.
-#define WHISPER_DEFN_HEAP_TYPES(_) \
-    /* Heap Doubles */             \
-    _(HeapDouble)                  \
+#define WHISPER_DEFN_HEAP_TYPES(_)                              \
+    /* Name                             Traced */               \
     \
-    /* Heap Strings */             \
-    _(HeapString)                  \
+    _(HeapDouble,                       false)                  \
+    _(HeapString,                       false)                  \
     \
-    /* Regular objects */          \
-    _(Object)                      \
-    _(ObjectSlots)                 \
+    _(Object,                           true)                   \
+    _(ObjectSlots,                      true)                   \
     \
-    /* Classes */                  \
-    _(Class)
+    _(Class,                            true)
 
 
 #endif // WHISPER__VM__HEAP_TYPE_DEFN_HPP

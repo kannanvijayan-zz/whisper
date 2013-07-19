@@ -19,7 +19,7 @@ enum class HeapType : uint32_t
 {
     INVALID = 0,
 
-#define ENUM_(t) t,
+#define ENUM_(t, ...) t,
     WHISPER_DEFN_HEAP_TYPES(ENUM_)
 #undef ENUM_
 
@@ -30,6 +30,14 @@ inline bool
 IsValidHeapType(HeapType ht) {
     return (ht > HeapType::INVALID) && (ht < HeapType::LIMIT);
 }
+
+template <HeapType HT> struct HeapTypeTraits {};
+#define TRAITS_(t, traced) \
+    template <> struct HeapTypeTraits<HeapType::t> { \
+        static constexpr bool Traced = traced; \
+    };
+    WHISPER_DEFN_HEAP_TYPES(TRAITS_)
+#undef TRAITS_
 
 
 //
@@ -84,9 +92,12 @@ IsValidHeapType(HeapType ht) {
 
 class HeapThing
 {
+  template <HeapType HT>
   friend class HeapThingPayload;
   protected:
     uint64_t header_ = 0;
+
+    static constexpr uint32_t HeaderSize = sizeof(uint64_t);
 
     static constexpr uint64_t CardNoBits = 12;
     static constexpr uint64_t CardNoMask = (1ULL << CardNoBits) - 1;
@@ -107,16 +118,13 @@ class HeapThing
     static constexpr uint64_t Tag = 0xFu;
     static constexpr unsigned TagShift = 60;
 
-    inline HeapThing(HeapType type, uint32_t cardNo, uint32_t size,
-                     uint32_t flags)
+    inline HeapThing(HeapType type, uint32_t cardNo, uint32_t size)
     {
         WH_ASSERT(IsValidHeapType(type));
         WH_ASSERT(cardNo <= CardNoMask);
         WH_ASSERT(size <= SizeMask);
-        WH_ASSERT(flags <= FlagsMask);
 
         header_ |= Tag << TagShift;
-        header_ |= static_cast<uint64_t>(flags) << FlagsShift;
         header_ |= static_cast<uint64_t>(size) << SizeShift;
         header_ |= static_cast<uint64_t>(type) << TypeShift;
         header_ |= static_cast<uint64_t>(cardNo) << CardNoShift;
@@ -160,19 +168,26 @@ class HeapThingWrapper : public HeapThing
 
   public:
     template <typename... T_ARGS>
-    inline HeapThingWrapper(uint32_t cardNo, uint32_t size, uint32_t flags,
-                            T_ARGS... tArgs)
-      : HeapThing(HT, cardNo, size, flags),
+    inline HeapThingWrapper(uint32_t cardNo, uint32_t size, T_ARGS... tArgs)
+      : HeapThing(HT, cardNo, size),
         payload_(tArgs...)
     {}
+
+    inline T *payloadPointer() {
+        return &payload_;
+    }
 };
 
 //
 // HeapThingPayload is a base class for payload classes, with protected
 // helper methods for accessing the header word.
 //
+template <HeapType HT>
 class HeapThingPayload
 {
+  public:
+    static constexpr HeapType Type = HT;
+
   protected:
     inline HeapThingPayload() {};
     inline ~HeapThingPayload() {};
