@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 
+#include "spew.hpp"
 #include "memalloc.hpp"
 
 namespace Whisper {
@@ -10,12 +11,16 @@ namespace Whisper {
 void *
 AllocateMemory(size_t bytes)
 {
-    return malloc(bytes);
+    void *ptr = malloc(bytes);
+    SpewMemoryNote("AllocateMemory allocated %ld bytes at %p",
+                   (long)bytes, ptr);
+    return ptr;
 }
 
 void
 ReleaseMemory(void *ptr)
 {
+    SpewMemoryNote("ReleasingMemory releasing %p", ptr);
     free(ptr);
 }
 
@@ -30,8 +35,14 @@ AllocateMappedMemory(size_t bytes, bool allowExec)
     void *result = mmap(nullptr, bytes, prot,
                         MAP_PRIVATE | MAP_ANONYMOUS,
                         -1, 0);
-    if (result == MAP_FAILED)
+    if (result == MAP_FAILED) {
+        SpewMemoryError("AllocateMappedMemory failed to map %ld bytes",
+                        (long)bytes);
         return nullptr;
+    }
+
+    SpewMemoryNote("AllocateMappedMemory mapped %ld bytes at %p (exec=%s)",
+                   (long)bytes, result, allowExec?"yes":"no");
 
     return result;
 }
@@ -39,7 +50,15 @@ AllocateMappedMemory(size_t bytes, bool allowExec)
 bool
 ReleaseMappedMemory(void *ptr, size_t bytes)
 {
-    return munmap(ptr, bytes) == 0;
+    SpewMemoryNote("ReleaseMappedMemory unmapping %ld bytes at %p",
+                   (long)bytes, ptr);
+    int result = munmap(ptr, bytes) == 0;
+    if (result == -1) {
+        SpewMemoryError("ReleaseMappedMemory failed to unmap %p.",
+                        (long)bytes, ptr);
+        return false;
+    }
+    return true;
 }
 
 

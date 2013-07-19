@@ -8,7 +8,7 @@ AC_PROG_CXX
 AC_LANG([C++])
 
 AC_ARG_ENABLE(debug, [  --enable-debug          Enable debugging.])
-AC_ARG_ENABLE(spew , [  --enable-spew           Enable spew.])
+AC_ARG_ENABLE(spew, [  --enable-spew           Enable spew.])
 
 AC_CHECK_HEADER([iostream],
                 [AC_DEFINE([HAVE_IOSTREAM], [1],
@@ -55,17 +55,19 @@ case "$target_cpu" in
 esac
 
 # Set ENABLE_DEBUG define.
-if test "$enable_debug" == "yes"; then
+if test "$enable_debug" = "yes"; then
     AC_DEFINE([ENABLE_DEBUG], [],
                 [Define to enable debugging.])
     AC_DEFINE([ENABLE_SPEW], [],
                 [Define to enable spew.])
     AM_CONDITIONAL(DEBUG, test x"$enable_debug" = x"yes")
+    AM_CONDITIONAL(SPEW, test x"$enable_spew" = x"yes")
 fi
 
-if test "$enable_spew" == "yes"; then
+if test "$enable_spew" = "yes"; then
     AC_DEFINE([ENABLE_SPEW], [],
                 [Define to enable spew.])
+    AM_CONDITIONAL(SPEW, test x"$enable_spew" = x"yes")
 fi
 
 AC_OUTPUT

@@ -11,7 +11,9 @@ namespace Whisper {
 //
 #define WHISPER_DEFN_SPEW_CHANNELS(_) \
     _(Debug)        \
-    _(Parser)
+    _(Parser)       \
+    _(Memory)       \
+    _(Slab)
 
 enum class SpewChannel
 {
@@ -36,33 +38,21 @@ enum class SpewLevel
 void InitializeSpew();
 void Spew(SpewChannel chan, SpewLevel level, const char *fmt, ...);
 
-template <typename... Args>
-void SpewDebugNote(const char *fmt, Args... args) {
-    Spew(SpewChannel::Debug, SpewLevel::Note, fmt, args...);
-}
-template <typename... Args>
-void SpewDebugWarn(const char *fmt, Args... args) {
-    Spew(SpewChannel::Debug, SpewLevel::Warn, fmt, args...);
-}
-template <typename... Args>
-void SpewDebugError(const char *fmt, Args... args) {
-    Spew(SpewChannel::Debug, SpewLevel::Error, fmt, args...);
-}
-
-
-template <typename... Args>
-void SpewParserNote(const char *fmt, Args... args) {
-    Spew(SpewChannel::Parser, SpewLevel::Note, fmt, args...);
-}
-template <typename... Args>
-void SpewParserWarn(const char *fmt, Args... args) {
-    Spew(SpewChannel::Parser, SpewLevel::Warn, fmt, args...);
-}
-template <typename... Args>
-void SpewParserError(const char *fmt, Args... args) {
-    Spew(SpewChannel::Parser, SpewLevel::Error, fmt, args...);
-}
-
+#define DEFSPEW_(n) \
+    template <typename... Args> \
+    void Spew##n##Note(const char *fmt, Args... args) {\
+        Spew(SpewChannel::n, SpewLevel::Note, fmt, args...); \
+    } \
+    template <typename... Args> \
+    void Spew##n##Warn(const char *fmt, Args... args) {\
+        Spew(SpewChannel::n, SpewLevel::Warn, fmt, args...); \
+    } \
+    template <typename... Args> \
+    void Spew##n##Error(const char *fmt, Args... args) {\
+        Spew(SpewChannel::n, SpewLevel::Error, fmt, args...); \
+    }
+    WHISPER_DEFN_SPEW_CHANNELS(DEFSPEW_)
+#undef DEFSPEW_
 
 
 #else // !defined(ENABLE_SPEW)
@@ -76,6 +66,14 @@ inline void InitializeSpew() {}
 #define SpewParserNote(...)
 #define SpewParserWarn(...)
 #define SpewParserError(...)
+
+#define SpewMemoryNote(...)
+#define SpewMemoryWarn(...)
+#define SpewMemoryError(...)
+
+#define SpewSlabNote(...)
+#define SpewSlabWarn(...)
+#define SpewSlabError(...)
 
 
 #endif // defined(ENABLE_SPEW)

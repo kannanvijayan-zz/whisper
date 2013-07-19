@@ -2,6 +2,7 @@
 #include <iostream>
 #include "common.hpp"
 #include "allocators.hpp"
+#include "spew.hpp"
 #include "parser/code_source.hpp"
 #include "parser/tokenizer.hpp"
 #include "parser/syntax_tree.hpp"
@@ -12,6 +13,7 @@
 #include "vm/heap_thing.hpp"
 #include "vm/double.hpp"
 #include "vm/string.hpp"
+#include "runtime.hpp"
 #include "runtime.hpp"
 
 using namespace Whisper;
@@ -28,6 +30,8 @@ struct Printer {
 
 int main(int argc, char **argv) {
     std::cout << "Whisper says hello." << std::endl;
+
+    InitializeSpew();
 
     // Open input file.
     if (argc <= 1) {

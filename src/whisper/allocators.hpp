@@ -3,10 +3,6 @@
 
 #include <new>
 
-// DELETEME
-#include <cstdio>
-// DELETEME
-
 #include "common.hpp"
 #include "debug.hpp"
 #include "helpers.hpp"
@@ -120,8 +116,6 @@ class BumpAllocator
         // Set up allocTop and allocBottom
         allocBottom_ = chainAddr + sizeof(Chain);
         allocTop_ = memu8 + size;
-        fprintf(stderr, "CHUNK Mem=%p memu8=%p chain=%p bot=%p top=%p\n",
-                mem, memu8, chainEnd_, allocBottom_, allocTop_);
     }
 
     void popChunk() {
