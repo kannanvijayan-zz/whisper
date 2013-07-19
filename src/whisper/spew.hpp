@@ -24,10 +24,10 @@ enum class SpewChannel
 
 enum class SpewLevel
 {
-    None,
     Note,
     Warn,
-    Error
+    Error,
+    None
 };
 
 

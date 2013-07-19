@@ -13,6 +13,7 @@ namespace Whisper {
 
 #if defined(ENABLE_SPEW)
 
+static bool SPEW_INITIALIZED = false;
 static SpewLevel SPEW_LEVELS[static_cast<int>(SpewChannel::LIMIT)];
 
 struct LevelInfo {
@@ -99,6 +100,8 @@ CheckSpewChannel(const char *envstr, const char *channelName, SpewChannel chan)
 void
 InitializeSpew()
 {
+    WH_ASSERT(!SPEW_INITIALIZED);
+
     // Get environment variable WHSPEW
     const char *whspew = getenv("WHSPEW");
 
@@ -106,6 +109,8 @@ InitializeSpew()
 #define CHECK_(n)    CheckSpewChannel(whspew, #n, SpewChannel::n);
     WHISPER_DEFN_SPEW_CHANNELS(CHECK_)
 #undef CHECK_
+
+    SPEW_INITIALIZED = 1;
 }
 
 
@@ -126,6 +131,7 @@ SpewChannelString(SpewChannel chan)
 void
 Spew(SpewChannel chan, SpewLevel level, const char *fmt, ...)
 {
+    WH_ASSERT(SPEW_INITIALIZED);
     WH_ASSERT(chan > SpewChannel::INVALID);
     WH_ASSERT(chan < SpewChannel::LIMIT);
     if (SPEW_LEVELS[static_cast<int>(chan)] > level)
