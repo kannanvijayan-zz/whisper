@@ -1757,6 +1757,9 @@ Parser::tryParseFunction()
     } else if (tok0.isKeyword(strict_)) {
         // Identifier name token can't be keyword.
         emitError("Function name is keyword.");
+    } else {
+        // No other token is acceptable.
+        emitError("Invalid token after 'function'.");
     }
 
     // Parse formal parameter list.

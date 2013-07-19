@@ -2,6 +2,8 @@
 #include <unictype.h>
 #include <string.h>
 #include <algorithm>
+
+#include "spew.hpp"
 #include "parser/tokenizer.hpp"
 
 
@@ -731,6 +733,9 @@ Tokenizer::readIdentifierName()
             continue;
         }
 
+        if (IsDigit(ch))
+            emitError("Digit immediately follows identifier.");
+
         // Any other ASCII char means end of identifier.
         // Check this first because it's more likely than
         // a complex identifier continue char.
@@ -774,6 +779,10 @@ Tokenizer::readIdentifier(unic_t firstChar)
             consumeUnicodeEscapeSequence();
             return readIdentifierName();
         }
+
+        // Digit immediately following identifier is not allowed.
+        if (IsDigit(ch))
+            emitError("Digit immediately follows identifier.");
 
         // Any other ASCII char means end of identifier.
         // Check this first because it's more likely than
@@ -833,6 +842,10 @@ Tokenizer::readNumericLiteral(bool startsWithZero)
 
     // Otherwise check for non-digit char.
     if (!IsDigit(ch)) {
+        if (IsIdentifierContinue(ch)) {
+            return emitError("Identifier starts immediately after "
+                             "numeric literal.");
+        }
         unreadChar(ch);
         return emitToken(Token::NumericLiteral);
     }
@@ -857,6 +870,11 @@ Tokenizer::readNumericLiteral(bool startsWithZero)
         // Check for exponent.
         if (CharIn<'e','E'>(ch))
             return readNumericLiteralExponent();
+
+        if (IsIdentifierContinue(ch)) {
+            return emitError("Identifier starts immediately after "
+                             "numeric literal.");
+        }
 
         unreadChar(ch);
         break;
@@ -1006,6 +1024,7 @@ Tokenizer::emitError(const char *msg)
 {
     WH_ASSERT(!error_);
     error_ = msg;
+    ParserError("%s", msg);
     throw TokenizerError();
 }
 

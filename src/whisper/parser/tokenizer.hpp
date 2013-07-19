@@ -558,6 +558,9 @@ class Tokenizer
         return IsKeywordChar(ch) || IsNonKeywordSimpleIdentifierStart(ch);
     }
     static bool IsComplexIdentifierStart(unic_t ch);
+    inline static bool IsIdentifierStart(unic_t ch) {
+        return IsSimpleIdentifierStart(ch) || IsComplexIdentifierStart(ch);
+    }
 
     inline static bool IsNonKeywordSimpleIdentifierContinue(unic_t ch) {
         WH_ASSERT(!IsKeywordChar(ch));
@@ -566,7 +569,11 @@ class Tokenizer
     inline static bool IsSimpleIdentifierContinue(unic_t ch) {
         return IsKeywordChar(ch) || IsNonKeywordSimpleIdentifierContinue(ch);
     }
-    inline static bool IsComplexIdentifierContinue(unic_t ch);
+    static bool IsComplexIdentifierContinue(unic_t ch);
+    inline static bool IsIdentifierContinue(unic_t ch) {
+        return IsSimpleIdentifierContinue(ch) ||
+               IsComplexIdentifierContinue(ch);
+    }
 
 
     inline static bool IsHexDigit(unic_t ch) {
