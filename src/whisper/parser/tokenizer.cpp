@@ -1024,7 +1024,7 @@ Tokenizer::emitError(const char *msg)
 {
     WH_ASSERT(!error_);
     error_ = msg;
-    ParserError("%s", msg);
+    SpewParserError("%s", msg);
     throw TokenizerError();
 }
 

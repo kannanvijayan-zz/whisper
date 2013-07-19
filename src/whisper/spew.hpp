@@ -37,29 +37,29 @@ void InitializeSpew();
 void Spew(SpewChannel chan, SpewLevel level, const char *fmt, ...);
 
 template <typename... Args>
-void DebugNote(const char *fmt, Args... args) {
+void SpewDebugNote(const char *fmt, Args... args) {
     Spew(SpewChannel::Debug, SpewLevel::Note, fmt, args...);
 }
 template <typename... Args>
-void DebugWarn(const char *fmt, Args... args) {
+void SpewDebugWarn(const char *fmt, Args... args) {
     Spew(SpewChannel::Debug, SpewLevel::Warn, fmt, args...);
 }
 template <typename... Args>
-void DebugError(const char *fmt, Args... args) {
+void SpewDebugError(const char *fmt, Args... args) {
     Spew(SpewChannel::Debug, SpewLevel::Error, fmt, args...);
 }
 
 
 template <typename... Args>
-void ParserNote(const char *fmt, Args... args) {
+void SpewParserNote(const char *fmt, Args... args) {
     Spew(SpewChannel::Parser, SpewLevel::Note, fmt, args...);
 }
 template <typename... Args>
-void ParserWarn(const char *fmt, Args... args) {
+void SpewParserWarn(const char *fmt, Args... args) {
     Spew(SpewChannel::Parser, SpewLevel::Warn, fmt, args...);
 }
 template <typename... Args>
-void ParserError(const char *fmt, Args... args) {
+void SpewParserError(const char *fmt, Args... args) {
     Spew(SpewChannel::Parser, SpewLevel::Error, fmt, args...);
 }
 
@@ -69,13 +69,13 @@ void ParserError(const char *fmt, Args... args) {
 
 inline void InitializeSpew() {}
 
-#define DebugNote(...)
-#define DebugWarn(...)
-#define DebugError(...)
+#define SpewDebugNote(...)
+#define SpewDebugWarn(...)
+#define SpewDebugError(...)
 
-#define ParserNote(...)
-#define ParserWarn(...)
-#define ParserError(...)
+#define SpewParserNote(...)
+#define SpewParserWarn(...)
+#define SpewParserError(...)
 
 
 #endif // defined(ENABLE_SPEW)

@@ -1,4 +1,5 @@
 
+#include "spew.hpp"
 #include "parser/parser.hpp"
 
 //
@@ -1905,6 +1906,7 @@ Parser::MorphError
 Parser::emitError(const char *msg)
 {
     error_ = msg;
+    SpewParserError("%s", msg);
     throw ParserError();
 }
 
