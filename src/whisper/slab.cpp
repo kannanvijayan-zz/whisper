@@ -1,9 +1,10 @@
 
-#include "slab.hpp"
-#include "memalloc.hpp"
-
 #include <unistd.h>
 #include <new>
+
+#include "spew.hpp"
+#include "memalloc.hpp"
+#include "slab.hpp"
 
 namespace Whisper {
 
@@ -16,7 +17,6 @@ static uint32_t CachedStandardSlabMaxObjectSize = 0;
 static void
 InitializeStandardSlabInfo()
 {
-
     CachedSystemPageSize = sysconf(_SC_PAGESIZE);
 
     WH_ASSERT(CachedSystemPageSize >= Slab::CardSize);
@@ -48,6 +48,11 @@ InitializeStandardSlabInfo()
     // size as a maximum object size.
     if (maxObjectSize < ((slabCards * Slab::CardSize) / 8))
         maxObjectSize = (slabCards * Slab::CardSize) / 8;
+
+    SpewSlabNote("StandardSlabInfo: slabCards     = %d", slabCards);
+    SpewSlabNote("StandardSlabInfo: headerCards   = %d", headerCards);
+    SpewSlabNote("StandardSlabInfo: dataCards     = %d", dataCards);
+    SpewSlabNote("StandardSlabInfo: maxObjectSize = %d", maxObjectSize);
 
     CachedStandardSlabCards = slabCards;
     CachedStandardSlabHeaderCards = headerCards;
@@ -144,6 +149,7 @@ Slab::AllocateStandard()
         return nullptr;
 
     WH_ASSERT(IsPtrAligned(result, CardSize));
+    SpewSlabNote("Allocated std slab at %p", result);
 
     return new (result) Slab(result, size,
                              StandardSlabHeaderCards(),
@@ -164,6 +170,9 @@ Slab::AllocateSingleton(uint32_t objectSize, bool needsGC)
 
     WH_ASSERT(IsPtrAligned(result, CardSize));
 
+    SpewSlabNote("Allocated singleton slab at %p (hdr=%d, data=%d)",
+                 result, dataCards, headerCards);
+
     Slab *slab = new (result) Slab(result, size, dataCards, headerCards);
     slab->needsGC_ = needsGC;
     return slab;
@@ -172,7 +181,10 @@ Slab::AllocateSingleton(uint32_t objectSize, bool needsGC)
 /*static*/ void
 Slab::Destroy(Slab *slab)
 {
+    SpewSlabNote("Destroying slab at %p", slab);
     DebugVal<bool> r = ReleaseMappedMemory(slab->region_, slab->regionSize_);
+    if (!r)
+        SpewSlabError("Failed to destroy slab at %p");
     WH_ASSERT(r);
 }
 
