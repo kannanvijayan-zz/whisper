@@ -9,14 +9,16 @@
     _(HeapDouble,                       false)                  \
     _(HeapString,                       false)                  \
     \
+    _(Tuple,                            true)                   \
+    \
     _(CompletionRecord,                 true)                   \
     _(Reference,                        true)                   \
     _(PropertyDescriptor,               true)                   \
     \
-    _(DeclarationEnvironment,           true)                   \
-    _(ObjectEnvironment,                true)                   \
-    _(FunctionEnvironment,              true)                   \
-    _(GlobalEnvironment,                true)                   \
+    _(DeclEnv,                          true)                   \
+    _(ObjEnv,                           true)                   \
+    _(FuncEnv,                          true)                   \
+    _(GlobalEnv,                        true)                   \
     \
     _(Script,                           true)                   \
     _(ConstantPool,                     true)                   \

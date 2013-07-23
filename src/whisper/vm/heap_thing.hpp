@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "slab.hpp"
+#include "value.hpp"
 #include "vm/heap_type_defn.hpp"
 
 #include <limits>
@@ -265,12 +266,35 @@ class HeapThing : public UntypedHeapThing
         return header()->size();
     }
 
+    inline uint32_t objectValueCount() const {
+        WH_ASSERT(IsIntAligned<uint32_t>(objectSize(), sizeof(Value)));
+        return objectSize() / sizeof(Value);
+    }
+
     inline uint32_t flags() const {
         return header()->flags();
     }
 
     inline uint32_t reservedSpace() const {
         return AlignIntUp<uint32_t>(objectSize(), Slab::AllocAlign);
+    }
+
+    template <typename T>
+    inline T *dataPointer(uint32_t offset) {
+        uint8_t *ptr = recastThis<uint8_t *>() + offset;
+        WH_ASSERT(IsPtrAligned(ptr, alignof(T)));
+        return reinterpret_cast<T *>(ptr);
+    }
+
+    template <typename T>
+    inline const T *dataPointer(uint32_t offset) const {
+        uint8_t *ptr = recastThis<const uint8_t *>() + offset;
+        WH_ASSERT(IsPtrAligned(ptr, alignof(T)));
+        return reinterpret_cast<const T *>(ptr);
+    }
+
+    inline const Value *valuePointer(uint32_t idx) const {
+        return dataPointer<Value>(idx * 8);
     }
 };
 

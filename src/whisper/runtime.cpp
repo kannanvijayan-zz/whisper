@@ -4,7 +4,6 @@
 #include "slab.hpp"
 #include "runtime.hpp"
 
-
 namespace Whisper {
 
 

@@ -1,9 +1,9 @@
 #ifndef WHISPER__VALUE_HPP
 #define WHISPER__VALUE_HPP
 
+#include <limits>
 #include "common.hpp"
 #include "debug.hpp"
-#include "rooting.hpp"
 
 namespace Whisper {
 
@@ -222,7 +222,7 @@ class Value
     uint64_t tagged_;
 
   public:
-    inline Value() : tagged_(INVALID) {}
+    inline Value() : tagged_(Invalid) {}
 
   private:
     // Raw uint64_t constructor is private.
@@ -415,6 +415,7 @@ class Value
     template <typename T>
     inline T *getSpecialObject() const {
         WH_ASSERT(isSpecialObject());
+        WH_ASSERT(getPtr<T>()->type() == T::Type);
         return getPtr<T>();
     }
 
@@ -690,231 +691,6 @@ IntegerValue(int32_t ival) {
     return Value::MakeTagValue(ValueTag::Int32, static_cast<uint32_t>(ival));
 }
 
-
-//
-// Root-wrapped Value
-//
-template <>
-class Root<Value> : public TypedRootBase<Value>
-{
-    Root(RunContext *cx)
-      : TypedRootBase<Value>(cx, RootKind::Value)
-    {}
-
-    Root(ThreadContext *cx)
-      : TypedRootBase<Value>(cx, RootKind::Value)
-    {}
-
-    Root(RunContext *cx, const Value &val)
-      : TypedRootBase<Value>(cx, RootKind::Value, val)
-    {}
-
-    Root(ThreadContext *cx, const Value &val)
-      : TypedRootBase<Value>(cx, RootKind::Value, val)
-    {}
-
-#if defined(ENABLE_DEBUG)
-    inline bool isValid() const {
-        return thing_.isValid();
-    }
-#endif // defined(ENABLE_DEBUG)
-
-    //
-    // Checker methods
-    //
-
-    inline bool isObject() const {
-        return thing_.isObject();
-    }
-
-    inline bool isNativeObject() const {
-        return thing_.isNativeObject();
-    }
-
-    inline bool isForeignObject() const {
-        return thing_.isForeignObject();
-    }
-
-    inline bool isNull() const {
-        return thing_.isNull();
-    }
-
-    inline bool isUndefined() const {
-        return thing_.isUndefined();
-    }
-
-    inline bool isBoolean() const {
-        return thing_.isBoolean();
-    }
-
-    inline bool isHeapString() const {
-        return thing_.isHeapString();
-    }
-
-    inline bool isImmString8() const {
-        return thing_.isImmString8();
-    }
-
-    inline bool isImmString16() const {
-        return thing_.isImmString16();
-    }
-
-    inline bool isImmDoubleLow() const {
-        return thing_.isImmDoubleLow();
-    }
-
-    inline bool isImmDoubleHigh() const {
-        return thing_.isImmDoubleHigh();
-    }
-
-    inline bool isImmDoubleX() const {
-        return thing_.isImmDoubleX();
-    }
-
-    inline bool isNegZero() const {
-        return thing_.isNegZero();
-    }
-
-    inline bool isNaN() const {
-        return thing_.isNaN();
-    }
-
-    inline bool isPosInf() const {
-        return thing_.isPosInf();
-    }
-
-    inline bool isNegInf() const {
-        return thing_.isNegInf();
-    }
-
-    inline bool isHeapDouble() const {
-        return thing_.isHeapDouble();
-    }
-
-    inline bool isInt32() const {
-        return thing_.isInt32();
-    }
-
-    inline bool isMagic() const {
-        return thing_.isMagic();
-    }
-
-    // Helper functions to check combined types.
-
-    inline bool isString() const {
-        return thing_.isString();
-    }
-
-    inline bool isImmString() const {
-        return thing_.isImmString();
-    }
-
-    inline bool isNumber() const {
-        return thing_.isNumber();
-    }
-
-    inline bool isDouble() const {
-        return thing_.isDouble();
-    }
-
-    inline bool isSpecialImmDouble() const {
-        return thing_.isSpecialImmDouble();
-    }
-
-    inline bool isRegularImmDouble() const {
-        return thing_.isRegularImmDouble();
-    }
-
-
-    //
-    // Getter methods
-    //
-
-    inline Object *getObject() const {
-        return thing_.getObject();
-    }
-
-    template <typename T>
-    inline T *getForeignObject() const {
-        return thing_.getForeignObject<T>();
-    }
-
-    template <typename T>
-    inline T *getSpecialObject() const {
-        return thing_.getSpecialObject<T>();
-    }
-
-    inline bool getBoolean() const {
-        return thing_.getBoolean();
-    }
-
-    inline HeapString *getHeapString() const {
-        return thing_.getHeapString();
-    }
-
-    inline unsigned immString8Length() const {
-        return thing_.immString8Length();
-    }
-
-    inline uint8_t getImmString8Char(unsigned idx) const {
-        return thing_.getImmString8Char(idx);
-    }
-
-    template <typename CharT>
-    inline unsigned readImmString8(CharT *buf) const {
-        return thing_.readImmString8<CharT>(buf);
-    }
-
-    inline unsigned immString16Length() const {
-        return thing_.immString16Length();
-    }
-
-    inline uint16_t getImmString16Char(unsigned idx) const {
-        return thing_.getImmString16Char(idx);
-    }
-
-    template <typename CharT>
-    inline unsigned readImmString16(CharT *buf) const {
-        return thing_.readImmString16<CharT>(buf);
-    }
-
-    inline unsigned immStringLength() const {
-        return thing_.immStringLength();
-    }
-
-    inline uint16_t getImmStringChar(unsigned idx) const {
-        return thing_.getImmStringChar(idx);
-    }
-
-    template <typename CharT>
-    inline unsigned readImmString(CharT *buf) const {
-        return thing_.readImmString<CharT>(buf);
-    }
-
-    inline double getImmDoubleHiLoValue() const {
-        return thing_.getImmDoubleHiLoValue();
-    }
-
-    inline double getImmDoubleXValue() const {
-        return thing_.getImmDoubleXValue();
-    }
-
-    inline double getImmDoubleValue() const {
-        return thing_.getImmDoubleValue();
-    }
-
-    inline HeapDouble *getHeapDouble() const {
-        return thing_.getHeapDouble();
-    }
-
-    inline Magic getMagic() const {
-        return thing_.getMagic();
-    }
-
-    inline int32_t getInt32() const {
-        return thing_.getInt32();
-    }
-};
 
 
 } // namespace Whisper
