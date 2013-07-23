@@ -92,7 +92,7 @@ template <HeapType HT> struct HeapTypeTraits {};
 
 class HeapThingHeader
 {
-  template <HeapType HT> friend class HeapThing;
+  friend class UntypedHeapThing;
 
   protected:
     uint64_t header_ = 0;
@@ -211,15 +211,11 @@ class HeapThingWrapper
 // HeapThing is a base class for heap thing payload classes, with protected
 // helper methods for accessing the header.
 //
-template <HeapType HT>
-class HeapThing
+class UntypedHeapThing
 {
-  public:
-    static constexpr HeapType Type = HT;
-
   protected:
-    inline HeapThing() {};
-    inline ~HeapThing() {};
+    inline UntypedHeapThing() {};
+    inline ~UntypedHeapThing() {};
 
     template <typename PtrT>
     inline PtrT *recastThis() {
@@ -244,6 +240,17 @@ class HeapThing
     inline void initFlags(uint32_t flags) {
         return header()->initFlags(flags);
     }
+};
+
+template <HeapType HT>
+class HeapThing : public UntypedHeapThing
+{
+  public:
+    static constexpr HeapType Type = HT;
+
+  protected:
+    inline HeapThing() {};
+    inline ~HeapThing() {};
 
   public:
     inline uint32_t cardNo() const {
