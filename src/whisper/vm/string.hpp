@@ -78,7 +78,7 @@ struct HeapString : public HeapThingPayload<HeapType::HeapString>
     }
 };
 
-typedef HeapThingWrapper<HeapString, HeapType::HeapString> WrappedHeapString;
+typedef HeapThingWrapper<HeapString> WrappedHeapString;
 
 
 } // namespace VM

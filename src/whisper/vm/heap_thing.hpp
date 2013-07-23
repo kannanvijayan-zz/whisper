@@ -160,7 +160,7 @@ class HeapThing
 // HeapThingWrapper establishes a wrapper for payload structs which are
 // a subcomponent of heap things.
 //
-template <typename T, HeapType HT>
+template <typename T>
 class HeapThingWrapper : public HeapThing
 {
   private:
@@ -169,7 +169,7 @@ class HeapThingWrapper : public HeapThing
   public:
     template <typename... T_ARGS>
     inline HeapThingWrapper(uint32_t cardNo, uint32_t size, T_ARGS... tArgs)
-      : HeapThing(HT, cardNo, size),
+      : HeapThing(T::Type, cardNo, size),
         payload_(tArgs...)
     {}
 

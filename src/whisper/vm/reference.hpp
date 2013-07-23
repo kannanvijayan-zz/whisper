@@ -120,7 +120,7 @@ class Reference : public HeapThingPayload<HeapType::Reference>
     }
 };
 
-typedef HeapThingWrapper<Reference, HeapType::Reference> WrappedReference;
+typedef HeapThingWrapper<Reference> WrappedReference;
 
 
 } // namespace VM

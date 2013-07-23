@@ -111,8 +111,7 @@ class PropertyDescriptor : public HeapThingPayload<HeapType::PropertyDescriptor>
     }
 };
 
-typedef HeapThingWrapper<PropertyDescriptor, HeapType::PropertyDescriptor>
-        WrappedPropertyDescriptor;
+typedef HeapThingWrapper<PropertyDescriptor> WrappedPropertyDescriptor;
 
 
 } // namespace VM

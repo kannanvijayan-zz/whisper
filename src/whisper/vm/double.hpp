@@ -34,7 +34,7 @@ struct HeapDouble : public HeapThingPayload<HeapType::HeapDouble>
     }
 };
 
-typedef HeapThingWrapper<HeapDouble, HeapType::HeapDouble> WrappedHeapDouble;
+typedef HeapThingWrapper<HeapDouble> WrappedHeapDouble;
 
 
 } // namespace VM

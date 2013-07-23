@@ -13,6 +13,11 @@
     _(Reference,                        true)                   \
     _(PropertyDescriptor,               true)                   \
     \
+    _(DeclarationEnvironment,           true)                   \
+    _(ObjectEnvironment,                true)                   \
+    _(FunctionEnvironment,              true)                   \
+    _(GlobalEnvironment,                true)                   \
+    \
     _(Script,                           true)                   \
     _(ConstantPool,                     true)                   \
     _(Bytecode,                         false)                  \

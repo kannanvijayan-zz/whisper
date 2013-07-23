@@ -193,7 +193,7 @@ class RunContext
 
         // Initialize the object using HeapThingWrapper, and
         // return it.
-        typedef VM::HeapThingWrapper<ObjT, ObjT::Type> WrappedType;
+        typedef VM::HeapThingWrapper<ObjT> WrappedType;
         WrappedType *wrapped = new (mem) WrappedType(cardNo, size, args...);
         return wrapped->payloadPointer();
     }

@@ -19,7 +19,7 @@ namespace VM {
 class CompletionRecord : public HeapThingPayload<HeapType::CompletionRecord>
 {
   public:
-    enum Type : uint8_t { Normal, Break, Continue, Return, Throw };
+    enum CompletionType : uint8_t { Normal, Break, Continue, Return, Throw };
     static constexpr uint32_t TypeShift = 0;
     static constexpr uint32_t TypeMask = 0x7u;
     static constexpr uint32_t HasValueShift = 3;
@@ -27,7 +27,7 @@ class CompletionRecord : public HeapThingPayload<HeapType::CompletionRecord>
   private:
     Value valueOrTarget_;
 
-    void initCompletionRecordFlags(Type type, bool hasVal) {
+    void initCompletionRecordFlags(CompletionType type, bool hasVal) {
         WH_ASSERT((static_cast<uint32_t>(type) & TypeMask) == 0);
         uint32_t flags = static_cast<uint32_t>(type) << TypeShift;
         flags |= static_cast<uint32_t>(hasVal) << HasValueShift;
@@ -35,21 +35,21 @@ class CompletionRecord : public HeapThingPayload<HeapType::CompletionRecord>
     }
 
   public:
-    CompletionRecord(Type type)
+    CompletionRecord(CompletionType type)
       : valueOrTarget_(UndefinedValue())
     {
         initCompletionRecordFlags(type, false);
     }
 
-    CompletionRecord(Type type, Value val)
+    CompletionRecord(CompletionType type, Value val)
       : valueOrTarget_(val)
     {
         initCompletionRecordFlags(type, true);
     }
 
   private:
-    inline Type type() const {
-        return static_cast<Type>(flags() & TypeMask);
+    inline CompletionType type() const {
+        return static_cast<CompletionType>(flags() & TypeMask);
     }
 
     inline bool hasValueOrTarget() const {
@@ -102,8 +102,7 @@ class CompletionRecord : public HeapThingPayload<HeapType::CompletionRecord>
     }
 };
 
-typedef HeapThingWrapper<CompletionRecord, HeapType::CompletionRecord>
-        WrappedCompletionRecord;
+typedef HeapThingWrapper<CompletionRecord> WrappedCompletionRecord;
 
 
 } // namespace VM
