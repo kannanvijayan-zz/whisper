@@ -16,9 +16,12 @@
 #include "runtime.hpp"
 #include "rooting.hpp"
 #include "ref_scanner.hpp"
+
 #include "vm/completion_record.hpp"
 #include "vm/reference.hpp"
 #include "vm/property_descriptor.hpp"
+
+#include "vm/tuple.hpp"
 
 using namespace Whisper;
 

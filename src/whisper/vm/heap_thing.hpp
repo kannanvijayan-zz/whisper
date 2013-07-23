@@ -281,20 +281,42 @@ class HeapThing : public UntypedHeapThing
 
     template <typename T>
     inline T *dataPointer(uint32_t offset) {
-        uint8_t *ptr = recastThis<uint8_t *>() + offset;
+        uint8_t *ptr = recastThis<uint8_t>() + offset;
         WH_ASSERT(IsPtrAligned(ptr, alignof(T)));
         return reinterpret_cast<T *>(ptr);
     }
 
     template <typename T>
     inline const T *dataPointer(uint32_t offset) const {
-        uint8_t *ptr = recastThis<const uint8_t *>() + offset;
+        const uint8_t *ptr = recastThis<uint8_t>() + offset;
         WH_ASSERT(IsPtrAligned(ptr, alignof(T)));
         return reinterpret_cast<const T *>(ptr);
     }
 
+    template <typename T>
+    inline T &dataRef(uint32_t offset) {
+        return *dataPointer<T>(offset);
+    }
+
+    template <typename T>
+    inline const T &dataRef(uint32_t offset) const {
+        return *dataPointer<T>(offset);
+    }
+
+    inline Value *valuePointer(uint32_t idx) {
+        return dataPointer<Value>(idx * 8);
+    }
+
     inline const Value *valuePointer(uint32_t idx) const {
         return dataPointer<Value>(idx * 8);
+    }
+
+    inline Value &valueRef(uint32_t idx) {
+        return dataRef<Value>(idx * 8);
+    }
+
+    inline const Value &valueRef(uint32_t idx) const {
+        return dataRef<Value>(idx * 8);
     }
 };
 
