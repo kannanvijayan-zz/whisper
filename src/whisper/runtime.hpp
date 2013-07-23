@@ -212,7 +212,7 @@ class RunContext
     template <VM::HeapType ObjType>
     inline uint8_t *allocate(uint32_t size) {
         // Add HeaderSize to size.
-        uint32_t allocSize = size + VM::HeapThing::HeaderSize;
+        uint32_t allocSize = size + VM::HeapThingHeader::HeaderSize;
         allocSize = AlignIntUp<uint32_t>(allocSize, Slab::AllocAlign);
 
         // Track whether to allocate from top or bottom.

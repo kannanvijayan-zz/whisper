@@ -12,7 +12,7 @@ namespace VM {
 //
 // A Reference object, as per ECMA-262 specification 8.2.4
 //
-class Reference : public HeapThingPayload<HeapType::Reference>
+class Reference : public HeapThing<HeapType::Reference>
 {
   public:
     static constexpr uint32_t IsStrictShift = 0;

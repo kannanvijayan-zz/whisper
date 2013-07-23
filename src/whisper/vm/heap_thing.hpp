@@ -41,7 +41,7 @@ template <HeapType HT> struct HeapTypeTraits {};
 
 
 //
-// HeapThing
+// HeapThingHeader
 //
 // Defines the base structure for all garbage-collected heap things.
 // All heap things are composed of a header word, followed by one
@@ -90,10 +90,10 @@ template <HeapType HT> struct HeapTypeTraits {};
 //      use to track information about an object.
 //
 
-class HeapThing
+class HeapThingHeader
 {
-  template <HeapType HT>
-  friend class HeapThingPayload;
+  template <HeapType HT> friend class HeapThing;
+
   protected:
     uint64_t header_ = 0;
 
@@ -118,7 +118,7 @@ class HeapThing
     static constexpr uint64_t Tag = 0xFu;
     static constexpr unsigned TagShift = 60;
 
-    inline HeapThing(HeapType type, uint32_t cardNo, uint32_t size)
+    inline HeapThingHeader(HeapType type, uint32_t cardNo, uint32_t size)
     {
         WH_ASSERT(IsValidHeapType(type));
         WH_ASSERT(cardNo <= CardNoMask);
@@ -161,17 +161,46 @@ class HeapThing
 // a subcomponent of heap things.
 //
 template <typename T>
-class HeapThingWrapper : public HeapThing
+class HeapThingWrapper
 {
   private:
+    HeapThingHeader header_;
     T payload_;
 
   public:
     template <typename... T_ARGS>
     inline HeapThingWrapper(uint32_t cardNo, uint32_t size, T_ARGS... tArgs)
-      : HeapThing(T::Type, cardNo, size),
+      : header_(T::Type, cardNo, size),
         payload_(tArgs...)
     {}
+
+    inline const HeapThingHeader &header() const {
+        return header_;
+    }
+
+    inline HeapThingHeader &header() {
+        return header_;
+    }
+
+    inline const HeapThingHeader *headerPointer() const {
+        return &header_;
+    }
+
+    inline HeapThingHeader *headerPointer() {
+        return &header_;
+    }
+
+    inline const T &payload() const {
+        return payload_;
+    }
+
+    inline T &payload() {
+        return payload_;
+    }
+
+    inline const T *payloadPointer() const {
+        return &payload_;
+    }
 
     inline T *payloadPointer() {
         return &payload_;
@@ -179,18 +208,18 @@ class HeapThingWrapper : public HeapThing
 };
 
 //
-// HeapThingPayload is a base class for payload classes, with protected
-// helper methods for accessing the header word.
+// HeapThing is a base class for heap thing payload classes, with protected
+// helper methods for accessing the header.
 //
 template <HeapType HT>
-class HeapThingPayload
+class HeapThing
 {
   public:
     static constexpr HeapType Type = HT;
 
   protected:
-    inline HeapThingPayload() {};
-    inline ~HeapThingPayload() {};
+    inline HeapThing() {};
+    inline ~HeapThing() {};
 
     template <typename PtrT>
     inline PtrT *recastThis() {
@@ -202,14 +231,14 @@ class HeapThingPayload
         return reinterpret_cast<const PtrT *>(this);
     }
 
-    inline HeapThing *header() {
+    inline HeapThingHeader *header() {
         uint64_t *thisp = recastThis<uint64_t>();
-        return reinterpret_cast<HeapThing *>(thisp - 1);
+        return reinterpret_cast<HeapThingHeader *>(thisp - 1);
     }
 
-    inline const HeapThing *header() const {
+    inline const HeapThingHeader *header() const {
         const uint64_t *thisp = recastThis<const uint64_t>();
-        return reinterpret_cast<const HeapThing *>(thisp - 1);
+        return reinterpret_cast<const HeapThingHeader *>(thisp - 1);
     }
 
     inline void initFlags(uint32_t flags) {

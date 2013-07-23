@@ -839,6 +839,11 @@ class Root<Value> : public TypedRootBase<Value>
         return thing_.getForeignObject<T>();
     }
 
+    template <typename T>
+    inline T *getSpecialObject() const {
+        return thing_.getSpecialObject<T>();
+    }
+
     inline bool getBoolean() const {
         return thing_.getBoolean();
     }
@@ -910,7 +915,6 @@ class Root<Value> : public TypedRootBase<Value>
         return thing_.getInt32();
     }
 };
-
 
 
 } // namespace Whisper

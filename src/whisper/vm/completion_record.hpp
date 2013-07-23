@@ -16,7 +16,7 @@ namespace VM {
 // A completion record object uses the flag bits in the object header
 // to store its type.
 //
-class CompletionRecord : public HeapThingPayload<HeapType::CompletionRecord>
+class CompletionRecord : public HeapThing<HeapType::CompletionRecord>
 {
   public:
     enum CompletionType : uint8_t { Normal, Break, Continue, Return, Throw };

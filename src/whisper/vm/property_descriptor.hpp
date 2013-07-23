@@ -12,7 +12,7 @@ namespace VM {
 //
 // A PropertyDescriptor object, as per ECMA-262 specification 8.2.5
 //
-class PropertyDescriptor : public HeapThingPayload<HeapType::PropertyDescriptor>
+class PropertyDescriptor : public HeapThing<HeapType::PropertyDescriptor>
 {
   public:
     static constexpr uint32_t HasValueShift = 0;
