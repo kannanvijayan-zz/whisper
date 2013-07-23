@@ -9,10 +9,18 @@
     _(HeapDouble,                       false)                  \
     _(HeapString,                       false)                  \
     \
+    _(CompletionRecord,                 true)                   \
+    _(Reference,                        true)                   \
+    _(PropertyDescriptor,               true)                   \
+    \
+    _(Script,                           true)                   \
+    _(ConstantPool,                     true)                   \
+    _(Bytecode,                         false)                  \
+    \
     _(Object,                           true)                   \
     _(ObjectSlots,                      true)                   \
-    \
-    _(Class,                            true)
+    _(ObjectType,                       true)                   \
+    _(ObjectShape,                      true)
 
 
 #endif // WHISPER__VM__HEAP_TYPE_DEFN_HPP

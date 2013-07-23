@@ -23,6 +23,7 @@ namespace Whisper {
 // in a subtantial way must have an associated one.
 //
 
+class RootBase;
 class Slab;
 class ThreadContext;
 class RunContext;
@@ -77,12 +78,14 @@ class ThreadContext
 {
   friend class Runtime;
   friend class RunContext;
+  friend class RootBase;
   private:
     Runtime *runtime_;
     Slab *hatchery_;
     Slab *nursery_;
     SlabList tenured_;
     RunContext *activeRunContext_;
+    RootBase *roots_;
 
   public:
     ThreadContext(Runtime *runtime, Slab *nursery)
@@ -90,7 +93,8 @@ class ThreadContext
         hatchery_(nullptr),
         nursery_(nursery),
         tenured_(),
-        activeRunContext_(nullptr)
+        activeRunContext_(nullptr),
+        roots_(nullptr)
     {}
 
     inline Runtime *runtime() const {
@@ -115,6 +119,10 @@ class ThreadContext
 
     inline RunContext *activeRunContext() const {
         return activeRunContext_;
+    }
+
+    inline RootBase *roots() const {
+        return roots_;
     }
 
     RunContext makeRunContext();

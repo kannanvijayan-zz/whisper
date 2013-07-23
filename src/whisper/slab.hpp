@@ -5,8 +5,6 @@
 #include "helpers.hpp"
 #include "debug.hpp"
 
-#include <limits>
-
 namespace Whisper {
 
 

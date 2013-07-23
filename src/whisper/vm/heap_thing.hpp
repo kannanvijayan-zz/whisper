@@ -54,10 +54,10 @@ template <HeapType HT> struct HeapTypeTraits {};
 // A heap thing header word has the following structure:
 //
 // 64        56        48        40
-// 1111-FFFF SSSS-SSSS SSSS-SSSS SSSS-SSSS
+// 1111-00FF FFFF-SSSS SSSS-SSSS SSSS-SSSS
 //
 // 32        24        16        08
-// SSSS-SSSS TTTT-TTTT 0000-CCCC CCCC-CCCC
+// SSSS-SSSS SSSS-TTTT TTTT-00CC CCCC-CCCC
 //
 // The bitfields are as follows:
 //
@@ -99,21 +99,21 @@ class HeapThing
 
     static constexpr uint32_t HeaderSize = sizeof(uint64_t);
 
-    static constexpr uint64_t CardNoBits = 12;
+    static constexpr uint64_t CardNoBits = 10;
     static constexpr uint64_t CardNoMask = (1ULL << CardNoBits) - 1;
     static constexpr unsigned CardNoShift = 0;
 
     static constexpr uint64_t TypeBits = 8;
     static constexpr uint64_t TypeMask = (1ULL << TypeBits) - 1;
-    static constexpr unsigned TypeShift = 16;
+    static constexpr unsigned TypeShift = 12;
 
-    static constexpr uint64_t SizeBits = 64;
+    static constexpr uint64_t SizeBits = 32;
     static constexpr uint64_t SizeMask = UINT32_MAX;
-    static constexpr unsigned SizeShift = 24;
+    static constexpr unsigned SizeShift = 16;
 
-    static constexpr uint64_t FlagsBits = 4;
+    static constexpr uint64_t FlagsBits = 6;
     static constexpr uint64_t FlagsMask = (1ULL << FlagsBits) - 1;
-    static constexpr unsigned FlagsShift = 56;
+    static constexpr unsigned FlagsShift = 52;
 
     static constexpr uint64_t Tag = 0xFu;
     static constexpr unsigned TagShift = 60;

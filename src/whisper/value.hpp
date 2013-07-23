@@ -3,8 +3,7 @@
 
 #include "common.hpp"
 #include "debug.hpp"
-
-#include <limits>
+#include "rooting.hpp"
 
 namespace Whisper {
 
@@ -38,7 +37,9 @@ namespace Whisper {
 //  Magic           - magic value.
 //
 // Object:
-//  0000-PPPP PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Object pointer
+//  0000-0000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Object pointer
+//  0000-0001 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Foreign pointer
+//  0000-0001 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Foreign pointer
 //
 // Null & Undefined:
 //  0001-0000 0000-0000 0000-0000 ... 0000-0000     - Null value
@@ -48,7 +49,7 @@ namespace Whisper {
 //  0011-0000 0000-0000 0000-0000 ... 0000-000V     - Boolean value
 //
 // HeapString & ImmString8 & ImmString16:
-//  0100-PPPP PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - String pointer
+//  0100-0000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - String pointer
 //  0101-0LLL AAAA-AAAA BBBB-BBBB ... GGGG-GGGG     - Immediate 8-bit string
 //  0110-0000 0000-0000 AAAA-AAAA ... CCCC-CCCC     - Immediate 16-bit string
 //
@@ -68,7 +69,7 @@ namespace Whisper {
 //  0111-EEEE EEEM-MMMM MMMM-MMMM ... MMMM-MMMS     - ImmDoubleLow
 //  1000-EEEE EEEM-MMMM MMMM-MMMM ... MMMM-MMMS     - ImmDoubleHigh
 //  1001-0000 0000-0000 0000-0000 ... 0000-00XX     - ImmDoubleX
-//  1010-PPPP PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Double pointer
+//  1010-0000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Double pointer
 //
 //      ImmDoubleLo and ImmDoubleHi are "regular" double values which
 //      are immediately representable.  The only requirement is that
@@ -164,6 +165,14 @@ class Value
     static constexpr uint64_t TagMaskLow = 0xFu;
     static constexpr uint64_t TagMaskHigh = TagMaskLow << TagShift;
 
+    // High 16 bits of pointer values do not contain address bits.
+    static constexpr unsigned PtrHighBits = 8;
+    static constexpr unsigned PtrTypeShift = 56;
+    static constexpr unsigned PtrTypeMask = 0xFu;
+    static constexpr unsigned PtrType_Native = 0x0u;
+    static constexpr unsigned PtrType_Special = 0x1u;
+    static constexpr unsigned PtrType_Foreign = 0x2u;
+
     // Constants relating to string bits.
     static constexpr unsigned ImmString8MaxLength = 7;
     static constexpr unsigned ImmString8LengthShift = 56;
@@ -227,7 +236,7 @@ class Value
     inline T *getPtr() const {
         WH_ASSERT(isObject() || isHeapString() || isHeapDouble());
         return reinterpret_cast<T *>(
-                (static_cast<int64_t>(tagged_ << TagBits)) >> TagBits);
+                (static_cast<int64_t>(tagged_ << PtrHighBits)) >> PtrHighBits);
     }
 
     inline uint64_t removeTag() const {
@@ -255,6 +264,8 @@ class Value
         return Value(static_cast<uint64_t>(tag) << TagShift);
     }
 
+  public:
+
 #if defined(ENABLE_DEBUG)
     inline bool isValid() const {
         // If heap thing, pointer can't be zero.
@@ -276,6 +287,21 @@ class Value
 
     inline bool isObject() const {
         return checkTag(ValueTag::Object);
+    }
+
+    inline bool isNativeObject() const {
+        return isObject() &&
+               ((tagged_ >> PtrTypeShift) & PtrTypeMask) == PtrType_Native;
+    }
+
+    inline bool isSpecialObject() const {
+        return isObject() &&
+               ((tagged_ >> PtrTypeShift) & PtrTypeMask) == PtrType_Special;
+    }
+
+    inline bool isForeignObject() const {
+        return isObject() &&
+               ((tagged_ >> PtrTypeShift) & PtrTypeMask) == PtrType_Foreign;
     }
 
     inline bool isNull() const {
@@ -376,8 +402,20 @@ class Value
     //
 
     inline Object *getObject() const {
-        WH_ASSERT(isObject());
+        WH_ASSERT(isNativeObject());
         return getPtr<Object>();
+    }
+
+    template <typename T>
+    inline T *getForeignObject() const {
+        WH_ASSERT(isForeignObject());
+        return getPtr<T>();
+    }
+
+    template <typename T>
+    inline T *getSpecialObject() const {
+        WH_ASSERT(isSpecialObject());
+        return getPtr<T>();
     }
 
     inline bool getBoolean() const {
@@ -493,6 +531,8 @@ class Value
     // Friend functions
     //
     friend Value ObjectValue(Object *obj);
+    friend Value SpecialObjectValue(void *obj);
+    friend Value ForeignObjectValue(void *obj);
     friend Value NullValue();
     friend Value UndefinedValue();
     friend Value BooleanValue(bool b);
@@ -517,6 +557,22 @@ class Value
 inline Value
 ObjectValue(Object *obj) {
     return Value::MakePtr(ValueTag::Object, obj);
+}
+
+inline Value
+SpecialObjectValue(void *obj) {
+    Value val = Value::MakePtr(ValueTag::Object, obj);
+    val.tagged_ |= (static_cast<uint64_t>(Value::PtrType_Special) <<
+                        Value::PtrTypeShift);
+    return val;
+}
+
+inline Value
+ForeignObjectValue(void *obj) {
+    Value val = Value::MakePtr(ValueTag::Object, obj);
+    val.tagged_ |= (static_cast<uint64_t>(Value::PtrType_Foreign) <<
+                        Value::PtrTypeShift);
+    return val;
 }
 
 inline Value
@@ -633,6 +689,227 @@ inline Value
 IntegerValue(int32_t ival) {
     return Value::MakeTagValue(ValueTag::Int32, static_cast<uint32_t>(ival));
 }
+
+
+//
+// Root-wrapped Value
+//
+template <>
+class Root<Value> : public TypedRootBase<Value>
+{
+    Root(RunContext *cx)
+      : TypedRootBase<Value>(cx, RootKind::Value)
+    {}
+
+    Root(ThreadContext *cx)
+      : TypedRootBase<Value>(cx, RootKind::Value)
+    {}
+
+    Root(RunContext *cx, const Value &val)
+      : TypedRootBase<Value>(cx, RootKind::Value, val)
+    {}
+
+    Root(ThreadContext *cx, const Value &val)
+      : TypedRootBase<Value>(cx, RootKind::Value, val)
+    {}
+
+#if defined(ENABLE_DEBUG)
+    inline bool isValid() const {
+        return thing_.isValid();
+    }
+#endif // defined(ENABLE_DEBUG)
+
+    //
+    // Checker methods
+    //
+
+    inline bool isObject() const {
+        return thing_.isObject();
+    }
+
+    inline bool isNativeObject() const {
+        return thing_.isNativeObject();
+    }
+
+    inline bool isForeignObject() const {
+        return thing_.isForeignObject();
+    }
+
+    inline bool isNull() const {
+        return thing_.isNull();
+    }
+
+    inline bool isUndefined() const {
+        return thing_.isUndefined();
+    }
+
+    inline bool isBoolean() const {
+        return thing_.isBoolean();
+    }
+
+    inline bool isHeapString() const {
+        return thing_.isHeapString();
+    }
+
+    inline bool isImmString8() const {
+        return thing_.isImmString8();
+    }
+
+    inline bool isImmString16() const {
+        return thing_.isImmString16();
+    }
+
+    inline bool isImmDoubleLow() const {
+        return thing_.isImmDoubleLow();
+    }
+
+    inline bool isImmDoubleHigh() const {
+        return thing_.isImmDoubleHigh();
+    }
+
+    inline bool isImmDoubleX() const {
+        return thing_.isImmDoubleX();
+    }
+
+    inline bool isNegZero() const {
+        return thing_.isNegZero();
+    }
+
+    inline bool isNaN() const {
+        return thing_.isNaN();
+    }
+
+    inline bool isPosInf() const {
+        return thing_.isPosInf();
+    }
+
+    inline bool isNegInf() const {
+        return thing_.isNegInf();
+    }
+
+    inline bool isHeapDouble() const {
+        return thing_.isHeapDouble();
+    }
+
+    inline bool isInt32() const {
+        return thing_.isInt32();
+    }
+
+    inline bool isMagic() const {
+        return thing_.isMagic();
+    }
+
+    // Helper functions to check combined types.
+
+    inline bool isString() const {
+        return thing_.isString();
+    }
+
+    inline bool isImmString() const {
+        return thing_.isImmString();
+    }
+
+    inline bool isNumber() const {
+        return thing_.isNumber();
+    }
+
+    inline bool isDouble() const {
+        return thing_.isDouble();
+    }
+
+    inline bool isSpecialImmDouble() const {
+        return thing_.isSpecialImmDouble();
+    }
+
+    inline bool isRegularImmDouble() const {
+        return thing_.isRegularImmDouble();
+    }
+
+
+    //
+    // Getter methods
+    //
+
+    inline Object *getObject() const {
+        return thing_.getObject();
+    }
+
+    template <typename T>
+    inline T *getForeignObject() const {
+        return thing_.getForeignObject<T>();
+    }
+
+    inline bool getBoolean() const {
+        return thing_.getBoolean();
+    }
+
+    inline HeapString *getHeapString() const {
+        return thing_.getHeapString();
+    }
+
+    inline unsigned immString8Length() const {
+        return thing_.immString8Length();
+    }
+
+    inline uint8_t getImmString8Char(unsigned idx) const {
+        return thing_.getImmString8Char(idx);
+    }
+
+    template <typename CharT>
+    inline unsigned readImmString8(CharT *buf) const {
+        return thing_.readImmString8<CharT>(buf);
+    }
+
+    inline unsigned immString16Length() const {
+        return thing_.immString16Length();
+    }
+
+    inline uint16_t getImmString16Char(unsigned idx) const {
+        return thing_.getImmString16Char(idx);
+    }
+
+    template <typename CharT>
+    inline unsigned readImmString16(CharT *buf) const {
+        return thing_.readImmString16<CharT>(buf);
+    }
+
+    inline unsigned immStringLength() const {
+        return thing_.immStringLength();
+    }
+
+    inline uint16_t getImmStringChar(unsigned idx) const {
+        return thing_.getImmStringChar(idx);
+    }
+
+    template <typename CharT>
+    inline unsigned readImmString(CharT *buf) const {
+        return thing_.readImmString<CharT>(buf);
+    }
+
+    inline double getImmDoubleHiLoValue() const {
+        return thing_.getImmDoubleHiLoValue();
+    }
+
+    inline double getImmDoubleXValue() const {
+        return thing_.getImmDoubleXValue();
+    }
+
+    inline double getImmDoubleValue() const {
+        return thing_.getImmDoubleValue();
+    }
+
+    inline HeapDouble *getHeapDouble() const {
+        return thing_.getHeapDouble();
+    }
+
+    inline Magic getMagic() const {
+        return thing_.getMagic();
+    }
+
+    inline int32_t getInt32() const {
+        return thing_.getInt32();
+    }
+};
 
 
 
