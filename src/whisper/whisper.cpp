@@ -22,6 +22,7 @@
 #include "vm/property_descriptor.hpp"
 
 #include "vm/tuple.hpp"
+#include "vm/shape_tree.hpp"
 
 using namespace Whisper;
 

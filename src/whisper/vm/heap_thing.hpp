@@ -119,7 +119,7 @@ class HeapThingHeader
     static constexpr uint64_t Tag = 0xFu;
     static constexpr unsigned TagShift = 60;
 
-    inline HeapThingHeader(HeapType type, uint32_t cardNo, uint32_t size)
+    HeapThingHeader(HeapType type, uint32_t cardNo, uint32_t size)
     {
         WH_ASSERT(IsValidHeapType(type));
         WH_ASSERT(cardNo <= CardNoMask);
@@ -133,24 +133,24 @@ class HeapThingHeader
 
   public:
 
-    inline uint32_t cardNo() const {
+    uint32_t cardNo() const {
         return (header_ >> CardNoShift) & CardNoMask;
     }
 
-    inline HeapType type() const {
+    HeapType type() const {
         return static_cast<HeapType>((header_ >> TypeShift) & TypeMask);
     }
 
-    inline uint32_t size() const {
+    uint32_t size() const {
         return (header_ >> SizeShift) & SizeMask;
     }
 
-    inline uint32_t flags() const {
+    uint32_t flags() const {
         return (header_ >> FlagsShift) & FlagsMask;
     }
 
   protected:
-    inline void initFlags(uint32_t fl) {
+    void initFlags(uint32_t fl) {
         WH_ASSERT(fl <= FlagsMask);
         WH_ASSERT(flags() == 0);
         header_ |= static_cast<uint64_t>(fl) << FlagsShift;
@@ -170,40 +170,40 @@ class HeapThingWrapper
 
   public:
     template <typename... T_ARGS>
-    inline HeapThingWrapper(uint32_t cardNo, uint32_t size, T_ARGS... tArgs)
+    HeapThingWrapper(uint32_t cardNo, uint32_t size, T_ARGS... tArgs)
       : header_(T::Type, cardNo, size),
         payload_(tArgs...)
     {}
 
-    inline const HeapThingHeader &header() const {
+    const HeapThingHeader &header() const {
         return header_;
     }
 
-    inline HeapThingHeader &header() {
+    HeapThingHeader &header() {
         return header_;
     }
 
-    inline const HeapThingHeader *headerPointer() const {
+    const HeapThingHeader *headerPointer() const {
         return &header_;
     }
 
-    inline HeapThingHeader *headerPointer() {
+    HeapThingHeader *headerPointer() {
         return &header_;
     }
 
-    inline const T &payload() const {
+    const T &payload() const {
         return payload_;
     }
 
-    inline T &payload() {
+    T &payload() {
         return payload_;
     }
 
-    inline const T *payloadPointer() const {
+    const T *payloadPointer() const {
         return &payload_;
     }
 
-    inline T *payloadPointer() {
+    T *payloadPointer() {
         return &payload_;
     }
 };
@@ -215,31 +215,36 @@ class HeapThingWrapper
 class UntypedHeapThing
 {
   protected:
-    inline UntypedHeapThing() {};
-    inline ~UntypedHeapThing() {};
+    UntypedHeapThing() {};
+    ~UntypedHeapThing() {};
 
     template <typename PtrT>
-    inline PtrT *recastThis() {
+    PtrT *recastThis() {
         return reinterpret_cast<PtrT *>(this);
     }
 
     template <typename PtrT>
-    inline const PtrT *recastThis() const {
+    const PtrT *recastThis() const {
         return reinterpret_cast<const PtrT *>(this);
     }
 
-    inline HeapThingHeader *header() {
+    HeapThingHeader *header() {
         uint64_t *thisp = recastThis<uint64_t>();
         return reinterpret_cast<HeapThingHeader *>(thisp - 1);
     }
 
-    inline const HeapThingHeader *header() const {
+    const HeapThingHeader *header() const {
         const uint64_t *thisp = recastThis<const uint64_t>();
         return reinterpret_cast<const HeapThingHeader *>(thisp - 1);
     }
 
-    inline void initFlags(uint32_t flags) {
+    void initFlags(uint32_t flags) {
         return header()->initFlags(flags);
+    }
+
+    // Write barrier helper
+    void noteWrite(void *ptr) {
+        // TODO: Add write barrier.
     }
 };
 
@@ -250,72 +255,72 @@ class HeapThing : public UntypedHeapThing
     static constexpr HeapType Type = HT;
 
   protected:
-    inline HeapThing() {};
-    inline ~HeapThing() {};
+    HeapThing() {};
+    ~HeapThing() {};
 
   public:
-    inline uint32_t cardNo() const {
+    uint32_t cardNo() const {
         return header()->cardNo();
     }
 
-    inline HeapType type() const {
+    HeapType type() const {
         return header()->type();
     }
 
-    inline uint32_t objectSize() const {
+    uint32_t objectSize() const {
         return header()->size();
     }
 
-    inline uint32_t objectValueCount() const {
+    uint32_t objectValueCount() const {
         WH_ASSERT(IsIntAligned<uint32_t>(objectSize(), sizeof(Value)));
         return objectSize() / sizeof(Value);
     }
 
-    inline uint32_t flags() const {
+    uint32_t flags() const {
         return header()->flags();
     }
 
-    inline uint32_t reservedSpace() const {
+    uint32_t reservedSpace() const {
         return AlignIntUp<uint32_t>(objectSize(), Slab::AllocAlign);
     }
 
     template <typename T>
-    inline T *dataPointer(uint32_t offset) {
+    T *dataPointer(uint32_t offset) {
         uint8_t *ptr = recastThis<uint8_t>() + offset;
         WH_ASSERT(IsPtrAligned(ptr, alignof(T)));
         return reinterpret_cast<T *>(ptr);
     }
 
     template <typename T>
-    inline const T *dataPointer(uint32_t offset) const {
+    const T *dataPointer(uint32_t offset) const {
         const uint8_t *ptr = recastThis<uint8_t>() + offset;
         WH_ASSERT(IsPtrAligned(ptr, alignof(T)));
         return reinterpret_cast<const T *>(ptr);
     }
 
     template <typename T>
-    inline T &dataRef(uint32_t offset) {
+    T &dataRef(uint32_t offset) {
         return *dataPointer<T>(offset);
     }
 
     template <typename T>
-    inline const T &dataRef(uint32_t offset) const {
+    const T &dataRef(uint32_t offset) const {
         return *dataPointer<T>(offset);
     }
 
-    inline Value *valuePointer(uint32_t idx) {
+    Value *valuePointer(uint32_t idx) {
         return dataPointer<Value>(idx * 8);
     }
 
-    inline const Value *valuePointer(uint32_t idx) const {
+    const Value *valuePointer(uint32_t idx) const {
         return dataPointer<Value>(idx * 8);
     }
 
-    inline Value &valueRef(uint32_t idx) {
+    Value &valueRef(uint32_t idx) {
         return dataRef<Value>(idx * 8);
     }
 
-    inline const Value &valueRef(uint32_t idx) const {
+    const Value &valueRef(uint32_t idx) const {
         return dataRef<Value>(idx * 8);
     }
 };

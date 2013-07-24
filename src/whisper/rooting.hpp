@@ -396,7 +396,7 @@ class Root<Value> : public TypedRootBase<Value>
     // Getter methods
     //
 
-    Object *getObject() const {
+    VM::Object *getObject() const {
         return thing_.getObject();
     }
 
@@ -414,7 +414,7 @@ class Root<Value> : public TypedRootBase<Value>
         return thing_.getBoolean();
     }
 
-    HeapString *getHeapString() const {
+    VM::HeapString *getHeapString() const {
         return thing_.getHeapString();
     }
 
@@ -469,7 +469,7 @@ class Root<Value> : public TypedRootBase<Value>
         return thing_.getImmDoubleValue();
     }
 
-    HeapDouble *getHeapDouble() const {
+    VM::HeapDouble *getHeapDouble() const {
         return thing_.getHeapDouble();
     }
 

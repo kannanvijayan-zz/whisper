@@ -32,36 +32,40 @@ struct HeapString : public HeapThing<HeapType::HeapString>
     static constexpr uint32_t EightBitFlagMask = 0x1;
 
   protected:
-    uint8_t *eightBitData() {
-        return recastThis<uint8_t>();
-    }
-    const uint8_t *eightBitData() const {
+    uint8_t *writableEightBitData() {
         return recastThis<uint8_t>();
     }
 
-    uint16_t *sixteenBitData() {
-        return recastThis<uint16_t>();
-    }
-    const uint16_t *sixteenBitData() const {
+    uint16_t *writableSixteenBitData() {
         return recastThis<uint16_t>();
     }
     
   public:
     HeapString(const uint8_t *data) {
         initFlags(EightBitFlagMask);
-        std::copy(data, data + objectSize(), eightBitData());
+        std::copy(data, data + objectSize(), writableEightBitData());
     }
     HeapString(const uint16_t *data) {
         WH_ASSERT(objectSize() % 2 == 0);
-        std::copy(data, data + (objectSize() / 2), sixteenBitData());
+        std::copy(data, data + (objectSize() / 2), writableSixteenBitData());
     }
 
     inline bool isEightBit() const {
         return flags() & EightBitFlagMask;
     }
 
+    const uint8_t *eightBitData() const {
+        WH_ASSERT(isEightBit());
+        return recastThis<uint8_t>();
+    }
+
     inline bool isSixteenBit() const {
         return !isEightBit();
+    }
+
+    const uint16_t *sixteenBitData() const {
+        WH_ASSERT(isSixteenBit());
+        return recastThis<uint16_t>();
     }
 
     inline uint32_t length() const {

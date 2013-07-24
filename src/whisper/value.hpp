@@ -104,9 +104,11 @@ namespace Whisper {
 //
 //
 
-class Object;
-class HeapString;
-class HeapDouble;
+namespace VM {
+    class Object;
+    class HeapString;
+    class HeapDouble;
+}
 
 // Type tag enumeration for values.
 enum class ValueTag : uint8_t
@@ -400,9 +402,9 @@ class Value
     // Getter methods
     //
 
-    Object *getObject() const {
+    VM::Object *getObject() const {
         WH_ASSERT(isNativeObject());
-        return getPtr<Object>();
+        return getPtr<VM::Object>();
     }
 
     template <typename T>
@@ -423,9 +425,9 @@ class Value
         return tagged_ & 0x1;
     }
 
-    HeapString *getHeapString() const {
+    VM::HeapString *getHeapString() const {
         WH_ASSERT(isHeapString());
-        return getPtr<HeapString>();
+        return getPtr<VM::HeapString>();
     }
 
     unsigned immString8Length() const {
@@ -440,10 +442,10 @@ class Value
     }
 
     template <typename CharT>
-    unsigned readImmString8(CharT *buf) const {
+    uint32_t readImmString8(CharT *buf) const {
         WH_ASSERT(isImmString8());
-        unsigned length = immString8Length();
-        for (unsigned i = 0; i < length; i++)
+        uint32_t length = immString8Length();
+        for (uint32_t i = 0; i < length; i++)
             buf[i] = (tagged_ >> (48 - (8 * i))) & 0xFFu;
         return length;
     }
@@ -460,10 +462,10 @@ class Value
     }
 
     template <typename CharT>
-    unsigned readImmString16(CharT *buf) const {
+    uint32_t readImmString16(CharT *buf) const {
         WH_ASSERT(isImmString16());
-        unsigned length = immString16Length();
-        for (unsigned i = 0; i < length; i++)
+        uint32_t length = immString16Length();
+        for (uint32_t i = 0; i < length; i++)
             buf[i] = (tagged_ >> (32 - (16 * i))) & 0xFFu;
         return length;
     }
@@ -512,9 +514,9 @@ class Value
         return isImmDoubleX() ? getImmDoubleXValue() : getImmDoubleHiLoValue();
     }
 
-    HeapDouble *getHeapDouble() const {
+    VM::HeapDouble *getHeapDouble() const {
         WH_ASSERT(isHeapDouble());
-        return getPtr<HeapDouble>();
+        return getPtr<VM::HeapDouble>();
     }
 
     Magic getMagic() const {
@@ -530,14 +532,14 @@ class Value
     //
     // Friend functions
     //
-    friend Value ObjectValue(Object *obj);
+    friend Value ObjectValue(VM::Object *obj);
     template <typename T>
     friend Value SpecialObjectValue(T *obj);
     friend Value ForeignObjectValue(void *obj);
     friend Value NullValue();
     friend Value UndefinedValue();
     friend Value BooleanValue(bool b);
-    friend Value StringValue(HeapString *str);
+    friend Value StringValue(VM::HeapString *str);
     template <typename CharT>
     friend Value String8Value(unsigned length, const CharT *data);
     template <typename CharT>
@@ -546,7 +548,7 @@ class Value
     friend Value StringValue(unsigned length, const CharT *data);
     friend Value MagicValue(Magic m);
     friend Value IntegerValue(int32_t i);
-    friend Value DoubleValue(HeapDouble *d);
+    friend Value DoubleValue(VM::HeapDouble *d);
     friend Value NaNValue();
     friend Value NegZeroValue();
     friend Value PosInfValue();
@@ -556,7 +558,7 @@ class Value
 
 
 inline Value
-ObjectValue(Object *obj) {
+ObjectValue(VM::Object *obj) {
     return Value::MakePtr(ValueTag::Object, obj);
 }
 
@@ -594,7 +596,7 @@ BooleanValue(bool b) {
 }
 
 inline Value
-StringValue(HeapString *str) {
+StringValue(VM::HeapString *str) {
     return Value::MakePtr(ValueTag::HeapString, str);
 }
 
@@ -645,7 +647,7 @@ StringValue(unsigned length, const CharT *data)
 }
 
 inline Value
-DoubleValue(HeapDouble *d) {
+DoubleValue(VM::HeapDouble *d) {
     return Value::MakePtr(ValueTag::HeapDouble, d);
 }
 
