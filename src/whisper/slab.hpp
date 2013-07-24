@@ -122,18 +122,18 @@ class Slab
     ~Slab() {}
 
   public:
-    inline Slab *next() const {
+    Slab *next() const {
         return next_;
     }
-    inline Slab *previous() const {
+    Slab *previous() const {
         return previous_;
     }
 
-    inline uint32_t headerCards() const {
+    uint32_t headerCards() const {
         return headerCards_;
     }
 
-    inline uint32_t dataCards() const {
+    uint32_t dataCards() const {
         return dataCards_;
     }
 
@@ -162,7 +162,7 @@ class Slab
         return newBot;
     }
 
-    inline uint32_t calculateCardNumber(uint8_t *ptr) const {
+    uint32_t calculateCardNumber(uint8_t *ptr) const {
         WH_ASSERT(ptr >= allocTop_ && ptr < allocBottom_);
         WH_ASSERT(ptr < headAlloc_ || ptr >= tailAlloc_);
         uint32_t diff = ptr - allocTop_;
@@ -184,17 +184,17 @@ class SlabList
     Slab *lastSlab_;
 
   public:
-    inline SlabList()
+    SlabList()
       : numSlabs_(0),
         firstSlab_(nullptr),
         lastSlab_(nullptr)
     {}
 
-    inline uint32_t numSlabs() const {
+    uint32_t numSlabs() const {
         return numSlabs_;
     }
 
-    inline void addSlab(Slab *slab) {
+    void addSlab(Slab *slab) {
         WH_ASSERT(slab->next_ == nullptr);
         WH_ASSERT(slab->previous_ == nullptr);
 
@@ -214,29 +214,29 @@ class SlabList
         const SlabList &list_;
         Slab *slab_;
 
-        inline Iterator(const SlabList &list, Slab *slab)
+        Iterator(const SlabList &list, Slab *slab)
           : list_(list), slab_(slab)
         {}
 
       public:
-        inline Slab *operator *() const {
+        Slab *operator *() const {
             WH_ASSERT(slab_);
             return slab_;
         }
 
-        inline bool operator ==(const Iterator &other) const {
+        bool operator ==(const Iterator &other) const {
             return slab_ == other.slab_;
         }
 
-        inline bool operator !=(const Iterator &other) const {
+        bool operator !=(const Iterator &other) const {
             return slab_ != other.slab_;
         }
 
-        inline Iterator &operator ++() {
+        Iterator &operator ++() {
             slab_ = slab_->next();
             return *this;
         }
-        inline Iterator &operator --() {
+        Iterator &operator --() {
             WH_ASSERT(slab_ != list_.firstSlab_);
             slab_ = slab_ ? slab_->previous() : list_.lastSlab_;
             return *this;

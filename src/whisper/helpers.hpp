@@ -135,66 +135,66 @@ class Maybe
     alignas(alignof(T)) char data_[sizeof(T)];
     bool hasValue_;
 
-    inline T *ptr() {
+    T *ptr() {
         return reinterpret_cast<T *>(&data_[0]);
     }
-    inline const T *ptr() const {
+    const T *ptr() const {
         return reinterpret_cast<const T *>(&data_[0]);
     }
 
   public:
-    inline Maybe()
+    Maybe()
       : hasValue_(false)
     {}
 
-    inline Maybe(const T &t)
+    Maybe(const T &t)
       : hasValue_(true)
     {
         new (ptr()) T(t);
     }
 
     template <typename... ARGS>
-    inline Maybe(ARGS... args)
+    Maybe(ARGS... args)
       : hasValue_(true)
     {
         new (ptr()) T(args...);
     }
 
-    inline bool hasValue() const {
+    bool hasValue() const {
         return hasValue_;
     }
 
-    inline const T &value() const {
+    const T &value() const {
         WH_ASSERT(hasValue());
         return *(ptr());
     }
-    inline T &value() {
+    T &value() {
         WH_ASSERT(hasValue());
         return *(ptr());
     }
 
-    inline operator const T *() const {
+    operator const T *() const {
         return hasValue_ ? &value() : nullptr;
     }
-    inline operator T *() {
+    operator T *() {
         return hasValue_ ? &value() : nullptr;
     }
 
-    inline const T *operator ->() const {
+    const T *operator ->() const {
         return &value();
     }
-    inline T *operator ->() {
+    T *operator ->() {
         return &value();
     }
 
-    inline const T &operator *() const {
+    const T &operator *() const {
         return value();
     }
-    inline T &operator *() {
+    T &operator *() {
         return value();
     }
 
-    inline const T &operator =(const T &val) {
+    const T &operator =(const T &val) {
         if (hasValue_) {
             *ptr() = val;
         } else {
@@ -214,59 +214,59 @@ class Either
     alignas(Max(alignof(T), alignof(U))) char data_[Size];
     bool hasFirst_;
 
-    inline T *firstPtr() {
+    T *firstPtr() {
         return reinterpret_cast<T *>(&data_[0]);
     }
-    inline const T *firstPtr() const {
+    const T *firstPtr() const {
         return reinterpret_cast<const T *>(&data_[0]);
     }
 
-    inline T *secondPtr() {
+    T *secondPtr() {
         return reinterpret_cast<T *>(&data_[0]);
     }
-    inline const T *secondPtr() const {
+    const T *secondPtr() const {
         return reinterpret_cast<const T *>(&data_[0]);
     }
 
   public:
-    inline Either(const T &t)
+    Either(const T &t)
       : hasFirst_(true)
     {
         new (firstPtr()) T(t);
     }
 
-    inline Either(const U &u)
+    Either(const U &u)
       : hasFirst_(false)
     {
         new (secondPtr()) U(u);
     }
 
-    inline bool hasFirst() const {
+    bool hasFirst() const {
         return hasFirst_;
     }
-    inline bool hasSecond() const {
+    bool hasSecond() const {
         return !hasFirst_;
     }
 
-    inline const T &firstValue() const {
+    const T &firstValue() const {
         WH_ASSERT(hasFirst());
         return *(firstPtr());
     }
-    inline T &firstValue() {
+    T &firstValue() {
         WH_ASSERT(hasFirst());
         return *(firstPtr());
     }
 
-    inline const T &secondValue() const {
+    const T &secondValue() const {
         WH_ASSERT(hasSecond());
         return *(secondPtr());
     }
-    inline T &secondValue() {
+    T &secondValue() {
         WH_ASSERT(hasSecond());
         return *(secondPtr());
     }
 
-    inline const T &operator =(const T &val) {
+    const T &operator =(const T &val) {
         // Destroy existing second value of necessary.
         if (!hasFirst_) {
             secondPtr()->~U();
@@ -277,7 +277,7 @@ class Either
         return val;
     }
 
-    inline const U &operator =(const U &val) {
+    const U &operator =(const U &val) {
         // Destroy existing first value of necessary.
         if (hasFirst_) {
             firstPtr()->~T();
@@ -330,11 +330,11 @@ class OneOf
 
 
     template <unsigned N>
-    inline T<N> *nthPtr() {
+    T<N> *nthPtr() {
         return reinterpret_cast<T<N> *>(&data_[0]);
     }
     template <unsigned N>
-    inline const T<N> *nthPtr() const {
+    const T<N> *nthPtr() const {
         return reinterpret_cast<const T<N> *>(&data_[0]);
     }
 
@@ -348,35 +348,35 @@ class OneOf
     struct Dummy {};
 
     template <unsigned N>
-    inline OneOf(const T<N> &t, Dummy<N>)
+    OneOf(const T<N> &t, Dummy<N>)
       : which_(N)
     {
         new (nthPtr<N>()) T<N>(t);
     }
   public:
     template <unsigned N>
-    static inline OneOf Make(const T<N> &t) {
+    static OneOf Make(const T<N> &t) {
         return OneOf(t, Dummy<N>());
     }
 
-    inline bool isNth(unsigned n) const {
+    bool isNth(unsigned n) const {
         return which_ == n;
     }
 
     template <unsigned N>
-    inline const T<N> &nthValue() const {
+    const T<N> &nthValue() const {
         WH_ASSERT(isNth(N));
         return *(nthPtr<N>());
     }
 
     template <unsigned N>
-    inline T<N> &nthValue() {
+    T<N> &nthValue() {
         WH_ASSERT(isNth(N));
         return *(nthPtr<N>());
     }
 
     template <unsigned N>
-    inline const T<N> &setNth(const T<N> &val) {
+    const T<N> &setNth(const T<N> &val) {
         // If previous type was different, destruct it.
         if (!isNth(N)) {
             nthPtr<N>()->~T<N>();

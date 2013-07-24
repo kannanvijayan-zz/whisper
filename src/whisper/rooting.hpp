@@ -34,24 +34,24 @@ class RootBase
     RootBase *next_;
     RootKind kind_;
 
-    inline RootBase(ThreadContext *threadContext, RootKind kind)
+    RootBase(ThreadContext *threadContext, RootKind kind)
       : threadContext_(threadContext),
         next_(threadContext->roots()),
         kind_(kind)
     {}
 
-    inline void postInit() {
+    void postInit() {
         threadContext_->roots_ = this;
     }
 
   public:
-    inline ThreadContext *threadContext() const {
+    ThreadContext *threadContext() const {
         return threadContext_;
     }
-    inline RootBase *next() const {
+    RootBase *next() const {
         return next_;
     }
-    inline RootKind kind() const {
+    RootKind kind() const {
         return kind_;
     }
 };
@@ -69,7 +69,7 @@ class TypedRootBase : public RootBase
     T thing_;
 
   public:
-    inline TypedRootBase(ThreadContext *threadContext, RootKind kind,
+    TypedRootBase(ThreadContext *threadContext, RootKind kind,
                          const T &thing)
       : RootBase(threadContext, kind),
         thing_(thing)
@@ -77,45 +77,45 @@ class TypedRootBase : public RootBase
         postInit();
     }
 
-    inline TypedRootBase(ThreadContext *threadContext, RootKind kind)
+    TypedRootBase(ThreadContext *threadContext, RootKind kind)
       : RootBase(threadContext, kind),
         thing_()
     {
         postInit();
     }
 
-    inline TypedRootBase(RunContext *runContext, RootKind kind,
+    TypedRootBase(RunContext *runContext, RootKind kind,
                          const T &thing)
       : TypedRootBase(runContext->threadContext(), kind, thing)
     {}
 
-    inline TypedRootBase(RunContext *runContext, RootKind kind)
+    TypedRootBase(RunContext *runContext, RootKind kind)
       : TypedRootBase(runContext->threadContext(), kind)
     {}
 
-    inline const T &get() const {
+    const T &get() const {
         return thing_;
     }
-    inline T &get() {
+    T &get() {
         return thing_;
     }
 
-    inline void set(const T &val) {
+    void set(const T &val) {
         thing_ = val;
     }
 
-    inline operator const T &() const {
+    operator const T &() const {
         return thing_;
     }
-    inline operator T &() {
+    operator T &() {
         return thing_;
     }
 
-    inline TypedRootBase<T> &operator =(const T &other) {
+    TypedRootBase<T> &operator =(const T &other) {
         thing_ = other;
         return *this;
     }
-    inline TypedRootBase<T> &operator =(const TypedRootBase<T> &other) {
+    TypedRootBase<T> &operator =(const TypedRootBase<T> &other) {
         thing_ = other.thing_;
         return *this;
     }
@@ -127,16 +127,16 @@ template <typename T>
 class PointerRootBase : public TypedRootBase<T *>
 {
   public:
-    inline PointerRootBase(ThreadContext *threadContext, RootKind kind)
+    PointerRootBase(ThreadContext *threadContext, RootKind kind)
       : TypedRootBase<T *>(threadContext, kind, nullptr)
     {}
 
-    inline PointerRootBase(ThreadContext *threadContext, RootKind kind,
+    PointerRootBase(ThreadContext *threadContext, RootKind kind,
                            T *ptr)
       : TypedRootBase<T *>(threadContext, kind, ptr)
     {}
 
-    inline T *operator ->() const {
+    T *operator ->() const {
         return this->thing_;
     }
 };
@@ -179,7 +179,7 @@ class PointerHandleBase : public TypedHandleBase<T *>
       : TypedHandleBase<T *>(base)
     {}
 
-    inline T *operator ->() const {
+    T *operator ->() const {
         return this->rootBase_.get();
     }
 };
@@ -236,7 +236,7 @@ class PointerMutableHandleBase : public TypedMutableHandleBase<T *>
       : TypedMutableHandleBase<T *>(base)
     {}
 
-    inline T *operator ->() const {
+    T *operator ->() const {
         return this->rootBase_.get();
     }
 };
@@ -279,7 +279,7 @@ class Root<Value> : public TypedRootBase<Value>
     {}
 
 #if defined(ENABLE_DEBUG)
-    inline bool isValid() const {
+    bool isValid() const {
         return thing_.isValid();
     }
 #endif // defined(ENABLE_DEBUG)
@@ -288,109 +288,109 @@ class Root<Value> : public TypedRootBase<Value>
     // Checker methods
     //
 
-    inline bool isObject() const {
+    bool isObject() const {
         return thing_.isObject();
     }
 
-    inline bool isNativeObject() const {
+    bool isNativeObject() const {
         return thing_.isNativeObject();
     }
 
-    inline bool isForeignObject() const {
+    bool isForeignObject() const {
         return thing_.isForeignObject();
     }
 
-    inline bool isSpecialObject() const {
+    bool isSpecialObject() const {
         return thing_.isSpecialObject();
     }
 
-    inline bool isNull() const {
+    bool isNull() const {
         return thing_.isNull();
     }
 
-    inline bool isUndefined() const {
+    bool isUndefined() const {
         return thing_.isUndefined();
     }
 
-    inline bool isBoolean() const {
+    bool isBoolean() const {
         return thing_.isBoolean();
     }
 
-    inline bool isHeapString() const {
+    bool isHeapString() const {
         return thing_.isHeapString();
     }
 
-    inline bool isImmString8() const {
+    bool isImmString8() const {
         return thing_.isImmString8();
     }
 
-    inline bool isImmString16() const {
+    bool isImmString16() const {
         return thing_.isImmString16();
     }
 
-    inline bool isImmDoubleLow() const {
+    bool isImmDoubleLow() const {
         return thing_.isImmDoubleLow();
     }
 
-    inline bool isImmDoubleHigh() const {
+    bool isImmDoubleHigh() const {
         return thing_.isImmDoubleHigh();
     }
 
-    inline bool isImmDoubleX() const {
+    bool isImmDoubleX() const {
         return thing_.isImmDoubleX();
     }
 
-    inline bool isNegZero() const {
+    bool isNegZero() const {
         return thing_.isNegZero();
     }
 
-    inline bool isNaN() const {
+    bool isNaN() const {
         return thing_.isNaN();
     }
 
-    inline bool isPosInf() const {
+    bool isPosInf() const {
         return thing_.isPosInf();
     }
 
-    inline bool isNegInf() const {
+    bool isNegInf() const {
         return thing_.isNegInf();
     }
 
-    inline bool isHeapDouble() const {
+    bool isHeapDouble() const {
         return thing_.isHeapDouble();
     }
 
-    inline bool isInt32() const {
+    bool isInt32() const {
         return thing_.isInt32();
     }
 
-    inline bool isMagic() const {
+    bool isMagic() const {
         return thing_.isMagic();
     }
 
     // Helper functions to check combined types.
 
-    inline bool isString() const {
+    bool isString() const {
         return thing_.isString();
     }
 
-    inline bool isImmString() const {
+    bool isImmString() const {
         return thing_.isImmString();
     }
 
-    inline bool isNumber() const {
+    bool isNumber() const {
         return thing_.isNumber();
     }
 
-    inline bool isDouble() const {
+    bool isDouble() const {
         return thing_.isDouble();
     }
 
-    inline bool isSpecialImmDouble() const {
+    bool isSpecialImmDouble() const {
         return thing_.isSpecialImmDouble();
     }
 
-    inline bool isRegularImmDouble() const {
+    bool isRegularImmDouble() const {
         return thing_.isRegularImmDouble();
     }
 
@@ -399,88 +399,88 @@ class Root<Value> : public TypedRootBase<Value>
     // Getter methods
     //
 
-    inline Object *getObject() const {
+    Object *getObject() const {
         return thing_.getObject();
     }
 
     template <typename T>
-    inline T *getForeignObject() const {
+    T *getForeignObject() const {
         return thing_.getForeignObject<T>();
     }
 
     template <typename T>
-    inline T *getSpecialObject() const {
+    T *getSpecialObject() const {
         return thing_.getSpecialObject<T>();
     }
 
-    inline bool getBoolean() const {
+    bool getBoolean() const {
         return thing_.getBoolean();
     }
 
-    inline HeapString *getHeapString() const {
+    HeapString *getHeapString() const {
         return thing_.getHeapString();
     }
 
-    inline unsigned immString8Length() const {
+    unsigned immString8Length() const {
         return thing_.immString8Length();
     }
 
-    inline uint8_t getImmString8Char(unsigned idx) const {
+    uint8_t getImmString8Char(unsigned idx) const {
         return thing_.getImmString8Char(idx);
     }
 
     template <typename CharT>
-    inline unsigned readImmString8(CharT *buf) const {
+    unsigned readImmString8(CharT *buf) const {
         return thing_.readImmString8<CharT>(buf);
     }
 
-    inline unsigned immString16Length() const {
+    unsigned immString16Length() const {
         return thing_.immString16Length();
     }
 
-    inline uint16_t getImmString16Char(unsigned idx) const {
+    uint16_t getImmString16Char(unsigned idx) const {
         return thing_.getImmString16Char(idx);
     }
 
     template <typename CharT>
-    inline unsigned readImmString16(CharT *buf) const {
+    unsigned readImmString16(CharT *buf) const {
         return thing_.readImmString16<CharT>(buf);
     }
 
-    inline unsigned immStringLength() const {
+    unsigned immStringLength() const {
         return thing_.immStringLength();
     }
 
-    inline uint16_t getImmStringChar(unsigned idx) const {
+    uint16_t getImmStringChar(unsigned idx) const {
         return thing_.getImmStringChar(idx);
     }
 
     template <typename CharT>
-    inline unsigned readImmString(CharT *buf) const {
+    unsigned readImmString(CharT *buf) const {
         return thing_.readImmString<CharT>(buf);
     }
 
-    inline double getImmDoubleHiLoValue() const {
+    double getImmDoubleHiLoValue() const {
         return thing_.getImmDoubleHiLoValue();
     }
 
-    inline double getImmDoubleXValue() const {
+    double getImmDoubleXValue() const {
         return thing_.getImmDoubleXValue();
     }
 
-    inline double getImmDoubleValue() const {
+    double getImmDoubleValue() const {
         return thing_.getImmDoubleValue();
     }
 
-    inline HeapDouble *getHeapDouble() const {
+    HeapDouble *getHeapDouble() const {
         return thing_.getHeapDouble();
     }
 
-    inline Magic getMagic() const {
+    Magic getMagic() const {
         return thing_.getMagic();
     }
 
-    inline int32_t getInt32() const {
+    int32_t getInt32() const {
         return thing_.getInt32();
     }
 };

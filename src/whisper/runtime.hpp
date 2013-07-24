@@ -50,10 +50,10 @@ class Runtime
 
     bool initialize();
 
-    inline bool hasError() const {
+    bool hasError() const {
         return error_ != nullptr;
     }
-    inline const char *error() const {
+    const char *error() const {
         WH_ASSERT(hasError());
         return error_;
     }
@@ -97,31 +97,31 @@ class ThreadContext
         roots_(nullptr)
     {}
 
-    inline Runtime *runtime() const {
+    Runtime *runtime() const {
         return runtime_;
     }
 
-    inline Slab *hatchery() const {
+    Slab *hatchery() const {
         return hatchery_;
     }
 
-    inline Slab *nursery() const {
+    Slab *nursery() const {
         return nursery_;
     }
 
-    inline const SlabList &tenured() const {
+    const SlabList &tenured() const {
         return tenured_;
     }
 
-    inline SlabList &tenured() {
+    SlabList &tenured() {
         return tenured_;
     }
 
-    inline RunContext *activeRunContext() const {
+    RunContext *activeRunContext() const {
         return activeRunContext_;
     }
 
-    inline RootBase *roots() const {
+    RootBase *roots() const {
         return roots_;
     }
 
@@ -151,20 +151,20 @@ class RunContext
     Slab *hatchery_;
 
   public:
-    inline RunContext(ThreadContext *threadContext)
+    RunContext(ThreadContext *threadContext)
       : threadContext_(threadContext),
         hatchery_(threadContext_->hatchery())
     {}
 
-    inline ThreadContext *threadContext() const {
+    ThreadContext *threadContext() const {
         return threadContext_;
     }
 
-    inline Runtime *runtime() const {
+    Runtime *runtime() const {
         return threadContext_->runtime();
     }
 
-    inline Slab *hatchery() const {
+    Slab *hatchery() const {
         WH_ASSERT(hatchery_ == threadContext_->hatchery());
         return hatchery_;
     }
@@ -172,12 +172,12 @@ class RunContext
     // Construct an object in the hatchery.
     // Optionally GC-ing if necessary.
     template <typename ObjT, typename... Args>
-    inline ObjT *create(bool allowGC, Args... args) {
+    ObjT *create(bool allowGC, Args... args) {
         return create<ObjT, Args...>(allowGC, sizeof(ObjT), args...);
     }
 
     template <typename ObjT, typename... Args>
-    inline ObjT *create(bool allowGC, uint32_t size, Args... args) {
+    ObjT *create(bool allowGC, uint32_t size, Args... args) {
         // Allocate the space for the object.
         uint8_t *mem = allocate<ObjT::Type>(size);
         if (!mem) {
@@ -201,7 +201,7 @@ class RunContext
     void makeActive();
 
   private:
-    inline void syncHatchery() {
+    void syncHatchery() {
         WH_ASSERT(threadContext_->activeRunContext() == this);
         hatchery_ = threadContext_->hatchery();
     }
@@ -210,7 +210,7 @@ class RunContext
     // size because some objects are variable sized.
     // Return null if not enough space in hatchery.
     template <VM::HeapType ObjType>
-    inline uint8_t *allocate(uint32_t size) {
+    uint8_t *allocate(uint32_t size) {
         // Add HeaderSize to size.
         uint32_t allocSize = size + VM::HeapThingHeader::HeaderSize;
         allocSize = AlignIntUp<uint32_t>(allocSize, Slab::AllocAlign);

@@ -75,7 +75,7 @@ class BumpAllocator
         pushNewChunk(chunkSize_);
     }
 
-    inline void *allocate(size_t sz, unsigned align)
+    void *allocate(size_t sz, unsigned align)
     {
         align = Max(align, BasicAlignment);
 
@@ -180,39 +180,39 @@ class STLBumpAllocator
     BumpAllocator &base_;
 
   public:
-    inline STLBumpAllocator(BumpAllocator &base) : base_(base) {}
+    STLBumpAllocator(BumpAllocator &base) : base_(base) {}
 
-    inline STLBumpAllocator(const STLBumpAllocator &other) throw ()
+    STLBumpAllocator(const STLBumpAllocator &other) throw ()
       : base_(other.base_) {}
 
     template <typename U>
-    inline STLBumpAllocator(const STLBumpAllocator<U> &other) throw ()
+    STLBumpAllocator(const STLBumpAllocator<U> &other) throw ()
       : base_(other.base_) {}
 
-    inline pointer address(reference x) const {
+    pointer address(reference x) const {
         return &x;
     }
-    inline const_pointer address(const_reference x) const {
+    const_pointer address(const_reference x) const {
         return &x;
     }
 
-    inline pointer allocate(size_type n, void *hint = nullptr)
+    pointer allocate(size_type n, void *hint = nullptr)
     {
         return static_cast<pointer>(base_.allocate(n * sizeof(T), alignof(T)));
     }
 
-    inline void deallocate(pointer p, size_type n) {
+    void deallocate(pointer p, size_type n) {
         // Deallocation is a no-op.
     }
 
-    inline size_type max_size() const throw() {
+    size_type max_size() const throw() {
         return SIZE_MAX;
     }
 
-    inline void construct(pointer p, const value_type &val) {
+    void construct(pointer p, const value_type &val) {
         new (p) value_type(val);
     }
-    inline void destroy(pointer p) {
+    void destroy(pointer p) {
         p->~value_type();
     }
 };

@@ -28,10 +28,10 @@ class DebugVal
     T val_;
 
   public:
-    inline DebugVal() : val_() {}
-    inline DebugVal(const T &val) : val_(val) {}
+    DebugVal() : val_() {}
+    DebugVal(const T &val) : val_(val) {}
 
-    inline operator const T &() const {
+    operator const T &() const {
         return val_;
     }
 };
@@ -47,8 +47,8 @@ template <typename T>
 class DebugVal
 {
   public:
-    inline DebugVal() {}
-    inline DebugVal(const T &val) {}
+    DebugVal() {}
+    DebugVal(const T &val) {}
 };
 
 
