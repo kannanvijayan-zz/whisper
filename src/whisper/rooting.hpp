@@ -69,8 +69,7 @@ class TypedRootBase : public RootBase
     T thing_;
 
   public:
-    TypedRootBase(ThreadContext *threadContext, RootKind kind,
-                         const T &thing)
+    TypedRootBase(ThreadContext *threadContext, RootKind kind, const T &thing)
       : RootBase(threadContext, kind),
         thing_(thing)
     {
@@ -84,8 +83,7 @@ class TypedRootBase : public RootBase
         postInit();
     }
 
-    TypedRootBase(RunContext *runContext, RootKind kind,
-                         const T &thing)
+    TypedRootBase(RunContext *runContext, RootKind kind, const T &thing)
       : TypedRootBase(runContext->threadContext(), kind, thing)
     {}
 
@@ -131,8 +129,7 @@ class PointerRootBase : public TypedRootBase<T *>
       : TypedRootBase<T *>(threadContext, kind, nullptr)
     {}
 
-    PointerRootBase(ThreadContext *threadContext, RootKind kind,
-                           T *ptr)
+    PointerRootBase(ThreadContext *threadContext, RootKind kind, T *ptr)
       : TypedRootBase<T *>(threadContext, kind, ptr)
     {}
 
