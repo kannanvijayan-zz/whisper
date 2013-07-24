@@ -9,11 +9,14 @@
     _(HeapDouble,                       false)                  \
     _(HeapString,                       false)                  \
     \
-    _(Tuple,                            true)                   \
-    \
     _(CompletionRecord,                 true)                   \
     _(Reference,                        true)                   \
     _(PropertyDescriptor,               true)                   \
+    \
+    _(Tuple,                            true)                   \
+    \
+    _(ShapeTree,                        true)                   \
+    _(Shape,                            true)                   \
     \
     _(DeclEnv,                          true)                   \
     _(ObjEnv,                           true)                   \
@@ -26,8 +29,6 @@
     \
     _(Object,                           true)                   \
     _(ObjectSlots,                      true)                   \
-    _(ObjectType,                       true)                   \
-    _(ObjectShape,                      true)
 
 
 #endif // WHISPER__VM__HEAP_TYPE_DEFN_HPP
