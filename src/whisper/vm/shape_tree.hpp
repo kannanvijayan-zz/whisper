@@ -5,16 +5,26 @@
 #include "debug.hpp"
 #include "value.hpp"
 #include "rooting.hpp"
+#include "vm/heap_thing.hpp"
 #include "vm/vm_helpers.hpp"
 
 namespace Whisper {
 namespace VM {
 
+class Object;
 class Shape;
+class Class;
 
 //
 // A shape tree is the foundation on which trees of shapes are
-// built.
+// built.  Shape trees are parameterized on a two-tuple (klass, delegate),
+// where klass is an object Class, and delegate is an inherited ancestor
+// object.
+//
+// Most commonly, the delegate is either an object which is the prototype
+// of all objects described by the shape tree, or an object which is an
+// outer lexical environment to all lexical environments described by
+// the shape tree.
 //
 // Shape trees are used to describe the structure of objects which
 // hold property definitions.
@@ -22,11 +32,43 @@ class Shape;
 class ShapeTree : public HeapThing<HeapType::ShapeTree>
 {
   private:
+    Value klass_;
+    Value delegate_;
     Value root_;
     
   public:
-    inline ShapeTree(Shape *root);
+    inline ShapeTree(Class &klass, Object *delegate, Shape *root);
+
+    template <typename T>
+    inline ShapeTree(Class &klass, T *delegate, Shape *root);
+
     inline Shape *root();
+
+    bool hasDelegate() const {
+        return !delegate_.isNull();
+    }
+
+    bool hasObjectDelegate() const {
+        return delegate_.isNativeObject();
+    }
+
+    bool hasSpecialDelegate() const {
+        return delegate_.isSpecialObject();
+    }
+
+    Object *objectDelegate() const {
+        WH_ASSERT(hasObjectDelegate());
+        return delegate_.getObject();
+    }
+
+    Class &klass() const {
+        return *klass_.getForeignObject<Class>();
+    }
+
+    template <typename T>
+    T *specialDelegate() const {
+        return delegate_.getSpecialObject<T>();
+    }
 };
 
 //
@@ -108,14 +150,49 @@ class Shape : public HeapThing<HeapType::Shape>
 };
 
 inline
-ShapeTree::ShapeTree(Shape *root)
-  : root_(SpecialObjectValue(root))
+ShapeTree::ShapeTree(Class &klass, Object *delegate, Shape *root)
+  : klass_(ForeignObjectValue(&klass)),
+    delegate_(delegate ? ObjectValue(delegate) : NullValue()),
+    root_(SpecialObjectValue(root))
+{}
+
+template <typename T>
+inline
+ShapeTree::ShapeTree(Class &klass, T *delegate, Shape *root)
+  : klass_(ForeignObjectValue(&klass)),
+    delegate_(delegate ? SpecialObjectValue(delegate) : NullValue()),
+    root_(SpecialObjectValue(root))
 {}
 
 inline Shape *
 ShapeTree::root() {
     return root_.getSpecialObject<Shape>();
 }
+
+
+//
+// A ShapedHeapThing is a HeapThing whose structure is described by a Shape.
+//
+template <HeapType HT>
+class ShapedHeapThing : public HeapThing<HT>
+{
+  protected:
+    Value shape_;
+
+    ShapedHeapThing(Shape *shape) {
+        shape_ = SpecialObjectValue(shape);
+    }
+
+  public:
+    Shape *shape() const {
+        return shape_.getSpecialObject<Shape>();
+    }
+
+    void setShape(Shape *shape) {
+        this->noteWrite(&shape_);
+        shape_ = SpecialObjectValue(shape);
+    }
+};
 
 
 } // namespace VM

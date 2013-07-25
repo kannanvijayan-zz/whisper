@@ -23,6 +23,7 @@
 
 #include "vm/tuple.hpp"
 #include "vm/shape_tree.hpp"
+#include "vm/class.hpp"
 
 using namespace Whisper;
 

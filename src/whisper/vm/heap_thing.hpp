@@ -85,8 +85,8 @@ template <HeapType HT> struct HeapTypeTraits {};
 //      For normal objects which are composed of values, the size will
 //      be a multiple of 8.
 //
-//  FFFF
-//      This 4-bit field has an interpretation that depends on the type.
+//  FF-FFFF
+//      This 6-bit field has an interpretation that depends on the type.
 //      It's basically a small number of "free" bits which a type can
 //      use to track information about an object.
 //
