@@ -48,17 +48,17 @@ class ShapeTree : public HeapThing<HeapType::ShapeTree>
         return !delegate_.isNull();
     }
 
-    bool hasObjectDelegate() const {
+    bool hasNativeObjectDelegate() const {
         return delegate_.isNativeObject();
     }
 
-    bool hasSpecialDelegate() const {
+    bool hasSpecialObjectDelegate() const {
         return delegate_.isSpecialObject();
     }
 
-    Object *objectDelegate() const {
-        WH_ASSERT(hasObjectDelegate());
-        return delegate_.getObject();
+    Object *nativeObjectDelegate() const {
+        WH_ASSERT(hasNativeObjectDelegate());
+        return delegate_.getNativeObject();
     }
 
     Class &klass() const {
@@ -66,7 +66,8 @@ class ShapeTree : public HeapThing<HeapType::ShapeTree>
     }
 
     template <typename T>
-    T *specialDelegate() const {
+    T *specialObjectDelegate() const {
+        WH_ASSERT(hasSpecialObjectDelegate());
         return delegate_.getSpecialObject<T>();
     }
 };

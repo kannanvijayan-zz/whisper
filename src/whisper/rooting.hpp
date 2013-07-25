@@ -396,8 +396,8 @@ class Root<Value> : public TypedRootBase<Value>
     // Getter methods
     //
 
-    VM::Object *getObject() const {
-        return thing_.getObject();
+    VM::Object *getNativeObject() const {
+        return thing_.getNativeObject();
     }
 
     template <typename T>

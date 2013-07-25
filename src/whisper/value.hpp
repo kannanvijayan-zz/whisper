@@ -37,9 +37,11 @@ namespace Whisper {
 //  Magic           - magic value.
 //
 // Object:
-//  0000-0000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Object pointer
-//  0000-0001 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Foreign pointer
-//  0000-0001 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Foreign pointer
+//  0000-W000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Object pointer
+//  0000-W001 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Special pointer
+//  0000-W010 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Foreign pointer
+//
+//      W is the weak bit.  If W=1, the reference is weak.
 //
 // Null & Undefined:
 //  0001-0000 0000-0000 0000-0000 ... 0000-0000     - Null value
@@ -49,9 +51,12 @@ namespace Whisper {
 //  0011-0000 0000-0000 0000-0000 ... 0000-000V     - Boolean value
 //
 // HeapString & ImmString8 & ImmString16:
-//  0100-0000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - String pointer
+//  0100-W000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - String pointer
 //  0101-0LLL AAAA-AAAA BBBB-BBBB ... GGGG-GGGG     - Immediate 8-bit string
 //  0110-0000 0000-0000 AAAA-AAAA ... CCCC-CCCC     - Immediate 16-bit string
+//
+//      In a heap string reference, W is the weak bit.  If W=1, the
+//      reference is weak.
 //
 //      Immediate strings come in two variants.  The first variant can
 //      represent all strings of length up to 7 containing 8-bit chars
@@ -69,7 +74,7 @@ namespace Whisper {
 //  0111-EEEE EEEM-MMMM MMMM-MMMM ... MMMM-MMMS     - ImmDoubleLow
 //  1000-EEEE EEEM-MMMM MMMM-MMMM ... MMMM-MMMS     - ImmDoubleHigh
 //  1001-0000 0000-0000 0000-0000 ... 0000-00XX     - ImmDoubleX
-//  1010-0000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Double pointer
+//  1010-W000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Double pointer
 //
 //      ImmDoubleLo and ImmDoubleHi are "regular" double values which
 //      are immediately representable.  The only requirement is that
@@ -86,6 +91,9 @@ namespace Whisper {
 //          01 => NaN
 //          10 => Inf
 //          11 => -Inf
+//
+//      In a heap double reference, W is the weak bit.  If W=1, the
+//      reference is weak.
 //
 // Int32:
 //  1100-0000 0000-0000 0000-0000 ... IIII-IIII     - Int32 value.
@@ -187,6 +195,10 @@ class Value
     static constexpr uint64_t ImmString16LengthMaskLow = 0x3;
     static constexpr uint64_t ImmString16LengthMaskHigh =
         ImmString16LengthMaskLow << ImmString16LengthShift;
+
+    // The weak bit is the same bit across all pointer-type values.
+    static constexpr unsigned WeakBit = 59;
+    static constexpr uint64_t WeakMask = static_cast<uint64_t>(1) << WeakBit;
 
     // Bounds for representable simple ImmDouble:
     // In order of: [PosMax, PosMin, NegMax, NegMin]
@@ -398,11 +410,16 @@ class Value
        return isImmDoubleLow() || isImmDoubleHigh();
     }
 
+    bool isWeakPointer() const {
+        WH_ASSERT(isHeapDouble() || isHeapString() || isObject());
+        return tagged_ & WeakMask;
+    }
+
     //
     // Getter methods
     //
 
-    VM::Object *getObject() const {
+    VM::Object *getNativeObject() const {
         WH_ASSERT(isNativeObject());
         return getPtr<VM::Object>();
     }
