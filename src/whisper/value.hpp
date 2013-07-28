@@ -544,7 +544,10 @@ class Value
     //
     template <typename T>
     friend Value NativeObjectValue(T *obj);
+    template <typename T>
+    friend Value WeakNativeObjectValue(T *obj);
     friend Value ForeignObjectValue(void *obj);
+    friend Value WeakForeignObjectValue(void *obj);
     friend Value NullValue();
     friend Value UndefinedValue();
     friend Value BooleanValue(bool b);
@@ -574,11 +577,26 @@ NativeObjectValue(T *obj) {
     return val;
 }
 
+template <typename T>
+inline Value
+WeakNativeObjectValue(T *obj) {
+    Value val = NativeObjectValue<T>(obj);
+    val.tagged_ |= Value::WeakMask;
+    return val;
+}
+
 inline Value
 ForeignObjectValue(void *obj) {
     Value val = Value::MakePtr(ValueTag::Object, obj);
     val.tagged_ |= (static_cast<uint64_t>(Value::PtrType_Foreign) <<
                         Value::PtrTypeShift);
+    return val;
+}
+
+inline Value
+WeakForeignObjectValue(void *obj) {
+    Value val = ForeignObjectValue(obj);
+    val.tagged_ |= Value::WeakMask;
     return val;
 }
 
