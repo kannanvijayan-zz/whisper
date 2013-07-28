@@ -246,17 +246,6 @@ class UntypedHeapThing
     void noteWrite(void *ptr) {
         // TODO: Add write barrier.
     }
-};
-
-template <HeapType HT>
-class HeapThing : public UntypedHeapThing
-{
-  public:
-    static constexpr HeapType Type = HT;
-
-  protected:
-    HeapThing() {};
-    ~HeapThing() {};
 
   public:
     uint32_t cardNo() const {
@@ -323,6 +312,17 @@ class HeapThing : public UntypedHeapThing
     const Value &valueRef(uint32_t idx) const {
         return dataRef<Value>(idx * 8);
     }
+};
+
+template <HeapType HT>
+class HeapThing : public UntypedHeapThing
+{
+  public:
+    static constexpr HeapType Type = HT;
+
+  protected:
+    HeapThing() {};
+    ~HeapThing() {};
 };
 
 

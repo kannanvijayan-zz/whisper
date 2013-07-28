@@ -8,12 +8,16 @@
 #include "vm/heap_thing.hpp"
 #include "vm/vm_helpers.hpp"
 
+#include <type_traits>
+
 namespace Whisper {
 namespace VM {
 
 class Object;
 class Shape;
 class Class;
+
+template <HeapType HT> class ShapedHeapThing;
 
 //
 // A shape tree is the foundation on which trees of shapes are
@@ -32,13 +36,12 @@ class Class;
 class ShapeTree : public HeapThing<HeapType::ShapeTree>
 {
   private:
+    // Foreign pointer referring to Class
     Value klass_;
     Value delegate_;
     Value root_;
     
   public:
-    inline ShapeTree(Class &klass, Object *delegate, Shape *root);
-
     template <typename T>
     inline ShapeTree(Class &klass, T *delegate, Shape *root);
 
@@ -48,27 +51,14 @@ class ShapeTree : public HeapThing<HeapType::ShapeTree>
         return !delegate_.isNull();
     }
 
-    bool hasNativeObjectDelegate() const {
-        return delegate_.isNativeObject();
-    }
-
-    bool hasSpecialObjectDelegate() const {
-        return delegate_.isSpecialObject();
-    }
-
-    Object *nativeObjectDelegate() const {
-        WH_ASSERT(hasNativeObjectDelegate());
-        return delegate_.getNativeObject();
+    template <typename T=Object>
+    T *delegate() const {
+        WH_ASSERT(hasDelegate());
+        return delegate_.getNativeObject<T>();
     }
 
     Class &klass() const {
         return *klass_.getForeignObject<Class>();
-    }
-
-    template <typename T>
-    T *specialObjectDelegate() const {
-        WH_ASSERT(hasSpecialObjectDelegate());
-        return delegate_.getSpecialObject<T>();
     }
 };
 
@@ -87,7 +77,7 @@ class Shape : public HeapThing<HeapType::Shape>
     
   public:
     Shape(ShapeTree *tree)
-      : tree_(SpecialObjectValue(tree)),
+      : tree_(NativeObjectValue(tree)),
         parent_(NullValue()),
         name_(NullValue()),
         firstChild_(NullValue()),
@@ -95,8 +85,8 @@ class Shape : public HeapThing<HeapType::Shape>
     {}
 
     Shape(ShapeTree *tree, Shape *parent, Value name)
-      : tree_(SpecialObjectValue(tree)),
-        parent_(SpecialObjectValue<Shape>(parent)),
+      : tree_(NativeObjectValue(tree)),
+        parent_(NativeObjectValue<Shape>(parent)),
         name_(name),
         firstChild_(NullValue()),
         nextSibling_(NullValue())
@@ -105,12 +95,12 @@ class Shape : public HeapThing<HeapType::Shape>
     }
 
     ShapeTree *tree() const {
-        return tree_.getSpecialObject<ShapeTree>();
+        return tree_.getNativeObject<ShapeTree>();
     }
 
     Shape *parent() const {
-        WH_ASSERT(parent_.isNull() || parent_.isSpecialObject());
-        return parent_.getSpecialObject<Shape>();
+        WH_ASSERT(parent_.isNull() || parent_.isNativeObject());
+        return parent_.getNativeObject<Shape>();
     }
 
     const Value &name() const {
@@ -118,13 +108,13 @@ class Shape : public HeapThing<HeapType::Shape>
     }
 
     Shape *firstChild() const {
-        WH_ASSERT(firstChild_.isNull() || firstChild_.isSpecialObject());
-        return firstChild_.getSpecialObject<Shape>();
+        WH_ASSERT(firstChild_.isNull() || firstChild_.isNativeObject());
+        return firstChild_.getNativeObject<Shape>();
     }
 
     Shape *nextSibling() const {
-        WH_ASSERT(nextSibling_.isNull() || nextSibling_.isSpecialObject());
-        return nextSibling_.getSpecialObject<Shape>();
+        WH_ASSERT(nextSibling_.isNull() || nextSibling_.isNativeObject());
+        return nextSibling_.getNativeObject<Shape>();
     }
 
     void addChild(Shape *child) {
@@ -140,35 +130,15 @@ class Shape : public HeapThing<HeapType::Shape>
     void setNextSibling(Shape *sibling) {
         WH_ASSERT(sibling);
         noteWrite(&nextSibling_);
-        nextSibling_ = SpecialObjectValue(sibling);
+        nextSibling_ = NativeObjectValue(sibling);
     }
 
     void setFirstChild(Shape *child) {
         WH_ASSERT(child);
         noteWrite(&firstChild_);
-        firstChild_ = SpecialObjectValue(child);
+        firstChild_ = NativeObjectValue(child);
     }
 };
-
-inline
-ShapeTree::ShapeTree(Class &klass, Object *delegate, Shape *root)
-  : klass_(ForeignObjectValue(&klass)),
-    delegate_(delegate ? ObjectValue(delegate) : NullValue()),
-    root_(SpecialObjectValue(root))
-{}
-
-template <typename T>
-inline
-ShapeTree::ShapeTree(Class &klass, T *delegate, Shape *root)
-  : klass_(ForeignObjectValue(&klass)),
-    delegate_(delegate ? SpecialObjectValue(delegate) : NullValue()),
-    root_(SpecialObjectValue(root))
-{}
-
-inline Shape *
-ShapeTree::root() {
-    return root_.getSpecialObject<Shape>();
-}
 
 
 //
@@ -181,19 +151,35 @@ class ShapedHeapThing : public HeapThing<HT>
     Value shape_;
 
     ShapedHeapThing(Shape *shape) {
-        shape_ = SpecialObjectValue(shape);
+        shape_ = NativeObjectValue(shape);
     }
 
   public:
     Shape *shape() const {
-        return shape_.getSpecialObject<Shape>();
+        return shape_.getNativeObject<Shape>();
     }
 
     void setShape(Shape *shape) {
         this->noteWrite(&shape_);
-        shape_ = SpecialObjectValue(shape);
+        shape_ = NativeObjectValue(shape);
     }
 };
+
+template <typename T>
+inline
+ShapeTree::ShapeTree(Class &klass, T *delegate, Shape *root)
+  : klass_(ForeignObjectValue(&klass)),
+    delegate_(delegate ? NativeObjectValue(delegate) : NullValue()),
+    root_(NativeObjectValue(root))
+{
+    static_assert(std::is_base_of<ShapedHeapThing<T::Type>, T>::value,
+                  "ShapeTree delegate object must be itself shaped.");
+}
+
+inline Shape *
+ShapeTree::root() {
+    return root_.getNativeObject<Shape>();
+}
 
 
 } // namespace VM

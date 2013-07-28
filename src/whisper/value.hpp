@@ -38,8 +38,7 @@ namespace Whisper {
 //
 // Object:
 //  0000-W000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Object pointer
-//  0000-W001 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Special pointer
-//  0000-W010 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Foreign pointer
+//  0000-W001 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Foreign pointer
 //
 //      W is the weak bit.  If W=1, the reference is weak.
 //
@@ -51,7 +50,7 @@ namespace Whisper {
 //  0011-0000 0000-0000 0000-0000 ... 0000-000V     - Boolean value
 //
 // HeapString & ImmString8 & ImmString16:
-//  0100-W000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - String pointer
+//  0100-W000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - HeapString pointer
 //  0101-0LLL AAAA-AAAA BBBB-BBBB ... GGGG-GGGG     - Immediate 8-bit string
 //  0110-0000 0000-0000 AAAA-AAAA ... CCCC-CCCC     - Immediate 16-bit string
 //
@@ -74,7 +73,7 @@ namespace Whisper {
 //  0111-EEEE EEEM-MMMM MMMM-MMMM ... MMMM-MMMS     - ImmDoubleLow
 //  1000-EEEE EEEM-MMMM MMMM-MMMM ... MMMM-MMMS     - ImmDoubleHigh
 //  1001-0000 0000-0000 0000-0000 ... 0000-00XX     - ImmDoubleX
-//  1010-W000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Double pointer
+//  1010-W000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - HeapDouble pointer
 //
 //      ImmDoubleLo and ImmDoubleHi are "regular" double values which
 //      are immediately representable.  The only requirement is that
@@ -113,6 +112,7 @@ namespace Whisper {
 //
 
 namespace VM {
+    class UntypedHeapThing;
     class Object;
     class HeapString;
     class HeapDouble;
@@ -180,8 +180,7 @@ class Value
     static constexpr unsigned PtrTypeShift = 56;
     static constexpr unsigned PtrTypeMask = 0xFu;
     static constexpr unsigned PtrType_Native = 0x0u;
-    static constexpr unsigned PtrType_Special = 0x1u;
-    static constexpr unsigned PtrType_Foreign = 0x2u;
+    static constexpr unsigned PtrType_Foreign = 0x1u;
 
     // Constants relating to string bits.
     static constexpr unsigned ImmString8MaxLength = 7;
@@ -308,11 +307,6 @@ class Value
                ((tagged_ >> PtrTypeShift) & PtrTypeMask) == PtrType_Native;
     }
 
-    bool isSpecialObject() const {
-        return isObject() &&
-               ((tagged_ >> PtrTypeShift) & PtrTypeMask) == PtrType_Special;
-    }
-
     bool isForeignObject() const {
         return isObject() &&
                ((tagged_ >> PtrTypeShift) & PtrTypeMask) == PtrType_Foreign;
@@ -418,22 +412,21 @@ class Value
     //
     // Getter methods
     //
-
-    VM::Object *getNativeObject() const {
+    template <typename T=VM::Object>
+    T *getNativeObject() const {
         WH_ASSERT(isNativeObject());
-        return getPtr<VM::Object>();
+        WH_ASSERT(getPtr<T>()->type() == T::Type);
+        return getPtr<T>();
+    }
+
+    VM::UntypedHeapThing *getAnyNativeObject() const {
+        WH_ASSERT(isNativeObject());
+        return getPtr<VM::UntypedHeapThing>();
     }
 
     template <typename T>
     T *getForeignObject() const {
         WH_ASSERT(isForeignObject());
-        return getPtr<T>();
-    }
-
-    template <typename T>
-    T *getSpecialObject() const {
-        WH_ASSERT(isSpecialObject());
-        WH_ASSERT(getPtr<T>()->type() == T::Type);
         return getPtr<T>();
     }
 
@@ -549,9 +542,8 @@ class Value
     //
     // Friend functions
     //
-    friend Value ObjectValue(VM::Object *obj);
     template <typename T>
-    friend Value SpecialObjectValue(T *obj);
+    friend Value NativeObjectValue(T *obj);
     friend Value ForeignObjectValue(void *obj);
     friend Value NullValue();
     friend Value UndefinedValue();
@@ -574,18 +566,11 @@ class Value
 };
 
 
-inline Value
-ObjectValue(VM::Object *obj) {
-    return Value::MakePtr(ValueTag::Object, obj);
-}
-
 template <typename T>
 inline Value
-SpecialObjectValue(T *obj) {
+NativeObjectValue(T *obj) {
     WH_ASSERT(T::Type == obj->type());
     Value val = Value::MakePtr(ValueTag::Object, obj);
-    val.tagged_ |= (static_cast<uint64_t>(Value::PtrType_Special) <<
-                        Value::PtrTypeShift);
     return val;
 }
 

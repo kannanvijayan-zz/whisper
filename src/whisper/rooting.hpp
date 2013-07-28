@@ -293,12 +293,16 @@ class Root<Value> : public TypedRootBase<Value>
         return thing_.isNativeObject();
     }
 
-    bool isForeignObject() const {
-        return thing_.isForeignObject();
+    template <typename T>
+    bool isNativeObjectOf() const {
+        if (!isNativeObject())
+            return false;
+        VM::UntypedHeapThing *heapThing = thing_.getAnyNativeObject();
+        return heapThing->type() == T::Type;
     }
 
-    bool isSpecialObject() const {
-        return thing_.isSpecialObject();
+    bool isForeignObject() const {
+        return thing_.isForeignObject();
     }
 
     bool isNull() const {
@@ -396,18 +400,14 @@ class Root<Value> : public TypedRootBase<Value>
     // Getter methods
     //
 
-    VM::Object *getNativeObject() const {
-        return thing_.getNativeObject();
+    template <typename T=VM::Object>
+    T *getNativeObject() const {
+        return thing_.getNativeObject<T>();
     }
 
     template <typename T>
     T *getForeignObject() const {
         return thing_.getForeignObject<T>();
-    }
-
-    template <typename T>
-    T *getSpecialObject() const {
-        return thing_.getSpecialObject<T>();
     }
 
     bool getBoolean() const {

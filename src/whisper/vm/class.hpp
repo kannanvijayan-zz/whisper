@@ -31,8 +31,8 @@ class PropertyDescriptor;
 class Class
 {
   private:
-    // Up to 16 hidden slots.
-    uint32_t numHiddenSlots_ : 4;
+    // Up to 16 internal slots.
+    uint32_t numInternalSlots_ : 4;
 
     // Flags.
     uint32_t handleGetInheritance_ : 1;
