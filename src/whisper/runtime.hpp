@@ -6,7 +6,7 @@
 
 #include "common.hpp"
 #include "debug.hpp"
-#include "vm/heap_thing.hpp"
+#include "slab.hpp"
 
 namespace Whisper {
 

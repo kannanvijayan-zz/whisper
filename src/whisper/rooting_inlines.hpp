@@ -2,6 +2,7 @@
 #define WHISPER__ROOTING_INLINES_HPP
 
 #include "rooting.hpp"
+#include "runtime.hpp"
 
 namespace Whisper {
 

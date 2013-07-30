@@ -2,6 +2,7 @@
 #define WHISPER__RUNTIME_INLINES_HPP
 
 #include "runtime.hpp"
+#include "vm/heap_thing.hpp"
 
 namespace Whisper {
 

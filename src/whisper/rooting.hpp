@@ -4,9 +4,11 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "value.hpp"
-#include "runtime.hpp"
 
 namespace Whisper {
+
+class RunContext;
+class ThreadContext;
 
 template <typename T> class TypedHandleBase;
 template <typename T> class TypedMutableHandleBase;
