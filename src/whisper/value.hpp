@@ -236,323 +236,142 @@ class Value
     uint64_t tagged_;
 
   public:
-    Value() : tagged_(Invalid) {}
+    Value();
 
   protected:
     // Raw uint64_t constructor is private.
-    explicit Value(uint64_t tagged) : tagged_(tagged) {}
+    explicit Value(uint64_t tagged);
 
-    bool checkTag(ValueTag tag) const {
-        return (tagged_ >> TagShift) == ValueTagNumber(tag);
-    }
+    bool checkTag(ValueTag tag) const;
+    uint64_t removeTag() const;
 
     template <typename T=void>
-    T *getPtr() const {
-        WH_ASSERT(isObject() || isHeapString() || isHeapDouble());
-        return reinterpret_cast<T *>(
-                (static_cast<int64_t>(tagged_ << PtrHighBits)) >> PtrHighBits);
-    }
-
-    uint64_t removeTag() const {
-        return (tagged_ << TagBits) >> TagBits;
-    }
+    inline T *getPtr() const;
 
     template <typename T>
-    static Value MakePtr(ValueTag tag, T *ptr) {
-        WH_ASSERT(tag == ValueTag::Object || tag == ValueTag::HeapString ||
-                  tag == ValueTag::HeapDouble);
-        uint64_t ptrval = reinterpret_cast<uint64_t>(ptr);
-        ptrval &= ~TagMaskHigh;
-        ptrval |= UInt64(tag) << TagShift;
-        return Value(ptrval);
-    }
+    static inline Value MakePtr(ValueTag tag, T *ptr);
 
-    static Value MakeTag(ValueTag tag) {
-        WH_ASSERT(IsValidValueTag(tag));
-        return Value(UInt64(tag) << TagShift);
-    }
-
-    static Value MakeTagValue(ValueTag tag, uint64_t ival) {
-        WH_ASSERT(IsValidValueTag(tag));
-        WH_ASSERT(ival <= (~UInt64(0) >> TagBits));
-        return Value(UInt64(tag) << TagShift);
-    }
+    static Value MakeTag(ValueTag tag);
+    static Value MakeTagValue(ValueTag tag, uint64_t ival);
 
   public:
 
 #if defined(ENABLE_DEBUG)
-    bool isValid() const {
-        // If heap thing, pointer can't be zero.
-        if (((tagged_ & 0x3) == 0) && ((tagged_ >> 4) == 0))
-            return false;
 
-        // Otherwise, check for unused tag range.
-        unsigned tag = tagged_ & 0xFu;
-        if (tag >= 0x8u && tag <= 0xBu)
-            return false;
+    bool isValid() const;
 
-        return true;
-    }
 #endif // defined(ENABLE_DEBUG)
 
     //
     // Checker methods
     //
 
-    bool isObject() const {
-        return checkTag(ValueTag::Object);
-    }
+    bool isObject() const;
 
-    bool isNativeObject() const {
-        return isObject() &&
-               ((tagged_ >> PtrTypeShift) & PtrTypeMask) == PtrType_Native;
-    }
+    bool isNativeObject() const;
 
     template <typename T>
-    bool isNativeObjectOf() const {
-        static_assert(std::is_base_of<VM::UntypedHeapThing, T>::value,
-                      "Type is not a heap thing.");
-        if (!isNativeObject())
-            return false;
-        return getPtr<T>()->type() == T::Type;
-    }
+    inline bool isNativeObjectOf() const;
 
-    bool isForeignObject() const {
-        return isObject() &&
-               ((tagged_ >> PtrTypeShift) & PtrTypeMask) == PtrType_Foreign;
-    }
+    bool isForeignObject() const;
 
-    bool isNull() const {
-        return checkTag(ValueTag::Null);
-    }
+    bool isNull() const;
 
-    bool isUndefined() const {
-        return checkTag(ValueTag::Undefined);
-    }
+    bool isUndefined() const;
 
-    bool isBoolean() const {
-        return checkTag(ValueTag::Boolean);
-    }
+    bool isBoolean() const;
 
-    bool isHeapString() const {
-        return checkTag(ValueTag::HeapString);
-    }
+    bool isHeapString() const;
 
-    bool isImmString8() const {
-        return checkTag(ValueTag::ImmString8);
-    }
+    bool isImmString8() const;
 
-    bool isImmString16() const {
-        return checkTag(ValueTag::ImmString16);
-    }
+    bool isImmString16() const;
 
-    bool isImmDoubleLow() const {
-        return checkTag(ValueTag::ImmDoubleLow);
-    }
+    bool isImmDoubleLow() const;
 
-    bool isImmDoubleHigh() const {
-        return checkTag(ValueTag::ImmDoubleHigh);
-    }
+    bool isImmDoubleHigh() const;
 
-    bool isImmDoubleX() const {
-        return checkTag(ValueTag::ImmDoubleX);
-    }
+    bool isImmDoubleX() const;
 
-    bool isNegZero() const {
-        return isImmDoubleX() && (tagged_ & 0xFu) == NegZeroVal;
-    }
+    bool isNegZero() const;
 
-    bool isNaN() const {
-        return isImmDoubleX() && (tagged_ & 0xFu) == NaNVal;
-    }
+    bool isNaN() const;
 
-    bool isPosInf() const {
-        return isImmDoubleX() && (tagged_ & 0xFu) == PosInfVal;
-    }
+    bool isPosInf() const;
 
-    bool isNegInf() const {
-        return isImmDoubleX() && (tagged_ & 0xFu) == NegInfVal;
-    }
+    bool isNegInf() const;
 
-    bool isHeapDouble() const {
-        return checkTag(ValueTag::HeapDouble);
-    }
+    bool isHeapDouble() const;
 
-    bool isInt32() const {
-        return checkTag(ValueTag::Int32);
-    }
+    bool isInt32() const;
 
-    bool isMagic() const {
-        return checkTag(ValueTag::Magic);
-    }
+    bool isMagic() const;
 
     // Helper functions to check combined types.
 
-    bool isString() const {
-        return isImmString8() || isImmString16() || isHeapString();
-    }
+    bool isString() const;
 
-    bool isImmString() const {
-        return isImmString8() || isImmString16();
-    }
+    bool isImmString() const;
 
-    bool isNumber() const {
-        return isImmDoubleLow() || isImmDoubleHigh() || isImmDoubleX() ||
-               isHeapDouble()   || isInt32();
-    }
+    bool isNumber() const;
 
-    bool isDouble() const {
-        return isImmDoubleLow() || isImmDoubleHigh() || isImmDoubleX() ||
-               isHeapDouble();
-    }
+    bool isDouble() const;
 
-    bool isSpecialImmDouble() const {
-       return isImmDoubleLow() || isImmDoubleHigh() || isImmDoubleX();
-    }
+    bool isSpecialImmDouble() const;
 
-    bool isRegularImmDouble() const {
-       return isImmDoubleLow() || isImmDoubleHigh();
-    }
+    bool isRegularImmDouble() const;
 
-    bool isWeakPointer() const {
-        WH_ASSERT(isHeapDouble() || isHeapString() || isObject());
-        return tagged_ & WeakMask;
-    }
+    bool isWeakPointer() const;
 
     //
     // Getter methods
     //
     template <typename T=VM::Object>
-    T *getNativeObject() const {
-        WH_ASSERT(isNativeObject());
-        WH_ASSERT(getPtr<T>()->type() == T::Type);
-        return getPtr<T>();
-    }
+    inline T *getNativeObject() const;
 
-    VM::UntypedHeapThing *getAnyNativeObject() const {
-        WH_ASSERT(isNativeObject());
-        return getPtr<VM::UntypedHeapThing>();
-    }
+    VM::UntypedHeapThing *getAnyNativeObject() const;
 
     template <typename T>
-    T *getForeignObject() const {
-        WH_ASSERT(isForeignObject());
-        return getPtr<T>();
-    }
+    inline T *getForeignObject() const;
 
-    bool getBoolean() const {
-        WH_ASSERT(isBoolean());
-        return tagged_ & 0x1;
-    }
+    bool getBoolean() const;
 
-    VM::HeapString *getHeapString() const {
-        WH_ASSERT(isHeapString());
-        return getPtr<VM::HeapString>();
-    }
+    VM::HeapString *getHeapString() const;
 
-    unsigned immString8Length() const {
-        WH_ASSERT(isImmString8());
-        return (tagged_ >> ImmString8LengthShift) & ImmString8LengthMaskLow;
-    }
+    unsigned immString8Length() const;
 
-    uint8_t getImmString8Char(unsigned idx) const {
-        WH_ASSERT(isImmString8());
-        WH_ASSERT(idx < immString8Length());
-        return (tagged_ >> (48 - (idx*8))) & 0xFFu;
-    }
+    uint8_t getImmString8Char(unsigned idx) const;
 
     template <typename CharT>
-    uint32_t readImmString8(CharT *buf) const {
-        WH_ASSERT(isImmString8());
-        uint32_t length = immString8Length();
-        for (uint32_t i = 0; i < length; i++)
-            buf[i] = (tagged_ >> (48 - (8 * i))) & 0xFFu;
-        return length;
-    }
+    inline uint32_t readImmString8(CharT *buf) const;
 
-    unsigned immString16Length() const {
-        WH_ASSERT(isImmString16());
-        return (tagged_ >> ImmString16LengthShift) & ImmString16LengthMaskLow;
-    }
+    unsigned immString16Length() const;
 
-    uint16_t getImmString16Char(unsigned idx) const {
-        WH_ASSERT(isImmString16());
-        WH_ASSERT(idx < immString16Length());
-        return (tagged_ >> (32 - (idx*16))) & 0xFFFFu;
-    }
+    uint16_t getImmString16Char(unsigned idx) const;
 
     template <typename CharT>
-    uint32_t readImmString16(CharT *buf) const {
-        WH_ASSERT(isImmString16());
-        uint32_t length = immString16Length();
-        for (uint32_t i = 0; i < length; i++)
-            buf[i] = (tagged_ >> (32 - (16 * i))) & 0xFFu;
-        return length;
-    }
+    inline uint32_t readImmString16(CharT *buf) const;
 
-    unsigned immStringLength() const {
-        WH_ASSERT(isImmString());
-        return isImmString8() ? immString8Length() : immString16Length();
-    }
+    unsigned immStringLength() const;
 
-    uint16_t getImmStringChar(unsigned idx) const {
-        WH_ASSERT(isImmString());
-        return isImmString8() ? getImmString8Char(idx)
-                              : getImmString16Char(idx);
-    }
+    uint16_t getImmStringChar(unsigned idx) const;
 
     template <typename CharT>
-    unsigned readImmString(CharT *buf) const {
-        WH_ASSERT(isImmString());
-        return isImmString8() ? readImmString8<CharT>(buf)
-                              : readImmString16<CharT>(buf);
-    }
+    inline unsigned readImmString(CharT *buf) const;
 
-    double getImmDoubleHiLoValue() const {
-        WH_ASSERT(isImmDoubleHigh() || isImmDoubleLow());
-        return IntToDouble(RotateRight(tagged_, 1));
-    }
+    double getImmDoubleHiLoValue() const;
 
-    double getImmDoubleXValue() const {
-        WH_ASSERT(isImmDoubleX());
-        switch (tagged_) {
-          case NaNVal:
-            return std::numeric_limits<double>::quiet_NaN();
-          case NegZeroVal:
-            return -0.0;
-          case PosInfVal:
-            return std::numeric_limits<double>::infinity();
-          case NegInfVal:
-            return -std::numeric_limits<double>::infinity();
-        }
-        WH_UNREACHABLE("Bad special immedate double.");
-        return 0.0;
-    }
+    double getImmDoubleXValue() const;
 
-    double getImmDoubleValue() const {
-        WH_ASSERT(isSpecialImmDouble());
-        return isImmDoubleX() ? getImmDoubleXValue() : getImmDoubleHiLoValue();
-    }
+    double getImmDoubleValue() const;
 
-    VM::HeapDouble *getHeapDouble() const {
-        WH_ASSERT(isHeapDouble());
-        return getPtr<VM::HeapDouble>();
-    }
+    VM::HeapDouble *getHeapDouble() const;
 
-    uint64_t getMagicInt() const {
-        WH_ASSERT(isMagic());
-        return removeTag();
-    }
+    uint64_t getMagicInt() const;
 
-    Magic getMagic() const {
-        WH_ASSERT(isMagic());
-        return static_cast<Magic>(removeTag());
-    }
+    Magic getMagic() const;
 
-    int32_t getInt32() const {
-        WH_ASSERT(isInt32());
-        return static_cast<int32_t>(tagged_);
-    }
+    int32_t getInt32() const;
 
     //
     // Friend functions
@@ -586,153 +405,49 @@ class Value
 
 
 template <typename T>
-inline Value
-NativeObjectValue(T *obj) {
-    WH_ASSERT(T::Type == obj->type());
-    Value val = Value::MakePtr(ValueTag::Object, obj);
-    return val;
-}
+inline Value NativeObjectValue(T *obj);
 
 template <typename T>
-inline Value
-WeakNativeObjectValue(T *obj) {
-    Value val = NativeObjectValue<T>(obj);
-    val.tagged_ |= Value::WeakMask;
-    return val;
-}
+inline Value WeakNativeObjectValue(T *obj);
 
-inline Value
-ForeignObjectValue(void *obj) {
-    Value val = Value::MakePtr(ValueTag::Object, obj);
-    val.tagged_ |= (UInt64(Value::PtrType_Foreign) << Value::PtrTypeShift);
-    return val;
-}
+Value ForeignObjectValue(void *obj);
 
-inline Value
-WeakForeignObjectValue(void *obj) {
-    Value val = ForeignObjectValue(obj);
-    val.tagged_ |= Value::WeakMask;
-    return val;
-}
+Value WeakForeignObjectValue(void *obj);
 
-inline Value
-NullValue() {
-    return Value::MakeTag(ValueTag::Null);
-}
+Value NullValue();
 
-inline Value
-UndefinedValue() {
-    return Value::MakeTag(ValueTag::Undefined);
-}
+Value UndefinedValue();
 
-inline Value
-BooleanValue(bool b) {
-    return Value::MakeTagValue(ValueTag::Boolean, b);
-}
+Value BooleanValue(bool b);
 
-inline Value
-StringValue(VM::HeapString *str) {
-    return Value::MakePtr(ValueTag::HeapString, str);
-}
+Value StringValue(VM::HeapString *str);
 
 template <typename CharT>
-inline Value
-String8Value(unsigned length, const CharT *data) {
-    WH_ASSERT(length < Value::ImmString8MaxLength);
-    uint64_t val = length;
-    for (unsigned i = 0; i < Value::ImmString8MaxLength; i++) {
-        val <<= 8;
-        if (i < length) {
-            WH_ASSERT(data[i] == data[i] & 0xFFu);
-            val |= data[i];
-        }
-    }
-    return Value::MakeTagValue(ValueTag::ImmString8, val);
-}
+inline Value String8Value(unsigned length, const CharT *data);
 
 template <typename CharT>
-inline Value
-String16Value(unsigned length, const CharT *data) {
-    WH_ASSERT(length < Value::ImmString16MaxLength);
-    uint64_t val = length;
-    for (unsigned i = 0; i < Value::ImmString16MaxLength; i++) {
-        val <<= 16;
-        if (i < length) {
-            WH_ASSERT(data[i] == data[i] & 0xFFFFu);
-            val |= data[i];
-        }
-    }
-    return Value::MakeTagValue(ValueTag::ImmString16, val);
-}
+inline Value String16Value(unsigned length, const CharT *data);
 
 template <typename CharT>
-inline Value
-StringValue(unsigned length, const CharT *data)
-{
-    bool make8 = true;
-    for (unsigned i = 0; i < length; i++) {
-        WH_ASSERT(data[i] == data[i] & 0xFFFFu);
-        if (data[i] != data[i] & 0xFFu) {
-            make8 = false;
-            break;
-        }
-    }
+inline Value StringValue(unsigned length, const CharT *data);
 
-    return make8 ? String8Value(length, data) : String16Value(length, data);
-}
+Value DoubleValue(VM::HeapDouble *d);
 
-inline Value
-DoubleValue(VM::HeapDouble *d) {
-    return Value::MakePtr(ValueTag::HeapDouble, d);
-}
+Value NegZeroValue();
 
-inline Value
-NegZeroValue() {
-    return Value::MakeTagValue(ValueTag::ImmDoubleX, UInt64(Value::NegZeroVal));
-}
+Value NaNValue();
 
-inline Value
-NaNValue() {
-    return Value::MakeTagValue(ValueTag::ImmDoubleX, UInt64(Value::NaNVal));
-}
+Value PosInfValue();
 
-inline Value
-PosInfValue() {
-    return Value::MakeTagValue(ValueTag::ImmDoubleX, UInt64(Value::PosInfVal));
-}
+Value NegInfValue();
 
-inline Value
-NegInfValue() {
-    return Value::MakeTagValue(ValueTag::ImmDoubleX, UInt64(Value::NegInfVal));
-}
+Value DoubleValue(double dval);
 
-inline Value
-DoubleValue(double dval) {
-    uint64_t ival = DoubleToInt(dval);
-    WH_ASSERT(((ival <= Value::ImmDoublePosMax) &&
-               (ival >= Value::ImmDoublePosMin)) ||
-              ((ival <= Value::ImmDoubleNegMax) &&
-               (ival >= Value::ImmDoubleNegMin)));
-    return Value(RotateLeft(ival, 1));
-}
+Value MagicValue(uint64_t val);
 
-inline Value
-MagicValue(uint64_t val) {
-    WH_ASSERT((val & Value::TagMaskHigh) == 0);
-    return Value::MakeTagValue(ValueTag::Magic, val);
-}
+Value MagicValue(Magic magic);
 
-inline Value
-MagicValue(Magic magic) {
-    return Value::MakeTagValue(ValueTag::Magic, UInt64(magic));
-}
-
-inline Value
-IntegerValue(int32_t ival) {
-    // Cast to uint32_t so value doesn't get sign extended when casting
-    // to uint64_t
-    return Value::MakeTagValue(ValueTag::Int32, UInt32(ival));
-}
+Value IntegerValue(int32_t ival);
 
 
 } // namespace Whisper

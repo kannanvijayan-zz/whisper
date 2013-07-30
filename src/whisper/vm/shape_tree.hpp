@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "value.hpp"
+#include "value_inlines.hpp"
 #include "rooting.hpp"
 #include "vm/heap_thing.hpp"
 #include "vm/vm_helpers.hpp"

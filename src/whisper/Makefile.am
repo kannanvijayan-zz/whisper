@@ -10,5 +10,6 @@ whisper_SOURCES = \
     parser/syntax_tree.cpp \
     parser/parser.cpp \
     slab.cpp \
+    value.cpp \
     runtime.cpp \
     vm/vm_helpers.cpp
