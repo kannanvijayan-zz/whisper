@@ -50,13 +50,8 @@ class Runtime
 
     bool initialize();
 
-    bool hasError() const {
-        return error_ != nullptr;
-    }
-    const char *error() const {
-        WH_ASSERT(hasError());
-        return error_;
-    }
+    bool hasError() const;
+    const char *error() const;
 
     const char *registerThread();
 
@@ -88,42 +83,15 @@ class ThreadContext
     RootBase *roots_;
 
   public:
-    ThreadContext(Runtime *runtime, Slab *nursery)
-      : runtime_(runtime),
-        hatchery_(nullptr),
-        nursery_(nursery),
-        tenured_(),
-        activeRunContext_(nullptr),
-        roots_(nullptr)
-    {}
+    ThreadContext(Runtime *runtime, Slab *nursery);
 
-    Runtime *runtime() const {
-        return runtime_;
-    }
-
-    Slab *hatchery() const {
-        return hatchery_;
-    }
-
-    Slab *nursery() const {
-        return nursery_;
-    }
-
-    const SlabList &tenured() const {
-        return tenured_;
-    }
-
-    SlabList &tenured() {
-        return tenured_;
-    }
-
-    RunContext *activeRunContext() const {
-        return activeRunContext_;
-    }
-
-    RootBase *roots() const {
-        return roots_;
-    }
+    Runtime *runtime() const;
+    Slab *hatchery() const;
+    Slab *nursery() const;
+    const SlabList &tenured() const;
+    SlabList &tenured();
+    RunContext *activeRunContext() const;
+    RootBase *roots() const;
 
     RunContext makeRunContext();
 };
@@ -151,77 +119,32 @@ class RunContext
     Slab *hatchery_;
 
   public:
-    RunContext(ThreadContext *threadContext)
-      : threadContext_(threadContext),
-        hatchery_(threadContext_->hatchery())
-    {}
+    RunContext(ThreadContext *threadContext);
 
-    ThreadContext *threadContext() const {
-        return threadContext_;
-    }
+    ThreadContext *threadContext() const;
 
-    Runtime *runtime() const {
-        return threadContext_->runtime();
-    }
+    Runtime *runtime() const;
 
-    Slab *hatchery() const {
-        WH_ASSERT(hatchery_ == threadContext_->hatchery());
-        return hatchery_;
-    }
+    Slab *hatchery() const;
 
     // Construct an object in the hatchery.
     // Optionally GC-ing if necessary.
     template <typename ObjT, typename... Args>
-    ObjT *create(bool allowGC, Args... args) {
-        return create<ObjT, Args...>(allowGC, sizeof(ObjT), args...);
-    }
+    inline ObjT *create(bool allowGC, Args... args);
 
     template <typename ObjT, typename... Args>
-    ObjT *create(bool allowGC, uint32_t size, Args... args) {
-        // Allocate the space for the object.
-        uint8_t *mem = allocate<ObjT::Type>(size);
-        if (!mem) {
-            if (!allowGC)
-                return nullptr;
-
-            WH_ASSERT(!"GC infrastructure.");
-            return nullptr;
-        }
-
-        // Figure out the card number.
-        uint32_t cardNo = hatchery_->calculateCardNumber(mem);
-
-        // Initialize the object using HeapThingWrapper, and
-        // return it.
-        typedef VM::HeapThingWrapper<ObjT> WrappedType;
-        WrappedType *wrapped = new (mem) WrappedType(cardNo, size, args...);
-        return wrapped->payloadPointer();
-    }
+    inline ObjT *create(bool allowGC, uint32_t size, Args... args);
 
     void makeActive();
 
   private:
-    void syncHatchery() {
-        WH_ASSERT(threadContext_->activeRunContext() == this);
-        hatchery_ = threadContext_->hatchery();
-    }
+    void syncHatchery();
 
     // Allocate an object in the hatchery.  This takes an explicit
     // size because some objects are variable sized.
     // Return null if not enough space in hatchery.
-    template <VM::HeapType ObjType>
-    uint8_t *allocate(uint32_t size) {
-        // Add HeaderSize to size.
-        uint32_t allocSize = size + VM::HeapThingHeader::HeaderSize;
-        allocSize = AlignIntUp<uint32_t>(allocSize, Slab::AllocAlign);
-
-        // Track whether to allocate from top or bottom.
-        bool headAlloc = VM::HeapTypeTraits<ObjType>::Traced;
-
-        // Allocate the space.
-        return headAlloc ? hatchery_->allocateHead(allocSize)
-                         : hatchery_->allocateTail(allocSize);
-    }
+    template <typename ObjT>
+    inline uint8_t *allocate(uint32_t size);
 };
 
 

@@ -3,9 +3,13 @@
 
 #include "slab.hpp"
 #include "runtime.hpp"
+#include "runtime_inlines.hpp"
 
 namespace Whisper {
 
+//
+// Runtime
+//
 
 Runtime::Runtime()
   : threadContexts_()
@@ -28,6 +32,19 @@ Runtime::initialize()
 
     initialized_ = true;
     return true;
+}
+
+bool
+Runtime::hasError() const
+{
+    return error_ != nullptr;
+}
+
+const char *
+Runtime::error() const
+{
+    WH_ASSERT(hasError());
+    return error_;
 }
 
 const char *
@@ -88,10 +105,93 @@ Runtime::threadContext()
     return ctx;
 }
 
+//
+// ThreadContext
+//
+
+ThreadContext::ThreadContext(Runtime *runtime, Slab *nursery)
+  : runtime_(runtime),
+    hatchery_(nullptr),
+    nursery_(nursery),
+    tenured_(),
+    activeRunContext_(nullptr),
+    roots_(nullptr)
+{}
+
+Runtime *
+ThreadContext::runtime() const
+{
+    return runtime_;
+}
+
+Slab *
+ThreadContext::hatchery() const
+{
+    return hatchery_;
+}
+
+Slab *
+ThreadContext::nursery() const
+{
+    return nursery_;
+}
+
+const SlabList &
+ThreadContext::tenured() const
+{
+    return tenured_;
+}
+
+SlabList &
+ThreadContext::tenured()
+{
+    return tenured_;
+}
+
+RunContext *
+ThreadContext::activeRunContext() const
+{
+    return activeRunContext_;
+}
+
+RootBase *
+ThreadContext::roots() const
+{
+    return roots_;
+}
+
 RunContext
 ThreadContext::makeRunContext()
 {
     return RunContext(this);
+}
+
+//
+// RunContext
+//
+
+RunContext::RunContext(ThreadContext *threadContext)
+  : threadContext_(threadContext),
+    hatchery_(threadContext_->hatchery())
+{}
+
+ThreadContext *
+RunContext::threadContext() const
+{
+    return threadContext_;
+}
+
+Runtime *
+RunContext::runtime() const
+{
+    return threadContext_->runtime();
+}
+
+Slab *
+RunContext::hatchery() const
+{
+    WH_ASSERT(hatchery_ == threadContext_->hatchery());
+    return hatchery_;
 }
 
 void
@@ -103,6 +203,13 @@ RunContext::makeActive()
         threadContext_->activeRunContext_ = this;
         syncHatchery();
     }
+}
+
+void
+RunContext::syncHatchery()
+{
+    WH_ASSERT(threadContext_->activeRunContext() == this);
+    hatchery_ = threadContext_->hatchery();
 }
 
 
