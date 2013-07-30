@@ -9,8 +9,6 @@
     _(HeapDouble,                       false)                  \
     _(HeapString,                       false)                  \
     \
-    _(PropertyDescriptor,               true)                   \
-    \
     _(Tuple,                            true)                   \
     \
     _(ShapeTree,                        true)                   \

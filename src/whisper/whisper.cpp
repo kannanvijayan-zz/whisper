@@ -18,7 +18,7 @@
 #include "ref_scanner.hpp"
 
 #include "vm/reference.hpp"
-//#include "vm/property_descriptor.hpp"
+#include "vm/property_descriptor.hpp"
 
 //#include "vm/tuple.hpp"
 //#include "vm/shape_tree.hpp"

@@ -17,4 +17,5 @@ whisper_SOURCES = \
     vm/string.cpp \
     vm/double.cpp \
     vm/reference.cpp \
+    vm/property_descriptor.cpp \
     whisper.cpp
