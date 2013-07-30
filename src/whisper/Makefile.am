@@ -16,4 +16,5 @@ whisper_SOURCES = \
     vm/heap_thing.cpp \
     vm/string.cpp \
     vm/double.cpp \
+    vm/reference.cpp \
     whisper.cpp
