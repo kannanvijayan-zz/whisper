@@ -9,7 +9,6 @@
     _(HeapDouble,                       false)                  \
     _(HeapString,                       false)                  \
     \
-    _(CompletionRecord,                 true)                   \
     _(Reference,                        true)                   \
     _(PropertyDescriptor,               true)                   \
     \
