@@ -295,10 +295,7 @@ class Root<Value> : public TypedRootBase<Value>
 
     template <typename T>
     bool isNativeObjectOf() const {
-        if (!isNativeObject())
-            return false;
-        VM::UntypedHeapThing *heapThing = thing_.getAnyNativeObject();
-        return heapThing->type() == T::Type;
+        return thing_.isNativeObjectOf<T>();
     }
 
     bool isForeignObject() const {

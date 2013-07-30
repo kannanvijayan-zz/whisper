@@ -2,6 +2,7 @@
 #define WHISPER__VALUE_HPP
 
 #include <limits>
+#include <type_traits>
 #include "common.hpp"
 #include "debug.hpp"
 
@@ -197,7 +198,7 @@ class Value
 
     // The weak bit is the same bit across all pointer-type values.
     static constexpr unsigned WeakBit = 59;
-    static constexpr uint64_t WeakMask = static_cast<uint64_t>(1) << WeakBit;
+    static constexpr uint64_t WeakMask = UInt64(1) << WeakBit;
 
     // Bounds for representable simple ImmDouble:
     // In order of: [PosMax, PosMin, NegMax, NegMin]
@@ -209,9 +210,9 @@ class Value
     template <bool NEG, unsigned EXP, bool MANT>
     struct GenerateDouble_ {
         static constexpr uint64_t Value =
-            (static_cast<uint64_t>(NEG) << 63) |
-            (static_cast<uint64_t>(EXP) << 52) |
-            (MANT ? ((static_cast<uint64_t>(MANT) << 52) - 1u) : 0);
+            (UInt64(NEG) << 63) |
+            (UInt64(EXP) << 52) |
+            (MANT ? ((UInt64(MANT) << 52) - 1u) : 0);
     };
     static constexpr uint64_t ImmDoublePosMax =
         GenerateDouble_<false, 0x47f, true>::Value;
@@ -231,13 +232,13 @@ class Value
     // Invalid value is a null-pointer
     static constexpr uint64_t Invalid = 0u;
 
-  private:
+  protected:
     uint64_t tagged_;
 
   public:
     Value() : tagged_(Invalid) {}
 
-  private:
+  protected:
     // Raw uint64_t constructor is private.
     explicit Value(uint64_t tagged) : tagged_(tagged) {}
 
@@ -262,19 +263,19 @@ class Value
                   tag == ValueTag::HeapDouble);
         uint64_t ptrval = reinterpret_cast<uint64_t>(ptr);
         ptrval &= ~TagMaskHigh;
-        ptrval |= static_cast<uint64_t>(tag) << TagShift;
+        ptrval |= UInt64(tag) << TagShift;
         return Value(ptrval);
     }
 
     static Value MakeTag(ValueTag tag) {
         WH_ASSERT(IsValidValueTag(tag));
-        return Value(static_cast<uint64_t>(tag) << TagShift);
+        return Value(UInt64(tag) << TagShift);
     }
 
     static Value MakeTagValue(ValueTag tag, uint64_t ival) {
         WH_ASSERT(IsValidValueTag(tag));
-        WH_ASSERT(ival <= (~static_cast<uint64_t>(0) >> TagBits));
-        return Value(static_cast<uint64_t>(tag) << TagShift);
+        WH_ASSERT(ival <= (~UInt64(0) >> TagBits));
+        return Value(UInt64(tag) << TagShift);
     }
 
   public:
@@ -305,6 +306,15 @@ class Value
     bool isNativeObject() const {
         return isObject() &&
                ((tagged_ >> PtrTypeShift) & PtrTypeMask) == PtrType_Native;
+    }
+
+    template <typename T>
+    bool isNativeObjectOf() const {
+        static_assert(std::is_base_of<VM::UntypedHeapThing, T>::value,
+                      "Type is not a heap thing.");
+        if (!isNativeObject())
+            return false;
+        return getPtr<T>()->type() == T::Type;
     }
 
     bool isForeignObject() const {
@@ -529,6 +539,11 @@ class Value
         return getPtr<VM::HeapDouble>();
     }
 
+    uint64_t getMagicInt() const {
+        WH_ASSERT(isMagic());
+        return removeTag();
+    }
+
     Magic getMagic() const {
         WH_ASSERT(isMagic());
         return static_cast<Magic>(removeTag());
@@ -558,6 +573,7 @@ class Value
     friend Value String16Value(unsigned length, const CharT *data);
     template <typename CharT>
     friend Value StringValue(unsigned length, const CharT *data);
+    friend Value MagicValue(uint64_t val);
     friend Value MagicValue(Magic m);
     friend Value IntegerValue(int32_t i);
     friend Value DoubleValue(VM::HeapDouble *d);
@@ -588,8 +604,7 @@ WeakNativeObjectValue(T *obj) {
 inline Value
 ForeignObjectValue(void *obj) {
     Value val = Value::MakePtr(ValueTag::Object, obj);
-    val.tagged_ |= (static_cast<uint64_t>(Value::PtrType_Foreign) <<
-                        Value::PtrTypeShift);
+    val.tagged_ |= (UInt64(Value::PtrType_Foreign) << Value::PtrTypeShift);
     return val;
 }
 
@@ -673,26 +688,22 @@ DoubleValue(VM::HeapDouble *d) {
 
 inline Value
 NegZeroValue() {
-    return Value::MakeTagValue(ValueTag::ImmDoubleX,
-                               static_cast<uint64_t>(Value::NegZeroVal));
+    return Value::MakeTagValue(ValueTag::ImmDoubleX, UInt64(Value::NegZeroVal));
 }
 
 inline Value
 NaNValue() {
-    return Value::MakeTagValue(ValueTag::ImmDoubleX,
-                               static_cast<uint64_t>(Value::NaNVal));
+    return Value::MakeTagValue(ValueTag::ImmDoubleX, UInt64(Value::NaNVal));
 }
 
 inline Value
 PosInfValue() {
-    return Value::MakeTagValue(ValueTag::ImmDoubleX,
-                               static_cast<uint64_t>(Value::PosInfVal));
+    return Value::MakeTagValue(ValueTag::ImmDoubleX, UInt64(Value::PosInfVal));
 }
 
 inline Value
 NegInfValue() {
-    return Value::MakeTagValue(ValueTag::ImmDoubleX,
-                               static_cast<uint64_t>(Value::NegInfVal));
+    return Value::MakeTagValue(ValueTag::ImmDoubleX, UInt64(Value::NegInfVal));
 }
 
 inline Value
@@ -706,15 +717,22 @@ DoubleValue(double dval) {
 }
 
 inline Value
+MagicValue(uint64_t val) {
+    WH_ASSERT((val & Value::TagMaskHigh) == 0);
+    return Value::MakeTagValue(ValueTag::Magic, val);
+}
+
+inline Value
 MagicValue(Magic magic) {
-    return Value::MakeTagValue(ValueTag::Magic, static_cast<uint64_t>(magic));
+    return Value::MakeTagValue(ValueTag::Magic, UInt64(magic));
 }
 
 inline Value
 IntegerValue(int32_t ival) {
-    return Value::MakeTagValue(ValueTag::Int32, static_cast<uint32_t>(ival));
+    // Cast to uint32_t so value doesn't get sign extended when casting
+    // to uint64_t
+    return Value::MakeTagValue(ValueTag::Int32, UInt32(ival));
 }
-
 
 
 } // namespace Whisper

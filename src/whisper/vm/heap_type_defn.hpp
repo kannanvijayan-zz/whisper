@@ -16,6 +16,7 @@
     _(Tuple,                            true)                   \
     \
     _(ShapeTree,                        true)                   \
+    _(ShapeTreeChild,                   true)                   \
     _(Shape,                            true)                   \
     \
     _(DeclEnv,                          true)                   \
