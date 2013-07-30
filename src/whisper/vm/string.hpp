@@ -6,9 +6,6 @@
 #include "vm/heap_type_defn.hpp"
 #include "vm/heap_thing.hpp"
 
-#include <limits>
-#include <algorithm>
-
 namespace Whisper {
 namespace VM {
 
@@ -32,54 +29,24 @@ struct HeapString : public HeapThing<HeapType::HeapString>
     static constexpr uint32_t EightBitFlagMask = 0x1;
 
   protected:
-    uint8_t *writableEightBitData() {
-        return recastThis<uint8_t>();
-    }
-
-    uint16_t *writableSixteenBitData() {
-        return recastThis<uint16_t>();
-    }
+    uint8_t *writableEightBitData();
+    uint16_t *writableSixteenBitData();
     
   public:
-    HeapString(const uint8_t *data) {
-        initFlags(EightBitFlagMask);
-        std::copy(data, data + objectSize(), writableEightBitData());
-    }
-    HeapString(const uint16_t *data) {
-        WH_ASSERT(objectSize() % 2 == 0);
-        std::copy(data, data + (objectSize() / 2), writableSixteenBitData());
-    }
+    HeapString(const uint8_t *data);
+    HeapString(const uint16_t *data);
 
-    inline bool isEightBit() const {
-        return flags() & EightBitFlagMask;
-    }
+    bool isEightBit() const;
 
-    const uint8_t *eightBitData() const {
-        WH_ASSERT(isEightBit());
-        return recastThis<uint8_t>();
-    }
+    const uint8_t *eightBitData() const;
 
-    inline bool isSixteenBit() const {
-        return !isEightBit();
-    }
+    bool isSixteenBit() const;
 
-    const uint16_t *sixteenBitData() const {
-        WH_ASSERT(isSixteenBit());
-        return recastThis<uint16_t>();
-    }
+    const uint16_t *sixteenBitData() const;
 
-    inline uint32_t length() const {
-        if (isEightBit())
-            return objectSize();
-        return objectSize() / 2;
-    }
+    uint32_t length() const;
 
-    inline uint16_t getChar(uint32_t idx) const {
-        WH_ASSERT(idx < length());
-        if (isEightBit())
-            return eightBitData()[idx];
-        return sixteenBitData()[idx];
-    }
+    uint16_t getChar(uint32_t idx) const;
 };
 
 typedef HeapThingWrapper<HeapString> WrappedHeapString;

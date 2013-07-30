@@ -1,7 +1,6 @@
 
 bin_PROGRAMS = whisper
 whisper_SOURCES = \
-    whisper.cpp \
     debug.cpp \
     spew.cpp \
     memalloc.cpp \
@@ -13,4 +12,8 @@ whisper_SOURCES = \
     value.cpp \
     rooting.cpp \
     runtime.cpp \
-    vm/vm_helpers.cpp
+    vm/vm_helpers.cpp \
+    vm/heap_thing.cpp \
+    vm/string.cpp \
+    vm/double.cpp \
+    whisper.cpp

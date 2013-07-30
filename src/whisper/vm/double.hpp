@@ -27,11 +27,9 @@ struct HeapDouble : public HeapThing<HeapType::HeapDouble>
     double value_;
 
   public:
-    HeapDouble(double val) : value_(val) {}
+    HeapDouble(double val);
 
-    inline double value() const {
-        return value_;
-    }
+    double value() const;
 };
 
 typedef HeapThingWrapper<HeapDouble> WrappedHeapDouble;

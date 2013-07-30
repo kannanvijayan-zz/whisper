@@ -3,6 +3,7 @@
 #include "debug.hpp"
 #include "value.hpp"
 #include "value_inlines.hpp"
+#include "vm/heap_thing_inlines.hpp"
 #include "vm/string.hpp"
 #include "vm/vm_helpers.hpp"
 
