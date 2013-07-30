@@ -37,6 +37,27 @@ typedef int32_t unic_t;
 constexpr unic_t InvalidUnicode = -1;
 constexpr unic_t MaxUnicode = 0x10FFFFu;
 
+// Helper to convert integer to [u]int[64|32]_t
+template <typename IntT>
+constexpr uint64_t UInt64(IntT val) {
+    return static_cast<uint64_t>(val);
+}
+
+template <typename IntT>
+constexpr uint64_t UInt32(IntT val) {
+    return static_cast<uint32_t>(val);
+}
+
+template <typename IntT>
+constexpr uint64_t Int64(IntT val) {
+    return static_cast<int64_t>(val);
+}
+
+template <typename IntT>
+constexpr uint64_t Int32(IntT val) {
+    return static_cast<int32_t>(val);
+}
+
 // Casting between pointers and words.
 template <typename T>
 constexpr inline word_t PtrToWord(T *ptr) {
