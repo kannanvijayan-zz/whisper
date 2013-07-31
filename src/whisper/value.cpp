@@ -10,10 +10,16 @@ Value::Value() : tagged_(Invalid) {}
 // Raw uint64_t constructor is private.
 Value::Value(uint64_t tagged) : tagged_(tagged) {}
 
+ValueTag
+Value::getTag() const
+{
+    return static_cast<ValueTag>(tagged_ >> TagShift);
+}
+
 bool
 Value::checkTag(ValueTag tag) const
 {
-    return (tagged_ >> TagShift) == ValueTagNumber(tag);
+    return getTag() == tag;
 }
 
 uint64_t
@@ -53,6 +59,40 @@ Value::isValid() const
     return true;
 }
 #endif // defined(ENABLE_DEBUG)
+
+ValueType
+Value::type() const
+{
+    switch (getTag()) {
+      case ValueTag::Object:
+        return ValueType::Object;
+
+      case ValueTag::Null:
+        return ValueType::Null;
+
+      case ValueTag::Undefined:
+        return ValueType::Undefined;
+
+      case ValueTag::Boolean:
+        return ValueType::Boolean;
+
+      case ValueTag::HeapString:
+      case ValueTag::ImmString8:
+      case ValueTag::ImmString16:
+        return ValueType::String;
+
+      case ValueTag::ImmDoubleLow:
+      case ValueTag::ImmDoubleHigh:
+      case ValueTag::ImmDoubleX:
+      case ValueTag::HeapDouble:
+      case ValueTag::Int32:
+        return ValueType::Number;
+      default:
+        break;
+    }
+    WH_UNREACHABLE("Value does not have legitimate ValueType.");
+    return ValueType::INVALID;
+}
 
 bool
 Value::isObject() const
@@ -378,12 +418,14 @@ BooleanValue(bool b)
 Value
 StringValue(VM::HeapString *str)
 {
+    WH_ASSERT(str != nullptr);
     return Value::MakePtr(ValueTag::HeapString, str);
 }
 
 Value
 DoubleValue(VM::HeapDouble *d)
 {
+    WH_ASSERT(d != nullptr);
     return Value::MakePtr(ValueTag::HeapDouble, d);
 }
 

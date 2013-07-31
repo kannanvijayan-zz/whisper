@@ -111,9 +111,9 @@ class ShapeTree : public HeapThing<HeapType::ShapeTree>
     };
 
   private:
-    HeapThingValue<ShapeTree> parentTree_;
-    HeapThingValue<Shape> rootShape_;
-    HeapThingValue<ShapeTreeChild> childTrees_;
+    NullableHeapThingValue<ShapeTree> parentTree_;
+    NullableHeapThingValue<Shape> rootShape_;
+    NullableHeapThingValue<ShapeTreeChild> childTrees_;
 
     // The info word below is a magic word storing information
     // about the structure of the object.
@@ -160,7 +160,7 @@ class ShapeTreeChild : public HeapThing<HeapType::ShapeTreeChild>
   friend class Shape;
   friend class ShapeTree;
   private:
-    HeapThingValue<ShapeTreeChild> next_;
+    NullableHeapThingValue<ShapeTreeChild> next_;
     HeapThingValue<ShapeTree> child_;
 
   public:
@@ -185,10 +185,10 @@ class Shape : public HeapThing<HeapType::Shape>
 
   private:
     HeapThingValue<ShapeTree> tree_;
-    HeapThingValue<Shape> parent_;
+    NullableHeapThingValue<Shape> parent_;
     Value name_;
-    HeapThingValue<Shape> firstChild_;
-    HeapThingValue<Shape> nextSibling_;
+    NullableHeapThingValue<Shape> firstChild_;
+    NullableHeapThingValue<Shape> nextSibling_;
 
     // The info associated with the shape.  This is stored in a
     // magic value with the low 60 bits containing the data

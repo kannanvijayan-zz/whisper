@@ -95,6 +95,9 @@ namespace Whisper {
 //      In a heap double reference, W is the weak bit.  If W=1, the
 //      reference is weak.
 //
+// UNUSED:
+//  1011-**** ****-**** ****-**** ... ****-****
+//
 // Int32:
 //  1100-0000 0000-0000 0000-0000 ... IIII-IIII     - Int32 value.
 //
@@ -119,7 +122,20 @@ namespace VM {
     class HeapDouble;
 }
 
-// Type tag enumeration for values.
+// Logical value types.
+enum class ValueType : uint8_t
+{
+    INVALID = 0,
+    Object,
+    Null,
+    Undefined,
+    Boolean,
+    String,
+    Number,
+    LIMIT
+};
+
+// Tag enumeration for values.
 enum class ValueTag : uint8_t
 {
     Object          = 0x0,
@@ -242,6 +258,7 @@ class Value
     // Raw uint64_t constructor is private.
     explicit Value(uint64_t tagged);
 
+    ValueTag getTag() const;
     bool checkTag(ValueTag tag) const;
     uint64_t removeTag() const;
 
@@ -261,6 +278,12 @@ class Value
     bool isValid() const;
 
 #endif // defined(ENABLE_DEBUG)
+
+    //
+    // Get type
+    //
+
+    ValueType type() const;
 
     //
     // Checker methods

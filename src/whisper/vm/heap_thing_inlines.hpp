@@ -140,24 +140,70 @@ HeapThing<HT>::~HeapThing() {};
 
 
 //
-// HeapThingValue<typename T>
+// HeapThingValue<typename T, bool Null=false>
 //
 
 template <typename T>
 inline
-HeapThingValue<T>::HeapThingValue()
-  : Value(NullValue())
-{}
-
-template <typename T>
-inline
-HeapThingValue<T>::HeapThingValue(T *thing)
+HeapThingValue<T, false>::HeapThingValue(T *thing)
   : Value(NativeObjectValue(thing))
 {}
 
 template <typename T>
 inline
-HeapThingValue<T>::HeapThingValue(const Value &val)
+HeapThingValue<T, false>::HeapThingValue(const Value &val)
+  : Value(val)
+{
+    WH_ASSERT(val.isNativeObject() &&
+              val.getAnyNativeObject()->type() == T::Type);
+}
+
+template <typename T>
+inline T *
+HeapThingValue<T, false>::getHeapThing() const
+{
+    return this->getNativeObject<T>();
+}
+
+template <typename T>
+inline HeapThingValue<T> &
+HeapThingValue<T, false>::operator =(T *thing)
+{
+    WH_ASSERT(thing != nullptr);
+    this->Value::operator=(NativeObjectValue(thing));
+    return *this;
+}
+
+template <typename T>
+inline HeapThingValue<T> &
+HeapThingValue<T, false>::operator =(const Value &val)
+{
+    WH_ASSERT(val.isNativeObject() &&
+              val.getAnyNativeObject()->type() == T::Type);
+    this->Value::operator=(val);
+    return *this;
+}
+
+
+//
+// HeapThingValue<typename T, bool Null=true>
+//
+
+template <typename T>
+inline
+HeapThingValue<T, true>::HeapThingValue()
+  : Value(NullValue())
+{}
+
+template <typename T>
+inline
+HeapThingValue<T, true>::HeapThingValue(T *thing)
+  : Value(thing ? NativeObjectValue(thing) : NullValue())
+{}
+
+template <typename T>
+inline
+HeapThingValue<T, true>::HeapThingValue(const Value &val)
   : Value(val)
 {
     WH_ASSERT((val.isNativeObject() &&
@@ -167,36 +213,36 @@ HeapThingValue<T>::HeapThingValue(const Value &val)
 
 template <typename T>
 inline bool
-HeapThingValue<T>::hasHeapThing() const
+HeapThingValue<T, true>::hasHeapThing() const
 {
     return !this->isNull();
 }
 
 template <typename T>
 inline T *
-HeapThingValue<T>::maybeGetHeapThing() const
+HeapThingValue<T, true>::maybeGetHeapThing() const
 {
     return hasHeapThing() ? nullptr : this->getNativeObject<T>();
 }
 
 template <typename T>
 inline T *
-HeapThingValue<T>::getHeapThing() const
+HeapThingValue<T, true>::getHeapThing() const
 {
     return this->getNativeObject<T>();
 }
 
 template <typename T>
-inline HeapThingValue<T> &
-HeapThingValue<T>::operator =(T *thing)
+inline HeapThingValue<T, true> &
+HeapThingValue<T, true>::operator =(T *thing)
 {
     this->Value::operator=(thing ? NullValue() : NativeObjectValue(thing));
     return *this;
 }
 
 template <typename T>
-inline HeapThingValue<T> &
-HeapThingValue<T>::operator =(const Value &val)
+inline HeapThingValue<T, true> &
+HeapThingValue<T, true>::operator =(const Value &val)
 {
     WH_ASSERT((val.isNativeObject() &&
                val.getAnyNativeObject()->type() == T::Type) ||

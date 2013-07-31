@@ -236,8 +236,23 @@ class HeapThing : public UntypedHeapThing
 };
 
 // A Value subclass that allows heap things or undefined.
+template <typename T, bool Null=false> class HeapThingValue {};
+
 template <typename T>
-class HeapThingValue : public Value
+class HeapThingValue<T, false> : public Value
+{
+  public:
+    inline explicit HeapThingValue(T *thing);
+    inline explicit HeapThingValue(const Value &val);
+
+    inline T *getHeapThing() const;
+
+    HeapThingValue<T> &operator =(T *thing);
+    HeapThingValue<T> &operator =(const Value &val);
+};
+
+template <typename T>
+class HeapThingValue<T, true> : public Value
 {
   public:
     inline HeapThingValue();
@@ -248,9 +263,12 @@ class HeapThingValue : public Value
     inline T *maybeGetHeapThing() const;
     inline T *getHeapThing() const;
 
-    HeapThingValue<T> &operator =(T *thing);
-    HeapThingValue<T> &operator =(const Value &val);
+    HeapThingValue<T, true> &operator =(T *thing);
+    HeapThingValue<T, true> &operator =(const Value &val);
 };
+
+template <typename T>
+using NullableHeapThingValue = HeapThingValue<T, true>;
 
 
 } // namespace VM

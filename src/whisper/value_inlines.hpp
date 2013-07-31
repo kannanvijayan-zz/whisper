@@ -79,7 +79,7 @@ Value::readImmString16(CharT *buf) const
 
 template <typename CharT>
 inline unsigned
-Value:: readImmString(CharT *buf) const
+Value::readImmString(CharT *buf) const
 {
     WH_ASSERT(isImmString());
     return isImmString8() ? readImmString8<CharT>(buf)
@@ -90,6 +90,7 @@ template <typename T>
 inline Value
 NativeObjectValue(T *obj)
 {
+    WH_ASSERT(obj != nullptr);
     WH_ASSERT(T::Type == obj->type());
     Value val = Value::MakePtr(ValueTag::Object, obj);
     return val;
@@ -99,6 +100,7 @@ template <typename T>
 inline Value
 WeakNativeObjectValue(T *obj)
 {
+    WH_ASSERT(obj != nullptr);
     Value val = NativeObjectValue<T>(obj);
     val.tagged_ |= Value::WeakMask;
     return val;
