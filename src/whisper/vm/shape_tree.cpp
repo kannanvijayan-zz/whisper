@@ -25,9 +25,9 @@ ShapeTree::initialize(const Config &config)
 
 ShapeTree::ShapeTree(ShapeTree *parentTree, Shape *rootShape,
                      const Config &config)
-  : parentTree_(parentTree ? NativeObjectValue(parentTree) : NullValue()),
-    rootShape_(NativeObjectValue(rootShape)),
-    childTrees_(UndefinedValue()),
+  : parentTree_(parentTree),
+    rootShape_(rootShape),
+    childTrees_(),
     info_(UndefinedValue())
 {
     initialize(config);
@@ -65,6 +65,29 @@ ShapeTree::version() const
 }
 
 //
+// ShapeTreeChild
+//
+
+ShapeTreeChild::ShapeTreeChild(ShapeTreeChild *next, ShapeTree *child)
+  : next_(next),
+    child_(child)
+{
+    WH_ASSERT(child);
+}
+
+ShapeTreeChild *
+ShapeTreeChild::next() const
+{
+    return next_.maybeGetHeapThing();
+}
+
+ShapeTree *
+ShapeTreeChild::child() const
+{
+    return child_.getHeapThing();
+}
+
+//
 // Shape
 //
 
@@ -79,21 +102,23 @@ Shape::initialize(const Config &config)
     
 Shape::Shape(ShapeTree *tree, const Config &config)
   : tree_(NativeObjectValue(tree)),
-    parent_(NullValue()),
+    parent_(),
     name_(NullValue()),
-    firstChild_(NullValue()),
-    nextSibling_(NullValue())
+    firstChild_(),
+    nextSibling_()
 {
+    WH_ASSERT(tree);
     initialize(config);
 }
 
 Shape::Shape(ShapeTree *tree, Shape *parent, Value name, const Config &config)
-  : tree_(NativeObjectValue(tree)),
-    parent_(NativeObjectValue<Shape>(parent)),
+  : tree_(tree),
+    parent_(parent),
     name_(name),
-    firstChild_(NullValue()),
-    nextSibling_(NullValue())
+    firstChild_(),
+    nextSibling_()
 {
+    WH_ASSERT(tree);
     WH_ASSERT(IsNormalizedPropertyId(name));
     initialize(config);
 }

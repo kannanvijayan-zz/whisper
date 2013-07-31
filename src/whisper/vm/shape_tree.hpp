@@ -43,9 +43,9 @@ class ShapeTree : public HeapThing<HeapType::ShapeTree>
     };
 
   private:
-    Value parentTree_;
-    Value rootShape_;
-    Value childTrees_;
+    HeapThingValue<ShapeTree> parentTree_;
+    HeapThingValue<Shape> rootShape_;
+    HeapThingValue<ShapeTreeChild> childTrees_;
 
     // The info word below is a magic word storing information
     // about the structure of the object.
@@ -68,7 +68,7 @@ class ShapeTree : public HeapThing<HeapType::ShapeTree>
     static constexpr uint64_t VersionMask = UInt64(VersionMax) << VersionShift;
 
     void initialize(const Config &config);
-    
+
   public:
     ShapeTree(ShapeTree *parentTree, Shape *rootShape, const Config &config);
 
@@ -81,6 +81,25 @@ class ShapeTree : public HeapThing<HeapType::ShapeTree>
     uint32_t numFixedSlots() const;
 
     uint32_t version() const;
+};
+
+//
+// A linked list of ShapeTreeChild instances links a parent shape tree
+// to all of its children.
+//
+class ShapeTreeChild : public HeapThing<HeapType::ShapeTreeChild>
+{
+  friend class Shape;
+  friend class ShapeTree;
+  private:
+    HeapThingValue<ShapeTreeChild> next_;
+    HeapThingValue<ShapeTree> child_;
+
+  public:
+    ShapeTreeChild(ShapeTreeChild *next, ShapeTree *child);
+
+    ShapeTreeChild *next() const;
+    ShapeTree *child() const;
 };
 
 //
@@ -97,11 +116,11 @@ class Shape : public HeapThing<HeapType::Shape>
     };
 
   private:
-    Value tree_;
-    Value parent_;
+    HeapThingValue<ShapeTree> tree_;
+    HeapThingValue<Shape> parent_;
     Value name_;
-    Value firstChild_;
-    Value nextSibling_;
+    HeapThingValue<Shape> firstChild_;
+    HeapThingValue<Shape> nextSibling_;
 
     // The info associated with the shape.  This is stored in a
     // magic value with the low 60 bits containing the data
@@ -117,7 +136,7 @@ class Shape : public HeapThing<HeapType::Shape>
         UInt64(SlotNumberMax) << SlotNumberShift;
 
     void initialize(const Config &config);
-    
+
   public:
     Shape(ShapeTree *tree, const Config &config);
     Shape(ShapeTree *tree, Shape *parent, Value name, const Config &config);

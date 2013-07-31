@@ -186,6 +186,25 @@ HeapThingValue<T>::getHeapThing() const
     return this->getNativeObject<T>();
 }
 
+template <typename T>
+inline HeapThingValue<T> &
+HeapThingValue<T>::operator =(T *thing)
+{
+    this->Value::operator=(thing ? NullValue() : NativeObjectValue(thing));
+    return *this;
+}
+
+template <typename T>
+inline HeapThingValue<T> &
+HeapThingValue<T>::operator =(const Value &val)
+{
+    WH_ASSERT((val.isNativeObject() &&
+               val.getAnyNativeObject()->type() == T::Type) ||
+              val.isNull());
+    this->Value::operator=(val);
+    return *this;
+}
+
 
 } // namespace VM
 } // namespace Whisper

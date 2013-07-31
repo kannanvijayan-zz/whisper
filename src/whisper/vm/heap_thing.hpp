@@ -247,6 +247,9 @@ class HeapThingValue : public Value
     bool hasHeapThing() const;
     inline T *maybeGetHeapThing() const;
     inline T *getHeapThing() const;
+
+    HeapThingValue<T> &operator =(T *thing);
+    HeapThingValue<T> &operator =(const Value &val);
 };
 
 
