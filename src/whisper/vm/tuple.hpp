@@ -4,7 +4,7 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "value.hpp"
-#include "rooting.hpp"
+#include "heap_thing.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -16,38 +16,13 @@ namespace VM {
 class Tuple : public HeapThing<HeapType::Tuple>
 {
   public:
-    Tuple() {
-        uint32_t vals = objectValueCount();
-        for (uint32_t i = 0; i < vals; i++)
-            valueRef(i) = UndefinedValue();
-    }
+    Tuple();
+    Tuple(const Tuple &other);
 
-    Tuple(const Tuple &other) {
-        uint32_t vals = objectValueCount();
-        uint32_t otherVals = other.objectValueCount();
-        if (vals <= otherVals) {
-            for (uint32_t i = 0; i < vals; i++)
-                valueRef(i) = other.valueRef(i);
-        } else {
-            uint32_t i;
-            for (i = 0; i < otherVals; i++)
-                valueRef(i) = other.valueRef(i);
-            for (; i < vals; i++)
-                valueRef(i) = UndefinedValue();
-        }
-    }
+    inline const Value &operator [](uint32_t idx) const;
+    inline Value &operator [](uint32_t idx);
 
-    inline const Value &operator [](uint32_t idx) const {
-        return valueRef(idx);
-    }
-
-    inline Value &operator [](uint32_t idx) {
-        return valueRef(idx);
-    }
-
-    inline uint32_t size() const {
-        return objectValueCount();
-    }
+    inline uint32_t size() const;
 };
 
 
