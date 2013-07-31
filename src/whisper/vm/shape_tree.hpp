@@ -232,7 +232,7 @@ template <HeapType HT>
 class ShapedHeapThing : public HeapThing<HT>
 {
   protected:
-    Value shape_;
+    HeapThingValue<Shape> shape_;
 
     inline ShapedHeapThing(Shape *shape);
 

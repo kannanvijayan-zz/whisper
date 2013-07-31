@@ -13,15 +13,14 @@ namespace VM {
 template <HeapType HT>
 inline
 ShapedHeapThing<HT>::ShapedHeapThing(Shape *shape)
-{
-    shape_ = NativeObjectValue(shape);
-}
+  : shape_(shape)
+{}
 
 template <HeapType HT>
 inline Shape *
 ShapedHeapThing<HT>::shape() const
 {
-    return shape_.getNativeObject<Shape>();
+    return shape_.getHeapThing();
 }
 
 template <HeapType HT>
@@ -29,7 +28,7 @@ inline void
 ShapedHeapThing<HT>::setShape(Shape *shape)
 {
     this->noteWrite(&shape_);
-    shape_ = NativeObjectValue(shape);
+    shape_ = shape;
 }
 
 
