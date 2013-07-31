@@ -4,7 +4,7 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "value.hpp"
-#include "heap_thing.hpp"
+#include "vm/heap_thing.hpp"
 
 namespace Whisper {
 namespace VM {

@@ -4,10 +4,7 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "value.hpp"
-#include "value_inlines.hpp"
-#include "rooting.hpp"
 #include "vm/heap_thing.hpp"
-#include "vm/vm_helpers.hpp"
 
 #include <type_traits>
 
@@ -70,38 +67,20 @@ class ShapeTree : public HeapThing<HeapType::ShapeTree>
     static constexpr uint64_t VersionMax = (UInt64(1) << VersionBits) - 1;
     static constexpr uint64_t VersionMask = UInt64(VersionMax) << VersionShift;
 
-    void initialize(const Config &config) {
-        WH_ASSERT(config.numFixedSlots <= NumFixedSlotsMax);
-        WH_ASSERT(config.version <= VersionMax);
-        uint64_t value = 0;
-        value |= UInt64(config.numFixedSlots) << NumFixedSlotsShift;
-        value |= UInt64(config.version) << VersionShift;
-        info_ = MagicValue(value);
-    }
+    void initialize(const Config &config);
     
   public:
-    template <typename T>
-    inline ShapeTree(ShapeTree *parentTree, Shape *rootShape,
-                     const Config &config);
+    ShapeTree(ShapeTree *parentTree, Shape *rootShape, const Config &config);
 
-    inline Shape *rootShape();
+    Shape *rootShape();
 
-    bool hasParentTree() const {
-        return !parentTree_.isNull();
-    }
+    bool hasParentTree() const;
 
-    ShapeTree *parentTree() const {
-        WH_ASSERT(hasParentTree());
-        return parentTree_.getNativeObject<ShapeTree>();
-    }
+    ShapeTree *parentTree() const;
 
-    uint32_t numFixedSlots() const {
-        return (info_.getMagicInt() & NumFixedSlotsMask) >> NumFixedSlotsShift;
-    }
+    uint32_t numFixedSlots() const;
 
-    uint32_t version() const {
-        return (info_.getMagicInt() & VersionMask) >> VersionShift;
-    }
+    uint32_t version() const;
 };
 
 //
@@ -137,79 +116,25 @@ class Shape : public HeapThing<HeapType::Shape>
     static constexpr uint64_t SlotNumberMask =
         UInt64(SlotNumberMax) << SlotNumberShift;
 
-    void initialize(const Config &config) {
-        WH_ASSERT(config.slotNumber <= SlotNumberMax);
-        uint64_t value = 0;
-        value |= (config.slotNumber << SlotNumberShift);
-        info_ = MagicValue(value);
-    }
+    void initialize(const Config &config);
     
   public:
-    Shape(ShapeTree *tree, const Config &config)
-      : tree_(NativeObjectValue(tree)),
-        parent_(NullValue()),
-        name_(NullValue()),
-        firstChild_(NullValue()),
-        nextSibling_(NullValue())
-    {
-        initialize(config);
-    }
+    Shape(ShapeTree *tree, const Config &config);
+    Shape(ShapeTree *tree, Shape *parent, Value name, const Config &config);
 
-    Shape(ShapeTree *tree, Shape *parent, Value name, const Config &config)
-      : tree_(NativeObjectValue(tree)),
-        parent_(NativeObjectValue<Shape>(parent)),
-        name_(name),
-        firstChild_(NullValue()),
-        nextSibling_(NullValue())
-    {
-        WH_ASSERT(IsNormalizedPropertyId(name));
-        initialize(config);
-    }
+    ShapeTree *tree() const;
+    Shape *parent() const;
+    const Value &name() const;
 
-    ShapeTree *tree() const {
-        return tree_.getNativeObject<ShapeTree>();
-    }
+    Shape *firstChild() const;
+    Shape *nextSibling() const;
 
-    Shape *parent() const {
-        WH_ASSERT(parent_.isNull() || parent_.isNativeObject());
-        return parent_.getNativeObject<Shape>();
-    }
-
-    const Value &name() const {
-        return name_;
-    }
-
-    Shape *firstChild() const {
-        WH_ASSERT(firstChild_.isNull() || firstChild_.isNativeObject());
-        return firstChild_.getNativeObject<Shape>();
-    }
-
-    Shape *nextSibling() const {
-        WH_ASSERT(nextSibling_.isNull() || nextSibling_.isNativeObject());
-        return nextSibling_.getNativeObject<Shape>();
-    }
-
-    void addChild(Shape *child) {
-        WH_ASSERT(child->nextSibling() == nullptr);
-        WH_ASSERT(child->firstChild() == nullptr);
-        WH_ASSERT(child->parent() == this);
-        WH_ASSERT(!child->name().isNull());
-        child->setNextSibling(firstChild());
-        setFirstChild(child);
-    }
+    void addChild(Shape *child);
 
   protected:
-    void setNextSibling(Shape *sibling) {
-        WH_ASSERT(sibling);
-        noteWrite(&nextSibling_);
-        nextSibling_ = NativeObjectValue(sibling);
-    }
+    void setNextSibling(Shape *sibling);
 
-    void setFirstChild(Shape *child) {
-        WH_ASSERT(child);
-        noteWrite(&firstChild_);
-        firstChild_ = NativeObjectValue(child);
-    }
+    void setFirstChild(Shape *child);
 };
 
 
@@ -222,39 +147,12 @@ class ShapedHeapThing : public HeapThing<HT>
   protected:
     Value shape_;
 
-    ShapedHeapThing(Shape *shape) {
-        shape_ = NativeObjectValue(shape);
-    }
+    inline ShapedHeapThing(Shape *shape);
 
   public:
-    Shape *shape() const {
-        return shape_.getNativeObject<Shape>();
-    }
-
-    void setShape(Shape *shape) {
-        this->noteWrite(&shape_);
-        shape_ = NativeObjectValue(shape);
-    }
+    inline Shape *shape() const;
+    inline void setShape(Shape *shape);
 };
-
-template <typename T>
-inline
-ShapeTree::ShapeTree(ShapeTree *parentTree, Shape *rootShape,
-                     const Config &config)
-  : parentTree_(parentTree ? NativeObjectValue(parentTree) : NullValue()),
-    rootShape_(NativeObjectValue(rootShape)),
-    childTrees_(UndefinedValue()),
-    info_(UndefinedValue())
-{
-    static_assert(std::is_base_of<ShapedHeapThing<T::Type>, T>::value,
-                  "ShapeTree delegate object must be itself shaped.");
-    initialize(config);
-}
-
-inline Shape *
-ShapeTree::rootShape() {
-    return rootShape_.getNativeObject<Shape>();
-}
 
 
 } // namespace VM

@@ -1,6 +1,6 @@
 
 #include "tuple.hpp"
-#include "heap_thing_inlines.hpp"
+#include "vm/heap_thing_inlines.hpp"
 
 namespace Whisper {
 namespace VM {
