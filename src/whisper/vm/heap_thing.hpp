@@ -235,6 +235,20 @@ class HeapThing : public UntypedHeapThing
     inline ~HeapThing();
 };
 
+// A Value subclass that allows heap things or undefined.
+template <typename T>
+class HeapThingValue : public Value
+{
+  public:
+    inline HeapThingValue();
+    inline explicit HeapThingValue(T *thing);
+    inline explicit HeapThingValue(const Value &val);
+
+    bool hasHeapThing() const;
+    inline T *maybeGetHeapThing() const;
+    inline T *getHeapThing() const;
+};
+
 
 } // namespace VM
 } // namespace Whisper

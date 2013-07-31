@@ -128,8 +128,6 @@ UntypedHeapThing::dataRef(uint32_t offset) const
 }
 
 
-
-
 //
 // HeapThing<HeapType HT>
 //
@@ -139,6 +137,54 @@ HeapThing<HT>::HeapThing() {};
 
 template <HeapType HT>
 HeapThing<HT>::~HeapThing() {};
+
+
+//
+// HeapThingValue<typename T>
+//
+
+template <typename T>
+inline
+HeapThingValue<T>::HeapThingValue()
+  : Value(NullValue())
+{}
+
+template <typename T>
+inline
+HeapThingValue<T>::HeapThingValue(T *thing)
+  : Value(NativeObjectValue(thing))
+{}
+
+template <typename T>
+inline
+HeapThingValue<T>::HeapThingValue(const Value &val)
+  : Value(val)
+{
+    WH_ASSERT((val.isNativeObject() &&
+               val.getAnyNativeObject()->type() == T::Type) ||
+              val.isNull());
+}
+
+template <typename T>
+inline bool
+HeapThingValue<T>::hasHeapThing() const
+{
+    return !this->isNull();
+}
+
+template <typename T>
+inline T *
+HeapThingValue<T>::maybeGetHeapThing() const
+{
+    return hasHeapThing() ? nullptr : this->getNativeObject<T>();
+}
+
+template <typename T>
+inline T *
+HeapThingValue<T>::getHeapThing() const
+{
+    return this->getNativeObject<T>();
+}
 
 
 } // namespace VM
