@@ -8,6 +8,89 @@
 
 #include <type_traits>
 
+//
+// Shape trees are used to describe the structure of objects which
+// hold property definitions.  They are composed of a single
+// ShapeTree object, along with a parent-and-sibling-linked tree of
+// Shape objects.
+//
+//
+//                      +---------------+
+//                      |               |
+//                      |   ShapeTree   |
+//                      |               |
+//                      +---------------+
+//                              |
+//                              |rootShape
+//                              V
+//                      +---------------+
+//                      |               |
+//                      |   Root Shape  |
+//                      |               |
+//                      +---------------+
+//                         ^   |
+//                         |   |
+//          +--------------+---|-------------------------+
+//          |                  |                         |
+//          |   +--------------+                         |
+//          |   |   firstChild                           |
+//          |   |                                        |
+//    parent|   |                                  parent|
+//          |   V                                        |
+//      +---------------+                       +---------------+
+//      |               |    nextSibling        |               |
+//      |  Child Shape  |---------------------->|  Child Shape  |
+//      |               |                       |               |
+//      +---------------+                       +---------------+
+//         ^    |                                   ^   |
+//         |    |                                   |   |
+//         |    |                    +--------------+---|-------------+
+//         |    |                    |                  |             |
+//         |    | firstChild         |    +-------------+             |
+//   parent|    |                    |    |  firstChild               |
+//         |    |              parent|    |                     parent|
+//         |    V                    |    V                           |
+//      +---------------+         +---------------+   next    +---------------+
+//      |               |         |               |  Sibling  |               |
+//      |  Child Shape  |         |  Child Shape  |---------->|  Child Shape  |
+//      |               |         |               |           |               |
+//      +---------------+         +---------------+           +---------------+
+//
+//
+// ShapeTree objects may optionally have a 'parent' shape tree, pointing
+// to another ShapeTree.  In these cases, the parent shape tree corresponds
+// to the shape of the prototype of the object of the
+//
+// All objects whose shape is captured by a particular shape tree have
+// the same number of fixed slots.  The ShapeTree object holds this
+// number.
+//
+//                               +---------------+
+//                               |               |
+//                               |   ShapeTree   |
+//                               |               |
+//                               +---------------+
+//                   children            |   ^
+//           +---------------------------+   |
+//           |                               |
+//           |                +--------------+-----------+
+//           V                |                          |
+//    +---------------+       |  +---------------+       |  +---------------+
+//    |               | next  |  |               | next  |  |               |
+//    | ShapeTreeChild|--------->| ShapeTreeChild|--------->| ShapeTreeChild|
+//    |               |       |  |               |       |  |               |
+//    +---------------+       |  +---------------+       |  +---------------+
+//           |                |     child|               |          |
+//      child|           +----+          |         parent|     child|
+//           V     parent|    |parent    V               |          V
+//    +---------------+  |    |  +---------------+       |  +---------------+
+//    |               |  |    |  |               |       |  |               |
+//    |   ShapeTree   |--+    +--|   ShapeTree   |       +--|   ShapeTree   |
+//    |               |          |               |          |               |
+//    +---------------+          +---------------+          +---------------+
+//
+//
+
 namespace Whisper {
 namespace VM {
 
@@ -17,21 +100,6 @@ class Class;
 class ShapeTreeChild;
 class Shape;
 
-//
-// Shape trees are used to describe the structure of objects which
-// hold property definitions.  They are composed of a single
-// ShapeTree object, along with a parent-and-sibling-linked tree of
-// Shape objects.
-//
-// ShapeTree objects may optionally have a 'parent' shape tree, which
-// may point to another ShapeTree which describes a notional parent
-// object for any object whose shape is captured by the child
-// shape tree.
-//
-// All objects whose shape is captured by a particular shape tree have
-// the same number of fixed slots.  The ShapeTree object holds this
-// number.
-//
 class ShapeTree : public HeapThing<HeapType::ShapeTree>
 {
   friend class Shape;
@@ -52,7 +120,7 @@ class ShapeTree : public HeapThing<HeapType::ShapeTree>
     // This info is organized as follows:
     //  Bits 0 to 7         - the number of fixed slots in the object.
     //  Bits 8 to 31        - the tree's version.  This gets incremented
-    //                        every time the tree's shape info changes.
+    //                        every time the shape tree changes.
     Value info_;
 
     static constexpr unsigned NumFixedSlotsBits = 8;
