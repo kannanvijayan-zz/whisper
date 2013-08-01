@@ -15,6 +15,9 @@
     _(ShapeTreeChild,                   true)                   \
     _(Shape,                            true)                   \
     \
+    _(Object,                           true)                   \
+    _(ObjectSlots,                      true)                   \
+    \
     _(DeclEnv,                          true)                   \
     _(ObjEnv,                           true)                   \
     _(FuncEnv,                          true)                   \
@@ -23,9 +26,6 @@
     _(Script,                           true)                   \
     _(ConstantPool,                     true)                   \
     _(Bytecode,                         false)                  \
-    \
-    _(Object,                           true)                   \
-    _(ObjectSlots,                      true)                   \
 
 
 #endif // WHISPER__VM__HEAP_TYPE_DEFN_HPP

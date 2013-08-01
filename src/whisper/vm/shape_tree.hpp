@@ -20,26 +20,15 @@
 //                      |   ShapeTree   |
 //                      |               |
 //                      +---------------+
-//                              |
-//                              |rootShape
-//                              V
-//                      +---------------+
-//                      |               |
-//                      |   Root Shape  |
-//                      |               |
-//                      +---------------+
-//                         ^   |
-//                         |   |
-//          +--------------+---|-------------------------+
-//          |                  |                         |
-//          |   +--------------+                         |
-//          |   |   firstChild                           |
-//          |   |                                        |
-//    parent|   |                                  parent|
-//          |   V                                        |
+//                             | 
+//                             |firstRoot
+//                             |
+//              +--------------+
+//              |
+//              V
 //      +---------------+                       +---------------+
 //      |               |    nextSibling        |               |
-//      |  Child Shape  |---------------------->|  Child Shape  |
+//      |  Root Shape 0 |---------------------->|  Root Shape 1 |
 //      |               |                       |               |
 //      +---------------+                       +---------------+
 //         ^    |                                   ^   |
@@ -112,7 +101,7 @@ class ShapeTree : public HeapThing<HeapType::ShapeTree>
 
   private:
     NullableHeapThingValue<ShapeTree> parentTree_;
-    NullableHeapThingValue<Shape> rootShape_;
+    NullableHeapThingValue<Shape> firstRoot_;
     NullableHeapThingValue<ShapeTreeChild> childTrees_;
 
     // The info word below is a magic word storing information
@@ -138,9 +127,9 @@ class ShapeTree : public HeapThing<HeapType::ShapeTree>
     void initialize(const Config &config);
 
   public:
-    ShapeTree(ShapeTree *parentTree, Shape *rootShape, const Config &config);
+    ShapeTree(ShapeTree *parentTree, Shape *firstRoot, const Config &config);
 
-    Shape *rootShape();
+    Shape *firstRoot();
 
     bool hasParentTree() const;
 
@@ -174,41 +163,53 @@ class ShapeTreeChild : public HeapThing<HeapType::ShapeTreeChild>
 // Individual shapes are are linked-trees, formed from child
 // and sibling pointers.
 //
+// A Shape object uses the header flag bits as follows:
+//  Bit 0       - set if property has a value slot.
+//  Bit 1       - set if property has a getter.
+//  Bit 2       - set if property has a setter.
+//  Bit 3       - set if property is configurable.
+//  Bit 4       - set if property is enumerable.
+//  Bit 5       - set if property is writable.
+//
+// Depending on the values of these bits, the size of a shape can
+// vary.
+//
+//  A value shape has 1 extra int32 field, |slotOffset|, holding the
+//  offset of the slot.
+//  A constant (non-writable value) shape has 1 extra field holding the
+//  slot value.
+//
+//  A getter shape has 1 extra heap thing field holding the getter.
+//  A setter shape has 1 extra heap thing field holding the setter.
+//  A getter+setter shape has 2 extra heap thing fields holding the accessors.
+//
+// The root shape for a shape tree is always an empty shape.
+//
 class Shape : public HeapThing<HeapType::Shape>
 {
   friend class ShapeTree;
-  public:
-    struct Config
-    {
-        unsigned slotNumber;
-    };
-
-  private:
+  protected:
     HeapThingValue<ShapeTree> tree_;
     NullableHeapThingValue<Shape> parent_;
     Value name_;
     NullableHeapThingValue<Shape> firstChild_;
     NullableHeapThingValue<Shape> nextSibling_;
 
-    // The info associated with the shape.  This is stored in a
-    // magic value with the low 60 bits containing the data
-    // below:
-    //  Bits 0 to 32 - the slot number of the object.
-    Value info_;
+    enum Flags : uint32_t
+    {
+        HasValue        = 0x01,
+        HasGetter       = 0x02,
+        HasSetter       = 0x04,
+        IsConfigurable  = 0x08,
+        IsEnumerable    = 0x10,
+        IsWritable      = 0x20
+    };
 
-    static constexpr unsigned SlotNumberBits = 32;
-    static constexpr unsigned SlotNumberShift = 0;
-    static constexpr uint64_t SlotNumberMax =
-        (UInt64(1) << SlotNumberBits) - 1;
-    static constexpr uint64_t SlotNumberMask =
-        UInt64(SlotNumberMax) << SlotNumberShift;
-
-    void initialize(const Config &config);
+    Shape(ShapeTree *tree, Shape *parent, const Value &name,
+          bool hasValue, bool hasGetter, bool hasSetter,
+          bool isConfigurable, bool isEnumerable, bool isWritable);
 
   public:
-    Shape(ShapeTree *tree, const Config &config);
-    Shape(ShapeTree *tree, Shape *parent, Value name, const Config &config);
-
     ShapeTree *tree() const;
     Shape *parent() const;
     const Value &name() const;
@@ -222,6 +223,84 @@ class Shape : public HeapThing<HeapType::Shape>
     void setNextSibling(Shape *sibling);
 
     void setFirstChild(Shape *child);
+};
+
+class ValueShape : public Shape
+{
+  friend class ShapeTree;
+  public:
+    static constexpr unsigned SlotOffsetShift = 0;
+    static constexpr uint64_t SlotOffsetMask = (UInt64(1) << 32) - 1u;
+
+    static constexpr unsigned IsExtendedSlotShift = 32;
+  private:
+    Value slotInfo_;
+
+  public:
+    ValueShape(ShapeTree *tree, Shape *parent, const Value &name,
+               uint32_t slotOffset, bool isExtendedSlot,
+               bool isConfigurable, bool isEnumerable);
+
+    uint32_t slotOffset() const;
+    bool isExtendedSlot() const;
+};
+
+class ConstantShape : public Shape
+{
+  friend class ShapeTree;
+  protected:
+    Value constant_;
+
+  public:
+    ConstantShape(ShapeTree *tree, Shape *parent, const Value &name,
+                  const Value &constant,
+                  bool isConfigurable, bool isEnumerable);
+
+    const Value &constant() const;
+};
+
+class GetterShape : public Shape
+{
+  friend class ShapeTree;
+  protected:
+    Value getter_;
+
+  public:
+    GetterShape(ShapeTree *tree, Shape *parent, const Value &name,
+                const Value &getter,
+                bool isConfigurable, bool isEnumerable);
+
+    const Value &getter() const;
+};
+
+class SetterShape : public Shape
+{
+  friend class ShapeTree;
+  protected:
+    Value setter_;
+
+  public:
+    SetterShape(ShapeTree *tree, Shape *parent, const Value &name,
+                const Value &setter,
+                bool isConfigurable, bool isEnumerable);
+
+    const Value &setter() const;
+};
+
+class AccessorShape : public Shape
+{
+  friend class ShapeTree;
+  protected:
+    Value getter_;
+    Value setter_;
+
+  public:
+    AccessorShape(ShapeTree *tree, Shape *parent, const Value &name,
+                  const Value &getter, const Value &setter,
+                  bool isConfigurable, bool isEnumerable);
+
+    const Value &getter() const;
+    const Value &setter() const;
 };
 
 

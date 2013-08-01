@@ -20,7 +20,7 @@ template <HeapType HT>
 inline Shape *
 ShapedHeapThing<HT>::shape() const
 {
-    return shape_.getHeapThing();
+    return shape_;
 }
 
 template <HeapType HT>

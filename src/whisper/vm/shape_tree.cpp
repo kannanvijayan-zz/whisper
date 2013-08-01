@@ -23,10 +23,10 @@ ShapeTree::initialize(const Config &config)
     info_ = MagicValue(value);
 }
 
-ShapeTree::ShapeTree(ShapeTree *parentTree, Shape *rootShape,
+ShapeTree::ShapeTree(ShapeTree *parentTree, Shape *firstRoot,
                      const Config &config)
   : parentTree_(parentTree),
-    rootShape_(rootShape),
+    firstRoot_(firstRoot),
     childTrees_(),
     info_(UndefinedValue())
 {
@@ -34,9 +34,9 @@ ShapeTree::ShapeTree(ShapeTree *parentTree, Shape *rootShape,
 }
 
 Shape *
-ShapeTree::rootShape()
+ShapeTree::firstRoot()
 {
-    return rootShape_.getNativeObject<Shape>();
+    return firstRoot_.getNativeObject<Shape>();
 }
 
 bool
@@ -78,40 +78,22 @@ ShapeTreeChild::ShapeTreeChild(ShapeTreeChild *next, ShapeTree *child)
 ShapeTreeChild *
 ShapeTreeChild::next() const
 {
-    return next_.maybeGetHeapThing();
+    return next_;
 }
 
 ShapeTree *
 ShapeTreeChild::child() const
 {
-    return child_.getHeapThing();
+    return child_;
 }
 
 //
 // Shape
 //
 
-void
-Shape::initialize(const Config &config)
-{
-    WH_ASSERT(config.slotNumber <= SlotNumberMax);
-    uint64_t value = 0;
-    value |= (config.slotNumber << SlotNumberShift);
-    info_ = MagicValue(value);
-}
-    
-Shape::Shape(ShapeTree *tree, const Config &config)
-  : tree_(NativeObjectValue(tree)),
-    parent_(),
-    name_(NullValue()),
-    firstChild_(),
-    nextSibling_()
-{
-    WH_ASSERT(tree);
-    initialize(config);
-}
-
-Shape::Shape(ShapeTree *tree, Shape *parent, Value name, const Config &config)
+Shape::Shape(ShapeTree *tree, Shape *parent, const Value &name,
+             bool hasValue, bool hasGetter, bool hasSetter,
+             bool isConfigurable, bool isEnumerable, bool isWritable)
   : tree_(tree),
     parent_(parent),
     name_(name),
@@ -120,7 +102,22 @@ Shape::Shape(ShapeTree *tree, Shape *parent, Value name, const Config &config)
 {
     WH_ASSERT(tree);
     WH_ASSERT(IsNormalizedPropertyId(name));
-    initialize(config);
+    WH_ASSERT_IF(hasValue, !hasGetter && !hasSetter);
+    WH_ASSERT_IF(!hasValue, !isWritable);
+    uint32_t flags = 0;
+    if (hasValue)
+        flags |= HasValue;
+    if (hasGetter)
+        flags |= HasGetter;
+    if (hasSetter)
+        flags |= HasSetter;
+    if (isConfigurable)
+        flags |= IsConfigurable;
+    if (isEnumerable)
+        flags |= IsEnumerable;
+    if (isWritable)
+        flags |= IsWritable;
+    initFlags(flags);
 }
 
 ShapeTree *
@@ -181,6 +178,123 @@ Shape::setFirstChild(Shape *child)
     WH_ASSERT(child);
     noteWrite(&firstChild_);
     firstChild_ = NativeObjectValue(child);
+}
+
+//
+// ValueShape
+//
+
+ValueShape::ValueShape(ShapeTree *tree, Shape *parent, const Value &name,
+                       uint32_t slotOffset, bool isExtendedSlot,
+                       bool isConfigurable, bool isEnumerable)
+  : Shape(tree, parent, name,
+          /*hasValue=*/true, /*hasGetter=*/false, /*hasSetter=*/false,
+          isConfigurable, isEnumerable, /*isWritable=*/true)
+{
+    uint64_t slotInfo = 0;
+    slotInfo |= UInt64(slotOffset) << SlotOffsetShift;
+    if (isExtendedSlot)
+        slotInfo |= UInt64(1) << IsExtendedSlotShift;
+    slotInfo_ = MagicValue(slotInfo);
+}
+
+uint32_t
+ValueShape::slotOffset() const
+{
+    return (slotInfo_.getMagicInt() >> SlotOffsetShift) & SlotOffsetMask;
+}
+
+bool
+ValueShape::isExtendedSlot() const
+{
+    return (slotInfo_.getMagicInt() >> IsExtendedSlotShift) & 1u;
+}
+
+//
+// ConstantShape
+//
+
+ConstantShape::ConstantShape(ShapeTree *tree, Shape *parent, const Value &name,
+                             const Value &constant,
+                             bool isConfigurable, bool isEnumerable)
+  : Shape(tree, parent, name,
+          /*hasValue=*/true, /*hasGetter=*/false, /*hasSetter=*/false,
+          isConfigurable, isEnumerable, /*isWritable=*/false)
+{
+    constant_ = constant;
+}
+
+const Value &
+ConstantShape::constant() const
+{
+    return constant_;
+}
+
+//
+// GetterShape
+//
+
+GetterShape::GetterShape(ShapeTree *tree, Shape *parent, const Value &name,
+                         const Value &getter,
+                         bool isConfigurable, bool isEnumerable)
+  : Shape(tree, parent, name,
+          /*hasValue=*/false, /*hasGetter=*/true, /*hasSetter=*/false,
+          isConfigurable, isEnumerable, /*isWritable=*/false)
+{
+    getter_ = getter;
+}
+
+const Value &
+GetterShape::getter() const
+{
+    return getter_;
+}
+
+//
+// SetterShape
+//
+
+SetterShape::SetterShape(ShapeTree *tree, Shape *parent, const Value &name,
+                         const Value &setter,
+                         bool isConfigurable, bool isEnumerable)
+  : Shape(tree, parent, name,
+          /*hasValue=*/false, /*hasGetter=*/false, /*hasSetter=*/true,
+          isConfigurable, isEnumerable, /*isWritable=*/false)
+{
+    setter_ = setter;
+}
+
+const Value &
+SetterShape::setter() const
+{
+    return setter_;
+}
+
+//
+// AccessorShape
+//
+
+AccessorShape::AccessorShape(ShapeTree *tree, Shape *parent, const Value &name,
+                             const Value &getter, const Value &setter,
+                             bool isConfigurable, bool isEnumerable)
+  : Shape(tree, parent, name,
+          /*hasValue=*/false, /*hasGetter=*/true, /*hasSetter=*/true,
+          isConfigurable, isEnumerable, /*isWritable=*/false)
+{
+    getter_ = getter;
+    setter_ = setter;
+}
+
+const Value &
+AccessorShape::getter() const
+{
+    return getter_;
+}
+
+const Value &
+AccessorShape::setter() const
+{
+    return setter_;
 }
 
 

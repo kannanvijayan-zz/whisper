@@ -246,9 +246,10 @@ class HeapThingValue<T, false> : public Value
     inline explicit HeapThingValue(const Value &val);
 
     inline T *getHeapThing() const;
+    inline operator T *() const;
 
-    HeapThingValue<T> &operator =(T *thing);
-    HeapThingValue<T> &operator =(const Value &val);
+    inline HeapThingValue<T> &operator =(T *thing);
+    inline HeapThingValue<T> &operator =(const Value &val);
 };
 
 template <typename T>
@@ -262,9 +263,10 @@ class HeapThingValue<T, true> : public Value
     bool hasHeapThing() const;
     inline T *maybeGetHeapThing() const;
     inline T *getHeapThing() const;
+    inline operator T *() const;
 
-    HeapThingValue<T, true> &operator =(T *thing);
-    HeapThingValue<T, true> &operator =(const Value &val);
+    inline HeapThingValue<T, true> &operator =(T *thing);
+    inline HeapThingValue<T, true> &operator =(const Value &val);
 };
 
 template <typename T>

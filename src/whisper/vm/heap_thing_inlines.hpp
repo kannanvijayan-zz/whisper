@@ -166,6 +166,13 @@ HeapThingValue<T, false>::getHeapThing() const
 }
 
 template <typename T>
+inline
+HeapThingValue<T, false>::operator T *() const
+{
+    return getHeapThing();
+}
+
+template <typename T>
 inline HeapThingValue<T> &
 HeapThingValue<T, false>::operator =(T *thing)
 {
@@ -230,6 +237,13 @@ inline T *
 HeapThingValue<T, true>::getHeapThing() const
 {
     return this->getNativeObject<T>();
+}
+
+template <typename T>
+inline
+HeapThingValue<T, true>::operator T *() const
+{
+    return maybeGetHeapThing();
 }
 
 template <typename T>
