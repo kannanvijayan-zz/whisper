@@ -20,4 +20,5 @@ whisper_SOURCES = \
     vm/property_descriptor.cpp \
     vm/tuple.cpp \
     vm/shape_tree.cpp \
+    vm/object.cpp \
     whisper.cpp
