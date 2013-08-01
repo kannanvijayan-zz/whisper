@@ -117,7 +117,6 @@ namespace Whisper {
 
 namespace VM {
     class UntypedHeapThing;
-    class Object;
     class HeapString;
     class HeapDouble;
 }
@@ -349,7 +348,7 @@ class Value
     //
     // Getter methods
     //
-    template <typename T=VM::Object>
+    template <typename T>
     inline T *getNativeObject() const;
 
     VM::UntypedHeapThing *getAnyNativeObject() const;
