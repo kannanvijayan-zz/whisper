@@ -84,10 +84,16 @@ namespace Whisper {
 namespace VM {
 
 class Object;
-class Shape;
 class Class;
+
 class ShapeTreeChild;
+
 class Shape;
+class ValueShape;
+class ConstantShape;
+class GetterShape;
+class SetterShape;
+class AccessorShape;
 
 class ShapeTree : public HeapThing<HeapType::ShapeTree>
 {
@@ -174,8 +180,10 @@ class ShapeTreeChild : public HeapThing<HeapType::ShapeTreeChild>
 // Depending on the values of these bits, the size of a shape can
 // vary.
 //
-//  A value shape has 1 extra int32 field, |slotOffset|, holding the
-//  offset of the slot.
+//  A value shape has 1 extra magic field, |slotInfo|, holding the
+//  index of the slot, and a flag indicating whether it's a dynamic
+//  or fixed slot.
+//
 //  A constant (non-writable value) shape has 1 extra field holding the
 //  slot value.
 //
@@ -211,13 +219,44 @@ class Shape : public HeapThing<HeapType::Shape>
 
   public:
     ShapeTree *tree() const;
+
+    bool hasParent() const;
+    Shape *maybeParent() const;
     Shape *parent() const;
+
     const Value &name() const;
 
+    bool hasFirstChild() const;
+    Shape *maybeFirstChild() const;
     Shape *firstChild() const;
+
+    bool hasNextSibling() const;
+    Shape *maybeNextSibling() const;
     Shape *nextSibling() const;
 
     void addChild(Shape *child);
+
+    bool hasValue() const;
+    bool hasGetter() const;
+    bool hasSetter() const;
+    bool isConfigurable() const;
+    bool isEnumerable() const;
+    bool isWritable() const;
+
+    ValueShape *toValueShape();
+    const ValueShape *toValueShape() const;
+
+    ConstantShape *toConstantShape();
+    const ConstantShape *toConstantShape() const;
+
+    GetterShape *toGetterShape();
+    const GetterShape *toGetterShape() const;
+
+    SetterShape *toSetterShape();
+    const SetterShape *toSetterShape() const;
+
+    AccessorShape *toAccessorShape();
+    const AccessorShape *toAccessorShape() const;
 
   protected:
     void setNextSibling(Shape *sibling);
@@ -229,20 +268,20 @@ class ValueShape : public Shape
 {
   friend class ShapeTree;
   public:
-    static constexpr unsigned SlotOffsetShift = 0;
-    static constexpr uint64_t SlotOffsetMask = (UInt64(1) << 32) - 1u;
+    static constexpr unsigned SlotIndexShift = 0;
+    static constexpr uint64_t SlotIndexMask = (UInt64(1) << 32) - 1u;
 
-    static constexpr unsigned IsExtendedSlotShift = 32;
+    static constexpr unsigned IsDynamicSlotShift = 32;
   private:
     Value slotInfo_;
 
   public:
     ValueShape(ShapeTree *tree, Shape *parent, const Value &name,
-               uint32_t slotOffset, bool isExtendedSlot,
+               uint32_t slotIndex, bool isDynamicSlot,
                bool isConfigurable, bool isEnumerable);
 
-    uint32_t slotOffset() const;
-    bool isExtendedSlot() const;
+    uint32_t slotIndex() const;
+    bool isDynamicSlot() const;
 };
 
 class ConstantShape : public Shape

@@ -123,14 +123,26 @@ Shape::Shape(ShapeTree *tree, Shape *parent, const Value &name,
 ShapeTree *
 Shape::tree() const
 {
-    return tree_.getNativeObject<ShapeTree>();
+    return tree_;
+}
+
+bool
+Shape::hasParent() const
+{
+    return parent_.hasHeapThing();
+}
+
+Shape *
+Shape::maybeParent() const
+{
+    return parent_;
 }
 
 Shape *
 Shape::parent() const
 {
-    WH_ASSERT(parent_.isNull() || parent_.isNativeObject());
-    return parent_.getNativeObject<Shape>();
+    WH_ASSERT(hasParent());
+    return parent_;
 }
 
 const Value &
@@ -139,18 +151,42 @@ Shape::name() const
     return name_;
 }
 
+bool
+Shape::hasFirstChild() const
+{
+    return firstChild_.hasHeapThing();
+}
+
+Shape *
+Shape::maybeFirstChild() const
+{
+    return firstChild_;
+}
+
 Shape *
 Shape::firstChild() const
 {
-    WH_ASSERT(firstChild_.isNull() || firstChild_.isNativeObject());
-    return firstChild_.getNativeObject<Shape>();
+    WH_ASSERT(hasFirstChild());
+    return firstChild_;
+}
+
+bool
+Shape::hasNextSibling() const
+{
+    return nextSibling_.hasHeapThing();
+}
+
+Shape *
+Shape::maybeNextSibling() const
+{
+    return nextSibling_;
 }
 
 Shape *
 Shape::nextSibling() const
 {
-    WH_ASSERT(nextSibling_.isNull() || nextSibling_.isNativeObject());
-    return nextSibling_.getNativeObject<Shape>();
+    WH_ASSERT(hasNextSibling());
+    return nextSibling_;
 }
 
 void
@@ -164,12 +200,48 @@ Shape::addChild(Shape *child)
     setFirstChild(child);
 }
 
+bool
+Shape::hasValue() const
+{
+    return flags() & HasValue;
+}
+
+bool
+Shape::hasGetter() const
+{
+    return flags() & HasGetter;
+}
+
+bool
+Shape::hasSetter() const
+{
+    return flags() & HasSetter;
+}
+
+bool
+Shape::isConfigurable() const
+{
+    return flags() & IsConfigurable;
+}
+
+bool
+Shape::isEnumerable() const
+{
+    return flags() & IsEnumerable;
+}
+
+bool
+Shape::isWritable() const
+{
+    return flags() & IsWritable;
+}
+
 void
 Shape::setNextSibling(Shape *sibling)
 {
     WH_ASSERT(sibling);
     noteWrite(&nextSibling_);
-    nextSibling_ = NativeObjectValue(sibling);
+    nextSibling_ = sibling;
 }
 
 void
@@ -177,7 +249,77 @@ Shape::setFirstChild(Shape *child)
 {
     WH_ASSERT(child);
     noteWrite(&firstChild_);
-    firstChild_ = NativeObjectValue(child);
+    firstChild_ = child;
+}
+
+ValueShape *
+Shape::toValueShape()
+{
+    WH_ASSERT(hasValue() && isWritable());
+    return reinterpret_cast<ValueShape *>(this);
+}
+
+const ValueShape *
+Shape::toValueShape() const
+{
+    WH_ASSERT(hasValue() && isWritable());
+    return reinterpret_cast<const ValueShape *>(this);
+}
+
+ConstantShape *
+Shape::toConstantShape()
+{
+    WH_ASSERT(hasValue() && !isWritable());
+    return reinterpret_cast<ConstantShape *>(this);
+}
+
+const ConstantShape *
+Shape::toConstantShape() const
+{
+    WH_ASSERT(hasValue() && !isWritable());
+    return reinterpret_cast<const ConstantShape *>(this);
+}
+
+GetterShape *
+Shape::toGetterShape()
+{
+    WH_ASSERT(hasGetter() && !hasSetter());
+    return reinterpret_cast<GetterShape *>(this);
+}
+
+const GetterShape *
+Shape::toGetterShape() const
+{
+    WH_ASSERT(hasGetter() && !hasSetter());
+    return reinterpret_cast<const GetterShape *>(this);
+}
+
+SetterShape *
+Shape::toSetterShape()
+{
+    WH_ASSERT(hasSetter() && !hasGetter());
+    return reinterpret_cast<SetterShape *>(this);
+}
+
+const SetterShape *
+Shape::toSetterShape() const
+{
+    WH_ASSERT(hasSetter() && !hasGetter());
+    return reinterpret_cast<const SetterShape *>(this);
+}
+
+AccessorShape *
+Shape::toAccessorShape()
+{
+    WH_ASSERT(hasGetter() && hasSetter());
+    return reinterpret_cast<AccessorShape *>(this);
+}
+
+const AccessorShape *
+Shape::toAccessorShape() const
+{
+    WH_ASSERT(hasGetter() && hasSetter());
+    return reinterpret_cast<const AccessorShape *>(this);
 }
 
 //
@@ -185,29 +327,29 @@ Shape::setFirstChild(Shape *child)
 //
 
 ValueShape::ValueShape(ShapeTree *tree, Shape *parent, const Value &name,
-                       uint32_t slotOffset, bool isExtendedSlot,
+                       uint32_t slotIndex, bool isDynamicSlot,
                        bool isConfigurable, bool isEnumerable)
   : Shape(tree, parent, name,
           /*hasValue=*/true, /*hasGetter=*/false, /*hasSetter=*/false,
           isConfigurable, isEnumerable, /*isWritable=*/true)
 {
     uint64_t slotInfo = 0;
-    slotInfo |= UInt64(slotOffset) << SlotOffsetShift;
-    if (isExtendedSlot)
-        slotInfo |= UInt64(1) << IsExtendedSlotShift;
+    slotInfo |= UInt64(slotIndex) << SlotIndexShift;
+    if (isDynamicSlot)
+        slotInfo |= UInt64(1) << IsDynamicSlotShift;
     slotInfo_ = MagicValue(slotInfo);
 }
 
 uint32_t
-ValueShape::slotOffset() const
+ValueShape::slotIndex() const
 {
-    return (slotInfo_.getMagicInt() >> SlotOffsetShift) & SlotOffsetMask;
+    return (slotInfo_.getMagicInt() >> SlotIndexShift) & SlotIndexMask;
 }
 
 bool
-ValueShape::isExtendedSlot() const
+ValueShape::isDynamicSlot() const
 {
-    return (slotInfo_.getMagicInt() >> IsExtendedSlotShift) & 1u;
+    return (slotInfo_.getMagicInt() >> IsDynamicSlotShift) & 1u;
 }
 
 //

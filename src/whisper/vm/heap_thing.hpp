@@ -247,6 +247,7 @@ class HeapThingValue<T, false> : public Value
 
     inline T *getHeapThing() const;
     inline operator T *() const;
+    inline T *operator ->() const;
 
     inline HeapThingValue<T> &operator =(T *thing);
     inline HeapThingValue<T> &operator =(const Value &val);
@@ -264,6 +265,7 @@ class HeapThingValue<T, true> : public Value
     inline T *maybeGetHeapThing() const;
     inline T *getHeapThing() const;
     inline operator T *() const;
+    inline T *operator ->() const;
 
     inline HeapThingValue<T, true> &operator =(T *thing);
     inline HeapThingValue<T, true> &operator =(const Value &val);

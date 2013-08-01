@@ -19,10 +19,13 @@ class Tuple : public HeapThing<HeapType::Tuple>
     Tuple();
     Tuple(const Tuple &other);
 
-    inline const Value &operator [](uint32_t idx) const;
-    inline Value &operator [](uint32_t idx);
+    const Value &element(uint32_t idx) const;
+    Value &element(uint32_t idx);
 
-    inline uint32_t size() const;
+    const Value &operator [](uint32_t idx) const;
+    Value &operator [](uint32_t idx);
+
+    uint32_t size() const;
 };
 
 

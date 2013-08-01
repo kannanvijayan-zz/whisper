@@ -173,6 +173,13 @@ HeapThingValue<T, false>::operator T *() const
 }
 
 template <typename T>
+inline T *
+HeapThingValue<T, false>::operator ->() const
+{
+    return getHeapThing();
+}
+
+template <typename T>
 inline HeapThingValue<T> &
 HeapThingValue<T, false>::operator =(T *thing)
 {
@@ -244,6 +251,14 @@ inline
 HeapThingValue<T, true>::operator T *() const
 {
     return maybeGetHeapThing();
+}
+
+template <typename T>
+inline T *
+HeapThingValue<T, true>::operator ->() const
+{
+    // Arrow notation should only be used on non-null values.
+    return getHeapThing();
 }
 
 template <typename T>

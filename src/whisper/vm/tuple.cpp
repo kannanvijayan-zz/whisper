@@ -30,6 +30,18 @@ Tuple::Tuple(const Tuple &other) : HeapThing(other)
 }
 
 const Value &
+Tuple::element(uint32_t idx) const
+{
+    return valueRef(idx);
+}
+
+Value &
+Tuple::element(uint32_t idx)
+{
+    return valueRef(idx);
+}
+
+const Value &
 Tuple::operator [](uint32_t idx) const
 {
     return valueRef(idx);
