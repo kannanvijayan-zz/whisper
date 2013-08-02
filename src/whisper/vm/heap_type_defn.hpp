@@ -16,7 +16,6 @@
     _(Shape,                            true)                   \
     \
     _(Object,                           true)                   \
-    _(ObjectSlots,                      true)                   \
     \
     _(DeclEnv,                          true)                   \
     _(ObjEnv,                           true)                   \

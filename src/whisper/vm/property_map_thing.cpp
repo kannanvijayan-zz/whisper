@@ -33,14 +33,14 @@ PropertyMapThing::PropertyMapThing(Shape *shape, PropertyMapThing *prototype)
 bool
 PropertyMapThing::isExtensible() const
 {
-    return !(flags() & PreventExtensions);
+    return !(flags() & PreventExtensionsFlag);
 }
 
 void
 PropertyMapThing::preventExtensions()
 {
     WH_ASSERT(isExtensible());
-    addFlags(PreventExtensions);
+    addFlags(PreventExtensionsFlag);
 }
 
 uint32_t

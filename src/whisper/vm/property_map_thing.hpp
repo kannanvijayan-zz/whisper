@@ -81,10 +81,7 @@ class PropertyMapThing : public ShapedHeapThing
     // Static function to calculate implicit slots.
     static uint32_t NumInternalSlots(HeapType ht);
 
-    enum Flags : uint8_t
-    {
-        PreventExtensions = 0x01
-    };
+    static constexpr uint32_t PreventExtensionsFlag = 0x01;
 
   private:
     NullableHeapThingValue<PropertyMapThing> prototype_;
