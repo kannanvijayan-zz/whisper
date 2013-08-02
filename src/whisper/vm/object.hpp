@@ -29,7 +29,8 @@ namespace VM {
 // The header flags store the following info:
 //      PreventExtensions
 //
-class Object : public ShapedHeapThing<HeapType::Object>
+class Object : public ShapedHeapThing,
+               public TypedHeapThing<HeapType::Object>
 {
   public:
     enum Flags : uint8_t {

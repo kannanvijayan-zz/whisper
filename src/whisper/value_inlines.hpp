@@ -31,7 +31,7 @@ template <typename T>
 inline bool
 Value::isNativeObjectOf() const
 {
-    static_assert(std::is_base_of<VM::UntypedHeapThing, T>::value,
+    static_assert(std::is_base_of<VM::HeapThing, T>::value,
                   "Type is not a heap thing.");
     if (!isNativeObject())
         return false;

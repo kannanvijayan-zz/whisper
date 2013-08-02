@@ -95,7 +95,7 @@ class GetterShape;
 class SetterShape;
 class AccessorShape;
 
-class ShapeTree : public HeapThing<HeapType::ShapeTree>
+class ShapeTree : public HeapThing, public TypedHeapThing<HeapType::ShapeTree>
 {
   friend class Shape;
   public:
@@ -150,7 +150,8 @@ class ShapeTree : public HeapThing<HeapType::ShapeTree>
 // A linked list of ShapeTreeChild instances links a parent shape tree
 // to all of its children.
 //
-class ShapeTreeChild : public HeapThing<HeapType::ShapeTreeChild>
+class ShapeTreeChild : public HeapThing,
+                       public TypedHeapThing<HeapType::ShapeTreeChild>
 {
   friend class Shape;
   friend class ShapeTree;
@@ -193,7 +194,7 @@ class ShapeTreeChild : public HeapThing<HeapType::ShapeTreeChild>
 //
 // The root shape for a shape tree is always an empty shape.
 //
-class Shape : public HeapThing<HeapType::Shape>
+class Shape : public HeapThing, public TypedHeapThing<HeapType::Shape>
 {
   friend class ShapeTree;
   protected:
@@ -346,17 +347,16 @@ class AccessorShape : public Shape
 //
 // A ShapedHeapThing is a HeapThing whose structure is described by a Shape.
 //
-template <HeapType HT>
-class ShapedHeapThing : public HeapThing<HT>
+class ShapedHeapThing : public HeapThing
 {
   protected:
     HeapThingValue<Shape> shape_;
 
-    inline ShapedHeapThing(Shape *shape);
+    ShapedHeapThing(Shape *shape);
 
   public:
-    inline Shape *shape() const;
-    inline void setShape(Shape *shape);
+    Shape *shape() const;
+    void setShape(Shape *shape);
 };
 
 

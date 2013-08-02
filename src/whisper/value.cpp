@@ -256,11 +256,11 @@ Value::isWeakPointer() const
 }
 
 
-VM::UntypedHeapThing *
+VM::HeapThing *
 Value::getAnyNativeObject() const
 {
     WH_ASSERT(isNativeObject());
-    return getPtr<VM::UntypedHeapThing>();
+    return getPtr<VM::HeapThing>();
 }
 
 bool

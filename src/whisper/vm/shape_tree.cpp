@@ -439,6 +439,27 @@ AccessorShape::setter() const
     return setter_;
 }
 
+//
+// A ShapedHeapThing is a HeapThing whose structure is described by a Shape.
+//
+
+ShapedHeapThing::ShapedHeapThing(Shape *shape)
+  : shape_(shape)
+{}
+
+Shape *
+ShapedHeapThing::shape() const
+{
+    return shape_;
+}
+
+void
+ShapedHeapThing::setShape(Shape *shape)
+{
+    noteWrite(&shape_);
+    shape_ = shape;
+}
+
 
 } // namespace VM
 } // namespace Whisper

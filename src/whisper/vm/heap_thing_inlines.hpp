@@ -77,19 +77,19 @@ HeapThingWrapper<T>::payloadPointer()
 }
 
 //
-// UntypedHeapThing
+// HeapThing
 //
 
 template <typename PtrT>
 inline PtrT *
-UntypedHeapThing::recastThis()
+HeapThing::recastThis()
 {
     return reinterpret_cast<PtrT *>(this);
 }
 
 template <typename PtrT>
 inline const PtrT *
-UntypedHeapThing::recastThis() const
+HeapThing::recastThis() const
 {
     return reinterpret_cast<const PtrT *>(this);
 }
@@ -97,7 +97,7 @@ UntypedHeapThing::recastThis() const
 
 template <typename T>
 inline T *
-UntypedHeapThing::dataPointer(uint32_t offset)
+HeapThing::dataPointer(uint32_t offset)
 {
     uint8_t *ptr = recastThis<uint8_t>() + offset;
     WH_ASSERT(IsPtrAligned(ptr, alignof(T)));
@@ -106,7 +106,7 @@ UntypedHeapThing::dataPointer(uint32_t offset)
 
 template <typename T>
 inline const T *
-UntypedHeapThing::dataPointer(uint32_t offset) const
+HeapThing::dataPointer(uint32_t offset) const
 {
     const uint8_t *ptr = recastThis<uint8_t>() + offset;
     WH_ASSERT(IsPtrAligned(ptr, alignof(T)));
@@ -115,28 +115,17 @@ UntypedHeapThing::dataPointer(uint32_t offset) const
 
 template <typename T>
 inline T &
-UntypedHeapThing::dataRef(uint32_t offset)
+HeapThing::dataRef(uint32_t offset)
 {
     return *dataPointer<T>(offset);
 }
 
 template <typename T>
 inline const T &
-UntypedHeapThing::dataRef(uint32_t offset) const
+HeapThing::dataRef(uint32_t offset) const
 {
     return *dataPointer<T>(offset);
 }
-
-
-//
-// HeapThing<HeapType HT>
-//
-
-template <HeapType HT>
-HeapThing<HT>::HeapThing() {};
-
-template <HeapType HT>
-HeapThing<HT>::~HeapThing() {};
 
 
 //

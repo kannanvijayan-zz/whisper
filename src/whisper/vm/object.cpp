@@ -10,7 +10,7 @@ namespace VM {
 
 
 Object::Object(Shape *shape, Object *prototype)
-  : ShapedHeapThing<HeapType::Object>(shape)
+  : ShapedHeapThing(shape)
 {
     prototype_ = prototype;
     dynamicSlots_ = nullptr;
@@ -37,7 +37,7 @@ Object::dynamicSlots() const
 uint32_t
 Object::numFixedSlots() const
 {
-    return this->objectValueCount() - FixedSlotsStart;
+    return objectValueCount() - FixedSlotsStart;
 }
 
 uint32_t

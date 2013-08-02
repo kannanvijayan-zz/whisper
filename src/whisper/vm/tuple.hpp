@@ -13,7 +13,7 @@ namespace VM {
 // A Tuple is a useful helper that's used to hold a bunch of
 // different values.
 //
-class Tuple : public HeapThing<HeapType::Tuple>
+class Tuple : public HeapThing, public TypedHeapThing<HeapType::Tuple>
 {
   public:
     Tuple();

@@ -6,31 +6,6 @@
 namespace Whisper {
 namespace VM {
 
-//
-// A ShapedHeapThing is a HeapThing whose structure is described by a Shape.
-//
-
-template <HeapType HT>
-inline
-ShapedHeapThing<HT>::ShapedHeapThing(Shape *shape)
-  : shape_(shape)
-{}
-
-template <HeapType HT>
-inline Shape *
-ShapedHeapThing<HT>::shape() const
-{
-    return shape_;
-}
-
-template <HeapType HT>
-inline void
-ShapedHeapThing<HT>::setShape(Shape *shape)
-{
-    this->noteWrite(&shape_);
-    shape_ = shape;
-}
-
 
 } // namespace VM
 } // namespace Whisper

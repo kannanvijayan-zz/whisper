@@ -91,7 +91,7 @@ template <HeapType HT> struct HeapTypeTraits {};
 
 class HeapThingHeader
 {
-  friend class UntypedHeapThing;
+  friend class HeapThing;
 
   protected:
     uint64_t header_ = 0;
@@ -169,11 +169,11 @@ class HeapThingWrapper
 // HeapThing is a base class for heap thing payload classes, with protected
 // helper methods for accessing the header.
 //
-class UntypedHeapThing
+class HeapThing
 {
   protected:
-    UntypedHeapThing();
-    ~UntypedHeapThing();
+    HeapThing();
+    ~HeapThing();
 
     template <typename PtrT>
     inline PtrT *recastThis();
@@ -225,14 +225,14 @@ class UntypedHeapThing
 };
 
 template <HeapType HT>
-class HeapThing : public UntypedHeapThing
+class TypedHeapThing
 {
   public:
     static constexpr HeapType Type = HT;
 
   protected:
-    inline HeapThing();
-    inline ~HeapThing();
+    inline TypedHeapThing() {}
+    inline ~TypedHeapThing() {}
 };
 
 // A Value subclass that allows heap things or undefined.
