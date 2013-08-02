@@ -213,7 +213,7 @@ class Root<Value> : public TypedRootBase<Value>
     //
     // Getter methods
     //
-    template <typename T=VM::Object>
+    template <typename T>
     T *getNativeObject() const;
 
     template <typename T>
