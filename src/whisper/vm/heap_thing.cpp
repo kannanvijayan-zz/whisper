@@ -54,6 +54,13 @@ HeapThingHeader::initFlags(uint32_t fl)
     header_ |= static_cast<uint64_t>(fl) << FlagsShift;
 }
 
+void
+HeapThingHeader::addFlags(uint32_t fl)
+{
+    WH_ASSERT(fl <= FlagsMask);
+    header_ |= static_cast<uint64_t>(fl) << FlagsShift;
+}
+
 //
 // HeapThing
 //
@@ -79,6 +86,12 @@ void
 HeapThing::initFlags(uint32_t flags)
 {
     return header()->initFlags(flags);
+}
+
+void
+HeapThing::addFlags(uint32_t flags)
+{
+    header()->addFlags(flags);
 }
 
 void 

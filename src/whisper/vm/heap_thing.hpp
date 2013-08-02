@@ -131,6 +131,7 @@ class HeapThingHeader
 
   protected:
     void initFlags(uint32_t fl);
+    void addFlags(uint32_t fl);
 };
 
 //
@@ -186,6 +187,7 @@ class HeapThing
     const HeapThingHeader *header() const;
 
     void initFlags(uint32_t flags);
+    void addFlags(uint32_t flags);
 
     // Write barrier helper
     void noteWrite(void *ptr);

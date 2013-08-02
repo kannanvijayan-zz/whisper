@@ -28,4 +28,10 @@
     _(Bytecode,                         false)                  \
 
 
+// Listing of all PropertyMap types.
+#define WHISPER_DEFN_PROPMAP_TYPES(_)                           \
+    /* Name */                                                  \
+    _(Object)
+
+
 #endif // WHISPER__VM__HEAP_TYPE_DEFN_HPP
