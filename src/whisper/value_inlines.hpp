@@ -43,7 +43,6 @@ inline T *
 Value::getNativeObject() const
 {
     WH_ASSERT(isNativeObject());
-    WH_ASSERT(getPtr<T>()->type() == T::Type);
     return getPtr<T>();
 }
 
@@ -84,26 +83,6 @@ Value::readImmString(CharT *buf) const
     WH_ASSERT(isImmString());
     return isImmString8() ? readImmString8<CharT>(buf)
                           : readImmString16<CharT>(buf);
-}
-
-template <typename T>
-inline Value
-NativeObjectValue(T *obj)
-{
-    WH_ASSERT(obj != nullptr);
-    WH_ASSERT(T::Type == obj->type());
-    Value val = Value::MakePtr(ValueTag::Object, obj);
-    return val;
-}
-
-template <typename T>
-inline Value
-WeakNativeObjectValue(T *obj)
-{
-    WH_ASSERT(obj != nullptr);
-    Value val = NativeObjectValue<T>(obj);
-    val.tagged_ |= Value::WeakMask;
-    return val;
 }
 
 template <typename CharT>

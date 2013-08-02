@@ -398,10 +398,8 @@ class Value
     //
     // Friend functions
     //
-    template <typename T>
-    friend Value NativeObjectValue(T *obj);
-    template <typename T>
-    friend Value WeakNativeObjectValue(T *obj);
+    friend Value NativeObjectValue(VM::HeapThing *obj);
+    friend Value WeakNativeObjectValue(VM::HeapThing *obj);
     friend Value ForeignObjectValue(void *obj);
     friend Value WeakForeignObjectValue(void *obj);
     friend Value NullValue();
@@ -426,11 +424,9 @@ class Value
 };
 
 
-template <typename T>
-inline Value NativeObjectValue(T *obj);
+Value NativeObjectValue(VM::HeapThing *obj);
 
-template <typename T>
-inline Value WeakNativeObjectValue(T *obj);
+Value WeakNativeObjectValue(VM::HeapThing *obj);
 
 Value ForeignObjectValue(void *obj);
 

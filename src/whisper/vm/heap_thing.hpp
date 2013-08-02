@@ -243,14 +243,12 @@ class HeapThingValue<T, false> : public Value
 {
   public:
     inline explicit HeapThingValue(T *thing);
-    inline explicit HeapThingValue(const Value &val);
 
     inline T *getHeapThing() const;
     inline operator T *() const;
     inline T *operator ->() const;
 
     inline HeapThingValue<T> &operator =(T *thing);
-    inline HeapThingValue<T> &operator =(const Value &val);
 };
 
 template <typename T>
@@ -259,7 +257,6 @@ class HeapThingValue<T, true> : public Value
   public:
     inline HeapThingValue();
     inline explicit HeapThingValue(T *thing);
-    inline explicit HeapThingValue(const Value &val);
 
     bool hasHeapThing() const;
     inline T *maybeGetHeapThing() const;
@@ -268,7 +265,6 @@ class HeapThingValue<T, true> : public Value
     inline T *operator ->() const;
 
     inline HeapThingValue<T, true> &operator =(T *thing);
-    inline HeapThingValue<T, true> &operator =(const Value &val);
 };
 
 template <typename T>

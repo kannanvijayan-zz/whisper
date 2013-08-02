@@ -382,6 +382,23 @@ Value::getInt32() const
 }
 
 Value
+NativeObjectValue(VM::HeapThing *obj)
+{
+    WH_ASSERT(obj != nullptr);
+    Value val = Value::MakePtr(ValueTag::Object, obj);
+    return val;
+}
+
+Value
+WeakNativeObjectValue(VM::HeapThing *obj)
+{
+    WH_ASSERT(obj != nullptr);
+    Value val = NativeObjectValue(obj);
+    val.tagged_ |= Value::WeakMask;
+    return val;
+}
+
+Value
 ForeignObjectValue(void *obj)
 {
     Value val = Value::MakePtr(ValueTag::Object, obj);
