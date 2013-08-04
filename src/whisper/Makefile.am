@@ -23,4 +23,5 @@ whisper_SOURCES = \
     vm/shape_tree.cpp \
     vm/property_map_thing.cpp \
     vm/object.cpp \
+    interp/bytecode_generator.cpp \
     whisper.cpp

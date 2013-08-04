@@ -20,7 +20,7 @@ enum class RootKind : uint8_t
 {
     INVALID = 0,
     Value,
-    Object,
+    HeapThing,
     LIMIT
 };
 
@@ -60,7 +60,6 @@ class TypedRootBase : public RootBase
   protected:
     T thing_;
 
-  public:
     inline TypedRootBase(ThreadContext *threadContext, RootKind kind,
                          const T &thing);
 
@@ -71,6 +70,7 @@ class TypedRootBase : public RootBase
 
     inline TypedRootBase(RunContext *runContext, RootKind kind);
 
+  public:
     inline const T &get() const;
     inline T &get();
 
@@ -88,10 +88,15 @@ class TypedRootBase : public RootBase
 template <typename T>
 class PointerRootBase : public TypedRootBase<T *>
 {
-  public:
-    inline PointerRootBase(ThreadContext *threadContext, RootKind kind);
+  protected:
     inline PointerRootBase(ThreadContext *threadContext, RootKind kind, T *ptr);
+    inline PointerRootBase(ThreadContext *threadContext, RootKind kind);
+    inline PointerRootBase(RunContext *runContext, RootKind kind, T *ptr);
+    inline PointerRootBase(RunContext *runContext, RootKind kind);
+
+  public:
     inline T *operator ->() const;
+    inline explicit operator bool() const;
 };
 
 template <typename T>
@@ -119,9 +124,18 @@ class TypedHandleBase
 template <typename T>
 class PointerHandleBase : public TypedHandleBase<T *>
 {
-  public:
+  protected:
     inline PointerHandleBase(TypedRootBase<T *> &base);
+
+  public:
     inline T *operator ->() const;
+    inline explicit operator bool() const;
+};
+
+template <typename T>
+class Handle
+{
+    Handle(const Handle<T> &other) = delete;
 };
 
 
@@ -153,9 +167,18 @@ class TypedMutableHandleBase
 template <typename T>
 class PointerMutableHandleBase : public TypedMutableHandleBase<T *>
 {
-  public:
+  protected:
     inline PointerMutableHandleBase(TypedRootBase<T *> &base);
+
+  public:
     inline T *operator ->() const;
+    inline explicit operator bool() const;
+};
+
+template <typename T>
+class MutableHandle
+{
+    MutableHandle(const MutableHandle<T> &other) = delete;
 };
 
 
@@ -246,6 +269,30 @@ class Root<Value> : public TypedRootBase<Value>
     VM::HeapDouble *getHeapDouble() const;
     Magic getMagic() const;
     int32_t getInt32() const;
+};
+
+template <typename T>
+class Root<T *> : public PointerRootBase<T>
+{
+  public:
+    Root(RunContext *cx);
+    Root(ThreadContext *cx);
+    Root(RunContext *cx, T *);
+    Root(ThreadContext *cx, T *);
+};
+
+template <typename T>
+class Handle<T *> : public PointerHandleBase<T>
+{
+  public:
+    Handle(Root<T *> &root);
+};
+
+template <typename T>
+class MutableHandle<T *> : public PointerMutableHandleBase<T>
+{
+  public:
+    MutableHandle(Root<T *> &root);
 };
 
 

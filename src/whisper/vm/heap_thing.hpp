@@ -93,7 +93,10 @@ class HeapThingHeader
 {
   friend class HeapThing;
 
-  protected:
+  template <typename T>
+  friend class HeapThingWrapper;
+
+  public:
     uint64_t header_ = 0;
 
     static constexpr uint32_t HeaderSize = sizeof(uint64_t);
@@ -117,6 +120,7 @@ class HeapThingHeader
     static constexpr uint64_t Tag = 0xFu;
     static constexpr unsigned TagShift = 60;
 
+  protected:
     HeapThingHeader(HeapType type, uint32_t cardNo, uint32_t size);
 
   public:

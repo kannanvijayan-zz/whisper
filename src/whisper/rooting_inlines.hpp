@@ -3,6 +3,8 @@
 
 #include "rooting.hpp"
 #include "runtime.hpp"
+#include "vm/heap_thing.hpp"
+#include <type_traits>
 
 namespace Whisper {
 
@@ -114,15 +116,28 @@ TypedRootBase<T>::operator =(const TypedMutableHandleBase<T> &other)
 template <typename T>
 inline
 PointerRootBase<T>::PointerRootBase(ThreadContext *threadContext,
+                                    RootKind kind, T *ptr)
+  : TypedRootBase<T *>(threadContext, kind, ptr)
+{}
+
+template <typename T>
+inline
+PointerRootBase<T>::PointerRootBase(ThreadContext *threadContext,
                                     RootKind kind)
   : TypedRootBase<T *>(threadContext, kind, nullptr)
 {}
 
 template <typename T>
 inline
-PointerRootBase<T>::PointerRootBase(ThreadContext *threadContext,
-                                    RootKind kind, T *ptr)
-  : TypedRootBase<T *>(threadContext, kind, ptr)
+PointerRootBase<T>::PointerRootBase(RunContext *runContext, RootKind kind,
+                                    T *ptr)
+  : TypedRootBase<T *>(runContext->threadContext(), kind, ptr)
+{}
+
+template <typename T>
+inline
+PointerRootBase<T>::PointerRootBase(RunContext *runContext, RootKind kind)
+  : TypedRootBase<T *>(runContext->threadContext(), kind, nullptr)
 {}
 
 template <typename T>
@@ -130,6 +145,13 @@ inline T *
 PointerRootBase<T>::operator ->() const
 {
     return this->thing_;
+}
+
+template <typename T>
+inline
+PointerRootBase<T>::operator bool() const
+{
+    return this->thing_ == nullptr;
 }
 
 //
@@ -171,6 +193,13 @@ inline T *
 PointerHandleBase<T>::operator ->() const
 {
     return this->rootBase_.get();
+}
+
+template <typename T>
+inline
+PointerHandleBase<T>::operator bool() const
+{
+    return this->rootBase_.get() == nullptr;
 }
 
 //
@@ -243,6 +272,13 @@ PointerMutableHandleBase<T>::operator ->() const
     return this->rootBase_.get();
 }
 
+template <typename T>
+inline
+PointerMutableHandleBase<T>::operator bool() const
+{
+    return this->rootBase_.get() == nullptr;
+}
+
 
 
 //
@@ -290,6 +326,56 @@ Root<Value>::readImmString(CharT *buf) const
 {
     return thing_.readImmString<CharT>(buf);
 }
+
+//
+// Root<T *>
+//
+
+template <typename T>
+Root<T *>::Root(RunContext *cx)
+  : PointerRootBase<T>(cx, RootKind::HeapThing)
+{
+    static_assert(std::is_base_of<VM::HeapThing, T>::value,
+                  "Type is not a heap thing.");
+}
+
+template <typename T>
+Root<T *>::Root(ThreadContext *cx)
+  : PointerRootBase<T>(cx, RootKind::HeapThing)
+{
+    static_assert(std::is_base_of<VM::HeapThing, T>::value,
+                  "Type is not a heap thing.");
+}
+
+template <typename T>
+Root<T *>::Root(RunContext *cx, T *ptr)
+  : PointerRootBase<T>(cx, RootKind::HeapThing, ptr)
+{
+    static_assert(std::is_base_of<VM::HeapThing, T>::value,
+                  "Type is not a heap thing.");
+}
+
+template <typename T>
+Root<T *>::Root(ThreadContext *cx, T *ptr)
+  : PointerRootBase<T>(cx, RootKind::HeapThing, ptr)
+{
+    static_assert(std::is_base_of<VM::HeapThing, T>::value,
+                  "Type is not a heap thing.");
+}
+
+//
+// Handle<T *> and MutableHandle<T *>
+//
+
+template <typename T>
+Handle<T *>::Handle(Root<T *> &root)
+  : PointerHandleBase<T>(root)
+{}
+
+template <typename T>
+MutableHandle<T *>::MutableHandle(Root<T *> &root)
+  : PointerMutableHandleBase<T>(root)
+{}
 
 
 } // namespace Whisper

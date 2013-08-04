@@ -5,6 +5,7 @@
 #include "debug.hpp"
 #include "vm/heap_type_defn.hpp"
 #include "vm/heap_thing.hpp"
+#include "rooting.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -15,18 +16,19 @@ namespace VM {
 //
 struct Bytecode : public HeapThing, public TypedHeapThing<HeapType::Bytecode>
 {
-  protected:
-    uint8_t *writableData();
-    
   public:
-    Bytecode(const uint8_t *data);
+    Bytecode();
 
     const uint8_t *data() const;
+    uint8_t *writableData();
 
     uint32_t length() const;
 };
 
 typedef HeapThingWrapper<Bytecode> WrappedBytecode;
+typedef Root<Bytecode *> RootedBytecode;
+typedef Handle<Bytecode *> HandleBytecode;
+typedef MutableHandle<Bytecode *> MutHandleBytecode;
 
 
 } // namespace VM

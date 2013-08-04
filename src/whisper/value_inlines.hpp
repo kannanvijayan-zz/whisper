@@ -2,6 +2,7 @@
 #define WHISPER__VALUE_INLINES_HPP
 
 #include "value.hpp"
+#include <type_traits>
 
 namespace Whisper {
 

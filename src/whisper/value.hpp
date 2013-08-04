@@ -2,7 +2,6 @@
 #define WHISPER__VALUE_HPP
 
 #include <limits>
-#include <type_traits>
 #include "common.hpp"
 #include "debug.hpp"
 
