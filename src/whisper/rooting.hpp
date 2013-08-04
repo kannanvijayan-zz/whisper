@@ -275,10 +275,15 @@ template <typename T>
 class Root<T *> : public PointerRootBase<T>
 {
   public:
-    Root(RunContext *cx);
-    Root(ThreadContext *cx);
-    Root(RunContext *cx, T *);
-    Root(ThreadContext *cx, T *);
+    inline Root(RunContext *cx);
+    inline Root(ThreadContext *cx);
+    inline Root(RunContext *cx, T *);
+    inline Root(ThreadContext *cx, T *);
+
+    inline Root<T *> &operator =(const Root<T *> &other);
+    inline Root<T *> &operator =(const Handle<T *> &other);
+    inline Root<T *> &operator =(const MutableHandle<T *> &other);
+    inline Root<T *> &operator =(T *other);
 };
 
 template <typename T>
@@ -293,6 +298,11 @@ class MutableHandle<T *> : public PointerMutableHandleBase<T>
 {
   public:
     MutableHandle(Root<T *> &root);
+
+    inline MutableHandle<T *> &operator =(const Root<T *> &other);
+    inline MutableHandle<T *> &operator =(const Handle<T *> &other);
+    inline MutableHandle<T *> &operator =(const MutableHandle<T *> &other);
+    inline MutableHandle<T *> &operator =(T *other);
 };
 
 

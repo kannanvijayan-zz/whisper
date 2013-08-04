@@ -332,6 +332,7 @@ Root<Value>::readImmString(CharT *buf) const
 //
 
 template <typename T>
+inline
 Root<T *>::Root(RunContext *cx)
   : PointerRootBase<T>(cx, RootKind::HeapThing)
 {
@@ -340,6 +341,7 @@ Root<T *>::Root(RunContext *cx)
 }
 
 template <typename T>
+inline
 Root<T *>::Root(ThreadContext *cx)
   : PointerRootBase<T>(cx, RootKind::HeapThing)
 {
@@ -348,6 +350,7 @@ Root<T *>::Root(ThreadContext *cx)
 }
 
 template <typename T>
+inline
 Root<T *>::Root(RunContext *cx, T *ptr)
   : PointerRootBase<T>(cx, RootKind::HeapThing, ptr)
 {
@@ -356,6 +359,7 @@ Root<T *>::Root(RunContext *cx, T *ptr)
 }
 
 template <typename T>
+inline
 Root<T *>::Root(ThreadContext *cx, T *ptr)
   : PointerRootBase<T>(cx, RootKind::HeapThing, ptr)
 {
@@ -363,19 +367,92 @@ Root<T *>::Root(ThreadContext *cx, T *ptr)
                   "Type is not a heap thing.");
 }
 
+template <typename T>
+inline Root<T *> &
+Root<T *>::operator =(const Root<T *> &other)
+{
+    this->TypedRootBase<T *>::operator =(other);
+    return *this;
+}
+
+template <typename T>
+inline Root<T *> &
+Root<T *>::operator =(const Handle<T *> &other)
+{
+    this->TypedRootBase<T *>::operator =(other);
+    return *this;
+}
+
+template <typename T>
+inline Root<T *> &
+Root<T *>::operator =(const MutableHandle<T *> &other)
+{
+    this->TypedRootBase<T *>::operator =(other);
+    return *this;
+}
+
+template <typename T>
+inline Root<T *> &
+Root<T *>::operator =(T *other)
+{
+    this->TypedRootBase<T *>::operator =(other);
+    return *this;
+}
+
+
 //
-// Handle<T *> and MutableHandle<T *>
+// Handle<T *>
 //
 
 template <typename T>
+inline
 Handle<T *>::Handle(Root<T *> &root)
   : PointerHandleBase<T>(root)
 {}
 
+
+//
+// MutableHandle<T *>
+//
+
+
 template <typename T>
+inline
 MutableHandle<T *>::MutableHandle(Root<T *> &root)
   : PointerMutableHandleBase<T>(root)
 {}
+
+template <typename T>
+inline MutableHandle<T *> &
+MutableHandle<T *>::operator =(const Root<T *> &other)
+{
+    this->TypedMutableHandleBase<T *>::operator =(other);
+    return *this;
+}
+
+template <typename T>
+inline MutableHandle<T *> &
+MutableHandle<T *>::operator =(const Handle<T *> &other)
+{
+    this->TypedMutableHandleBase<T *>::operator =(other);
+    return *this;
+}
+
+template <typename T>
+inline MutableHandle<T *> &
+MutableHandle<T *>::operator =(const MutableHandle<T *> &other)
+{
+    this->TypedMutableHandleBase<T *>::operator =(other);
+    return *this;
+}
+
+template <typename T>
+inline MutableHandle<T *> &
+MutableHandle<T *>::operator =(T *other)
+{
+    this->TypedMutableHandleBase<T *>::operator =(other);
+    return *this;
+}
 
 
 } // namespace Whisper
