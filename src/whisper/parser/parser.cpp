@@ -51,7 +51,7 @@ Parser::tryParseSourceElement()
     // the ExpressionStatement is a FunctionExpression with
     // a non-empty name, treat the expression as a FunctionDeclaration.
     if (sawNamedFunction)
-        return make<FunctionDeclarationNode>(StatementToNamedFunction(stmt));
+        return make<FunctionDeclarationNode>(stmt->statementToNamedFunction());
 
     return stmt;
 }
@@ -178,7 +178,7 @@ Parser::tryParseStatement(bool *sawNamedFunction)
         return nullptr;
 
     // Saw a labelled statement.
-    return tryParseLabelledStatement(ToIdentifier(expr)->token());
+    return tryParseLabelledStatement(expr->toIdentifier()->token());
 }
 
 VariableStatementNode *
@@ -468,7 +468,7 @@ Parser::parseForStatement()
         if (tok5->isInKeyword()) {
             tok5->debug_markUsed();
 
-            if (!IsLeftHandSideExpression(init))
+            if (!init->isLeftHandSideExpression())
                 emitError("Invalid left-hand side in for..in.");
 
             // Parse right-hand side of in expression.
@@ -907,7 +907,7 @@ Parser::tryParseExpressionStatement(bool *sawLabel, bool *sawNamedFunction)
 
     // If this is standalone named function, it's actually a function
     // declaration.  Return immediately.
-    if (sawNamedFunction && IsNamedFunction(expr)) {
+    if (sawNamedFunction && expr->isNamedFunction()) {
         *sawNamedFunction = true;
         return expr;
     }
@@ -1057,7 +1057,7 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
         if (!expr)
             emitError("Error parsing unary expression.");
 
-        if (!IsLeftHandSideExpression(expr))
+        if (!expr->isLeftHandSideExpression())
             emitError("Expected lvalue for pre-increment expression.");
 
         curExpr = make<PreIncrementExpressionNode>(expr);
@@ -1067,7 +1067,7 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
         if (!expr)
             emitError("Error parsing unary expression.");
 
-        if (!IsLeftHandSideExpression(expr))
+        if (!expr->isLeftHandSideExpression())
             emitError("Expected lvalue for pre-decrement expression.");
 
         curExpr = make<PreDecrementExpressionNode>(expr);
@@ -1077,7 +1077,7 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
         if (!expr)
             emitError("Error parsing unary expression.");
 
-        if (!IsLeftHandSideExpression(expr))
+        if (!expr->isLeftHandSideExpression())
             emitError("Expected lvalue for delete expression.");
 
         curExpr = make<DeleteExpressionNode>(expr);
@@ -1167,7 +1167,7 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             Token::Type type = tok2.type();
 
-            if (!IsLeftHandSideExpression(curExpr))
+            if (!curExpr->isLeftHandSideExpression())
                 emitError("Expected lvalue for post-increment/decrement.");
 
             if (type == Token::PlusPlus)
@@ -1474,7 +1474,7 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
 
             Token::Type type = tok2.type();
 
-            if (!IsLeftHandSideExpression(curExpr))
+            if (!curExpr->isLeftHandSideExpression())
                 emitError("Expected lvalue for assignment.");
 
             // Parse rhs expression

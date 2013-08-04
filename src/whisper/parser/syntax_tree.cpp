@@ -22,6 +22,50 @@ NodeTypeString(NodeType nodeType)
     }
 }
 
+//
+// BaseNode
+//
+
+bool
+BaseNode::isLeftHandSideExpression()
+{
+    if (isIdentifier() || isGetElementExpression() ||
+        isGetPropertyExpression())
+    {
+        return true;
+    }
+
+    if (isParenthesizedExpression()) {
+        return toParenthesizedExpression()->subexpression()
+                                          ->isLeftHandSideExpression();
+    }
+
+    return false;
+}
+
+bool
+ExpressionNode::isNamedFunction()
+{
+    if (!isFunctionExpression())
+        return false;
+    return toFunctionExpression()->name() ? true : false;
+}
+
+FunctionExpressionNode *
+StatementNode::statementToNamedFunction()
+{
+    WH_ASSERT(isExpressionStatement());
+
+    ExpressionStatementNode *exprStmt = toExpressionStatement();
+    WH_ASSERT(exprStmt->expression()->isFunctionExpression());
+
+    FunctionExpressionNode *fun =
+        exprStmt->expression()->toFunctionExpression();
+    WH_ASSERT(fun->name());
+
+    return fun;
+}
+
 
 } // namespace AST
 } // namespace Whisper

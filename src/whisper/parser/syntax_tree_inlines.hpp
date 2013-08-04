@@ -29,7 +29,7 @@ PrintNode(const CodeSource &src, const BaseNode *node, Printer pr,
     switch (node->type()) {
     #define DEF_CASE_(ntype) \
       case ntype: \
-        Print##ntype<Printer>(src, To##ntype(node), pr, tabDepth); break;
+        Print##ntype<Printer>(src, node->to##ntype(), pr, tabDepth); break;
         WHISPER_DEFN_SYNTAX_NODES(DEF_CASE_)
     #undef DEF_CASE_
       default:

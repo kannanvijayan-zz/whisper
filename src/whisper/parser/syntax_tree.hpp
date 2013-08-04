@@ -20,6 +20,167 @@ enum NodeType : uint8_t
 const char *NodeTypeString(NodeType nodeType);
 
 //
+// Pre-declarations.
+//
+
+class SourceElementNode;
+class StatementNode;
+class ExpressionNode;
+class LiteralExpressionNode;
+class VariableDeclaration;
+
+class ThisNode;
+class IdentifierNode;
+class NullLiteralNode;
+class BooleanLiteralNode;
+class NumericLiteralNode;
+class StringLiteralNode;
+class RegularExpressionLiteralNode;
+class ArrayLiteralNode;
+class ObjectLiteralNode;
+class ParenthesizedExpressionNode;
+class FunctionExpressionNode;
+class GetElementExpressionNode;
+class GetPropertyExpressionNode;
+class NewExpressionNode;
+class CallExpressionNode;
+
+template <NodeType TYPE> class UnaryExpressionNode;
+
+typedef UnaryExpressionNode<PostIncrementExpression>
+        PostIncrementExpressionNode;
+typedef UnaryExpressionNode<PreIncrementExpression>
+        PreIncrementExpressionNode;
+typedef UnaryExpressionNode<PostDecrementExpression>
+        PostDecrementExpressionNode;
+typedef UnaryExpressionNode<PreDecrementExpression>
+        PreDecrementExpressionNode;
+
+typedef UnaryExpressionNode<DeleteExpression>
+        DeleteExpressionNode;
+typedef UnaryExpressionNode<VoidExpression>
+        VoidExpressionNode;
+typedef UnaryExpressionNode<TypeOfExpression>
+        TypeOfExpressionNode;
+typedef UnaryExpressionNode<PositiveExpression>
+        PositiveExpressionNode;
+typedef UnaryExpressionNode<NegativeExpression>
+        NegativeExpressionNode;
+typedef UnaryExpressionNode<BitNotExpression>
+        BitNotExpressionNode;
+typedef UnaryExpressionNode<LogicalNotExpression>
+        LogicalNotExpressionNode;
+
+
+template <NodeType TYPE> class BinaryExpressionNode;
+
+typedef BinaryExpressionNode<MultiplyExpression>
+        MultiplyExpressionNode;
+typedef BinaryExpressionNode<DivideExpression>
+        DivideExpressionNode;
+typedef BinaryExpressionNode<ModuloExpression>
+        ModuloExpressionNode;
+typedef BinaryExpressionNode<AddExpression>
+        AddExpressionNode;
+typedef BinaryExpressionNode<SubtractExpression>
+        SubtractExpressionNode;
+typedef BinaryExpressionNode<LeftShiftExpression>
+        LeftShiftExpressionNode;
+typedef BinaryExpressionNode<RightShiftExpression>
+        RightShiftExpressionNode;
+typedef BinaryExpressionNode<UnsignedRightShiftExpression>
+        UnsignedRightShiftExpressionNode;
+typedef BinaryExpressionNode<LessThanExpression>
+        LessThanExpressionNode;
+typedef BinaryExpressionNode<GreaterThanExpression>
+        GreaterThanExpressionNode;
+typedef BinaryExpressionNode<LessEqualExpression>
+        LessEqualExpressionNode;
+typedef BinaryExpressionNode<GreaterEqualExpression>
+        GreaterEqualExpressionNode;
+typedef BinaryExpressionNode<InstanceOfExpression>
+        InstanceOfExpressionNode;
+typedef BinaryExpressionNode<InExpression>
+        InExpressionNode;
+typedef BinaryExpressionNode<EqualExpression>
+        EqualExpressionNode;
+typedef BinaryExpressionNode<NotEqualExpression>
+        NotEqualExpressionNode;
+typedef BinaryExpressionNode<StrictEqualExpression>
+        StrictEqualExpressionNode;
+typedef BinaryExpressionNode<StrictNotEqualExpression>
+        StrictNotEqualExpressionNode;
+typedef BinaryExpressionNode<BitAndExpression>
+        BitAndExpressionNode;
+typedef BinaryExpressionNode<BitXorExpression>
+        BitXorExpressionNode;
+typedef BinaryExpressionNode<BitOrExpression>
+        BitOrExpressionNode;
+typedef BinaryExpressionNode<LogicalAndExpression>
+        LogicalAndExpressionNode;
+typedef BinaryExpressionNode<LogicalOrExpression>
+        LogicalOrExpressionNode;
+typedef BinaryExpressionNode<CommaExpression>
+        CommaExpressionNode;
+
+class ConditionalExpressionNode;
+class AssignmentExpressionNode;
+
+template <NodeType TYPE> class BaseAssignExpressionNode;
+
+typedef BaseAssignExpressionNode<AssignExpression>
+        AssignExpressionNode;
+typedef BaseAssignExpressionNode<AddAssignExpression>
+        AddAssignExpressionNode;
+typedef BaseAssignExpressionNode<SubtractAssignExpression>
+        SubtractAssignExpressionNode;
+typedef BaseAssignExpressionNode<MultiplyAssignExpression>
+        MultiplyAssignExpressionNode;
+typedef BaseAssignExpressionNode<ModuloAssignExpression>
+        ModuloAssignExpressionNode;
+typedef BaseAssignExpressionNode<LeftShiftAssignExpression>
+        LeftShiftAssignExpressionNode;
+typedef BaseAssignExpressionNode<RightShiftAssignExpression>
+        RightShiftAssignExpressionNode;
+typedef BaseAssignExpressionNode<UnsignedRightShiftAssignExpression>
+        UnsignedRightShiftAssignExpressionNode;
+typedef BaseAssignExpressionNode<BitAndAssignExpression>
+        BitAndAssignExpressionNode;
+typedef BaseAssignExpressionNode<BitOrAssignExpression>
+        BitOrAssignExpressionNode;
+typedef BaseAssignExpressionNode<BitXorAssignExpression>
+        BitXorAssignExpressionNode;
+typedef BaseAssignExpressionNode<DivideAssignExpression>
+        DivideAssignExpressionNode;
+
+class BlockNode;
+class VariableStatementNode;
+class EmptyStatementNode;
+class ExpressionStatementNode;
+class IfStatementNode;
+class IterationStatementNode;
+class DoWhileStatementNode;
+class WhileStatementNode;
+class ForLoopStatementNode;
+class ForLoopVarStatementNode;
+class ForInStatementNode;
+class ForInVarStatementNode;
+class ContinueStatementNode;
+class BreakStatementNode;
+class ReturnStatementNode;
+class WithStatementNode;
+class SwitchStatementNode;
+class LabelledStatementNode;
+class ThrowStatementNode;
+class TryStatementNode;
+class TryCatchStatementNode;
+class TryFinallyStatementNode;
+class TryCatchFinallyStatementNode;
+class DebuggerStatementNode;
+class FunctionDeclarationNode;
+class ProgramNode;
+
+//
 // Base syntax element.
 //
 class BaseNode
@@ -43,12 +204,26 @@ class BaseNode
         return type_;
     }
 
-#define DEF_CHECK_(node) \
+#define METHODS_(node) \
     inline bool is##node() const { \
         return type_ == node; \
+    } \
+    inline const node##Node *to##node() const { \
+        WH_ASSERT(is##node()); \
+        return reinterpret_cast<const node##Node *>(this); \
+    } \
+    inline node##Node *to##node() { \
+        WH_ASSERT(is##node()); \
+        return reinterpret_cast<node##Node *>(this); \
     }
-    WHISPER_DEFN_SYNTAX_NODES(DEF_CHECK_)
-#undef DEF_CHECK_
+    WHISPER_DEFN_SYNTAX_NODES(METHODS_)
+#undef METHODS_
+
+    virtual inline bool isStatement() {
+        return false;
+    }
+
+    bool isLeftHandSideExpression();
 };
 
 template <typename Printer>
@@ -78,6 +253,13 @@ class StatementNode : public SourceElementNode
 {
   protected:
     StatementNode(NodeType type) : SourceElementNode(type) {}
+
+  public:
+    virtual inline bool isStatement() override {
+        return true;
+    }
+
+    FunctionExpressionNode *statementToNamedFunction();
 };
 
 
@@ -85,6 +267,9 @@ class ExpressionNode : public BaseNode
 {
   protected:
     ExpressionNode(NodeType type) : BaseNode(type) {}
+
+  public:
+    bool isNamedFunction();
 };
 
 class LiteralExpressionNode : public ExpressionNode
@@ -647,29 +832,18 @@ class UnaryExpressionNode : public ExpressionNode
         return subexpression_;
     }
 };
-typedef UnaryExpressionNode<PostIncrementExpression>
-        PostIncrementExpressionNode;
-typedef UnaryExpressionNode<PreIncrementExpression>
-        PreIncrementExpressionNode;
-typedef UnaryExpressionNode<PostDecrementExpression>
-        PostDecrementExpressionNode;
-typedef UnaryExpressionNode<PreDecrementExpression>
-        PreDecrementExpressionNode;
+// PostIncrementExpressionNode;
+// PreIncrementExpressionNode;
+// PostDecrementExpressionNode;
+// PreDecrementExpressionNode;
 
-typedef UnaryExpressionNode<DeleteExpression>
-        DeleteExpressionNode;
-typedef UnaryExpressionNode<VoidExpression>
-        VoidExpressionNode;
-typedef UnaryExpressionNode<TypeOfExpression>
-        TypeOfExpressionNode;
-typedef UnaryExpressionNode<PositiveExpression>
-        PositiveExpressionNode;
-typedef UnaryExpressionNode<NegativeExpression>
-        NegativeExpressionNode;
-typedef UnaryExpressionNode<BitNotExpression>
-        BitNotExpressionNode;
-typedef UnaryExpressionNode<LogicalNotExpression>
-        LogicalNotExpressionNode;
+// DeleteExpressionNode;
+// VoidExpressionNode;
+// TypeOfExpressionNode;
+// PositiveExpressionNode;
+// NegativeExpressionNode;
+// BitNotExpressionNode;
+// LogicalNotExpressionNode;
 
 //
 // BinaryExpression syntax element
@@ -722,54 +896,30 @@ class BinaryExpressionNode : public ExpressionNode
     }
 };
 
-typedef BinaryExpressionNode<MultiplyExpression>
-        MultiplyExpressionNode;
-typedef BinaryExpressionNode<DivideExpression>
-        DivideExpressionNode;
-typedef BinaryExpressionNode<ModuloExpression>
-        ModuloExpressionNode;
-typedef BinaryExpressionNode<AddExpression>
-        AddExpressionNode;
-typedef BinaryExpressionNode<SubtractExpression>
-        SubtractExpressionNode;
-typedef BinaryExpressionNode<LeftShiftExpression>
-        LeftShiftExpressionNode;
-typedef BinaryExpressionNode<RightShiftExpression>
-        RightShiftExpressionNode;
-typedef BinaryExpressionNode<UnsignedRightShiftExpression>
-        UnsignedRightShiftExpressionNode;
-typedef BinaryExpressionNode<LessThanExpression>
-        LessThanExpressionNode;
-typedef BinaryExpressionNode<GreaterThanExpression>
-        GreaterThanExpressionNode;
-typedef BinaryExpressionNode<LessEqualExpression>
-        LessEqualExpressionNode;
-typedef BinaryExpressionNode<GreaterEqualExpression>
-        GreaterEqualExpressionNode;
-typedef BinaryExpressionNode<InstanceOfExpression>
-        InstanceOfExpressionNode;
-typedef BinaryExpressionNode<InExpression>
-        InExpressionNode;
-typedef BinaryExpressionNode<EqualExpression>
-        EqualExpressionNode;
-typedef BinaryExpressionNode<NotEqualExpression>
-        NotEqualExpressionNode;
-typedef BinaryExpressionNode<StrictEqualExpression>
-        StrictEqualExpressionNode;
-typedef BinaryExpressionNode<StrictNotEqualExpression>
-        StrictNotEqualExpressionNode;
-typedef BinaryExpressionNode<BitAndExpression>
-        BitAndExpressionNode;
-typedef BinaryExpressionNode<BitXorExpression>
-        BitXorExpressionNode;
-typedef BinaryExpressionNode<BitOrExpression>
-        BitOrExpressionNode;
-typedef BinaryExpressionNode<LogicalAndExpression>
-        LogicalAndExpressionNode;
-typedef BinaryExpressionNode<LogicalOrExpression>
-        LogicalOrExpressionNode;
-typedef BinaryExpressionNode<CommaExpression>
-        CommaExpressionNode;
+// MultiplyExpressionNode;
+// DivideExpressionNode;
+// ModuloExpressionNode;
+// AddExpressionNode;
+// SubtractExpressionNode;
+// LeftShiftExpressionNode;
+// RightShiftExpressionNode;
+// UnsignedRightShiftExpressionNode;
+// LessThanExpressionNode;
+// GreaterThanExpressionNode;
+// LessEqualExpressionNode;
+// GreaterEqualExpressionNode;
+// InstanceOfExpressionNode;
+// InExpressionNode;
+// EqualExpressionNode;
+// NotEqualExpressionNode;
+// StrictEqualExpressionNode;
+// StrictNotEqualExpressionNode;
+// BitAndExpressionNode;
+// BitXorExpressionNode;
+// BitOrExpressionNode;
+// LogicalAndExpressionNode;
+// LogicalOrExpressionNode;
+// CommaExpressionNode;
 
 //
 // ConditionalExpression syntax element
@@ -839,30 +989,18 @@ class BaseAssignExpressionNode : public AssignmentExpressionNode
         return rhs_;
     }
 };
-typedef BaseAssignExpressionNode<AssignExpression>
-        AssignExpressionNode;
-typedef BaseAssignExpressionNode<AddAssignExpression>
-        AddAssignExpressionNode;
-typedef BaseAssignExpressionNode<SubtractAssignExpression>
-        SubtractAssignExpressionNode;
-typedef BaseAssignExpressionNode<MultiplyAssignExpression>
-        MultiplyAssignExpressionNode;
-typedef BaseAssignExpressionNode<ModuloAssignExpression>
-        ModuloAssignExpressionNode;
-typedef BaseAssignExpressionNode<LeftShiftAssignExpression>
-        LeftShiftAssignExpressionNode;
-typedef BaseAssignExpressionNode<RightShiftAssignExpression>
-        RightShiftAssignExpressionNode;
-typedef BaseAssignExpressionNode<UnsignedRightShiftAssignExpression>
-        UnsignedRightShiftAssignExpressionNode;
-typedef BaseAssignExpressionNode<BitAndAssignExpression>
-        BitAndAssignExpressionNode;
-typedef BaseAssignExpressionNode<BitOrAssignExpression>
-        BitOrAssignExpressionNode;
-typedef BaseAssignExpressionNode<BitXorAssignExpression>
-        BitXorAssignExpressionNode;
-typedef BaseAssignExpressionNode<DivideAssignExpression>
-        DivideAssignExpressionNode;
+// AssignExpressionNode;
+// AddAssignExpressionNode;
+// SubtractAssignExpressionNode;
+// MultiplyAssignExpressionNode;
+// ModuloAssignExpressionNode;
+// LeftShiftAssignExpressionNode;
+// RightShiftAssignExpressionNode;
+// UnsignedRightShiftAssignExpressionNode;
+// BitAndAssignExpressionNode;
+// BitOrAssignExpressionNode;
+// BitXorAssignExpressionNode;
+// DivideAssignExpressionNode;
 
 
 //////////////////
@@ -1552,33 +1690,23 @@ class ProgramNode : public BaseNode
 //                         //
 /////////////////////////////
 
-#define DEF_CAST_(node) \
-    inline const node##Node * To##node(const BaseNode *n) { \
-        WH_ASSERT(n->is##node()); \
-        return reinterpret_cast<const node##Node *>(n); \
-    } \
-    inline node##Node * To##node(BaseNode *n) { \
-        WH_ASSERT(n->is##node()); \
-        return reinterpret_cast<node##Node *>(n); \
-    }
-    WHISPER_DEFN_SYNTAX_NODES(DEF_CAST_)
-#undef DEF_CAST_
-
+/*
 inline bool IsNamedFunction(ExpressionNode *node)
 {
     if (!node->isFunctionExpression())
         return false;
-    return ToFunctionExpression(node)->name() ? true : false;
+    return node->toFunctionExpression()->name() ? true : false;
 }
 
 inline FunctionExpressionNode *StatementToNamedFunction(StatementNode *node)
 {
     WH_ASSERT(node->isExpressionStatement());
 
-    ExpressionStatementNode *exprStmt = ToExpressionStatement(node);
+    ExpressionStatementNode *exprStmt = node->toExpressionStatement();
     WH_ASSERT(exprStmt->expression()->isFunctionExpression());
 
-    FunctionExpressionNode *fun = ToFunctionExpression(exprStmt->expression());
+    FunctionExpressionNode *fun =
+        exprStmt->expression()->toFunctionExpression();
     WH_ASSERT(fun->name());
 
     return fun;
@@ -1594,11 +1722,12 @@ inline bool IsLeftHandSideExpression(BaseNode *node)
 
     if (node->isParenthesizedExpression()) {
         return IsLeftHandSideExpression(
-                    ToParenthesizedExpression(node)->subexpression());
+                    node->toParenthesizedExpression()->subexpression());
     }
 
     return false;
 }
+*/
 
 
 } // namespace AST
