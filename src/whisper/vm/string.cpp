@@ -63,6 +63,7 @@ HeapString::length() const
 {
     if (isEightBit())
         return objectSize();
+    WH_ASSERT(objectSize() % 2 == 0);
     return objectSize() / 2;
 }
 

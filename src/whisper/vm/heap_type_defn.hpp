@@ -8,6 +8,7 @@
     \
     _(HeapDouble,                       false)                  \
     _(HeapString,                       false)                  \
+    _(Bytecode,                         false)                  \
     \
     _(Tuple,                            true)                   \
     \
@@ -24,7 +25,6 @@
     \
     _(Script,                           true)                   \
     _(ConstantPool,                     true)                   \
-    _(Bytecode,                         false)                  \
 
 
 // Listing of all PropertyMap types.

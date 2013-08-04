@@ -14,8 +14,9 @@ whisper_SOURCES = \
     runtime.cpp \
     vm/vm_helpers.cpp \
     vm/heap_thing.cpp \
-    vm/string.cpp \
     vm/double.cpp \
+    vm/string.cpp \
+    vm/bytecode.cpp \
     vm/reference.cpp \
     vm/property_descriptor.cpp \
     vm/tuple.cpp \
