@@ -36,9 +36,11 @@ BytecodeGenerator::error() const
 VM::Bytecode *
 BytecodeGenerator::generateBytecode()
 {
+    VM::RootedBytecode bytecode(cx_);
+
     // Scan bytecode initially to calculate info and check for errors.
     try {
-        scan();
+        generate(bytecode);
     } catch (BytecodeGeneratorError &exc) {
         WH_ASSERT(hasError());
         return nullptr;
@@ -47,22 +49,46 @@ BytecodeGenerator::generateBytecode()
     WH_ASSERT(bytecodeSize_ > 0);
 
     // Bytecode scanning worked out.  Allocate a bytecode object.
-    VM::RootedBytecode bc(cx_, cx_->create<VM::Bytecode>(true, bytecodeSize_));
-    WH_ASSERT(bc);
+    bytecode = cx_->create<VM::Bytecode>(true, bytecodeSize_);
+    WH_ASSERT(bytecode);
 
     // Fill the bytecode object.
-    fill(bc);
-    return bc;
+    generate(bytecode);
+
+    return bytecode;
 }
 
 void
-BytecodeGenerator::scan()
+BytecodeGenerator::generate(VM::HandleBytecode bytecode)
+{
+    for (AST::SourceElementNode *elem : node_->sourceElements()) {
+        if (elem->isFunctionDeclaration())
+            emitError("Cannot handle function declarations yet.");
+
+        // Otherwise, it must be a statement.
+        WH_ASSERT(elem->isStatement());
+        if (elem->isExpressionStatement()) {
+            generateExpressionStatement(bytecode,
+                                        elem->toExpressionStatement());
+            continue;
+        }
+
+        emitError("Cannot handle this syntax node yet.");
+    }
+}
+
+void
+BytecodeGenerator::generateExpressionStatement(
+        VM::HandleBytecode bytecode, AST::ExpressionStatementNode *exptStmt)
 {
 }
 
 void
-BytecodeGenerator::fill(VM::HandleBytecode bytecode)
+BytecodeGenerator::emitError(const char *msg)
 {
+    WH_ASSERT(!hasError());
+    error_ = msg;
+    throw BytecodeGeneratorError();
 }
 
 

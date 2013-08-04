@@ -38,11 +38,16 @@ class BytecodeGenerator
     // Whether to start with strict mode.
     bool strict_;
 
+    // Error message.
+    const char *error_ = nullptr;
+
+    /// Generated information. ///
+
     // The calculated size of the bytecode.
     uint32_t bytecodeSize_ = 0;
 
-    // Error message.
-    const char *error_ = nullptr;
+    // The maximum stack depth.
+    uint32_t maxStackDepth_ = 0;
 
   public:
     BytecodeGenerator(RunContext *cx,
@@ -55,8 +60,11 @@ class BytecodeGenerator
     VM::Bytecode *generateBytecode();
 
   private:
-    void scan();
-    void fill(VM::HandleBytecode bytecode);
+    void generate(VM::HandleBytecode bytecode);
+    void generateExpressionStatement(VM::HandleBytecode bytecode,
+                                     AST::ExpressionStatementNode *exptStmt);
+
+    void emitError(const char *msg);
 };
 
 
