@@ -54,14 +54,14 @@ Runtime::registerThread()
     WH_ASSERT(pthread_getspecific(threadKey_) == nullptr);
 
     // Create a new nursery slab.
-    Slab *nursery = Slab::AllocateStandard();
-    if (!nursery)
-        return "Could not allocate nursery slab.";
+    Slab *hatchery = Slab::AllocateStandard();
+    if (!hatchery)
+        return "Could not allocate hatchery slab.";
 
     // Allocate the ThreadContext
     ThreadContext *ctx;
     try {
-        ctx = new ThreadContext(this, nursery);
+        ctx = new ThreadContext(this, hatchery);
         threadContexts_.push_back(ctx);
     } catch (std::bad_alloc &err) {
         return "Could not allocate ThreadContext.";
@@ -71,7 +71,7 @@ Runtime::registerThread()
     int error = pthread_setspecific(threadKey_, ctx);
     if (error) {
         delete ctx;
-        Slab::Destroy(nursery);
+        Slab::Destroy(hatchery);
         return "pthread_setspecific failed to set ThreadContext.";
     }
 
@@ -109,10 +109,10 @@ Runtime::threadContext()
 // ThreadContext
 //
 
-ThreadContext::ThreadContext(Runtime *runtime, Slab *nursery)
+ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery)
   : runtime_(runtime),
-    hatchery_(nullptr),
-    nursery_(nursery),
+    hatchery_(hatchery),
+    nursery_(nullptr),
     tenured_(),
     activeRunContext_(nullptr),
     roots_(nullptr)

@@ -83,7 +83,7 @@ class ThreadContext
     RootBase *roots_;
 
   public:
-    ThreadContext(Runtime *runtime, Slab *nursery);
+    ThreadContext(Runtime *runtime, Slab *hatchery);
 
     Runtime *runtime() const;
     Slab *hatchery() const;
