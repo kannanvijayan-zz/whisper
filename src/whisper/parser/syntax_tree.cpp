@@ -309,6 +309,173 @@ ArrayLiteralNode::elements() const
     return elements_;
 }
 
+//
+// ObjectLiteralNode
+//
+
+// PropertyDefinition
+
+ObjectLiteralNode::PropertyDefinition::PropertyDefinition(
+        SlotKind kind, const Token &name)
+  : kind_(kind), name_(name)
+{
+    WH_ASSERT(name_.isIdentifierName() ||
+              name_.isStringLiteral() ||
+              name_.isNumericLiteral());
+}
+
+ObjectLiteralNode::SlotKind
+ObjectLiteralNode::PropertyDefinition::kind() const
+{
+    return kind_;
+}
+
+bool
+ObjectLiteralNode::PropertyDefinition::isValueSlot() const
+{
+    return kind_ == Value;
+}
+
+bool
+ObjectLiteralNode::PropertyDefinition::isGetterSlot() const
+{
+    return kind_ == Getter;
+}
+
+bool
+ObjectLiteralNode::PropertyDefinition::isSetterSlot() const
+{
+    return kind_ == Setter;
+}
+
+const ObjectLiteralNode::ValueDefinition *
+ObjectLiteralNode::PropertyDefinition::toValueSlot() const
+{
+    WH_ASSERT(isValueSlot());
+    return reinterpret_cast<const ValueDefinition *>(this);
+}
+
+const ObjectLiteralNode::GetterDefinition *
+ObjectLiteralNode::PropertyDefinition::toGetterSlot() const
+{
+    WH_ASSERT(isGetterSlot());
+    return reinterpret_cast<const GetterDefinition *>(this);
+}
+
+const ObjectLiteralNode::SetterDefinition *
+ObjectLiteralNode::PropertyDefinition::toSetterSlot() const
+{
+    WH_ASSERT(isSetterSlot());
+    return reinterpret_cast<const SetterDefinition *>(this);
+}
+
+bool
+ObjectLiteralNode::PropertyDefinition::hasIdentifierName() const
+{
+    return name_.isIdentifierName();
+}
+
+bool
+ObjectLiteralNode::PropertyDefinition::hasStringName() const
+{
+    return name_.isStringLiteral();
+}
+
+bool
+ObjectLiteralNode::PropertyDefinition::hasNumericName() const
+{
+    return name_.isNumericLiteral();
+}
+
+const IdentifierNameToken &
+ObjectLiteralNode::PropertyDefinition::identifierName() const
+{
+    WH_ASSERT(hasIdentifierName());
+    return reinterpret_cast<const IdentifierNameToken &>(name_);
+}
+
+const StringLiteralToken &
+ObjectLiteralNode::PropertyDefinition::stringName() const
+{
+    WH_ASSERT(hasStringName());
+    return reinterpret_cast<const StringLiteralToken &>(name_);
+}
+
+const NumericLiteralToken &
+ObjectLiteralNode::PropertyDefinition::numericName() const
+{
+    WH_ASSERT(hasNumericName());
+    return reinterpret_cast<const NumericLiteralToken &>(name_);
+}
+
+const Token &
+ObjectLiteralNode::PropertyDefinition::name() const
+{
+    return name_;
+}
+
+// ValueDefinition
+
+
+ObjectLiteralNode::ValueDefinition::ValueDefinition(
+        const Token &name, ExpressionNode *value)
+  : PropertyDefinition(Value, name), value_(value)
+{}
+
+ExpressionNode *
+ObjectLiteralNode::ValueDefinition::value() const
+{
+    return value_;
+}
+
+// AccessorDefinition
+
+ObjectLiteralNode::AccessorDefinition::AccessorDefinition(
+        SlotKind kind, const Token &name, SourceElementList &&body)
+  : PropertyDefinition(kind, name), body_(body)
+{}
+
+const SourceElementList &
+ObjectLiteralNode::AccessorDefinition::body() const
+{
+    return body_;
+}
+
+// GetterDefinition
+
+ObjectLiteralNode::GetterDefinition::GetterDefinition(
+        const Token &name, SourceElementList &&body)
+  : AccessorDefinition(Getter, name, std::move(body))
+{}
+
+// SetterDefinition
+
+ObjectLiteralNode::SetterDefinition::SetterDefinition(
+        const Token &name, const IdentifierNameToken &parameter,
+        SourceElementList &&body)
+  : AccessorDefinition(Setter, name, std::move(body)),
+    parameter_(parameter)
+{}
+
+const IdentifierNameToken &
+ObjectLiteralNode::SetterDefinition::parameter() const
+{
+    return parameter_;
+}
+
+
+ObjectLiteralNode::ObjectLiteralNode(
+        PropertyDefinitionList &&propertyDefinitions)
+  : LiteralExpressionNode(ObjectLiteral),
+    propertyDefinitions_(propertyDefinitions)
+{}
+
+const ObjectLiteralNode::PropertyDefinitionList &
+ObjectLiteralNode::propertyDefinitions() const
+{
+    return propertyDefinitions_;
+}
+
 
 } // namespace AST
 } // namespace Whisper

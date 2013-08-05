@@ -428,75 +428,27 @@ class ObjectLiteralNode : public LiteralExpressionNode
         Token name_;
 
       public:
-        PropertyDefinition(SlotKind kind, const Token &name)
-          : kind_(kind), name_(name)
-        {
-            WH_ASSERT(name_.isIdentifierName() ||
-                      name_.isStringLiteral() ||
-                      name_.isNumericLiteral());
-        }
+        PropertyDefinition(SlotKind kind, const Token &name);
 
-        inline SlotKind kind() const {
-            return kind_;
-        }
+        SlotKind kind() const;
 
-        inline bool isValueSlot() const {
-            return kind_ == Value;
-        }
+        bool isValueSlot() const;
+        bool isGetterSlot() const;
+        bool isSetterSlot() const;
 
-        inline const ValueDefinition *toValueSlot() const {
-            WH_ASSERT(isValueSlot());
-            return reinterpret_cast<const ValueDefinition *>(this);
-        }
+        const ValueDefinition *toValueSlot() const;
+        const GetterDefinition *toGetterSlot() const;
+        const SetterDefinition *toSetterSlot() const;
 
-        inline bool isGetterSlot() const {
-            return kind_ == Getter;
-        }
+        bool hasIdentifierName() const;
+        bool hasStringName() const;
+        bool hasNumericName() const;
 
-        inline const GetterDefinition *toGetterSlot() const {
-            WH_ASSERT(isGetterSlot());
-            return reinterpret_cast<const GetterDefinition *>(this);
-        }
+        const IdentifierNameToken &identifierName() const;
+        const StringLiteralToken &stringName() const;
+        const NumericLiteralToken &numericName() const;
 
-        inline bool isSetterSlot() const {
-            return kind_ == Setter;
-        }
-
-        inline const SetterDefinition *toSetterSlot() const {
-            WH_ASSERT(isSetterSlot());
-            return reinterpret_cast<const SetterDefinition *>(this);
-        }
-
-        inline bool hasIdentifierName() const {
-            return name_.isIdentifierName();
-        }
-
-        inline bool hasStringName() const {
-            return name_.isStringLiteral();
-        }
-
-        inline bool hasNumericName() const {
-            return name_.isNumericLiteral();
-        }
-
-        inline const IdentifierNameToken &identifierName() const {
-            WH_ASSERT(hasIdentifierName());
-            return reinterpret_cast<const IdentifierNameToken &>(name_);
-        }
-
-        inline const StringLiteralToken &stringName() const {
-            WH_ASSERT(hasStringName());
-            return reinterpret_cast<const StringLiteralToken &>(name_);
-        }
-
-        inline const NumericLiteralToken &numericName() const {
-            WH_ASSERT(hasNumericName());
-            return reinterpret_cast<const NumericLiteralToken &>(name_);
-        }
-
-        inline const Token &name() const {
-            return name_;
-        }
+        const Token &name() const;
     };
 
     class ValueDefinition : public PropertyDefinition
@@ -505,14 +457,9 @@ class ObjectLiteralNode : public LiteralExpressionNode
         ExpressionNode *value_;
 
       public:
-        ValueDefinition(const Token &name, ExpressionNode *value)
-          : PropertyDefinition(Value, name), value_(value)
-        {
-        }
+        ValueDefinition(const Token &name, ExpressionNode *value);
 
-        inline ExpressionNode *value() const {
-            return value_;
-        }
+        ExpressionNode *value() const;
     };
 
     class AccessorDefinition : public PropertyDefinition
@@ -522,21 +469,15 @@ class ObjectLiteralNode : public LiteralExpressionNode
 
       public:
         AccessorDefinition(SlotKind kind, const Token &name,
-                           SourceElementList &&body)
-          : PropertyDefinition(kind, name), body_(body)
-        {}
+                           SourceElementList &&body);
 
-        inline const SourceElementList &body() const {
-            return body_;
-        }
+        const SourceElementList &body() const;
     };
 
     class GetterDefinition : public AccessorDefinition
     {
       public:
-        GetterDefinition(const Token &name, SourceElementList &&body)
-          : AccessorDefinition(Getter, name, std::move(body))
-        {}
+        GetterDefinition(const Token &name, SourceElementList &&body);
     };
 
     class SetterDefinition : public AccessorDefinition
@@ -547,14 +488,9 @@ class ObjectLiteralNode : public LiteralExpressionNode
       public:
         SetterDefinition(const Token &name,
                          const IdentifierNameToken &parameter,
-                         SourceElementList &&body)
-          : AccessorDefinition(Setter, name, std::move(body)),
-            parameter_(parameter)
-        {}
+                         SourceElementList &&body);
 
-        const IdentifierNameToken &parameter() const {
-            return parameter_;
-        }
+        const IdentifierNameToken &parameter() const;
     };
 
     typedef List<PropertyDefinition *> PropertyDefinitionList;
@@ -563,14 +499,9 @@ class ObjectLiteralNode : public LiteralExpressionNode
     PropertyDefinitionList propertyDefinitions_;
 
   public:
-    explicit ObjectLiteralNode(PropertyDefinitionList &&propertyDefinitions)
-      : LiteralExpressionNode(ObjectLiteral),
-        propertyDefinitions_(propertyDefinitions)
-    {}
+    explicit ObjectLiteralNode(PropertyDefinitionList &&propertyDefinitions);
 
-    inline const PropertyDefinitionList &propertyDefinitions() const {
-        return propertyDefinitions_;
-    }
+    const PropertyDefinitionList &propertyDefinitions() const;
 };
 
 //
