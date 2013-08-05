@@ -45,6 +45,7 @@ class GetPropertyExpressionNode;
 class NewExpressionNode;
 class CallExpressionNode;
 
+class BaseUnaryExpressionNode;
 template <NodeType TYPE> class UnaryExpressionNode;
 
 typedef UnaryExpressionNode<PostIncrementExpression>
@@ -125,33 +126,33 @@ typedef BinaryExpressionNode<CommaExpression>
         CommaExpressionNode;
 
 class ConditionalExpressionNode;
-class AssignmentExpressionNode;
 
-template <NodeType TYPE> class BaseAssignExpressionNode;
+class BaseAssignmentExpressionNode;
+template <NodeType TYPE> class AssignmentExpressionNode;
 
-typedef BaseAssignExpressionNode<AssignExpression>
+typedef AssignmentExpressionNode<AssignExpression>
         AssignExpressionNode;
-typedef BaseAssignExpressionNode<AddAssignExpression>
+typedef AssignmentExpressionNode<AddAssignExpression>
         AddAssignExpressionNode;
-typedef BaseAssignExpressionNode<SubtractAssignExpression>
+typedef AssignmentExpressionNode<SubtractAssignExpression>
         SubtractAssignExpressionNode;
-typedef BaseAssignExpressionNode<MultiplyAssignExpression>
+typedef AssignmentExpressionNode<MultiplyAssignExpression>
         MultiplyAssignExpressionNode;
-typedef BaseAssignExpressionNode<ModuloAssignExpression>
+typedef AssignmentExpressionNode<ModuloAssignExpression>
         ModuloAssignExpressionNode;
-typedef BaseAssignExpressionNode<LeftShiftAssignExpression>
+typedef AssignmentExpressionNode<LeftShiftAssignExpression>
         LeftShiftAssignExpressionNode;
-typedef BaseAssignExpressionNode<RightShiftAssignExpression>
+typedef AssignmentExpressionNode<RightShiftAssignExpression>
         RightShiftAssignExpressionNode;
-typedef BaseAssignExpressionNode<UnsignedRightShiftAssignExpression>
+typedef AssignmentExpressionNode<UnsignedRightShiftAssignExpression>
         UnsignedRightShiftAssignExpressionNode;
-typedef BaseAssignExpressionNode<BitAndAssignExpression>
+typedef AssignmentExpressionNode<BitAndAssignExpression>
         BitAndAssignExpressionNode;
-typedef BaseAssignExpressionNode<BitOrAssignExpression>
+typedef AssignmentExpressionNode<BitOrAssignExpression>
         BitOrAssignExpressionNode;
-typedef BaseAssignExpressionNode<BitXorAssignExpression>
+typedef AssignmentExpressionNode<BitXorAssignExpression>
         BitXorAssignExpressionNode;
-typedef BaseAssignExpressionNode<DivideAssignExpression>
+typedef AssignmentExpressionNode<DivideAssignExpression>
         DivideAssignExpressionNode;
 
 class BlockNode;
@@ -816,8 +817,25 @@ class CallExpressionNode : public ExpressionNode
 //
 // UnaryExpression syntax element
 //
+class BaseUnaryExpressionNode : public ExpressionNode
+{
+  protected:
+    ExpressionNode *subexpression_;
+
+  public:
+    explicit BaseUnaryExpressionNode(NodeType type,
+                                     ExpressionNode *subexpression)
+      : ExpressionNode(type),
+        subexpression_(subexpression)
+    {}
+
+    inline ExpressionNode *subexpression() const {
+        return subexpression_;
+    }
+};
+
 template <NodeType TYPE>
-class UnaryExpressionNode : public ExpressionNode
+class UnaryExpressionNode : public BaseUnaryExpressionNode
 {
     static_assert(TYPE == PostIncrementExpression ||
                   TYPE == PreIncrementExpression ||
@@ -831,19 +849,12 @@ class UnaryExpressionNode : public ExpressionNode
                   TYPE == BitNotExpression ||
                   TYPE == LogicalNotExpression,
                   "Invalid IncDecExpressionNode type.");
-  private:
-    ExpressionNode *subexpression_;
-
   public:
     explicit UnaryExpressionNode(ExpressionNode *subexpression)
-      : ExpressionNode(TYPE),
-        subexpression_(subexpression)
+      : BaseUnaryExpressionNode(TYPE, subexpression)
     {}
-
-    inline ExpressionNode *subexpression() const {
-        return subexpression_;
-    }
 };
+
 // PostIncrementExpressionNode;
 // PreIncrementExpressionNode;
 // PostDecrementExpressionNode;
@@ -983,30 +994,19 @@ class ConditionalExpressionNode : public ExpressionNode
 //
 // AssignmentExpression syntax element
 //
-class AssignmentExpressionNode : public ExpressionNode
+class BaseAssignmentExpressionNode : public ExpressionNode
 {
   protected:
-    AssignmentExpressionNode(NodeType type) : ExpressionNode(type) {}
-};
-
-template <NodeType TYPE>
-class BaseAssignExpressionNode : public AssignmentExpressionNode
-{
-    static_assert(IsValidAssignmentExpressionType(TYPE),
-                  "Invalid AssignmentExpressionNode type.");
-
-  private:
     ExpressionNode *lhs_;
     ExpressionNode *rhs_;
 
-  public:
-    BaseAssignExpressionNode(ExpressionNode *lhs,
-                             ExpressionNode *rhs)
-      : AssignmentExpressionNode(TYPE),
-        lhs_(lhs),
-        rhs_(rhs)
+    BaseAssignmentExpressionNode(NodeType type,
+                                 ExpressionNode *lhs,
+                                 ExpressionNode *rhs)
+      : ExpressionNode(type)
     {}
 
+  public:
     inline ExpressionNode *lhs() const {
         return lhs_;
     }
@@ -1015,6 +1015,19 @@ class BaseAssignExpressionNode : public AssignmentExpressionNode
         return rhs_;
     }
 };
+
+template <NodeType TYPE>
+class AssignmentExpressionNode : public BaseAssignmentExpressionNode
+{
+    static_assert(IsValidAssignmentExpressionType(TYPE),
+                  "Invalid AssignmentExpressionNode type.");
+
+  public:
+    AssignmentExpressionNode(ExpressionNode *lhs, ExpressionNode *rhs)
+      : BaseAssignmentExpressionNode(TYPE, lhs, rhs)
+    {}
+};
+
 // AssignExpressionNode;
 // AddAssignExpressionNode;
 // SubtractAssignExpressionNode;
