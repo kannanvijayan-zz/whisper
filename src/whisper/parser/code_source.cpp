@@ -12,6 +12,55 @@
 namespace Whisper {
 
 
+//
+// CodeSource
+//
+
+CodeSource::CodeSource(const char *name)
+  : name_(name)
+{}
+
+CodeSource::~CodeSource()
+{}
+
+const char *
+CodeSource::name() const
+{
+    return name_;
+}
+
+const uint8_t *
+CodeSource::data() const
+{
+    return data_;
+}
+
+uint32_t
+CodeSource::dataSize() const
+{
+    return dataSize_;
+}
+
+const uint8_t *
+CodeSource::dataEnd() const
+{
+    return dataEnd_;
+}
+
+//
+// FileCodeSource
+//
+
+
+FileCodeSource::FileCodeSource(const char *filename)
+  : CodeSource(filename)
+{}
+
+FileCodeSource::~FileCodeSource()
+{
+    finalize();
+}
+
 void
 FileCodeSource::finalize()
 {
@@ -74,6 +123,87 @@ FileCodeSource::initialize()
     dataEnd_ = data_ + dataSize_;
 
     return true;
+}
+
+bool
+FileCodeSource::hasError() const
+{
+    return error_;
+}
+
+const char *
+FileCodeSource::error() const
+{
+    WH_ASSERT(hasError());
+    return error_;
+}
+
+//
+// SourceStream
+//
+
+SourceStream::SourceStream(CodeSource &source)
+    : source_(source),
+      cursor_(source_.data())
+{}
+
+CodeSource &
+SourceStream::source() const
+{
+    return source_;
+}
+
+const uint8_t *
+SourceStream::cursor() const
+{
+    return cursor_;
+}
+
+uint32_t
+SourceStream::positionOf(const uint8_t *ptr) const
+{
+    WH_ASSERT(ptr >= source_.data() && ptr <= source_.dataEnd());
+    return ptr - source_.data();
+}
+
+uint32_t
+SourceStream::position() const
+{
+    return positionOf(cursor_);
+}
+
+bool
+SourceStream::atEnd() const
+{
+    return cursor_ == source_.dataEnd();
+}
+
+uint8_t
+SourceStream::readByte()
+{
+    // readByte() should never be called on an EOLed stream.
+    WH_ASSERT(!atEnd());
+    return *cursor_++;
+}
+
+void
+SourceStream::rewindTo(uint32_t pos)
+{
+    WH_ASSERT(pos <= position());
+    cursor_ = source_.data() + pos;
+}
+
+void
+SourceStream::advanceTo(uint32_t pos)
+{
+    WH_ASSERT(pos >= position());
+    cursor_ = source_.data() + pos;
+}
+
+void
+SourceStream::rewindBy(uint32_t count) {
+    WH_ASSERT(count <= position());
+    cursor_ -= count;
 }
 
 

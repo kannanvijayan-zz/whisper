@@ -34,28 +34,17 @@ class CodeSource
     const uint8_t *dataEnd_;
     uint32_t dataSize_;
 
-    inline CodeSource(const char *name)
-      : name_(name)
-    {}
-
-    inline ~CodeSource() {}
+    CodeSource(const char *name);
+    ~CodeSource();
 
   public:
-    inline const char *name() const {
-        return name_;
-    }
+    const char *name() const;
 
-    inline const uint8_t *data() const {
-        return data_;
-    }
+    const uint8_t *data() const;
 
-    inline uint32_t dataSize() const {
-        return dataSize_;
-    }
+    uint32_t dataSize() const;
 
-    inline const uint8_t *dataEnd() const {
-        return dataEnd_;
-    }
+    const uint8_t *dataEnd() const;
 };
 
 //
@@ -70,23 +59,17 @@ class FileCodeSource : public CodeSource
     const char *error_ = nullptr;
 
   public:
-    inline FileCodeSource(const char *filename) : CodeSource(filename) {}
+    FileCodeSource(const char *filename);
 
-    inline ~FileCodeSource() {
-        finalize();
-    }
+    ~FileCodeSource();
 
     void finalize();
 
   public:
     bool initialize();
-    inline bool hasError() {
-        return error_;
-    }
-    inline const char *error() {
-        WH_ASSERT(hasError());
-        return error_;
-    }
+
+    bool hasError() const;
+    const char *error() const;
 };
 
 //
@@ -103,51 +86,24 @@ class SourceStream
     const uint8_t *cursor_;
 
   public:
-    inline SourceStream(CodeSource &source)
-        : source_(source),
-          cursor_(source_.data())
-    {}
+    SourceStream(CodeSource &source);
 
-    inline CodeSource &source() const {
-        return source_;
-    }
+    CodeSource &source() const;
 
-    inline const uint8_t *cursor() const {
-        return cursor_;
-    }
+    const uint8_t *cursor() const;
 
-    inline uint32_t positionOf(const uint8_t *ptr) const {
-        WH_ASSERT(ptr >= source_.data() && ptr <= source_.dataEnd());
-        return ptr - source_.data();
-    }
-    inline uint32_t position() const {
-        return positionOf(cursor_);
-    }
+    uint32_t positionOf(const uint8_t *ptr) const;
+    uint32_t position() const;
 
-    inline bool atEnd() const {
-        return cursor_ == source_.dataEnd();
-    }
+    bool atEnd() const;
 
-    inline uint8_t readByte() {
-        // readByte() should never be called on an EOLed stream.
-        WH_ASSERT(!atEnd());
-        return *cursor_++;
-    }
+    uint8_t readByte();
 
-    inline void rewindTo(uint32_t pos) {
-        WH_ASSERT(pos <= position());
-        cursor_ = source_.data() + pos;
-    }
+    void rewindTo(uint32_t pos);
 
-    inline void advanceTo(uint32_t pos) {
-        WH_ASSERT(pos >= position());
-        cursor_ = source_.data() + pos;
-    }
+    void advanceTo(uint32_t pos);
 
-    inline void rewindBy(uint32_t count) {
-        WH_ASSERT(count <= position());
-        cursor_ -= count;
-    }
+    void rewindBy(uint32_t count);
 };
 
 
