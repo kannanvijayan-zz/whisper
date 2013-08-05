@@ -12,7 +12,7 @@ namespace Whisper {
 
 //
 // KeywordTable implementation.
-// 
+//
 struct KeywordTableEntry
 {
     Token::Type token;
@@ -237,7 +237,27 @@ LookupQuickToken(unic_t ch)
 // Token implementation.
 //
 
-const char *
+/*static*/ bool
+Token::IsValidType(Type type)
+{
+    return (type > INVALID) && (type < LIMIT);
+}
+
+/*static*/ bool
+Token::IsKeywordType(Type type)
+{
+    return (type >= WHISPER_FIRST_KEYWORD_TOKEN) &&
+           (type <= WHISPER_LAST_KEYWORD_TOKEN);
+}
+
+/*static*/ bool
+Token::IsStrictKeywordType(Type type)
+{
+    return (type >= WHISPER_FIRST_STRICT_KEYWORD_TOKEN) &&
+           (type <= WHISPER_LAST_STRICT_KEYWORD_TOKEN);
+}
+
+/*static*/ const char *
 Token::TypeString(Type type)
 {
     switch (type) {
@@ -254,6 +274,148 @@ Token::TypeString(Type type)
     return "INVALID_UNKNOWN";
 }
 
+Token::Token()
+: debug_used_(true), debug_pushedBack_(false)
+{}
+
+Token::Token(Type type, uint32_t offset, uint32_t length,
+             uint32_t startLine, uint32_t startLineOffset,
+             uint32_t endLine, uint32_t endLineOffset)
+  : type_(type), offset_(offset), length_(length),
+    startLine_(startLine), startLineOffset_(startLineOffset),
+    endLine_(endLine), endLineOffset_(endLineOffset),
+    debug_used_(false), debug_pushedBack_(false)
+{}
+
+Token::Token(const Token &other)
+  : type_(other.type_), offset_(other.offset_), length_(other.length_),
+    startLine_(other.startLine_), startLineOffset_(other.startLineOffset_),
+    endLine_(other.endLine_), endLineOffset_(other.endLineOffset_),
+    debug_used_(false), debug_pushedBack_(false)
+{
+    WH_ASSERT(other.debug_pushedBack_ == false);
+    other.debug_used_ = true;
+}
+
+Token::Token(const Token &other, PreserveDebugUsed preserve)
+  : type_(other.type_), offset_(other.offset_), length_(other.length_),
+    startLine_(other.startLine_), startLineOffset_(other.startLineOffset_),
+    endLine_(other.endLine_), endLineOffset_(other.endLineOffset_),
+    debug_used_(other.debug_used_),
+    debug_pushedBack_(other.debug_pushedBack_)
+{}
+
+Token &
+Token::operator =(const Token &other)
+{
+    type_ = other.type_;
+    offset_ = other.offset_;
+    length_ = other.length_;
+    startLine_ = other.startLine_;
+    startLineOffset_ = other.startLineOffset_;
+    endLine_ = other.endLine_;
+    endLineOffset_ = other.endLineOffset_;
+    maybeKeyword_ = other.maybeKeyword_;
+    debug_used_ = other.debug_used_;
+    debug_pushedBack_ = other.debug_pushedBack_;
+    other.debug_used_ = true;
+    return *this;
+}
+
+Token::Type
+Token::type() const
+{
+    return type_;
+}
+
+const char *
+Token::typeString() const
+{
+    return TypeString(type_);
+}
+
+uint32_t
+Token::offset() const
+{
+    return offset_;
+}
+
+uint32_t
+Token::length() const
+{
+    return length_;
+}
+
+uint32_t
+Token::endOffset() const
+{
+    return offset_ + length_;
+}
+
+uint32_t
+Token::startLine() const
+{
+    return startLine_;
+}
+
+uint32_t
+Token::startLineOffset() const
+{
+    return startLineOffset_;
+}
+
+uint32_t
+Token::endLine() const
+{
+    return endLine_;
+}
+
+uint32_t
+Token::endLineOffset() const
+{
+    return endLineOffset_;
+}
+
+bool
+Token::maybeKeyword() const
+{
+    return maybeKeyword_;
+}
+
+void
+Token::setMaybeKeyword(bool b)
+{
+    maybeKeyword_ = b;
+}
+
+const uint8_t *
+Token::text(const CodeSource &src) const
+{
+    return src.data() + offset_;
+}
+
+bool
+Token::newlineOccursBefore(const Token &other) const
+{
+    return endLine_ < other.startLine_;
+}
+
+// Define type check methods
+#define DEF_CHECKER_(tok) \
+bool \
+Token::is##tok() const\
+{ \
+    return type_ == tok; \
+}
+    WHISPER_DEFN_TOKENS(DEF_CHECKER_)
+#undef DEF_CHECKER_
+
+bool
+Token::isKeyword(bool strict) const
+{
+    return strict ? IsKeywordType(type_) : IsStrictKeywordType(type_);
+}
+
 void
 Token::maybeConvertKeyword(const CodeSource &src, bool strict)
 {
@@ -266,6 +428,42 @@ Token::maybeConvertKeyword(const CodeSource &src, bool strict)
         // Now definitely a keyword.
         maybeKeyword_ = false;
     }
+}
+
+void
+Token::debug_markUsed() const
+{
+    debug_used_ = true;
+}
+
+bool
+Token::debug_isUsed() const
+{
+    return debug_used_;
+}
+
+void
+Token::debug_clearUsed() const
+{
+    debug_used_ = false;
+}
+
+bool
+Token::debug_isPushedBack() const
+{
+    return debug_pushedBack_;
+}
+
+void
+Token::debug_markPushedBack() const
+{
+    debug_pushedBack_ = true;
+}
+
+void
+Token::debug_clearPushedBack() const
+{
+    debug_pushedBack_ = false;
 }
 
 
