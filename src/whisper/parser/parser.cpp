@@ -1,6 +1,7 @@
 
 #include "spew.hpp"
 #include "parser/parser.hpp"
+#include "parser/parser_inlines.hpp"
 
 //
 // The tokenizer parses a code source into a series of tokens.
@@ -8,6 +9,17 @@
 
 namespace Whisper {
 
+
+//
+// Parser
+//
+
+Parser::Parser(Tokenizer &tokenizer)
+  : tokenizer_(tokenizer),
+    automaticSemicolon_()
+{}
+
+Parser::~Parser() {}
 
 ProgramNode *
 Parser::parseProgram()
@@ -31,6 +43,19 @@ Parser::parseProgram()
     } catch (ParserError err) {
         return nullptr;
     }
+}
+
+bool
+Parser::hasError() const
+{
+    return error_;
+}
+
+const char *
+Parser::error() const
+{
+    WH_ASSERT(error_);
+    return error_;
 }
 
 SourceElementNode *
@@ -1569,6 +1594,24 @@ Parser::tryParseExpression(bool forbidIn, Precedence prec,
     return curExpr;
 }
 
+ExpressionNode *
+Parser::tryParseExpression(bool forbidIn, bool expectSemicolon)
+{
+    return tryParseExpression(forbidIn, Prec_Comma, expectSemicolon);
+}
+
+ExpressionNode *
+Parser::tryParseExpression(Precedence prec, bool expectSemicolon)
+{
+    return tryParseExpression(/*forbidIn=*/false, prec, expectSemicolon);
+}
+
+ExpressionNode *
+Parser::tryParseExpression()
+{
+    return tryParseExpression(/*forbidIn=*/false);
+}
+
 ArrayLiteralNode *
 Parser::tryParseArrayLiteral()
 {
@@ -1900,6 +1943,18 @@ Parser::nextToken(Tokenizer::InputElementKind kind, bool checkKeywords)
         tok.debug_clearUsed();
         return tok;
     }
+}
+
+const Token &
+Parser::nextToken(bool checkKeywords)
+{
+    return nextToken(Tokenizer::InputElement_Div, checkKeywords);
+}
+
+const Token &
+Parser::nextToken()
+{
+    return nextToken(Tokenizer::InputElement_Div, false);
 }
 
 Parser::MorphError

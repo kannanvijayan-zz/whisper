@@ -1,7 +1,6 @@
 #ifndef WHISPER__PARSER__PARSER_HPP
 #define WHISPER__PARSER__PARSER_HPP
 
-#include <new>
 #include "allocators.hpp"
 #include "parser/tokenizer.hpp"
 #include "parser/syntax_tree.hpp"
@@ -40,23 +39,14 @@ class Parser
     bool justReadAutomaticSemicolon_ = false;
 
   public:
-    Parser(Tokenizer &tokenizer)
-      : tokenizer_(tokenizer),
-        automaticSemicolon_()
-    {}
+    Parser(Tokenizer &tokenizer);
 
-    inline ~Parser() {}
+    ~Parser();
 
     ProgramNode *parseProgram();
 
-    inline bool hasError() const {
-        return error_;
-    }
-
-    inline const char *error() const {
-        WH_ASSERT(error_);
-        return error_;
-    }
+    bool hasError() const;
+    const char *error() const;
         
 
   private:
@@ -111,19 +101,12 @@ class Parser
                                        Precedence prec,
                                        bool expectSemicolon=false);
 
-    inline ExpressionNode *tryParseExpression(bool forbidIn,
-                                              bool expectSemicolon=false)
-    {
-        return tryParseExpression(forbidIn, Prec_Comma, expectSemicolon);
-    }
-    inline ExpressionNode *tryParseExpression(Precedence prec,
-                                              bool expectSemicolon=false)
-    {
-        return tryParseExpression(/*forbidIn=*/false, prec, expectSemicolon);
-    }
-    inline ExpressionNode *tryParseExpression() {
-        return tryParseExpression(/*forbidIn=*/false);
-    }
+    ExpressionNode *tryParseExpression(bool forbidIn,
+                                       bool expectSemicolon=false);
+
+    ExpressionNode *tryParseExpression(Precedence prec,
+                                        bool expectSemicolon=false);
+    ExpressionNode *tryParseExpression();
 
     ArrayLiteralNode *tryParseArrayLiteral();
     ObjectLiteralNode *tryParseObjectLiteral();
@@ -142,89 +125,50 @@ class Parser
     const Token &nextToken(Tokenizer::InputElementKind kind,
                            bool checkKeywords);
 
-    inline const Token &nextToken(bool checkKeywords) {
-        return nextToken(Tokenizer::InputElement_Div, checkKeywords);
-    }
-
-    inline const Token &nextToken() {
-        return nextToken(Tokenizer::InputElement_Div, false);
-    }
+    const Token &nextToken(bool checkKeywords);
+    const Token &nextToken();
 
     // Check to see if upcoming token matches expected type,
     // but also return the token that was checked for.
 
     template <Token::Type TYPE>
-    inline static bool TestTokenType(Token::Type type) {
-        return (type == TYPE);
-    }
+    inline static bool TestTokenType(Token::Type type);
+
     template <Token::Type T1, Token::Type T2, Token::Type... TS>
-    inline static bool TestTokenType(Token::Type type) {
-        return (type == T1) || TestTokenType<T2, TS...>(type);
-    }
+    inline static bool TestTokenType(Token::Type type);
 
     template <Token::Type TYPE>
-    inline static bool ContainsKeywordType() {
-        return Token::IsKeywordType(TYPE);
-    }
+    inline static bool ContainsKeywordType();
+
     template <Token::Type T1, Token::Type T2, Token::Type... TS>
-    inline static bool ContainsKeywordType() {
-        return Token::IsKeywordType(T1) ||
-               ContainsKeywordType<T2, TS...>();
-    }
+    inline static bool ContainsKeywordType();
 
     template <Token::Type... TYPES>
     inline const Token *checkGetNextToken(Tokenizer::InputElementKind kind,
-                                          bool checkKw)
-    {
-        WH_ASSERT_IF(!checkKw, !ContainsKeywordType<TYPES...>());
-
-        const Token &tok = nextToken(kind, checkKw);
-        if (TestTokenType<TYPES...>(tok.type()))
-            return &tok;
-        tokenizer_.pushBackLastToken();
-        return nullptr;
-    }
+                                          bool checkKw);
 
     template <Token::Type... TYPES>
-    inline const Token *checkGetNextToken(bool checkKw) {
-        return checkGetNextToken<TYPES...>(Tokenizer::InputElement_Div,
-                                           checkKw);
-    }
+    inline const Token *checkGetNextToken(bool checkKw);
 
     template <Token::Type... TYPES>
-    inline const Token *checkGetNextToken() {
-        return checkGetNextToken<TYPES...>(Tokenizer::InputElement_Div, false);
-    }
+    inline const Token *checkGetNextToken();
 
     template <Token::Type... TYPES>
-    inline const Token *checkGetNextKeywordToken() {
-        return checkGetNextToken<TYPES...>(Tokenizer::InputElement_Div, true);
-    }
+    inline const Token *checkGetNextKeywordToken();
 
     // Check to see if upcoming token matches expected type.
 
     template <Token::Type... TYPES>
-    inline bool checkNextToken(Tokenizer::InputElementKind kind, bool checkKw) {
-        const Token *tok = checkGetNextToken<TYPES...>(kind, checkKw);
-        if (tok)
-            tok->debug_markUsed();
-        return tok;
-    }
+    inline bool checkNextToken(Tokenizer::InputElementKind kind, bool checkKw);
 
     template <Token::Type... TYPES>
-    inline bool checkNextToken(bool checkKw) {
-        return checkNextToken<TYPES...>(Tokenizer::InputElement_Div, checkKw);
-    }
+    inline bool checkNextToken(bool checkKw);
 
     template <Token::Type... TYPES>
-    inline bool checkNextToken() {
-        return checkNextToken<TYPES...>(Tokenizer::InputElement_Div, false);
-    }
+    inline bool checkNextToken();
 
     template <Token::Type... TYPES>
-    inline bool checkNextKeywordToken() {
-        return checkNextToken<TYPES...>(Tokenizer::InputElement_Div, true);
-    }
+    inline bool checkNextKeywordToken();
 
     // Emit a parser error.
 
@@ -239,15 +183,10 @@ class Parser
     MorphError emitError(const char *msg);
 
     template <typename T>
-    inline STLBumpAllocator<T> allocatorFor() const {
-        return STLBumpAllocator<T>(tokenizer_.allocator());
-    }
+    inline STLBumpAllocator<T> allocatorFor() const;
 
     template <typename T, typename... ARGS>
-    inline T *make(ARGS... args) {
-        return new (allocatorFor<T>().allocate(1)) T(
-            std::forward<ARGS>(args)...);
-    }
+    inline T *make(ARGS... args);
 };
 
 
