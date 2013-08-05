@@ -49,9 +49,20 @@ class Token
         LIMIT
     };
 
-    static bool IsValidType(Type type);
-    static bool IsKeywordType(Type type);
-    static bool IsStrictKeywordType(Type type);
+    inline static bool IsValidType(Type type) {
+        return (type > INVALID) && (type < LIMIT);
+    }
+
+    inline static bool IsKeywordType(Type type) {
+        return (type >= WHISPER_FIRST_KEYWORD_TOKEN) &&
+               (type <= WHISPER_LAST_KEYWORD_TOKEN);
+    }
+
+    inline static bool IsStrictKeywordType(Type type) {
+        return (type >= WHISPER_FIRST_STRICT_KEYWORD_TOKEN) &&
+               (type <= WHISPER_LAST_STRICT_KEYWORD_TOKEN);
+    }
+
     static const char *TypeString(Type type);
 
   protected:
@@ -74,59 +85,136 @@ class Token
     mutable DebugVal<bool> debug_pushedBack_;
 
   public:
-    Token();
+    Token() : debug_used_(true), debug_pushedBack_(false) {}
 
     Token(Type type, uint32_t offset, uint32_t length,
           uint32_t startLine, uint32_t startLineOffset,
-          uint32_t endLine, uint32_t endLineOffset);
+          uint32_t endLine, uint32_t endLineOffset)
+      : type_(type), offset_(offset), length_(length),
+        startLine_(startLine), startLineOffset_(startLineOffset),
+        endLine_(endLine), endLineOffset_(endLineOffset),
+        debug_used_(false), debug_pushedBack_(false)
+    {}
 
-    Token(const Token &other);
+    Token(const Token &other)
+      : type_(other.type_), offset_(other.offset_), length_(other.length_),
+        startLine_(other.startLine_), startLineOffset_(other.startLineOffset_),
+        endLine_(other.endLine_), endLineOffset_(other.endLineOffset_),
+        debug_used_(false), debug_pushedBack_(false)
+    {
+        WH_ASSERT(other.debug_pushedBack_ == false);
+        other.debug_used_ = true;
+    }
 
     enum PreserveDebugUsed {
         Preserve
     };
-    Token(const Token &other, PreserveDebugUsed preserve);
+    Token(const Token &other, PreserveDebugUsed preserve)
+      : type_(other.type_), offset_(other.offset_), length_(other.length_),
+        startLine_(other.startLine_), startLineOffset_(other.startLineOffset_),
+        endLine_(other.endLine_), endLineOffset_(other.endLineOffset_),
+        debug_used_(other.debug_used_),
+        debug_pushedBack_(other.debug_pushedBack_)
+    {
+    }
 
-    Token &operator =(const Token &other);
+    Token &operator =(const Token &other)
+    {
+        type_ = other.type_;
+        offset_ = other.offset_;
+        length_ = other.length_;
+        startLine_ = other.startLine_;
+        startLineOffset_ = other.startLineOffset_;
+        endLine_ = other.endLine_;
+        endLineOffset_ = other.endLineOffset_;
+        maybeKeyword_ = other.maybeKeyword_;
+        debug_used_ = other.debug_used_;
+        debug_pushedBack_ = other.debug_pushedBack_;
+        other.debug_used_ = true;
+        return *this;
+    }
 
-    Type type() const;
-    const char *typeString() const;
+    inline Type type() const {
+        return type_;
+    }
+    inline const char *typeString() const {
+        return TypeString(type_);
+    }
 
-    uint32_t offset() const;
-    uint32_t length() const;
-    uint32_t endOffset() const;
+    inline uint32_t offset() const {
+        return offset_;
+    }
+    inline uint32_t length() const {
+        return length_;
+    }
+    inline uint32_t endOffset() const {
+        return offset_ + length_;
+    }
 
-    uint32_t startLine() const;
-    uint32_t startLineOffset() const;
+    inline uint32_t startLine() const {
+        return startLine_;
+    }
+    inline uint32_t startLineOffset() const {
+        return startLineOffset_;
+    }
 
-    uint32_t endLine() const;
-    uint32_t endLineOffset() const;
+    inline uint32_t endLine() const {
+        return endLine_;
+    }
+    inline uint32_t endLineOffset() const {
+        return endLineOffset_;
+    }
 
-    bool maybeKeyword() const;
-    void setMaybeKeyword(bool b);
+    inline bool maybeKeyword() const {
+        return maybeKeyword_;
+    }
+    inline void setMaybeKeyword(bool b) {
+        maybeKeyword_ = b;
+    }
 
-    const uint8_t *text(const CodeSource &src) const;
+    inline const uint8_t *text(const CodeSource &src) const {
+        return src.data() + offset_;
+    }
 
-    bool newlineOccursBefore(const Token &other) const;
+    inline bool newlineOccursBefore(const Token &other) const {
+        return endLine_ < other.startLine_;
+    }
 
     // Define type check methods
 #define DEF_CHECKER_(tok) \
-    bool is##tok() const;
+    inline bool is##tok() const { \
+        return type_ == tok; \
+    }
     WHISPER_DEFN_TOKENS(DEF_CHECKER_)
 #undef DEF_CHECKER_
 
-    bool isKeyword(bool strict) const;
+    inline bool isKeyword(bool strict) const {
+        return strict ? IsKeywordType(type_) : IsStrictKeywordType(type_);
+    }
 
     void maybeConvertKeyword(const CodeSource &src, bool strict);
 
     // explicitly mark this token as being used.
     // This is a no-op in production code.
-    void debug_markUsed() const;
-    bool debug_isUsed() const;
-    void debug_clearUsed() const;
-    bool debug_isPushedBack() const;
-    void debug_markPushedBack() const;
-    void debug_clearPushedBack() const;
+    inline void debug_markUsed() const {
+        debug_used_ = true;
+    }
+
+    inline bool debug_isUsed() const {
+        return debug_used_;
+    }
+    inline void debug_clearUsed() const {
+        debug_used_ = false;
+    }
+    inline bool debug_isPushedBack() const {
+        return debug_pushedBack_;
+    }
+    inline void debug_markPushedBack() const {
+        debug_pushedBack_ = true;
+    }
+    inline void debug_clearPushedBack() const {
+        debug_pushedBack_ = false;
+    }
 };
 
 

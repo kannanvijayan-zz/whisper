@@ -1,6 +1,5 @@
 
 #include "spew.hpp"
-#include "parser/syntax_tree_inlines.hpp"
 #include "parser/parser.hpp"
 #include "parser/parser_inlines.hpp"
 
@@ -1808,7 +1807,8 @@ Parser::tryParseFunction()
     }
 
     // Parse formal parameter list.
-    FormalParameterList params(allocatorFor<IdentifierNameToken>());
+    FunctionExpressionNode::FormalParameterList params(
+                            allocatorFor<IdentifierNameToken>());
     for (;;) {
         // Check for immediate close paren.
         const Token &tok1 = nextToken(Tokenizer::InputElement_Div, true);
