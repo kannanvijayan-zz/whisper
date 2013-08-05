@@ -287,6 +287,8 @@ typedef BaseNode::List<ExpressionNode *> ExpressionList;
 typedef BaseNode::List<StatementNode *> StatementList;
 typedef BaseNode::List<SourceElementNode *> SourceElementList;
 typedef BaseNode::List<VariableDeclaration> DeclarationList;
+typedef BaseNode::List<IdentifierNameToken> FormalParameterList;
+
 
 ///////////////////
 //               //
@@ -513,14 +515,9 @@ class ParenthesizedExpressionNode : public ExpressionNode
     ExpressionNode *subexpression_;
 
   public:
-    explicit ParenthesizedExpressionNode(ExpressionNode *subexpression)
-      : ExpressionNode(ParenthesizedExpression),
-        subexpression_(subexpression)
-    {}
+    explicit ParenthesizedExpressionNode(ExpressionNode *subexpression);
 
-    inline ExpressionNode *subexpression() const {
-        return subexpression_;
-    }
+    ExpressionNode *subexpression() const;
 };
 
 //
@@ -528,9 +525,6 @@ class ParenthesizedExpressionNode : public ExpressionNode
 //
 class FunctionExpressionNode : public ExpressionNode
 {
-  public:
-    typedef BaseNode::List<IdentifierNameToken> FormalParameterList;
-
   private:
     Maybe<IdentifierNameToken> name_;
     FormalParameterList formalParameters_;
@@ -538,33 +532,17 @@ class FunctionExpressionNode : public ExpressionNode
 
   public:
     FunctionExpressionNode(FormalParameterList &&formalParameters,
-                           SourceElementList &&functionBody)
-      : ExpressionNode(FunctionExpression),
-        name_(),
-        formalParameters_(formalParameters),
-        functionBody_(functionBody)
-    {}
+                           SourceElementList &&functionBody);
 
     FunctionExpressionNode(const IdentifierNameToken &name,
                            FormalParameterList &&formalParameters,
-                           SourceElementList &&functionBody)
-      : ExpressionNode(FunctionExpression),
-        name_(name),
-        formalParameters_(formalParameters),
-        functionBody_(functionBody)
-    {}
+                           SourceElementList &&functionBody);
 
-    inline const Maybe<IdentifierNameToken> &name() const {
-        return name_;
-    }
+    const Maybe<IdentifierNameToken> &name() const;
 
-    inline const FormalParameterList &formalParameters() const {
-        return formalParameters_;
-    }
+    const FormalParameterList &formalParameters() const;
 
-    inline const SourceElementList &functionBody() const {
-        return functionBody_;
-    }
+    const SourceElementList &functionBody() const;
 };
 
 //
@@ -577,20 +555,10 @@ class GetElementExpressionNode : public ExpressionNode
     ExpressionNode *element_;
 
   public:
-    GetElementExpressionNode(ExpressionNode *object,
-                             ExpressionNode *element)
-      : ExpressionNode(GetElementExpression),
-        object_(object),
-        element_(element)
-    {}
+    GetElementExpressionNode(ExpressionNode *object, ExpressionNode *element);
 
-    inline ExpressionNode *object() const {
-        return object_;
-    }
-
-    inline ExpressionNode *element() const {
-        return element_;
-    }
+    ExpressionNode *object() const;
+    ExpressionNode *element() const;
 };
 
 //
@@ -604,19 +572,10 @@ class GetPropertyExpressionNode : public ExpressionNode
 
   public:
     GetPropertyExpressionNode(ExpressionNode *object,
-                              const IdentifierNameToken &property)
-      : ExpressionNode(GetPropertyExpression),
-        object_(object),
-        property_(property)
-    {}
+                              const IdentifierNameToken &property);
 
-    inline ExpressionNode *object() const {
-        return object_;
-    }
-
-    inline const IdentifierNameToken &property() const {
-        return property_;
-    }
+    ExpressionNode *object() const;
+    const IdentifierNameToken &property() const;
 };
 
 //
@@ -629,19 +588,10 @@ class NewExpressionNode : public ExpressionNode
     ExpressionList arguments_;
 
   public:
-    NewExpressionNode(ExpressionNode *constructor, ExpressionList &&arguments)
-      : ExpressionNode(NewExpression),
-        constructor_(constructor),
-        arguments_(arguments)
-    {}
+    NewExpressionNode(ExpressionNode *constructor, ExpressionList &&arguments);
 
-    inline ExpressionNode *constructor() const {
-        return constructor_;
-    }
-
-    inline const ExpressionList &arguments() const {
-        return arguments_;
-    }
+    ExpressionNode *constructor() const;
+    const ExpressionList &arguments() const;
 };
 
 //
@@ -654,19 +604,10 @@ class CallExpressionNode : public ExpressionNode
     ExpressionList arguments_;
 
   public:
-    CallExpressionNode(ExpressionNode *function, ExpressionList &&arguments)
-      : ExpressionNode(CallExpression),
-        function_(function),
-        arguments_(arguments)
-    {}
+    CallExpressionNode(ExpressionNode *function, ExpressionList &&arguments);
 
-    inline ExpressionNode *function() const {
-        return function_;
-    }
-
-    inline const ExpressionList &arguments() const {
-        return arguments_;
-    }
+    ExpressionNode *function() const;
+    const ExpressionList &arguments() const;
 };
 
 //

@@ -1807,8 +1807,7 @@ Parser::tryParseFunction()
     }
 
     // Parse formal parameter list.
-    FunctionExpressionNode::FormalParameterList params(
-                            allocatorFor<IdentifierNameToken>());
+    FormalParameterList params(allocatorFor<IdentifierNameToken>());
     for (;;) {
         // Check for immediate close paren.
         const Token &tok1 = nextToken(Tokenizer::InputElement_Div, true);

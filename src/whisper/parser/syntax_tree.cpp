@@ -476,6 +476,153 @@ ObjectLiteralNode::propertyDefinitions() const
     return propertyDefinitions_;
 }
 
+//
+// ParenthesizedExpressionNode
+//
+
+ParenthesizedExpressionNode::ParenthesizedExpressionNode(
+        ExpressionNode *subexpression)
+  : ExpressionNode(ParenthesizedExpression),
+    subexpression_(subexpression)
+{}
+
+ExpressionNode *
+ParenthesizedExpressionNode::subexpression() const
+{
+    return subexpression_;
+}
+
+//
+// FunctionExpression
+//
+
+FunctionExpressionNode::FunctionExpressionNode(
+        FormalParameterList &&formalParameters,
+        SourceElementList &&functionBody)
+  : ExpressionNode(FunctionExpression),
+    name_(),
+    formalParameters_(formalParameters),
+    functionBody_(functionBody)
+{}
+
+FunctionExpressionNode::FunctionExpressionNode(
+        const IdentifierNameToken &name,
+        FormalParameterList &&formalParameters,
+        SourceElementList &&functionBody)
+  : ExpressionNode(FunctionExpression),
+    name_(name),
+    formalParameters_(formalParameters),
+    functionBody_(functionBody)
+{}
+
+const Maybe<IdentifierNameToken> &
+FunctionExpressionNode::name() const
+{
+    return name_;
+}
+
+const FormalParameterList &
+FunctionExpressionNode::formalParameters() const
+{
+    return formalParameters_;
+}
+
+const SourceElementList &
+FunctionExpressionNode::functionBody() const
+{
+    return functionBody_;
+}
+
+//
+// GetElementExpression
+//
+
+GetElementExpressionNode::GetElementExpressionNode(
+        ExpressionNode *object, ExpressionNode *element)
+  : ExpressionNode(GetElementExpression),
+    object_(object),
+    element_(element)
+{}
+
+ExpressionNode *
+GetElementExpressionNode::object() const
+{
+    return object_;
+}
+
+ExpressionNode *
+GetElementExpressionNode::element() const
+{
+    return element_;
+}
+
+//
+// GetPropertyExpression
+//
+
+GetPropertyExpressionNode::GetPropertyExpressionNode(
+        ExpressionNode *object, const IdentifierNameToken &property)
+  : ExpressionNode(GetPropertyExpression),
+    object_(object),
+    property_(property)
+{}
+
+ExpressionNode *GetPropertyExpressionNode::object() const
+{
+    return object_;
+}
+
+const IdentifierNameToken &GetPropertyExpressionNode::property() const
+{
+    return property_;
+}
+
+//
+// NewExpression
+//
+
+NewExpressionNode::NewExpressionNode(
+        ExpressionNode *constructor, ExpressionList &&arguments)
+  : ExpressionNode(NewExpression),
+    constructor_(constructor),
+    arguments_(arguments)
+{}
+
+ExpressionNode *
+NewExpressionNode::constructor() const
+{
+    return constructor_;
+}
+
+const ExpressionList &
+NewExpressionNode::arguments() const
+{
+    return arguments_;
+}
+
+//
+// CallExpression
+//
+
+CallExpressionNode::CallExpressionNode(
+        ExpressionNode *function, ExpressionList &&arguments)
+  : ExpressionNode(CallExpression),
+    function_(function),
+    arguments_(arguments)
+{}
+
+ExpressionNode *
+CallExpressionNode::function() const
+{
+    return function_;
+}
+
+const ExpressionList &
+CallExpressionNode::arguments() const
+{
+    return arguments_;
+}
+
 
 } // namespace AST
 } // namespace Whisper
