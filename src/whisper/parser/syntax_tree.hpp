@@ -198,42 +198,23 @@ class BaseNode
   protected:
     NodeType type_;
 
-    BaseNode(NodeType type) : type_(type) {}
+    BaseNode(NodeType type);
 
   public:
-    inline NodeType type() const {
-        return type_;
-    }
+    NodeType type() const;
 
 #define METHODS_(node) \
-    inline bool is##node() const { \
-        return type_ == node; \
-    } \
-    inline const node##Node *to##node() const { \
-        WH_ASSERT(is##node()); \
-        return reinterpret_cast<const node##Node *>(this); \
-    } \
-    inline node##Node *to##node() { \
-        WH_ASSERT(is##node()); \
-        return reinterpret_cast<node##Node *>(this); \
-    }
+    bool is##node() const; \
+    const node##Node *to##node() const; \
+    node##Node *to##node();
     WHISPER_DEFN_SYNTAX_NODES(METHODS_)
 #undef METHODS_
 
-    virtual inline bool isStatement() const {
-        return false;
-    }
-    virtual inline bool isBinaryExpression() const {
-        return false;
-    }
-    const BaseBinaryExpressionNode *toBinaryExpression() const {
-        WH_ASSERT(isBinaryExpression());
-        return reinterpret_cast<const BaseBinaryExpressionNode *>(this);
-    }
-    BaseBinaryExpressionNode *toBinaryExpression() {
-        WH_ASSERT(isBinaryExpression());
-        return reinterpret_cast<BaseBinaryExpressionNode *>(this);
-    }
+    virtual bool isStatement() const;
+    virtual bool isBinaryExpression() const;
+
+    const BaseBinaryExpressionNode *toBinaryExpression() const;
+    BaseBinaryExpressionNode *toBinaryExpression();
 
     bool isLeftHandSideExpression();
 };
@@ -258,18 +239,16 @@ IsValidAssignmentExpressionType(NodeType type)
 class SourceElementNode : public BaseNode
 {
   protected:
-    SourceElementNode(NodeType type) : BaseNode(type) {}
+    SourceElementNode(NodeType type);
 };
 
 class StatementNode : public SourceElementNode
 {
   protected:
-    StatementNode(NodeType type) : SourceElementNode(type) {}
+    StatementNode(NodeType type);
 
   public:
-    virtual inline bool isStatement() const override {
-        return true;
-    }
+    virtual bool isStatement() const override;
 
     FunctionExpressionNode *statementToNamedFunction();
 };
@@ -278,7 +257,7 @@ class StatementNode : public SourceElementNode
 class ExpressionNode : public BaseNode
 {
   protected:
-    ExpressionNode(NodeType type) : BaseNode(type) {}
+    ExpressionNode(NodeType type);
 
   public:
     bool isNamedFunction();
@@ -287,7 +266,7 @@ class ExpressionNode : public BaseNode
 class LiteralExpressionNode : public ExpressionNode
 {
   protected:
-    LiteralExpressionNode(NodeType type) : ExpressionNode(type) {}
+    LiteralExpressionNode(NodeType type);
 };
 
 class VariableDeclaration
@@ -298,17 +277,10 @@ class VariableDeclaration
 
   public:
     VariableDeclaration(const IdentifierNameToken &name,
-                        ExpressionNode *initialiser)
-      : name_(name),
-        initialiser_(initialiser)
-    {}
+                        ExpressionNode *initialiser);
 
-    inline const IdentifierNameToken &name() const {
-        return name_;
-    }
-    inline ExpressionNode *initialiser() const {
-        return initialiser_;
-    }
+    const IdentifierNameToken &name() const;
+    ExpressionNode *initialiser() const;
 };
 
 typedef BaseNode::List<ExpressionNode *> ExpressionList;
@@ -331,14 +303,9 @@ class ThisNode : public ExpressionNode
     ThisKeywordToken token_;
 
   public:
-    explicit ThisNode(const ThisKeywordToken &token)
-      : ExpressionNode(This),
-        token_(token)
-    {}
+    explicit ThisNode(const ThisKeywordToken &token);
 
-    inline const ThisKeywordToken &token() const {
-        return token_;
-    }
+    const ThisKeywordToken &token() const;
 };
 
 //
@@ -350,14 +317,9 @@ class IdentifierNode : public ExpressionNode
     IdentifierNameToken token_;
 
   public:
-    explicit IdentifierNode(const IdentifierNameToken &token)
-      : ExpressionNode(Identifier),
-        token_(token)
-    {}
+    explicit IdentifierNode(const IdentifierNameToken &token);
 
-    inline const IdentifierNameToken &token() const {
-        return token_;
-    }
+    const IdentifierNameToken &token() const;
 };
 
 //
@@ -369,14 +331,9 @@ class NullLiteralNode : public LiteralExpressionNode
     NullLiteralToken token_;
 
   public:
-    explicit NullLiteralNode(const NullLiteralToken &token)
-      : LiteralExpressionNode(NullLiteral),
-        token_(token)
-    {}
+    explicit NullLiteralNode(const NullLiteralToken &token);
 
-    inline const NullLiteralToken &token() const {
-        return token_;
-    }
+    const NullLiteralToken &token() const;
 };
 
 //
@@ -388,23 +345,11 @@ class BooleanLiteralNode : public LiteralExpressionNode
     Either<FalseLiteralToken, TrueLiteralToken> token_;
 
   public:
-    explicit BooleanLiteralNode(const FalseLiteralToken &token)
-      : LiteralExpressionNode(BooleanLiteral),
-        token_(token)
-    {}
+    explicit BooleanLiteralNode(const FalseLiteralToken &token);
+    explicit BooleanLiteralNode(const TrueLiteralToken &token);
 
-    explicit BooleanLiteralNode(const TrueLiteralToken &token)
-      : LiteralExpressionNode(BooleanLiteral),
-        token_(token)
-    {}
-
-    inline bool isFalse() const {
-        return token_.hasFirst();
-    }
-
-    inline bool isTrue() const {
-        return token_.hasSecond();
-    }
+    bool isFalse() const;
+    bool isTrue() const;
 };
 
 //
@@ -416,14 +361,9 @@ class NumericLiteralNode : public LiteralExpressionNode
     NumericLiteralToken value_;
 
   public:
-    explicit NumericLiteralNode(const NumericLiteralToken &value)
-      : LiteralExpressionNode(NumericLiteral),
-        value_(value)
-    {}
+    explicit NumericLiteralNode(const NumericLiteralToken &value);
 
-    inline const NumericLiteralToken value() const {
-        return value_;
-    }
+    const NumericLiteralToken value() const;
 };
 
 //
@@ -435,14 +375,9 @@ class StringLiteralNode : public LiteralExpressionNode
     StringLiteralToken value_;
 
   public:
-    explicit StringLiteralNode(const StringLiteralToken &value)
-      : LiteralExpressionNode(StringLiteral),
-        value_(value)
-    {}
+    explicit StringLiteralNode(const StringLiteralToken &value);
 
-    inline const StringLiteralToken value() const {
-        return value_;
-    }
+    const StringLiteralToken value() const;
 };
 
 //
@@ -455,14 +390,9 @@ class RegularExpressionLiteralNode : public LiteralExpressionNode
 
   public:
     explicit RegularExpressionLiteralNode(
-            const RegularExpressionLiteralToken &value)
-      : LiteralExpressionNode(RegularExpressionLiteral),
-        value_(value)
-    {}
+            const RegularExpressionLiteralToken &value);
 
-    inline const RegularExpressionLiteralToken value() const {
-        return value_;
-    }
+    const RegularExpressionLiteralToken value() const;
 };
 
 //
@@ -474,14 +404,9 @@ class ArrayLiteralNode : public LiteralExpressionNode
     ExpressionList elements_;
 
   public:
-    explicit ArrayLiteralNode(ExpressionList &&elements)
-      : LiteralExpressionNode(ArrayLiteral),
-        elements_(elements)
-    {}
+    explicit ArrayLiteralNode(ExpressionList &&elements);
 
-    inline const ExpressionList &elements() const {
-        return elements_;
-    }
+    const ExpressionList &elements() const;
 };
 
 //
