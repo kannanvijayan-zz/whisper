@@ -72,6 +72,7 @@ typedef UnaryExpressionNode<LogicalNotExpression>
         LogicalNotExpressionNode;
 
 
+class BaseBinaryExpressionNode;
 template <NodeType TYPE> class BinaryExpressionNode;
 
 typedef BinaryExpressionNode<MultiplyExpression>
@@ -219,8 +220,19 @@ class BaseNode
     WHISPER_DEFN_SYNTAX_NODES(METHODS_)
 #undef METHODS_
 
-    virtual inline bool isStatement() {
+    virtual inline bool isStatement() const {
         return false;
+    }
+    virtual inline bool isBinaryExpression() const {
+        return false;
+    }
+    const BaseBinaryExpressionNode *toBinaryExpression() const {
+        WH_ASSERT(isBinaryExpression());
+        return reinterpret_cast<const BaseBinaryExpressionNode *>(this);
+    }
+    BaseBinaryExpressionNode *toBinaryExpression() {
+        WH_ASSERT(isBinaryExpression());
+        return reinterpret_cast<BaseBinaryExpressionNode *>(this);
     }
 
     bool isLeftHandSideExpression();
@@ -255,7 +267,7 @@ class StatementNode : public SourceElementNode
     StatementNode(NodeType type) : SourceElementNode(type) {}
 
   public:
-    virtual inline bool isStatement() override {
+    virtual inline bool isStatement() const override {
         return true;
     }
 
@@ -848,8 +860,36 @@ class UnaryExpressionNode : public ExpressionNode
 //
 // BinaryExpression syntax element
 //
+class BaseBinaryExpressionNode : public ExpressionNode
+{
+  private:
+    ExpressionNode *lhs_;
+    ExpressionNode *rhs_;
+
+  public:
+    BaseBinaryExpressionNode(NodeType type,
+                             ExpressionNode *lhs,
+                             ExpressionNode *rhs)
+      : ExpressionNode(type),
+        lhs_(lhs),
+        rhs_(rhs)
+    {}
+
+    inline ExpressionNode *lhs() const {
+        return lhs_;
+    }
+
+    inline ExpressionNode *rhs() const {
+        return rhs_;
+    }
+
+    virtual inline bool isBinaryExpression() const override {
+        return true;
+    }
+};
+
 template <NodeType TYPE>
-class BinaryExpressionNode : public ExpressionNode
+class BinaryExpressionNode : public BaseBinaryExpressionNode
 {
     static_assert(TYPE == MultiplyExpression ||
                   TYPE == DivideExpression ||
@@ -876,24 +916,10 @@ class BinaryExpressionNode : public ExpressionNode
                   TYPE == LogicalOrExpression ||
                   TYPE == CommaExpression,
                   "Invalid IncDecExpressionNode type.");
-  private:
-    ExpressionNode *lhs_;
-    ExpressionNode *rhs_;
-
   public:
     explicit BinaryExpressionNode(ExpressionNode *lhs, ExpressionNode *rhs)
-      : ExpressionNode(TYPE),
-        lhs_(lhs),
-        rhs_(rhs)
+      : BaseBinaryExpressionNode(TYPE, lhs, rhs)
     {}
-
-    inline ExpressionNode *lhs() const {
-        return lhs_;
-    }
-
-    inline ExpressionNode *rhs() const {
-        return rhs_;
-    }
 };
 
 // MultiplyExpressionNode;

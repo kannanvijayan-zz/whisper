@@ -7,6 +7,8 @@
 #include "runtime.hpp"
 #include "parser/syntax_tree.hpp"
 #include "vm/bytecode.hpp"
+#include "interp/bytecode_defn.hpp"
+#include "interp/bytecode_ops.hpp"
 
 //
 // The bytecode generator converts a syntax tree into interpretable
@@ -38,6 +40,9 @@ class BytecodeGenerator
     // Whether to start with strict mode.
     bool strict_;
 
+    // Bytecode.
+    VM::RootedBytecode bytecode_;
+
     // Error message.
     const char *error_ = nullptr;
 
@@ -48,6 +53,15 @@ class BytecodeGenerator
 
     // The maximum stack depth.
     uint32_t maxStackDepth_ = 0;
+
+
+    /// Intermediate state. ///
+
+    // The current bytecode size.
+    uint32_t currentBytecodeSize_ = 0;
+
+    // The current stack depth.
+    uint32_t currentStackDepth_ = 0;
 
   public:
     BytecodeGenerator(RunContext *cx,
@@ -60,10 +74,31 @@ class BytecodeGenerator
     VM::Bytecode *generateBytecode();
 
   private:
-    void generate(VM::HandleBytecode bytecode);
-    void generateExpressionStatement(VM::HandleBytecode bytecode,
-                                     AST::ExpressionStatementNode *exptStmt);
+    void generate();
+    void generateExpressionStatement(AST::ExpressionStatementNode *exprStmt);
+    void generateExpression(AST::ExpressionNode *expr,
+                            const OperandLocation &outputLocation);
 
+    bool getAddressableLocation(AST::ExpressionNode *expr,
+                                OperandLocation &location);
+
+
+    void emitBinaryOp(AST::BaseBinaryExpressionNode *expr,
+                      const OperandLocation &lhsLocation,
+                      const OperandLocation &rhsLocation,
+                      const OperandLocation &outputLocation);
+    void emitOperandLocation(const OperandLocation &location);
+    void emitOp(Opcode op);
+    void emitConstantOperand(uint32_t idx);
+    void emitArgumentOperand(uint32_t idx);
+    void emitLocalOperand(uint32_t idx);
+    void emitStackOperand(uint32_t idx);
+    void emitImmediateUnsignedOperand(uint32_t val);
+    void emitImmediateSignedOperand(int32_t val);
+
+    void emitIndexedOperand(OperandSpace space, uint32_t idx);
+    void emitByte(uint8_t byte);
+    
     void emitError(const char *msg);
 };
 
