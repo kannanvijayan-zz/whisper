@@ -45,6 +45,7 @@ class GetPropertyExpressionNode;
 class NewExpressionNode;
 class CallExpressionNode;
 
+class BaseUnaryExpressionNode;
 template <NodeType TYPE> class UnaryExpressionNode;
 
 typedef UnaryExpressionNode<PostIncrementExpression>
@@ -125,33 +126,33 @@ typedef BinaryExpressionNode<CommaExpression>
         CommaExpressionNode;
 
 class ConditionalExpressionNode;
-class AssignmentExpressionNode;
 
-template <NodeType TYPE> class BaseAssignExpressionNode;
+class BaseAssignmentExpressionNode;
+template <NodeType TYPE> class AssignmentExpressionNode;
 
-typedef BaseAssignExpressionNode<AssignExpression>
+typedef AssignmentExpressionNode<AssignExpression>
         AssignExpressionNode;
-typedef BaseAssignExpressionNode<AddAssignExpression>
+typedef AssignmentExpressionNode<AddAssignExpression>
         AddAssignExpressionNode;
-typedef BaseAssignExpressionNode<SubtractAssignExpression>
+typedef AssignmentExpressionNode<SubtractAssignExpression>
         SubtractAssignExpressionNode;
-typedef BaseAssignExpressionNode<MultiplyAssignExpression>
+typedef AssignmentExpressionNode<MultiplyAssignExpression>
         MultiplyAssignExpressionNode;
-typedef BaseAssignExpressionNode<ModuloAssignExpression>
+typedef AssignmentExpressionNode<ModuloAssignExpression>
         ModuloAssignExpressionNode;
-typedef BaseAssignExpressionNode<LeftShiftAssignExpression>
+typedef AssignmentExpressionNode<LeftShiftAssignExpression>
         LeftShiftAssignExpressionNode;
-typedef BaseAssignExpressionNode<RightShiftAssignExpression>
+typedef AssignmentExpressionNode<RightShiftAssignExpression>
         RightShiftAssignExpressionNode;
-typedef BaseAssignExpressionNode<UnsignedRightShiftAssignExpression>
+typedef AssignmentExpressionNode<UnsignedRightShiftAssignExpression>
         UnsignedRightShiftAssignExpressionNode;
-typedef BaseAssignExpressionNode<BitAndAssignExpression>
+typedef AssignmentExpressionNode<BitAndAssignExpression>
         BitAndAssignExpressionNode;
-typedef BaseAssignExpressionNode<BitOrAssignExpression>
+typedef AssignmentExpressionNode<BitOrAssignExpression>
         BitOrAssignExpressionNode;
-typedef BaseAssignExpressionNode<BitXorAssignExpression>
+typedef AssignmentExpressionNode<BitXorAssignExpression>
         BitXorAssignExpressionNode;
-typedef BaseAssignExpressionNode<DivideAssignExpression>
+typedef AssignmentExpressionNode<DivideAssignExpression>
         DivideAssignExpressionNode;
 
 class BlockNode;
@@ -613,8 +614,20 @@ class CallExpressionNode : public ExpressionNode
 //
 // UnaryExpression syntax element
 //
+class BaseUnaryExpressionNode : public ExpressionNode
+{
+  protected:
+    ExpressionNode *subexpression_;
+
+    explicit BaseUnaryExpressionNode(NodeType type,
+                                     ExpressionNode *subexpression);
+
+  public:
+    ExpressionNode *subexpression() const;
+};
+
 template <NodeType TYPE>
-class UnaryExpressionNode : public ExpressionNode
+class UnaryExpressionNode : public BaseUnaryExpressionNode
 {
     static_assert(TYPE == PostIncrementExpression ||
                   TYPE == PreIncrementExpression ||
@@ -628,19 +641,10 @@ class UnaryExpressionNode : public ExpressionNode
                   TYPE == BitNotExpression ||
                   TYPE == LogicalNotExpression,
                   "Invalid IncDecExpressionNode type.");
-  private:
-    ExpressionNode *subexpression_;
-
   public:
-    explicit UnaryExpressionNode(ExpressionNode *subexpression)
-      : ExpressionNode(TYPE),
-        subexpression_(subexpression)
-    {}
-
-    inline ExpressionNode *subexpression() const {
-        return subexpression_;
-    }
+    explicit inline UnaryExpressionNode(ExpressionNode *subexpression);
 };
+
 // PostIncrementExpressionNode;
 // PreIncrementExpressionNode;
 // PostDecrementExpressionNode;
@@ -666,23 +670,12 @@ class BaseBinaryExpressionNode : public ExpressionNode
   public:
     BaseBinaryExpressionNode(NodeType type,
                              ExpressionNode *lhs,
-                             ExpressionNode *rhs)
-      : ExpressionNode(type),
-        lhs_(lhs),
-        rhs_(rhs)
-    {}
+                             ExpressionNode *rhs);
 
-    inline ExpressionNode *lhs() const {
-        return lhs_;
-    }
+    ExpressionNode *lhs() const;
+    ExpressionNode *rhs() const;
 
-    inline ExpressionNode *rhs() const {
-        return rhs_;
-    }
-
-    virtual inline bool isBinaryExpression() const override {
-        return true;
-    }
+    virtual bool isBinaryExpression() const override;
 };
 
 template <NodeType TYPE>
@@ -714,9 +707,7 @@ class BinaryExpressionNode : public BaseBinaryExpressionNode
                   TYPE == CommaExpression,
                   "Invalid IncDecExpressionNode type.");
   public:
-    explicit BinaryExpressionNode(ExpressionNode *lhs, ExpressionNode *rhs)
-      : BaseBinaryExpressionNode(TYPE, lhs, rhs)
-    {}
+    explicit BinaryExpressionNode(ExpressionNode *lhs, ExpressionNode *rhs);
 };
 
 // MultiplyExpressionNode;
@@ -757,61 +748,41 @@ class ConditionalExpressionNode : public ExpressionNode
   public:
     ConditionalExpressionNode(ExpressionNode *condition,
                               ExpressionNode *trueExpression,
-                              ExpressionNode *falseExpression)
-      : ExpressionNode(ConditionalExpression),
-        condition_(condition),
-        trueExpression_(trueExpression),
-        falseExpression_(falseExpression)
-    {}
+                              ExpressionNode *falseExpression);
 
-    inline ExpressionNode *condition() const {
-        return condition_;
-    }
-
-    inline ExpressionNode *trueExpression() const {
-        return trueExpression_;
-    }
-
-    inline ExpressionNode *falseExpression() const {
-        return falseExpression_;
-    }
+    ExpressionNode *condition() const;
+    ExpressionNode *trueExpression() const;
+    ExpressionNode *falseExpression() const;
 };
 
 //
 // AssignmentExpression syntax element
 //
-class AssignmentExpressionNode : public ExpressionNode
+class BaseAssignmentExpressionNode : public ExpressionNode
 {
   protected:
-    AssignmentExpressionNode(NodeType type) : ExpressionNode(type) {}
+    ExpressionNode *lhs_;
+    ExpressionNode *rhs_;
+
+    BaseAssignmentExpressionNode(NodeType type,
+                                 ExpressionNode *lhs,
+                                 ExpressionNode *rhs);
+
+  public:
+    ExpressionNode *lhs() const;
+    ExpressionNode *rhs() const;
 };
 
 template <NodeType TYPE>
-class BaseAssignExpressionNode : public AssignmentExpressionNode
+class AssignmentExpressionNode : public BaseAssignmentExpressionNode
 {
     static_assert(IsValidAssignmentExpressionType(TYPE),
                   "Invalid AssignmentExpressionNode type.");
 
-  private:
-    ExpressionNode *lhs_;
-    ExpressionNode *rhs_;
-
   public:
-    BaseAssignExpressionNode(ExpressionNode *lhs,
-                             ExpressionNode *rhs)
-      : AssignmentExpressionNode(TYPE),
-        lhs_(lhs),
-        rhs_(rhs)
-    {}
-
-    inline ExpressionNode *lhs() const {
-        return lhs_;
-    }
-
-    inline ExpressionNode *rhs() const {
-        return rhs_;
-    }
+    inline AssignmentExpressionNode(ExpressionNode *lhs, ExpressionNode *rhs);
 };
+
 // AssignExpressionNode;
 // AddAssignExpressionNode;
 // SubtractAssignExpressionNode;
@@ -841,14 +812,9 @@ class BlockNode : public StatementNode
     SourceElementList sourceElements_;
 
   public:
-    explicit BlockNode(SourceElementList &&sourceElements)
-      : StatementNode(Block),
-        sourceElements_(sourceElements)
-    {}
+    explicit BlockNode(SourceElementList &&sourceElements);
 
-    inline const SourceElementList &sourceElements() const {
-        return sourceElements_;
-    }
+    const SourceElementList &sourceElements() const;
 };
 
 //
@@ -860,14 +826,9 @@ class VariableStatementNode : public StatementNode
     DeclarationList declarations_;
 
   public:
-    explicit VariableStatementNode(DeclarationList &&declarations)
-      : StatementNode(VariableStatement),
-        declarations_(declarations)
-    {}
+    explicit VariableStatementNode(DeclarationList &&declarations);
 
-    inline const DeclarationList &declarations() const {
-        return declarations_;
-    }
+    const DeclarationList &declarations() const;
 };
 
 //
@@ -876,7 +837,7 @@ class VariableStatementNode : public StatementNode
 class EmptyStatementNode : public StatementNode
 {
   public:
-    EmptyStatementNode() : StatementNode(EmptyStatement) {}
+    EmptyStatementNode();
 };
 
 //
@@ -888,14 +849,9 @@ class ExpressionStatementNode : public StatementNode
     ExpressionNode *expression_;
 
   public:
-    explicit ExpressionStatementNode(ExpressionNode *expression)
-      : StatementNode(ExpressionStatement),
-        expression_(expression)
-    {}
+    explicit ExpressionStatementNode(ExpressionNode *expression);
 
-    inline ExpressionNode *expression() const {
-        return expression_;
-    }
+    ExpressionNode *expression() const;
 };
 
 //
@@ -911,24 +867,11 @@ class IfStatementNode : public StatementNode
   public:
     IfStatementNode(ExpressionNode *condition,
                     StatementNode *trueBody,
-                    StatementNode *falseBody)
-      : StatementNode(IfStatement),
-        condition_(condition),
-        trueBody_(trueBody),
-        falseBody_(falseBody)
-    {}
+                    StatementNode *falseBody);
 
-    inline ExpressionNode *condition() const {
-        return condition_;
-    }
-
-    inline StatementNode *trueBody() const {
-        return trueBody_;
-    }
-
-    inline StatementNode *falseBody() const {
-        return falseBody_;
-    }
+    ExpressionNode *condition() const;
+    StatementNode *trueBody() const;
+    StatementNode *falseBody() const;
 };
 
 //
@@ -937,7 +880,7 @@ class IfStatementNode : public StatementNode
 class IterationStatementNode : public StatementNode
 {
   protected:
-    IterationStatementNode(NodeType type) : StatementNode(type) {}
+    IterationStatementNode(NodeType type);
 };
 
 //
@@ -950,20 +893,10 @@ class DoWhileStatementNode : public IterationStatementNode
     ExpressionNode *condition_;
 
   public:
-    DoWhileStatementNode(StatementNode *body,
-                         ExpressionNode *condition)
-      : IterationStatementNode(DoWhileStatement),
-        body_(body),
-        condition_(condition)
-    {}
+    DoWhileStatementNode(StatementNode *body, ExpressionNode *condition);
 
-    inline StatementNode *body() const {
-        return body_;
-    }
-
-    inline ExpressionNode *condition() const {
-        return condition_;
-    }
+    StatementNode *body() const;
+    ExpressionNode *condition() const;
 };
 
 //
@@ -976,20 +909,10 @@ class WhileStatementNode : public IterationStatementNode
     StatementNode *body_;
 
   public:
-    WhileStatementNode(ExpressionNode *condition,
-                       StatementNode *body)
-      : IterationStatementNode(WhileStatement),
-        condition_(condition),
-        body_(body)
-    {}
+    WhileStatementNode(ExpressionNode *condition, StatementNode *body);
 
-    inline ExpressionNode *condition() const {
-        return condition_;
-    }
-
-    inline StatementNode *body() const {
-        return body_;
-    }
+    ExpressionNode *condition() const;
+    StatementNode *body() const;
 };
 
 //
@@ -1007,29 +930,12 @@ class ForLoopStatementNode : public IterationStatementNode
     ForLoopStatementNode(ExpressionNode *initial,
                          ExpressionNode *condition,
                          ExpressionNode *update,
-                         StatementNode *body)
-      : IterationStatementNode(ForLoopStatement),
-        initial_(initial),
-        condition_(condition),
-        update_(update),
-        body_(body)
-    {}
+                         StatementNode *body);
 
-    inline ExpressionNode *initial() const {
-        return initial_;
-    }
-
-    inline ExpressionNode *condition() const {
-        return condition_;
-    }
-
-    inline ExpressionNode *update() const {
-        return update_;
-    }
-
-    inline StatementNode *body() const {
-        return body_;
-    }
+    ExpressionNode *initial() const;
+    ExpressionNode *condition() const;
+    ExpressionNode *update() const;
+    StatementNode *body() const;
 };
 
 //
@@ -1047,32 +953,13 @@ class ForLoopVarStatementNode : public IterationStatementNode
     ForLoopVarStatementNode(DeclarationList &&initial,
                             ExpressionNode *condition,
                             ExpressionNode *update,
-                            StatementNode *body)
-      : IterationStatementNode(ForLoopVarStatement),
-        initial_(initial),
-        condition_(condition),
-        update_(update),
-        body_(body)
-    {}
+                            StatementNode *body);
 
-    inline const DeclarationList &initial() const {
-        return initial_;
-    }
-    inline DeclarationList &initial() {
-        return initial_;
-    }
-
-    inline ExpressionNode *condition() const {
-        return condition_;
-    }
-
-    inline ExpressionNode *update() const {
-        return update_;
-    }
-
-    inline StatementNode *body() const {
-        return body_;
-    }
+    const DeclarationList &initial() const;
+    DeclarationList &initial();
+    ExpressionNode *condition() const;
+    ExpressionNode *update() const;
+    StatementNode *body() const;
 };
 
 //
@@ -1088,24 +975,11 @@ class ForInStatementNode : public IterationStatementNode
   public:
     ForInStatementNode(ExpressionNode *lhs,
                        ExpressionNode *object,
-                       StatementNode *body)
-      : IterationStatementNode(ForInStatement),
-        lhs_(lhs),
-        object_(object),
-        body_(body)
-    {}
+                       StatementNode *body);
 
-    inline ExpressionNode *lhs() const {
-        return lhs_;
-    }
-
-    inline ExpressionNode *object() const {
-        return object_;
-    }
-
-    inline StatementNode *body() const {
-        return body_;
-    }
+    ExpressionNode *lhs() const;
+    ExpressionNode *object() const;
+    StatementNode *body() const;
 };
 
 //
@@ -1121,24 +995,11 @@ class ForInVarStatementNode : public IterationStatementNode
   public:
     ForInVarStatementNode(const IdentifierNameToken &name,
                           ExpressionNode *object,
-                          StatementNode *body)
-      : IterationStatementNode(ForInVarStatement),
-        name_(name),
-        object_(object),
-        body_(body)
-    {}
+                          StatementNode *body);
 
-    inline const IdentifierNameToken &name() const {
-        return name_;
-    }
-
-    inline ExpressionNode *object() const {
-        return object_;
-    }
-
-    inline StatementNode *body() const {
-        return body_;
-    }
+    const IdentifierNameToken &name() const;
+    ExpressionNode *object() const;
+    StatementNode *body() const;
 };
 
 //
@@ -1150,19 +1011,11 @@ class ContinueStatementNode : public StatementNode
     Maybe<IdentifierNameToken> label_;
 
   public:
-    ContinueStatementNode()
-      : StatementNode(ContinueStatement),
-        label_()
-    {}
+    ContinueStatementNode();
 
-    explicit ContinueStatementNode(const IdentifierNameToken &label)
-      : StatementNode(ContinueStatement),
-        label_(label)
-    {}
+    explicit ContinueStatementNode(const IdentifierNameToken &label);
 
-    inline const Maybe<IdentifierNameToken> &label() const {
-        return label_;
-    }
+    const Maybe<IdentifierNameToken> &label() const;
 };
 
 //
@@ -1174,19 +1027,11 @@ class BreakStatementNode : public StatementNode
     Maybe<IdentifierNameToken> label_;
 
   public:
-    BreakStatementNode()
-      : StatementNode(BreakStatement),
-        label_()
-    {}
+    BreakStatementNode();
 
-    explicit BreakStatementNode(const IdentifierNameToken &label)
-      : StatementNode(BreakStatement),
-        label_(label)
-    {}
+    explicit BreakStatementNode(const IdentifierNameToken &label);
 
-    inline const Maybe<IdentifierNameToken> &label() const {
-        return label_;
-    }
+    const Maybe<IdentifierNameToken> &label() const;
 };
 
 //
@@ -1198,14 +1043,9 @@ class ReturnStatementNode : public StatementNode
     ExpressionNode *value_;
 
   public:
-    explicit ReturnStatementNode(ExpressionNode *value)
-      : StatementNode(ReturnStatement),
-        value_(value)
-    {}
+    explicit ReturnStatementNode(ExpressionNode *value);
 
-    inline ExpressionNode *value() const {
-        return value_;
-    }
+    ExpressionNode *value() const;
 };
 
 //
@@ -1218,20 +1058,10 @@ class WithStatementNode : public StatementNode
     StatementNode *body_;
 
   public:
-    WithStatementNode(ExpressionNode *value,
-                      StatementNode *body)
-      : StatementNode(WithStatement),
-        value_(value),
-        body_(body)
-    {}
+    WithStatementNode(ExpressionNode *value, StatementNode *body);
 
-    inline ExpressionNode *value() const {
-        return value_;
-    }
-
-    inline StatementNode *body() const {
-        return body_;
-    }
+    ExpressionNode *value() const;
+    StatementNode *body() const;
 };
 
 //
@@ -1247,29 +1077,12 @@ class SwitchStatementNode : public StatementNode
         StatementList statements_;
 
       public:
-        CaseClause(ExpressionNode *expression,
-                   StatementList &&statements)
-          : expression_(expression),
-            statements_(statements)
-        {}
+        CaseClause(ExpressionNode *expression, StatementList &&statements);
+        CaseClause(const CaseClause &other);
+        CaseClause(CaseClause &&other);
 
-        CaseClause(const CaseClause &other)
-          : expression_(other.expression_),
-            statements_(other.statements_)
-        {}
-
-        CaseClause(CaseClause &&other)
-          : expression_(other.expression_),
-            statements_(std::move(other.statements_))
-        {}
-
-        inline ExpressionNode *expression() const {
-            return expression_;
-        }
-
-        inline const StatementList &statements() const {
-            return statements_;
-        }
+        ExpressionNode *expression() const;
+        const StatementList &statements() const;
     };
     typedef List<CaseClause> CaseClauseList;
 
@@ -1278,20 +1091,10 @@ class SwitchStatementNode : public StatementNode
     CaseClauseList caseClauses_;
 
   public:
-    SwitchStatementNode(ExpressionNode *value,
-                        CaseClauseList &&caseClauses)
-      : StatementNode(SwitchStatement),
-        value_(value),
-        caseClauses_(caseClauses)
-    {}
+    SwitchStatementNode(ExpressionNode *value, CaseClauseList &&caseClauses);
 
-    inline ExpressionNode *value() const {
-        return value_;
-    }
-
-    inline const CaseClauseList &caseClauses() const {
-        return caseClauses_;
-    }
+    ExpressionNode *value() const;
+    const CaseClauseList &caseClauses() const;
 };
 
 //
@@ -1305,19 +1108,10 @@ class LabelledStatementNode : public StatementNode
 
   public:
     LabelledStatementNode(const IdentifierNameToken &label,
-                          StatementNode *statement)
-      : StatementNode(LabelledStatement),
-        label_(label),
-        statement_(statement)
-    {}
+                          StatementNode *statement);
 
-    inline const IdentifierNameToken &label() const {
-        return label_;
-    }
-
-    inline StatementNode *statement() const {
-        return statement_;
-    }
+    const IdentifierNameToken &label() const;
+    StatementNode *statement() const;
 };
 
 //
@@ -1329,14 +1123,9 @@ class ThrowStatementNode : public StatementNode
     ExpressionNode *value_;
 
   public:
-    explicit ThrowStatementNode(ExpressionNode *value)
-      : StatementNode(ThrowStatement),
-        value_(value)
-    {}
+    explicit ThrowStatementNode(ExpressionNode *value);
 
-    inline ExpressionNode *value() const {
-        return value_;
-    }
+    ExpressionNode *value() const;
 };
 
 
@@ -1346,7 +1135,7 @@ class ThrowStatementNode : public StatementNode
 class TryStatementNode : public StatementNode
 {
   protected:
-    TryStatementNode(NodeType type) : StatementNode(type) {}
+    TryStatementNode(NodeType type);
 };
 
 
@@ -1363,24 +1152,11 @@ class TryCatchStatementNode : public TryStatementNode
   public:
     TryCatchStatementNode(BlockNode *tryBlock,
                           const IdentifierNameToken &catchName,
-                          BlockNode *catchBlock)
-      : TryStatementNode(TryCatchStatement),
-        tryBlock_(tryBlock),
-        catchName_(catchName),
-        catchBlock_(catchBlock)
-    {}
+                          BlockNode *catchBlock);
 
-    inline BlockNode *tryBlock() const {
-        return tryBlock_;
-    }
-
-    inline const IdentifierNameToken &catchName() const {
-        return catchName_;
-    }
-
-    inline BlockNode *catchBlock() const {
-        return catchBlock_;
-    }
+    BlockNode *tryBlock() const;
+    const IdentifierNameToken &catchName() const;
+    BlockNode *catchBlock() const;
 };
 
 //
@@ -1393,20 +1169,10 @@ class TryFinallyStatementNode : public TryStatementNode
     BlockNode *finallyBlock_;
 
   public:
-    TryFinallyStatementNode(BlockNode *tryBlock,
-                            BlockNode *finallyBlock)
-      : TryStatementNode(TryFinallyStatement),
-        tryBlock_(tryBlock),
-        finallyBlock_(finallyBlock)
-    {}
+    TryFinallyStatementNode(BlockNode *tryBlock, BlockNode *finallyBlock);
 
-    inline BlockNode *tryBlock() const {
-        return tryBlock_;
-    }
-
-    inline BlockNode *finallyBlock() const {
-        return finallyBlock_;
-    }
+    BlockNode *tryBlock() const;
+    BlockNode *finallyBlock() const;
 };
 
 //
@@ -1424,29 +1190,12 @@ class TryCatchFinallyStatementNode : public TryStatementNode
     TryCatchFinallyStatementNode(BlockNode *tryBlock,
                                  const IdentifierNameToken &catchName,
                                  BlockNode *catchBlock,
-                                 BlockNode *finallyBlock)
-      : TryStatementNode(TryCatchFinallyStatement),
-        tryBlock_(tryBlock),
-        catchName_(catchName),
-        catchBlock_(catchBlock),
-        finallyBlock_(finallyBlock)
-    {}
+                                 BlockNode *finallyBlock);
 
-    inline BlockNode *tryBlock() const {
-        return tryBlock_;
-    }
-
-    inline const IdentifierNameToken &catchName() const {
-        return catchName_;
-    }
-
-    inline BlockNode *catchBlock() const {
-        return catchBlock_;
-    }
-
-    inline BlockNode *finallyBlock() const {
-        return finallyBlock_;
-    }
+    BlockNode *tryBlock() const;
+    const IdentifierNameToken &catchName() const;
+    BlockNode *catchBlock() const;
+    BlockNode *finallyBlock() const;
 };
 
 //
@@ -1455,9 +1204,7 @@ class TryCatchFinallyStatementNode : public TryStatementNode
 class DebuggerStatementNode : public StatementNode
 {
   public:
-    explicit DebuggerStatementNode()
-      : StatementNode(DebuggerStatement)
-    {}
+    explicit DebuggerStatementNode();
 };
 
 /////////////////////////////
@@ -1475,16 +1222,9 @@ class FunctionDeclarationNode : public SourceElementNode
     FunctionExpressionNode *func_;
 
   public:
-    FunctionDeclarationNode(FunctionExpressionNode *func)
-      : SourceElementNode(FunctionDeclaration),
-        func_(func)
-    {
-        WH_ASSERT(func->name());
-    }
+    FunctionDeclarationNode(FunctionExpressionNode *func);
 
-    inline FunctionExpressionNode *func() const {
-        return func_;
-    }
+    FunctionExpressionNode *func() const;
 };
 
 //
@@ -1496,61 +1236,10 @@ class ProgramNode : public BaseNode
     SourceElementList sourceElements_;
 
   public:
-    explicit ProgramNode(SourceElementList &&sourceElements)
-      : BaseNode(Program),
-        sourceElements_(sourceElements)
-    {}
+    explicit ProgramNode(SourceElementList &&sourceElements);
 
-    inline const SourceElementList &sourceElements() const {
-        return sourceElements_;
-    }
+    const SourceElementList &sourceElements() const;
 };
-
-
-/////////////////////////////
-//                         //
-//  BaseNode Cating Funcs  //
-//                         //
-/////////////////////////////
-
-/*
-inline bool IsNamedFunction(ExpressionNode *node)
-{
-    if (!node->isFunctionExpression())
-        return false;
-    return node->toFunctionExpression()->name() ? true : false;
-}
-
-inline FunctionExpressionNode *StatementToNamedFunction(StatementNode *node)
-{
-    WH_ASSERT(node->isExpressionStatement());
-
-    ExpressionStatementNode *exprStmt = node->toExpressionStatement();
-    WH_ASSERT(exprStmt->expression()->isFunctionExpression());
-
-    FunctionExpressionNode *fun =
-        exprStmt->expression()->toFunctionExpression();
-    WH_ASSERT(fun->name());
-
-    return fun;
-}
-
-inline bool IsLeftHandSideExpression(BaseNode *node)
-{
-    if (node->isIdentifier() || node->isGetElementExpression() ||
-        node->isGetPropertyExpression())
-    {
-        return true;
-    }
-
-    if (node->isParenthesizedExpression()) {
-        return IsLeftHandSideExpression(
-                    node->toParenthesizedExpression()->subexpression());
-    }
-
-    return false;
-}
-*/
 
 
 } // namespace AST

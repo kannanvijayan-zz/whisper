@@ -1,5 +1,6 @@
 
 #include "spew.hpp"
+#include "parser/syntax_tree_inlines.hpp"
 #include "parser/parser.hpp"
 #include "parser/parser_inlines.hpp"
 

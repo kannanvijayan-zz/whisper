@@ -7,6 +7,38 @@
 namespace Whisper {
 namespace AST {
 
+//
+// UnaryExpressionNode
+//
+
+template <NodeType TYPE>
+inline
+UnaryExpressionNode<TYPE>::UnaryExpressionNode(ExpressionNode *subexpression)
+  : BaseUnaryExpressionNode(TYPE, subexpression)
+{}
+
+//
+// BinaryExpressionNode
+//
+
+template <NodeType TYPE>
+inline
+BinaryExpressionNode<TYPE>::BinaryExpressionNode(
+        ExpressionNode *lhs, ExpressionNode *rhs)
+  : BaseBinaryExpressionNode(TYPE, lhs, rhs)
+{}
+
+//
+// AssignExpressionNode
+//
+
+template <NodeType TYPE>
+inline
+AssignmentExpressionNode<TYPE>::AssignmentExpressionNode(
+        ExpressionNode *lhs, ExpressionNode *rhs)
+  : BaseAssignmentExpressionNode(TYPE, lhs, rhs)
+{}
+
 
 ////////////////////////////
 //                        //

@@ -493,7 +493,7 @@ ParenthesizedExpressionNode::subexpression() const
 }
 
 //
-// FunctionExpression
+// FunctionExpressionNode
 //
 
 FunctionExpressionNode::FunctionExpressionNode(
@@ -534,7 +534,7 @@ FunctionExpressionNode::functionBody() const
 }
 
 //
-// GetElementExpression
+// GetElementExpressionNode
 //
 
 GetElementExpressionNode::GetElementExpressionNode(
@@ -557,7 +557,7 @@ GetElementExpressionNode::element() const
 }
 
 //
-// GetPropertyExpression
+// GetPropertyExpressionNode
 //
 
 GetPropertyExpressionNode::GetPropertyExpressionNode(
@@ -578,7 +578,7 @@ const IdentifierNameToken &GetPropertyExpressionNode::property() const
 }
 
 //
-// NewExpression
+// NewExpressionNode
 //
 
 NewExpressionNode::NewExpressionNode(
@@ -601,7 +601,7 @@ NewExpressionNode::arguments() const
 }
 
 //
-// CallExpression
+// CallExpressionNode
 //
 
 CallExpressionNode::CallExpressionNode(
@@ -622,6 +622,696 @@ CallExpressionNode::arguments() const
 {
     return arguments_;
 }
+
+//
+// BaseUnaryExpressionNode
+//
+
+BaseUnaryExpressionNode::BaseUnaryExpressionNode(
+        NodeType type, ExpressionNode *subexpression)
+  : ExpressionNode(type),
+    subexpression_(subexpression)
+{}
+
+ExpressionNode *
+BaseUnaryExpressionNode::subexpression() const
+{
+    return subexpression_;
+}
+
+//
+// BaseBinaryExpressionNode
+//
+
+BaseBinaryExpressionNode::BaseBinaryExpressionNode(NodeType type,
+                         ExpressionNode *lhs,
+                         ExpressionNode *rhs)
+  : ExpressionNode(type),
+    lhs_(lhs),
+    rhs_(rhs)
+{}
+
+ExpressionNode *
+BaseBinaryExpressionNode::lhs() const
+{
+    return lhs_;
+}
+
+ExpressionNode *
+BaseBinaryExpressionNode::rhs() const
+{
+    return rhs_;
+}
+
+bool
+BaseBinaryExpressionNode::isBinaryExpression() const
+{
+    return true;
+}
+
+//
+// ConditionalExpressionNode
+//
+
+ConditionalExpressionNode::ConditionalExpressionNode(
+        ExpressionNode *condition,
+        ExpressionNode *trueExpression,
+        ExpressionNode *falseExpression)
+  : ExpressionNode(ConditionalExpression),
+    condition_(condition),
+    trueExpression_(trueExpression),
+    falseExpression_(falseExpression)
+{}
+
+ExpressionNode *
+ConditionalExpressionNode::condition() const
+{
+    return condition_;
+}
+
+ExpressionNode *
+ConditionalExpressionNode::trueExpression() const
+{
+    return trueExpression_;
+}
+
+ExpressionNode *
+ConditionalExpressionNode::falseExpression() const
+{
+    return falseExpression_;
+}
+
+//
+// BaseAssignmentExpressionNode
+//
+
+BaseAssignmentExpressionNode::BaseAssignmentExpressionNode(
+        NodeType type, ExpressionNode *lhs, ExpressionNode *rhs)
+  : ExpressionNode(type),
+    lhs_(lhs),
+    rhs_(rhs)
+{}
+
+ExpressionNode *
+BaseAssignmentExpressionNode::lhs() const
+{
+    return lhs_;
+}
+
+ExpressionNode *
+BaseAssignmentExpressionNode::rhs() const
+{
+    return rhs_;
+}
+
+//
+// BlockNode
+//
+
+BlockNode::BlockNode(SourceElementList &&sourceElements)
+  : StatementNode(Block),
+    sourceElements_(sourceElements)
+{}
+
+const SourceElementList &
+BlockNode::sourceElements() const
+{
+    return sourceElements_;
+}
+
+//
+// VariableStatementNode
+//
+
+VariableStatementNode::VariableStatementNode(DeclarationList &&declarations)
+  : StatementNode(VariableStatement),
+    declarations_(declarations)
+{}
+
+const DeclarationList &
+VariableStatementNode::declarations() const
+{
+    return declarations_;
+}
+
+//
+// EmptyStatementNode
+//
+
+EmptyStatementNode::EmptyStatementNode() : StatementNode(EmptyStatement) {}
+
+//
+// ExpressionStatementNode
+//
+
+ExpressionStatementNode::ExpressionStatementNode(ExpressionNode *expression)
+  : StatementNode(ExpressionStatement),
+    expression_(expression)
+{}
+
+ExpressionNode *
+ExpressionStatementNode::expression() const
+{
+    return expression_;
+}
+
+//
+// IfStatementNode
+//
+
+IfStatementNode::IfStatementNode(ExpressionNode *condition,
+                                 StatementNode *trueBody,
+                                 StatementNode *falseBody)
+  : StatementNode(IfStatement),
+    condition_(condition),
+    trueBody_(trueBody),
+    falseBody_(falseBody)
+{}
+
+ExpressionNode *
+IfStatementNode::condition() const
+{
+    return condition_;
+}
+
+StatementNode *
+IfStatementNode::trueBody() const
+{
+    return trueBody_;
+}
+
+StatementNode *
+IfStatementNode::falseBody() const
+{
+    return falseBody_;
+}
+
+//
+// IterationStatementNode
+//
+
+IterationStatementNode::IterationStatementNode(NodeType type)
+  : StatementNode(type)
+{}
+
+//
+// DoWhileStatementNode
+//
+
+DoWhileStatementNode::DoWhileStatementNode(
+        StatementNode *body, ExpressionNode *condition)
+  : IterationStatementNode(DoWhileStatement),
+    body_(body),
+    condition_(condition)
+{}
+
+StatementNode *
+DoWhileStatementNode::body() const
+{
+    return body_;
+}
+
+ExpressionNode *
+DoWhileStatementNode::condition() const
+{
+    return condition_;
+}
+
+//
+// WhileStatementNode
+//
+
+WhileStatementNode::WhileStatementNode(
+        ExpressionNode *condition, StatementNode *body)
+  : IterationStatementNode(WhileStatement),
+    condition_(condition),
+    body_(body)
+{}
+
+ExpressionNode *
+WhileStatementNode::condition() const
+{
+    return condition_;
+}
+
+StatementNode *
+WhileStatementNode::body() const
+{
+    return body_;
+}
+
+//
+// ForLoopStatementNode
+//
+
+ForLoopStatementNode::ForLoopStatementNode(
+        ExpressionNode *initial, ExpressionNode *condition,
+        ExpressionNode *update, StatementNode *body)
+  : IterationStatementNode(ForLoopStatement),
+    initial_(initial),
+    condition_(condition),
+    update_(update),
+    body_(body)
+{}
+
+ExpressionNode *
+ForLoopStatementNode::initial() const
+{
+    return initial_;
+}
+
+ExpressionNode *
+ForLoopStatementNode::condition() const
+{
+    return condition_;
+}
+
+ExpressionNode *
+ForLoopStatementNode::update() const
+{
+    return update_;
+}
+
+StatementNode *
+ForLoopStatementNode::body() const
+{
+    return body_;
+}
+
+//
+// ForLoopVarStatementNode
+//
+
+ForLoopVarStatementNode::ForLoopVarStatementNode(
+        DeclarationList &&initial, ExpressionNode *condition,
+        ExpressionNode *update, StatementNode *body)
+  : IterationStatementNode(ForLoopVarStatement),
+    initial_(initial),
+    condition_(condition),
+    update_(update),
+    body_(body)
+{}
+
+const DeclarationList &
+ForLoopVarStatementNode::initial() const
+{
+    return initial_;
+}
+
+DeclarationList &
+ForLoopVarStatementNode::initial()
+{
+    return initial_;
+}
+
+ExpressionNode *
+ForLoopVarStatementNode::condition() const
+{
+    return condition_;
+}
+
+ExpressionNode *
+ForLoopVarStatementNode::update() const
+{
+    return update_;
+}
+
+StatementNode *
+ForLoopVarStatementNode::body() const
+{
+    return body_;
+}
+
+//
+// ForInStatementNode
+//
+
+ForInStatementNode::ForInStatementNode(
+        ExpressionNode *lhs, ExpressionNode *object, StatementNode *body)
+  : IterationStatementNode(ForInStatement),
+    lhs_(lhs),
+    object_(object),
+    body_(body)
+{}
+
+ExpressionNode *
+ForInStatementNode::lhs() const
+{
+    return lhs_;
+}
+
+ExpressionNode *
+ForInStatementNode::object() const
+{
+    return object_;
+}
+
+StatementNode *
+ForInStatementNode::body() const
+{
+    return body_;
+}
+
+//
+// ForInVarStatementNode
+//
+
+ForInVarStatementNode::ForInVarStatementNode(
+        const IdentifierNameToken &name, ExpressionNode *object,
+        StatementNode *body)
+  : IterationStatementNode(ForInVarStatement),
+    name_(name),
+    object_(object),
+    body_(body)
+{}
+
+const IdentifierNameToken &
+ForInVarStatementNode::name() const
+{
+    return name_;
+}
+
+ExpressionNode *
+ForInVarStatementNode::object() const
+{
+    return object_;
+}
+
+StatementNode *
+ForInVarStatementNode::body() const
+{
+    return body_;
+}
+
+//
+// ContinueStatementNode
+//
+
+ContinueStatementNode::ContinueStatementNode()
+  : StatementNode(ContinueStatement),
+    label_()
+{}
+
+ContinueStatementNode::ContinueStatementNode(const IdentifierNameToken &label)
+  : StatementNode(ContinueStatement),
+    label_(label)
+{}
+
+const Maybe<IdentifierNameToken> &
+ContinueStatementNode::label() const
+{
+    return label_;
+}
+
+//
+// BreakStatementNode
+//
+
+BreakStatementNode::BreakStatementNode()
+  : StatementNode(BreakStatement),
+    label_()
+{}
+
+BreakStatementNode::BreakStatementNode(const IdentifierNameToken &label)
+  : StatementNode(BreakStatement),
+    label_(label)
+{}
+
+const Maybe<IdentifierNameToken> &
+BreakStatementNode::label() const
+{
+    return label_;
+}
+
+//
+// ReturnStatementNode
+//
+
+ReturnStatementNode::ReturnStatementNode(ExpressionNode *value)
+  : StatementNode(ReturnStatement),
+    value_(value)
+{}
+
+ExpressionNode *
+ReturnStatementNode::value() const
+{
+    return value_;
+}
+
+//
+// WithStatementNode
+//
+
+WithStatementNode::WithStatementNode(
+        ExpressionNode *value, StatementNode *body)
+  : StatementNode(WithStatement),
+    value_(value),
+    body_(body)
+{}
+
+ExpressionNode *
+WithStatementNode::value() const
+{
+    return value_;
+}
+
+StatementNode *
+WithStatementNode::body() const
+{
+    return body_;
+}
+
+//
+// SwitchStatementNode
+//
+
+SwitchStatementNode::CaseClause::CaseClause(
+        ExpressionNode *expression, StatementList &&statements)
+  : expression_(expression),
+    statements_(statements)
+{}
+
+SwitchStatementNode::CaseClause::CaseClause(const CaseClause &other)
+  : expression_(other.expression_),
+    statements_(other.statements_)
+{}
+
+SwitchStatementNode::CaseClause::CaseClause(CaseClause &&other)
+  : expression_(other.expression_),
+    statements_(std::move(other.statements_))
+{}
+
+ExpressionNode *
+SwitchStatementNode::CaseClause::expression() const
+{
+    return expression_;
+}
+
+const StatementList &
+SwitchStatementNode::CaseClause::statements() const
+{
+    return statements_;
+}
+
+SwitchStatementNode::SwitchStatementNode(
+        ExpressionNode *value, CaseClauseList &&caseClauses)
+  : StatementNode(SwitchStatement),
+    value_(value),
+    caseClauses_(caseClauses)
+{}
+
+ExpressionNode *
+SwitchStatementNode::value() const
+{
+    return value_;
+}
+
+const SwitchStatementNode::CaseClauseList &
+SwitchStatementNode::caseClauses() const
+{
+    return caseClauses_;
+}
+
+//
+// LabelledStatementNode
+//
+
+LabelledStatementNode::LabelledStatementNode(
+        const IdentifierNameToken &label, StatementNode *statement)
+  : StatementNode(LabelledStatement),
+    label_(label),
+    statement_(statement)
+{}
+
+const IdentifierNameToken &
+LabelledStatementNode::label() const
+{
+    return label_;
+}
+
+StatementNode *
+LabelledStatementNode::statement() const
+{
+    return statement_;
+}
+
+//
+// ThrowStatementNode
+//
+
+ThrowStatementNode::ThrowStatementNode(ExpressionNode *value)
+  : StatementNode(ThrowStatement),
+    value_(value)
+{}
+
+ExpressionNode *
+ThrowStatementNode::value() const
+{
+    return value_;
+}
+
+
+//
+// TryStatementNode;
+//
+
+TryStatementNode::TryStatementNode(NodeType type)
+  : StatementNode(type)
+{}
+
+
+//
+// TryCatchStatementNode
+//
+
+TryCatchStatementNode::TryCatchStatementNode(
+        BlockNode *tryBlock, const IdentifierNameToken &catchName,
+        BlockNode *catchBlock)
+  : TryStatementNode(TryCatchStatement),
+    tryBlock_(tryBlock),
+    catchName_(catchName),
+    catchBlock_(catchBlock)
+{}
+
+BlockNode *
+TryCatchStatementNode::tryBlock() const
+{
+    return tryBlock_;
+}
+
+const IdentifierNameToken &
+TryCatchStatementNode::catchName() const
+{
+    return catchName_;
+}
+
+BlockNode *
+TryCatchStatementNode::catchBlock() const
+{
+    return catchBlock_;
+}
+
+//
+// TryFinallyStatementNode
+//
+
+TryFinallyStatementNode::TryFinallyStatementNode(
+        BlockNode *tryBlock, BlockNode *finallyBlock)
+  : TryStatementNode(TryFinallyStatement),
+    tryBlock_(tryBlock),
+    finallyBlock_(finallyBlock)
+{}
+
+BlockNode *
+TryFinallyStatementNode::tryBlock() const
+{
+    return tryBlock_;
+}
+
+BlockNode *
+TryFinallyStatementNode::finallyBlock() const
+{
+    return finallyBlock_;
+}
+
+//
+// TryCatchFinallyStatementNode
+//
+
+TryCatchFinallyStatementNode::TryCatchFinallyStatementNode(
+        BlockNode *tryBlock, const IdentifierNameToken &catchName,
+        BlockNode *catchBlock, BlockNode *finallyBlock)
+  : TryStatementNode(TryCatchFinallyStatement),
+    tryBlock_(tryBlock),
+    catchName_(catchName),
+    catchBlock_(catchBlock),
+    finallyBlock_(finallyBlock)
+{}
+
+BlockNode *
+TryCatchFinallyStatementNode::tryBlock() const
+{
+    return tryBlock_;
+}
+
+const IdentifierNameToken &
+TryCatchFinallyStatementNode::catchName() const
+{
+    return catchName_;
+}
+
+BlockNode *
+TryCatchFinallyStatementNode::catchBlock() const
+{
+    return catchBlock_;
+}
+
+BlockNode *
+TryCatchFinallyStatementNode::finallyBlock() const
+{
+    return finallyBlock_;
+}
+
+//
+// DebuggerStatementNode
+//
+
+DebuggerStatementNode::DebuggerStatementNode()
+  : StatementNode(DebuggerStatement)
+{}
+
+//
+// FunctionDeclarationNode
+//
+
+FunctionDeclarationNode::FunctionDeclarationNode(FunctionExpressionNode *func)
+  : SourceElementNode(FunctionDeclaration),
+    func_(func)
+{
+    WH_ASSERT(func->name());
+}
+
+FunctionExpressionNode *
+FunctionDeclarationNode::func() const
+{
+    return func_;
+}
+
+//
+// ProgramNode
+//
+
+ProgramNode::ProgramNode(SourceElementList &&sourceElements)
+  : BaseNode(Program),
+    sourceElements_(sourceElements)
+{}
+
+const SourceElementList &
+ProgramNode::sourceElements() const
+{
+    return sourceElements_;
+}
+
 
 
 } // namespace AST
