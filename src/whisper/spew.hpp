@@ -13,7 +13,8 @@ namespace Whisper {
     _(Debug)        \
     _(Parser)       \
     _(Memory)       \
-    _(Slab)
+    _(Slab)         \
+    _(Bytecode)
 
 enum class SpewChannel
 {
@@ -74,6 +75,10 @@ inline void InitializeSpew() {}
 #define SpewSlabNote(...)
 #define SpewSlabWarn(...)
 #define SpewSlabError(...)
+
+#define SpewBytecodeNote(...)
+#define SpewBytecodeWarn(...)
+#define SpewBytecodeError(...)
 
 
 #endif // defined(ENABLE_SPEW)

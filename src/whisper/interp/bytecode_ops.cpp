@@ -223,6 +223,7 @@ InitializeOpcodeInfo()
                      static_cast<uint8_t>(Opcode_Sec0::op));
     WHISPER_BYTECODE_SEC0_OPS(INIT_)
 #undef INIT_
+    OPCODE_TRAITS_INITIALIZED = true;
 }
 
 bool

@@ -206,6 +206,10 @@ class BaseNode
         return type_;
     }
 
+    inline const char *typeString() const {
+        return NodeTypeString(type_);
+    }
+
 #define METHODS_(node) \
     inline bool is##node() const { \
         return type_ == node; \

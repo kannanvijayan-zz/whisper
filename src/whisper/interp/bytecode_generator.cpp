@@ -1,6 +1,7 @@
 
 #include "interp/bytecode_generator.hpp"
 
+#include "spew.hpp"
 #include "runtime_inlines.hpp"
 #include "rooting_inlines.hpp"
 #include "vm/heap_thing_inlines.hpp"
@@ -45,7 +46,9 @@ BytecodeGenerator::generateBytecode()
         return nullptr;
     }
 
-    WH_ASSERT(bytecodeSize_ > 0);
+    WH_ASSERT(currentBytecodeSize_ > 0);
+    bytecodeSize_ = currentBytecodeSize_;
+    currentBytecodeSize_ = 0;
 
     // Bytecode scanning worked out.  Allocate a bytecode object.
     bytecode_ = cx_->create<VM::Bytecode>(true, bytecodeSize_);
@@ -71,6 +74,7 @@ BytecodeGenerator::generate()
             continue;
         }
 
+        SpewBytecodeError("Cannot handle syntax node: %s", elem->typeString());
         emitError("Cannot handle this syntax node yet.");
     }
 }
@@ -111,6 +115,9 @@ BytecodeGenerator::generateExpression(AST::ExpressionNode *expr,
 
         // Now generate the binary expression.
         emitBinaryOp(binExpr, lhsLocation, rhsLocation, outputLocation);
+    } else {
+        SpewBytecodeError("Cannot handle expr node: %s", expr->typeString());
+        emitError("Cannot handle expression");
     }
 }
 
@@ -358,7 +365,7 @@ BytecodeGenerator::emitIndexedOperand(OperandSpace space, uint32_t idx)
 void
 BytecodeGenerator::emitByte(uint8_t byte)
 {
-    WH_ASSERT(currentBytecodeSize_ < bytecodeSize_);
+    WH_ASSERT_IF(bytecode_, currentBytecodeSize_ < bytecodeSize_);
 
     if (bytecode_)
         bytecode_->writableData()[currentBytecodeSize_] = byte;

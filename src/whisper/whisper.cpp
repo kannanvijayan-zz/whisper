@@ -21,8 +21,10 @@
 #include "vm/property_descriptor.hpp"
 
 #include "vm/tuple.hpp"
-//#include "vm/shape_tree.hpp"
+#include "vm/shape_tree.hpp"
 #include "vm/class.hpp"
+
+#include "interp/bytecode_generator.hpp"
 
 using namespace Whisper;
 
@@ -40,6 +42,7 @@ int main(int argc, char **argv) {
     std::cout << "Whisper says hello." << std::endl;
 
     InitializeSpew();
+    Interp::InitializeOpcodeInfo();
 
     // Open input file.
     if (argc <= 1) {
@@ -90,6 +93,21 @@ int main(int argc, char **argv) {
     // Create a run context for execution.
     RunContext cx = thrcx->makeRunContext();
     cx.makeActive();
+
+    // Create a bytecode generator for the script.
+    Interp::BytecodeGenerator bcgen(&cx, wrappedAllocator, program, false);
+    VM::Bytecode *bc = bcgen.generateBytecode();
+    if (bcgen.hasError()) {
+        std::cerr << "Codgen error: " << bcgen.error() << "!" << std::endl;;
+        return 1;
+    }
+
+    WH_ASSERT(bc != nullptr);
+    const uint8_t *bcdata = bc->data();
+    std::cerr << "Bytecode length: " << bc->length() << std::endl;
+    for (uint32_t i = 0; i < bc->length(); i++) {
+        std::cerr << "Bytecode: " << (int)bcdata[i] << std::endl;
+    }
 
     return 0;
 }
