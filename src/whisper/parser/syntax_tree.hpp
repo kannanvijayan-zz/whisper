@@ -442,7 +442,7 @@ class NumericLiteralNode : public LiteralExpressionNode
         annot_(nullptr)
     {}
 
-    inline const NumericLiteralToken value() const {
+    inline const NumericLiteralToken &value() const {
         return value_;
     }
 
@@ -470,7 +470,7 @@ class StringLiteralNode : public LiteralExpressionNode
         value_(value)
     {}
 
-    inline const StringLiteralToken value() const {
+    inline const StringLiteralToken &value() const {
         return value_;
     }
 };
@@ -490,7 +490,7 @@ class RegularExpressionLiteralNode : public LiteralExpressionNode
         value_(value)
     {}
 
-    inline const RegularExpressionLiteralToken value() const {
+    inline const RegularExpressionLiteralToken &value() const {
         return value_;
     }
 };

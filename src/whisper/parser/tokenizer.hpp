@@ -65,8 +65,15 @@ class Token
 
     static const char *TypeString(Type type);
 
+    // The flags enum allows annotating a token with
+    // particular flags.  Different flags may use the same
+    // bits, but any two flags which may be used together
+    // must use different bits.
+    constexpr static uint16_t Numeric_Double = 0x0001u;
+
   protected:
     Type type_ = INVALID;
+    uint16_t flags_ = 0;
     uint32_t offset_ = 0;
     uint32_t length_ = 0;
     uint32_t startLine_ = 0;
@@ -87,10 +94,19 @@ class Token
   public:
     Token() : debug_used_(true), debug_pushedBack_(false) {}
 
+    Token(Type type, uint16_t flags, uint32_t offset, uint32_t length,
+          uint32_t startLine, uint32_t startLineOffset,
+          uint32_t endLine, uint32_t endLineOffset)
+      : type_(type), flags_(flags), offset_(offset), length_(length),
+        startLine_(startLine), startLineOffset_(startLineOffset),
+        endLine_(endLine), endLineOffset_(endLineOffset),
+        debug_used_(false), debug_pushedBack_(false)
+    {}
+
     Token(Type type, uint32_t offset, uint32_t length,
           uint32_t startLine, uint32_t startLineOffset,
           uint32_t endLine, uint32_t endLineOffset)
-      : type_(type), offset_(offset), length_(length),
+      : type_(type), flags_(0), offset_(offset), length_(length),
         startLine_(startLine), startLineOffset_(startLineOffset),
         endLine_(endLine), endLineOffset_(endLineOffset),
         debug_used_(false), debug_pushedBack_(false)
@@ -137,6 +153,14 @@ class Token
     inline Type type() const {
         return type_;
     }
+
+    inline uint16_t flags() const {
+        return flags_;
+    }
+    inline bool hasFlag(uint16_t flag) const {
+        return flags_ & flag;
+    }
+
     inline const char *typeString() const {
         return TypeString(type_);
     }
@@ -417,7 +441,10 @@ class Tokenizer
     void consumeStringEscapeSequence();
 
     // Emit methods.
-    const Token &emitToken(Token::Type type);
+    const Token &emitToken(Token::Type type, uint16_t flags);
+    const Token &emitToken(Token::Type type) {
+        return emitToken(type, 0);
+    }
     inline const Token &emitIdentifierName() {
         emitToken(Token::IdentifierName);
         tok_.setMaybeKeyword(true);

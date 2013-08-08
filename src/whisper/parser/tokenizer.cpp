@@ -898,7 +898,7 @@ Tokenizer::readNumericLiteralFraction()
         unreadChar(ch);
         break;
     }
-    return emitToken(Token::NumericLiteral);
+    return emitToken(Token::NumericLiteral, Token::Numeric_Double);
 }
 
 const Token &
@@ -923,7 +923,7 @@ Tokenizer::readNumericLiteralExponent()
         unreadChar(ch);
         break;
     }
-    return emitToken(Token::NumericLiteral);
+    return emitToken(Token::NumericLiteral, Token::Numeric_Double);
 }
 
 const Token &
@@ -1004,14 +1004,14 @@ Tokenizer::consumeStringEscapeSequence()
 }
 
 const Token &
-Tokenizer::emitToken(Token::Type type)
+Tokenizer::emitToken(Token::Type type, uint16_t flags)
 {
     WH_ASSERT(Token::IsValidType(type));
 
     // Previously emitted token must have been used.
     WH_ASSERT(tok_.debug_isUsed());
 
-    tok_ = Token(type,
+    tok_ = Token(type, flags,
                  stream_.positionOf(tokStart_),
                  stream_.cursor() - tokStart_,
                  tokStartLine_, tokStartLineOffset_,
