@@ -13,6 +13,33 @@ namespace AST {
 //
 class NumericLiteralAnnotation;
 
+//
+// Mixin class for syntax tree nodes which are annotated.
+//
+template <typename Annot>
+class Annotated
+{
+  protected:
+    Annot *annot_ = nullptr;
+
+  public:
+    inline Annotated() {}
+
+    inline bool hasAnnotation() const {
+        return annot_ != nullptr;
+    }
+
+    inline Annot *annotation() const {
+        WH_ASSERT(hasAnnotation());
+        return annot_;
+    }
+
+    inline void setAnnotation(Annot *annot) {
+        WH_ASSERT(!annot_);
+        annot_ = annot;
+    }
+};
+
 
 //
 // The syntax nodes are used to build a syntax tree of parsed script
@@ -429,30 +456,20 @@ class BooleanLiteralNode : public LiteralExpressionNode
 //
 // NumericLiteralNode syntax element
 //
-class NumericLiteralNode : public LiteralExpressionNode
+class NumericLiteralNode : public LiteralExpressionNode,
+                           public Annotated<NumericLiteralAnnotation>
 {
   private:
     NumericLiteralToken value_;
-    NumericLiteralAnnotation *annot_;
 
   public:
     explicit inline NumericLiteralNode(const NumericLiteralToken &value)
       : LiteralExpressionNode(NumericLiteral),
-        value_(value),
-        annot_(nullptr)
+        value_(value)
     {}
 
     inline const NumericLiteralToken &value() const {
         return value_;
-    }
-
-    inline NumericLiteralAnnotation *annotation() const {
-        return annot_;
-    }
-
-    inline void setAnnotation(NumericLiteralAnnotation *annot) {
-        WH_ASSERT(!annot_);
-        annot_ = annot;
     }
 };
 

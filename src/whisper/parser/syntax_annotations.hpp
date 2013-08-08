@@ -81,39 +81,39 @@ class NumericLiteralAnnotation
 {
   friend class SyntaxAnnotator;
   private:
-    bool isInt_;
+    bool isInt32_;
     union {
-        int32_t intVal_;
+        int32_t int32Val_;
         double doubleVal_;
     };
 
     NumericLiteralAnnotation(int32_t ival)
-      : isInt_(true)
+      : isInt32_(true)
     {
-        intVal_ = ival;
+        int32Val_ = ival;
     }
 
     NumericLiteralAnnotation(double dval)
-      : isInt_(false)
+      : isInt32_(false)
     {
         doubleVal_ = dval;
     }
 
   public:
-    bool isInt() const {
-        return isInt_;
+    bool isInt32() const {
+        return isInt32_;
     }
 
     bool isDouble() const {
-        return !isInt_;
+        return !isInt32_;
     }
 
-    int32_t intVal() const {
-        WH_ASSERT(isInt());
-        return intVal_;
+    int32_t int32Value() const {
+        WH_ASSERT(isInt32());
+        return int32Val_;
     }
 
-    double doubleVal() const {
+    double doubleValue() const {
         WH_ASSERT(isDouble());
         return doubleVal_;
     }

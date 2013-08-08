@@ -9,7 +9,7 @@ namespace Whisper {
 namespace AST {
 
 
-inline bool
+bool
 SyntaxAnnotator::annotate()
 {
     try {
@@ -62,6 +62,10 @@ void
 SyntaxAnnotator::annotateNumericLiteral(NumericLiteralNode *node,
                                         BaseNode *parent)
 {
+    //
+    // FIXME FIXME  Handle hex, values. FIXME FIXME
+    //
+
     // Parse the numeric literal.
     const NumericLiteralToken &tok = node->value();
     const char *text = reinterpret_cast<const char *>(tok.text(source_));
