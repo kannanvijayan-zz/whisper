@@ -6,6 +6,7 @@
 #include "allocators.hpp"
 #include "runtime.hpp"
 #include "parser/syntax_tree.hpp"
+#include "parser/syntax_annotations.hpp"
 #include "vm/bytecode.hpp"
 #include "interp/bytecode_defn.hpp"
 #include "interp/bytecode_ops.hpp"
@@ -37,6 +38,9 @@ class BytecodeGenerator
     // The syntax tree code is being generated for.
     AST::ProgramNode *node_;
 
+    // The syntax annotator used to analyze the syntax tree.
+    const AST::SyntaxAnnotator &annotator_;
+
     // Whether to start with strict mode.
     bool strict_;
 
@@ -66,7 +70,9 @@ class BytecodeGenerator
   public:
     BytecodeGenerator(RunContext *cx,
                       const STLBumpAllocator<uint8_t> &allocator,
-                      AST::ProgramNode *node, bool strict);
+                      AST::ProgramNode *node,
+                      AST::SyntaxAnnotator &annotator,
+                      bool strict);
 
     bool hasError() const;
     const char *error() const;
@@ -83,6 +89,7 @@ class BytecodeGenerator
                                 OperandLocation &location);
 
 
+    void emitPushInt32(int32_t value);
     void emitBinaryOp(AST::BaseBinaryExpressionNode *expr,
                       const OperandLocation &lhsLocation,
                       const OperandLocation &rhsLocation,

@@ -11,11 +11,15 @@ namespace Interp {
 
 
 BytecodeGenerator::BytecodeGenerator(
-        RunContext *cx, const STLBumpAllocator<uint8_t> &allocator,
-        AST::ProgramNode *node, bool strict)
+        RunContext *cx,
+        const STLBumpAllocator<uint8_t> &allocator,
+        AST::ProgramNode *node,
+        AST::SyntaxAnnotator &annotator,
+        bool strict)
   : cx_(cx),
     allocator_(allocator),
     node_(node),
+    annotator_(annotator),
     strict_(strict),
     bytecode_(cx_)
 {
@@ -115,6 +119,19 @@ BytecodeGenerator::generateExpression(AST::ExpressionNode *expr,
 
         // Now generate the binary expression.
         emitBinaryOp(binExpr, lhsLocation, rhsLocation, outputLocation);
+    } else if (expr->isNumericLiteral()) {
+        AST::NumericLiteralNode *lit = expr->toNumericLiteral();
+        WH_ASSERT(lit->hasAnnotation());
+        AST::NumericLiteralAnnotation *annot = lit->annotation();
+
+        if (!annot->isInt32()) {
+            SpewBytecodeError("Cannot handle non-int NumericLiterals.");
+            emitError("Cannot handle expression.");
+        }
+
+        // Int32s are just always emitted inline.
+        emitPushInt32(annot->int32Value());
+        
     } else {
         SpewBytecodeError("Cannot handle expr node: %s", expr->typeString());
         emitError("Cannot handle expression");
@@ -125,9 +142,58 @@ bool
 BytecodeGenerator::getAddressableLocation(AST::ExpressionNode *expr,
                                           OperandLocation &location)
 {
-    // TODO: check expression, and generate constant/arg/local/immediate
-    // operandLocations if possible.
+    if (expr->isNumericLiteral()) {
+        AST::NumericLiteralNode *lit = expr->toNumericLiteral();
+        WH_ASSERT(lit->hasAnnotation());
+        AST::NumericLiteralAnnotation *annot = lit->annotation();
+
+        // Nont-int32 immediates cannot be encoded.
+        if (!annot->isInt32())
+            return false;
+
+        // Ensure the value is within the immediate range.
+        int32_t val = annot->int32Value();
+        if (val < OperandMinSignedValue || value > OperandMaxSignedValue)
+            return false;
+
+        location = OperandLocation::Immediate(annot->int32Value());
+        return true;
+    }
+
+    // TODO: Handle other cases.
+
     return false;
+}
+
+void
+BytecodeGenerator::emitPushInt32(int32_t value)
+{
+    if (value >= INT8_MIN && value <= INT8_MAX) {
+        emitOp(Opcode::PushInt8);
+        emitByte(value);
+        return;
+    }
+
+    if (value >= INT16_MIN && value <= INT16_MAX) {
+        emitOp(Opcode::PushInt16);
+        emitByte(value & 0xFF);
+        emitByte((value >> 8));
+    }
+
+    constexpr int32_t INT24_MAX = 0xFFFFFFl;
+    constexpr int32_t INT24_MIN = -INT24_MAX - 1;
+    if (value >= INT24_MIN && value <= INT24_MAX) {
+        emitOp(Opcode::PushInt24);
+        emitByte(value & 0xFF);
+        emitByte((value >> 8) & 0xFF);
+        emitByte(value >> 16);
+    }
+
+    emitOp(Opcode::PushInt32);
+    emitByte(value & 0xFF);
+    emitByte((value >> 8) & 0xFF);
+    emitByte((value >> 16) & 0xFF);
+    emitByte(value >> 24);
 }
 
 void
@@ -154,7 +220,7 @@ BytecodeGenerator::emitBinaryOp(AST::BaseBinaryExpressionNode *binExpr,
         formatOffset |= (1 << 2);
     if (!rhsLocation.isStackTop())
         formatOffset |= (1 << 1);
-    if (!rhsLocation.isStackTop())
+    if (!outputLocation.isStackTop())
         formatOffset |= (1 << 0);
 
     // Calculate actual opcode.
