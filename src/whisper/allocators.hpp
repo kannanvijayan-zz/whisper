@@ -2,6 +2,7 @@
 #define WHISPER__ALLOCATORS_HPP
 
 #include <new>
+#include <algorithm>
 
 #include "common.hpp"
 #include "debug.hpp"
@@ -135,14 +136,6 @@ class BumpAllocator
 // STLBumpAllocator
 //
 // STL allocator which wraps BumpAllocator.
-// bump allocation is used to allocate smaller chunks.
-//
-// The allocator keeps a linked list (chain) of memory chunks that
-// are used for successive allocations.  The linked list is embedded
-// within the chain.
-//
-// Within a chunk, allocation happens from high-to-low, similar to stack
-// allocation.
 //
 template <typename T> class STLBumpAllocator;
 
@@ -203,6 +196,159 @@ class STLBumpAllocator
 
     void deallocate(pointer p, size_type n) {
         // Deallocation is a no-op.
+    }
+
+    size_type max_size() const throw() {
+        return SIZE_MAX;
+    }
+
+    void construct(pointer p, const value_type &val) {
+        new (p) value_type(val);
+    }
+    void destroy(pointer p) {
+        p->~value_type();
+    }
+};
+
+
+//
+// PoolAllocator
+//
+// Uses an underlying BumpAllocator, but also keeps a free-list of
+// allocations of particular sizes.  Also, this allocator can only
+// be used to allocate with alignment equal to "BasicAlignment".
+//
+
+class PoolAllocatorError {
+  public:
+    PoolAllocatorError() {}
+};
+
+class PoolAllocator
+{
+  public:
+    constexpr static unsigned BasicAlignment = sizeof(word_t);
+    constexpr static unsigned NumFreeLists = 16;
+
+  private:
+    struct FreeList {
+        FreeList *next;
+        FreeList(FreeList *next) : next(next) {}
+    };
+
+    BumpAllocator &bumpAllocator_;
+    FreeList **freeLists_;
+
+  public:
+    PoolAllocator(BumpAllocator &bumpAllocator)
+      : bumpAllocator_(bumpAllocator),
+        freeLists_(nullptr)
+    {
+        size_t arraySize = NumFreeLists * sizeof(FreeList *);
+        void *arrayPtr = bumpAllocator_.allocate(arraySize, BasicAlignment);
+        freeLists_ = reinterpret_cast<FreeList **>(arrayPtr);
+
+        for (unsigned i = 0; i < NumFreeLists; i++)
+            freeLists_[i] = nullptr;
+    }
+
+    void *allocate(size_t sz)
+    {
+        // Check the free list.
+        unsigned idx = sz / BasicAlignment;
+        if (idx < NumFreeLists && freeLists_[idx] != nullptr) {
+            FreeList *area = freeLists_[idx];
+            freeLists_[idx] = area->next;
+#if defined(ENABLE_DEBUG)
+            uint8_t *ptr = reinterpret_cast<uint8_t *>(area);
+            std::fill(ptr, ptr + sz, 0);
+#endif
+            return area;
+        }
+
+        // Otherwise, just allocate.
+        return bumpAllocator_.allocate(sz, BasicAlignment);
+    }
+
+    void deallocate(void *ptr, size_t sz) {
+        // See if we can add it to the free list.
+        unsigned idx = sz / BasicAlignment;
+        if (idx < NumFreeLists) {
+#if defined(ENABLE_DEBUG)
+            uint8_t *u8ptr = reinterpret_cast<uint8_t *>(ptr);
+            std::fill(u8ptr, u8ptr + sz, 0);
+#endif
+            freeLists_[idx] = new (ptr) FreeList(freeLists_[idx]);
+        }
+    }
+};
+
+
+//
+// STLPoolAllocator wraps PoolAllocator to present an STL allocator
+// interface.
+//
+
+template <typename T> class STLPoolAllocator;
+
+template <>
+class STLPoolAllocator<void>
+{
+  public:
+    typedef void *          pointer;
+    typedef const void *    const_pointer;
+    typedef void            value_type;
+    template <class U> struct rebind {
+        typedef STLPoolAllocator<U> other;
+    };
+};
+
+template <typename T>
+class STLPoolAllocator
+{
+    template <typename U>
+    friend class STLPoolAllocator;
+
+  public:
+    typedef size_t              size_type;
+    typedef ptrdiff_t           difference_type;
+    typedef T *                 pointer;
+    typedef const T *           const_pointer;
+    typedef T &                 reference;
+    typedef const T &           const_reference;
+    typedef T                   value_type;
+    template <class U> struct rebind {
+        typedef STLPoolAllocator<U> other;
+    };
+
+  private:
+    PoolAllocator &base_;
+
+  public:
+    STLPoolAllocator(PoolAllocator &base) : base_(base) {}
+
+    STLPoolAllocator(const STLPoolAllocator &other) throw ()
+      : base_(other.base_) {}
+
+    template <typename U>
+    STLPoolAllocator(const STLPoolAllocator<U> &other) throw ()
+      : base_(other.base_) {}
+
+    pointer address(reference x) const {
+        return &x;
+    }
+    const_pointer address(const_reference x) const {
+        return &x;
+    }
+
+    pointer allocate(size_type n, void *hint = nullptr)
+    {
+        WH_ASSERT(alignof(T) <= PoolAllocator::BasicAlignment);
+        return static_cast<pointer>(base_.allocate(n * sizeof(T)));
+    }
+
+    void deallocate(pointer p, size_type n) {
+        base_.deallocate(p, n * sizeof(T));
     }
 
     size_type max_size() const throw() {
