@@ -74,6 +74,15 @@ int main(int argc, char **argv) {
     Printer pr;
     PrintNode(tokenizer.source(), program, pr, 0);
 
+    // Annotate the program.
+    AST::SyntaxAnnotator annotator(wrappedAllocator, program, inputFile);
+    if (!annotator.annotate()) {
+        WH_ASSERT(annotator.hasError());
+        std::cerr << "Syntax annotation failed: " << annotator.error()
+                  << std::endl;
+        return 1;
+    }
+
     // Initialize a runtime.
     Runtime runtime;
     if (!runtime.initialize()) {
@@ -95,7 +104,8 @@ int main(int argc, char **argv) {
     cx.makeActive();
 
     // Create a bytecode generator for the script.
-    Interp::BytecodeGenerator bcgen(&cx, wrappedAllocator, program, false);
+    Interp::BytecodeGenerator bcgen(&cx, wrappedAllocator, program, annotator,
+                                    false);
     VM::Bytecode *bc = bcgen.generateBytecode();
     if (bcgen.hasError()) {
         std::cerr << "Codgen error: " << bcgen.error() << "!" << std::endl;;
