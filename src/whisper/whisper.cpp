@@ -119,5 +119,7 @@ int main(int argc, char **argv) {
         std::cerr << "Bytecode: " << (int)bcdata[i] << std::endl;
     }
 
+    VM::SpewHeapThingSlab(cx.hatchery());
+
     return 0;
 }

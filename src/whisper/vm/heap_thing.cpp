@@ -1,9 +1,68 @@
 
-#include "heap_thing.hpp"
-#include "heap_thing_inlines.hpp"
+#include "spew.hpp"
+#include "vm/heap_thing.hpp"
+#include "vm/heap_thing_inlines.hpp"
 
 namespace Whisper {
 namespace VM {
+
+const char *
+HeapTypeString(HeapType ht)
+{
+    switch (ht) {
+      case HeapType::INVALID:
+        return "INVALID";
+#define CASE_(t, ...) case HeapType::t: return #t;
+    WHISPER_DEFN_HEAP_TYPES(CASE_)
+#undef CASE_
+      default:
+        return "UNKNOWN";
+    }
+}
+
+void
+SpewHeapThingMemory(const uint8_t *startu8, const uint8_t *endu8)
+{
+    const uint64_t *start = reinterpret_cast<const uint64_t *>(startu8);
+    const uint64_t *end = reinterpret_cast<const uint64_t *>(endu8);
+    
+    const uint64_t *cur = start;
+    while (cur < end) {
+        const HeapThingHeader *hdr =
+            reinterpret_cast<const HeapThingHeader *>(cur);
+
+        SpewMemoryNote("{%016p}  <%s> [card=%u] [size=%u] [flags=%02x]",
+                        hdr, HeapTypeString(hdr->type()),
+                        (unsigned) hdr->cardNo(),
+                        (unsigned) hdr->size(),
+                        (unsigned) hdr->flags());
+
+        uint32_t size = hdr->size();
+        uint32_t words = DivUp<uint32_t>(size, sizeof(uint64_t));
+        const uint64_t *dataEnd = cur + 1 + words;
+        for (const uint64_t *data = cur + 1; data < dataEnd; data++)
+            SpewMemoryNote("{%016p}  %016x", data, *data);
+
+        cur += 1 + words;
+        WH_ASSERT(cur <= end);
+    }
+}
+
+void
+SpewHeapThingSlab(Slab *slab)
+{
+    uint8_t *headStart = slab->headStartAlloc();
+    uint8_t *headEnd = slab->headEndAlloc();
+    SpewHeapThingMemory(headStart, headEnd);
+
+    SpewMemoryNote("...");
+
+    // tailStart > tailEnd (since tail allocation grows down).
+    // So reverse them when printing memory.
+    uint8_t *tailStart = slab->tailStartAlloc();
+    uint8_t *tailEnd = slab->tailEndAlloc();
+    SpewHeapThingMemory(tailEnd, tailStart);
+}
 
 //
 // HeapThingHeader

@@ -197,13 +197,7 @@ class ShapeTreeChild : public HeapThing,
 class Shape : public HeapThing, public TypedHeapThing<HeapType::Shape>
 {
   friend class ShapeTree;
-  protected:
-    HeapThingValue<ShapeTree> tree_;
-    NullableHeapThingValue<Shape> parent_;
-    Value name_;
-    NullableHeapThingValue<Shape> firstChild_;
-    NullableHeapThingValue<Shape> nextSibling_;
-
+  public:
     enum Flags : uint32_t
     {
         HasValue        = 0x01,
@@ -213,6 +207,13 @@ class Shape : public HeapThing, public TypedHeapThing<HeapType::Shape>
         IsEnumerable    = 0x10,
         IsWritable      = 0x20
     };
+
+  protected:
+    HeapThingValue<ShapeTree> tree_;
+    NullableHeapThingValue<Shape> parent_;
+    Value name_;
+    NullableHeapThingValue<Shape> firstChild_;
+    NullableHeapThingValue<Shape> nextSibling_;
 
     Shape(ShapeTree *tree, Shape *parent, const Value &name,
           bool hasValue, bool hasGetter, bool hasSetter,

@@ -122,6 +122,16 @@ class Slab
     ~Slab() {}
 
   public:
+    uint8_t *headStartAlloc() const {
+        WH_ASSERT(allocTop_);
+        return allocTop_ + AlignIntUp<uint32_t>(sizeof(void *), AllocAlign);
+    }
+
+    uint8_t *tailStartAlloc() const {
+        WH_ASSERT(allocTop_);
+        return allocBottom_;
+    }
+
     Slab *next() const {
         return next_;
     }
@@ -135,6 +145,13 @@ class Slab
 
     uint32_t dataCards() const {
         return dataCards_;
+    }
+
+    uint8_t *headEndAlloc() const {
+        return headAlloc_;
+    }
+    uint8_t *tailEndAlloc() const {
+        return tailAlloc_;
     }
 
     // Allocate memory from Top

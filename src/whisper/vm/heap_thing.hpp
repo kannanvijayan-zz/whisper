@@ -30,6 +30,12 @@ IsValidHeapType(HeapType ht) {
     return (ht > HeapType::INVALID) && (ht < HeapType::LIMIT);
 }
 
+const char *
+HeapTypeString(HeapType ht);
+
+void SpewHeapThingSlab(Slab *slab);
+
+
 template <HeapType HT> struct HeapTypeTraits {};
 #define TRAITS_(t, traced) \
     template <> struct HeapTypeTraits<HeapType::t> { \
@@ -96,9 +102,10 @@ class HeapThingHeader
   template <typename T>
   friend class HeapThingWrapper;
 
-  public:
+  private:
     uint64_t header_ = 0;
 
+  public:
     static constexpr uint32_t HeaderSize = sizeof(uint64_t);
 
     static constexpr uint64_t CardNoBits = 10;
@@ -111,7 +118,7 @@ class HeapThingHeader
 
     static constexpr uint64_t SizeBits = 32;
     static constexpr uint64_t SizeMask = UINT32_MAX;
-    static constexpr unsigned SizeShift = 16;
+    static constexpr unsigned SizeShift = 20;
 
     static constexpr uint64_t FlagsBits = 6;
     static constexpr uint64_t FlagsMask = (1ULL << FlagsBits) - 1;

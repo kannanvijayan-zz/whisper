@@ -153,7 +153,7 @@ BytecodeGenerator::getAddressableLocation(AST::ExpressionNode *expr,
 
         // Ensure the value is within the immediate range.
         int32_t val = annot->int32Value();
-        if (val < OperandMinSignedValue || value > OperandMaxSignedValue)
+        if (val < OperandMinSignedValue || val > OperandMaxSignedValue)
             return false;
 
         location = OperandLocation::Immediate(annot->int32Value());

@@ -16,6 +16,8 @@
     _(ShapeTreeChild,                   true)                   \
     _(Shape,                            true)                   \
     \
+    _(Script,                           true)                   \
+    \
     _(Object,                           true)                   \
     \
     _(DeclEnv,                          true)                   \
@@ -23,7 +25,6 @@
     _(FuncEnv,                          true)                   \
     _(GlobalEnv,                        true)                   \
     \
-    _(Script,                           true)                   \
     _(ConstantPool,                     true)                   \
 
 
