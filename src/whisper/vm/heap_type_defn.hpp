@@ -19,6 +19,7 @@
     _(Script,                           true)                   \
     \
     _(Object,                           true)                   \
+    _(Global,                           true)                   \
     \
     _(DeclEnv,                          true)                   \
     _(ObjEnv,                           true)                   \
