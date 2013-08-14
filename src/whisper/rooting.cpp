@@ -120,21 +120,39 @@ Root<Value>::isImmString16() const
 }
 
 bool
-Root<Value>::isImmDoubleLow() const
+Root<Value>::isPosImmDoubleSmall() const
 {
-    return thing_.isImmDoubleLow();
+    return thing_.isPosImmDoubleSmall();
 }
 
 bool
-Root<Value>::isImmDoubleHigh() const
+Root<Value>::isPosImmDoubleBig() const
 {
-    return thing_.isImmDoubleHigh();
+    return thing_.isPosImmDoubleBig();
 }
 
 bool
-Root<Value>::isImmDoubleX() const
+Root<Value>::isNegImmDoubleSmall() const
 {
-    return thing_.isImmDoubleX();
+    return thing_.isNegImmDoubleSmall();
+}
+
+bool
+Root<Value>::isNegImmDoubleBig() const
+{
+    return thing_.isNegImmDoubleBig();
+}
+
+bool
+Root<Value>::isRegularImmDouble() const
+{
+    return thing_.isRegularImmDouble();
+}
+
+bool
+Root<Value>::isSpecialImmDouble() const
+{
+    return thing_.isSpecialImmDouble();
 }
 
 bool
@@ -204,17 +222,10 @@ Root<Value>::isDouble() const
 }
 
 bool
-Root<Value>::isSpecialImmDouble() const
+Root<Value>::isImmDouble() const
 {
-    return thing_.isSpecialImmDouble();
+    return thing_.isImmDouble();
 }
-
-bool
-Root<Value>::isRegularImmDouble() const
-{
-    return thing_.isRegularImmDouble();
-}
-
 
 bool
 Root<Value>::getBoolean() const
@@ -265,15 +276,15 @@ Root<Value>::getImmStringChar(unsigned idx) const
 }
 
 double
-Root<Value>::getImmDoubleHiLoValue() const
+Root<Value>::getRegularImmDoubleValue() const
 {
-    return thing_.getImmDoubleHiLoValue();
+    return thing_.getRegularImmDoubleValue();
 }
 
 double
-Root<Value>::getImmDoubleXValue() const
+Root<Value>::getSpecialImmDoubleValue() const
 {
-    return thing_.getImmDoubleXValue();
+    return thing_.getSpecialImmDoubleValue();
 }
 
 double
@@ -286,12 +297,6 @@ VM::HeapDouble *
 Root<Value>::getHeapDouble() const
 {
     return thing_.getHeapDouble();
-}
-
-Magic
-Root<Value>::getMagic() const
-{
-    return thing_.getMagic();
 }
 
 int32_t

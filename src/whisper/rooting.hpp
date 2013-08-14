@@ -214,9 +214,12 @@ class Root<Value> : public TypedRootBase<Value>
     bool isHeapString() const;
     bool isImmString8() const;
     bool isImmString16() const;
-    bool isImmDoubleLow() const;
-    bool isImmDoubleHigh() const;
-    bool isImmDoubleX() const;
+    bool isPosImmDoubleSmall() const;
+    bool isPosImmDoubleBig() const;
+    bool isNegImmDoubleSmall() const;
+    bool isNegImmDoubleBig() const;
+    bool isRegularImmDouble() const;
+    bool isSpecialImmDouble() const;
     bool isNegZero() const;
     bool isNaN() const;
     bool isPosInf() const;
@@ -230,8 +233,7 @@ class Root<Value> : public TypedRootBase<Value>
     bool isImmString() const;
     bool isNumber() const;
     bool isDouble() const;
-    bool isSpecialImmDouble() const;
-    bool isRegularImmDouble() const;
+    bool isImmDouble() const;
 
     //
     // Getter methods
@@ -263,11 +265,10 @@ class Root<Value> : public TypedRootBase<Value>
     template <typename CharT>
     unsigned readImmString(CharT *buf) const;
 
-    double getImmDoubleHiLoValue() const;
-    double getImmDoubleXValue() const;
+    double getRegularImmDoubleValue() const;
+    double getSpecialImmDoubleValue() const;
     double getImmDoubleValue() const;
     VM::HeapDouble *getHeapDouble() const;
-    Magic getMagic() const;
     int32_t getInt32() const;
 };
 

@@ -8,12 +8,64 @@ namespace Whisper {
 Value::Value() : tagged_(Invalid) {}
 
 // Raw uint64_t constructor is private.
-Value::Value(uint64_t tagged) : tagged_(tagged) {}
+Value::Value(uint64_t tagged) : tagged_(tagged)
+{
+#if defined(ENABLE_DEBUG)
+    WH_ASSERT(isValid());
+#endif // defined(ENABLE_DEBUG)
+}
 
 ValueTag
 Value::getTag() const
 {
-    return static_cast<ValueTag>(tagged_ >> TagShift);
+    ValueTag tag = static_cast<ValueTag>(tagged_ >> RegularTagShift);
+    switch (tag) {
+        case ValueTag::Object:
+        case ValueTag::Null:
+        case ValueTag::Undefined:
+        case ValueTag::Boolean:
+        case ValueTag::SpecialImmDouble:
+        case ValueTag::HeapDouble:
+        case ValueTag::HeapString:
+        case ValueTag::ImmString8:
+        case ValueTag::ImmString16:
+        case ValueTag::Int32:
+        case ValueTag::Magic:
+            return tag;
+
+        case ValueTag::PosImmDoubleBig:
+        case ValueTag::PosImmDoubleBig_2:
+        case ValueTag::PosImmDoubleBig_3:
+        case ValueTag::PosImmDoubleBig_4:
+            return ValueTag::PosImmDoubleBig;
+
+        case ValueTag::PosImmDoubleSmall:
+        case ValueTag::PosImmDoubleSmall_2:
+        case ValueTag::PosImmDoubleSmall_3:
+        case ValueTag::PosImmDoubleSmall_4:
+            return ValueTag::PosImmDoubleSmall;
+
+        case ValueTag::NegImmDoubleBig:
+        case ValueTag::NegImmDoubleBig_1:
+        case ValueTag::NegImmDoubleBig_2:
+        case ValueTag::NegImmDoubleBig_3:
+            return ValueTag::NegImmDoubleBig;
+
+        case ValueTag::NegImmDoubleSmall:
+        case ValueTag::NegImmDoubleSmall_2:
+        case ValueTag::NegImmDoubleSmall_3:
+        case ValueTag::NegImmDoubleSmall_4:
+            return ValueTag::NegImmDoubleSmall;
+
+        case ValueTag::UNUSED_11:
+        case ValueTag::UNUSED_12:
+        case ValueTag::UNUSED_13:
+        case ValueTag::UNUSED_1E:
+        case ValueTag::UNUSED_1F:
+        default:
+            WH_UNREACHABLE("Invalid value.");
+            return ValueTag::UNUSED_1F;
+    }
 }
 
 bool
@@ -22,25 +74,19 @@ Value::checkTag(ValueTag tag) const
     return getTag() == tag;
 }
 
-uint64_t
-Value::removeTag() const
-{
-    return (tagged_ << TagBits) >> TagBits;
-}
-
 /*static*/ Value
 Value::MakeTag(ValueTag tag)
 {
     WH_ASSERT(IsValidValueTag(tag));
-    return Value(UInt64(tag) << TagShift);
+    return Value(UInt64(tag) << RegularTagShift);
 }
 
 /*static*/ Value
 Value::MakeTagValue(ValueTag tag, uint64_t ival)
 {
     WH_ASSERT(IsValidValueTag(tag));
-    WH_ASSERT(ival <= (~UInt64(0) >> TagBits));
-    return Value(UInt64(tag) << TagShift);
+    WH_ASSERT(ival <= (~UInt64(0) >> RegularTagBits));
+    return Value(ival | (UInt64(tag) << RegularTagShift));
 }
 
 #if defined(ENABLE_DEBUG)
@@ -48,15 +94,11 @@ bool
 Value::isValid() const
 {
     // If heap thing, pointer can't be zero.
-    if (((tagged_ & 0x3) == 0) && ((tagged_ >> 4) == 0))
-        return false;
+    if (isHeapString() || isHeapDouble() || isObject())
+        return getPtr() != nullptr;
 
-    // Otherwise, check for unused tag range.
-    unsigned tag = tagged_ & 0xFu;
-    if (tag >= 0x8u && tag <= 0xBu)
-        return false;
-
-    return true;
+    // Otherwise, check for legit tag.
+    return IsValidValueTag(getTag());
 }
 #endif // defined(ENABLE_DEBUG)
 
@@ -81,9 +123,11 @@ Value::type() const
       case ValueTag::ImmString16:
         return ValueType::String;
 
-      case ValueTag::ImmDoubleLow:
-      case ValueTag::ImmDoubleHigh:
-      case ValueTag::ImmDoubleX:
+      case ValueTag::PosImmDoubleSmall:
+      case ValueTag::PosImmDoubleBig:
+      case ValueTag::NegImmDoubleSmall:
+      case ValueTag::NegImmDoubleBig:
+      case ValueTag::SpecialImmDouble:
       case ValueTag::HeapDouble:
       case ValueTag::Int32:
         return ValueType::Number;
@@ -104,14 +148,14 @@ bool
 Value::isNativeObject() const
 {
     return isObject() &&
-           ((tagged_ >> PtrTypeShift) & PtrTypeMask) == PtrType_Native;
+           ((tagged_ >> PtrTypeShift) & PtrTypeMaskLow) == PtrType_Native;
 }
 
 bool
 Value::isForeignObject() const
 {
     return isObject() &&
-           ((tagged_ >> PtrTypeShift) & PtrTypeMask) == PtrType_Foreign;
+           ((tagged_ >> PtrTypeShift) & PtrTypeMaskLow) == PtrType_Foreign;
 }
 
 bool
@@ -151,45 +195,61 @@ Value::isImmString16() const
 }
 
 bool
-Value::isImmDoubleLow() const
+Value::isPosImmDoubleSmall() const
 {
-    return checkTag(ValueTag::ImmDoubleLow);
+    return checkTag(ValueTag::PosImmDoubleSmall);
 }
 
 bool
-Value::isImmDoubleHigh() const
+Value::isPosImmDoubleBig() const
 {
-    return checkTag(ValueTag::ImmDoubleHigh);
+    return checkTag(ValueTag::PosImmDoubleBig);
 }
 
 bool
-Value::isImmDoubleX() const
+Value::isNegImmDoubleSmall() const
 {
-    return checkTag(ValueTag::ImmDoubleX);
+    return checkTag(ValueTag::NegImmDoubleSmall);
+}
+
+bool
+Value::isNegImmDoubleBig() const
+{
+    return checkTag(ValueTag::NegImmDoubleBig);
+}
+
+bool
+Value::isSpecialImmDouble() const
+{
+    return checkTag(ValueTag::SpecialImmDouble);
 }
 
 bool
 Value::isNegZero() const
 {
-    return isImmDoubleX() && (tagged_ & 0xFu) == NegZeroVal;
+    return isSpecialImmDouble() &&
+           (tagged_ & SpecialImmDoubleValueMask) == NegZeroVal;
 }
 
 bool
 Value::isNaN() const
 {
-    return isImmDoubleX() && (tagged_ & 0xFu) == NaNVal;
+    return isSpecialImmDouble() &&
+           (tagged_ & SpecialImmDoubleValueMask) == NaNVal;
 }
 
 bool
 Value::isPosInf() const
 {
-    return isImmDoubleX() && (tagged_ & 0xFu) == PosInfVal;
+    return isSpecialImmDouble() &&
+           (tagged_ & SpecialImmDoubleValueMask) == PosInfVal;
 }
 
 bool
 Value::isNegInf() const
 {
-    return isImmDoubleX() && (tagged_ & 0xFu) == NegInfVal;
+    return isSpecialImmDouble() &&
+           (tagged_ & SpecialImmDoubleValueMask) == NegInfVal;
 }
 
 bool
@@ -225,27 +285,27 @@ Value::isImmString() const
 bool
 Value::isNumber() const
 {
-    return isImmDoubleLow() || isImmDoubleHigh() || isImmDoubleX() ||
-           isHeapDouble()   || isInt32();
+    return isRegularImmDouble() || isSpecialImmDouble() ||
+           isHeapDouble()       || isInt32();
 }
 
 bool
 Value::isDouble() const
 {
-    return isImmDoubleLow() || isImmDoubleHigh() || isImmDoubleX() ||
-           isHeapDouble();
+    return isImmDouble() || isHeapDouble();
 }
 
 bool
-Value::isSpecialImmDouble() const
+Value::isImmDouble() const
 {
-   return isImmDoubleLow() || isImmDoubleHigh() || isImmDoubleX();
+   return isRegularImmDouble() || isSpecialImmDouble();
 }
 
 bool
 Value::isRegularImmDouble() const
 {
-   return isImmDoubleLow() || isImmDoubleHigh();
+   return isPosImmDoubleSmall() || isPosImmDoubleBig() ||
+          isNegImmDoubleSmall() || isNegImmDoubleBig();
 }
 
 bool
@@ -322,16 +382,16 @@ Value::getImmStringChar(unsigned idx) const
 }
 
 double
-Value::getImmDoubleHiLoValue() const
+Value::getRegularImmDoubleValue() const
 {
-    WH_ASSERT(isImmDoubleHigh() || isImmDoubleLow());
-    return IntToDouble(RotateRight(tagged_, 1));
+    WH_ASSERT(isRegularImmDouble());
+    return IntToDouble(tagged_);
 }
 
 double
-Value::getImmDoubleXValue() const
+Value::getSpecialImmDoubleValue() const
 {
-    WH_ASSERT(isImmDoubleX());
+    WH_ASSERT(isSpecialImmDouble());
     switch (tagged_) {
       case NaNVal:
         return std::numeric_limits<double>::quiet_NaN();
@@ -349,8 +409,9 @@ Value::getImmDoubleXValue() const
 double
 Value::getImmDoubleValue() const
 {
-    WH_ASSERT(isSpecialImmDouble());
-    return isImmDoubleX() ? getImmDoubleXValue() : getImmDoubleHiLoValue();
+    WH_ASSERT(isImmDouble());
+    return isRegularImmDouble() ? getRegularImmDoubleValue()
+                                : getSpecialImmDoubleValue();
 }
 
 VM::HeapDouble *
@@ -364,14 +425,7 @@ uint64_t
 Value::getMagicInt() const
 {
     WH_ASSERT(isMagic());
-    return removeTag();
-}
-
-Magic
-Value::getMagic() const
-{
-    WH_ASSERT(isMagic());
-    return static_cast<Magic>(removeTag());
+    return tagged_ & ~RegularTagMaskHigh;
 }
 
 int32_t
@@ -449,49 +503,52 @@ DoubleValue(VM::HeapDouble *d)
 Value
 NegZeroValue()
 {
-    return Value::MakeTagValue(ValueTag::ImmDoubleX, UInt64(Value::NegZeroVal));
+    return Value::MakeTagValue(ValueTag::SpecialImmDouble,
+                               UInt64(Value::NegZeroVal));
 }
 
 Value
 NaNValue()
 {
-    return Value::MakeTagValue(ValueTag::ImmDoubleX, UInt64(Value::NaNVal));
+    return Value::MakeTagValue(ValueTag::SpecialImmDouble,
+                               UInt64(Value::NaNVal));
 }
 
 Value
 PosInfValue()
 {
-    return Value::MakeTagValue(ValueTag::ImmDoubleX, UInt64(Value::PosInfVal));
+    return Value::MakeTagValue(ValueTag::SpecialImmDouble,
+                               UInt64(Value::PosInfVal));
 }
 
 Value
 NegInfValue()
 {
-    return Value::MakeTagValue(ValueTag::ImmDoubleX, UInt64(Value::NegInfVal));
+    return Value::MakeTagValue(ValueTag::SpecialImmDouble,
+                               UInt64(Value::NegInfVal));
 }
 
 Value
 DoubleValue(double dval)
 {
     uint64_t ival = DoubleToInt(dval);
-    WH_ASSERT(((ival <= Value::ImmDoublePosMax) &&
-               (ival >= Value::ImmDoublePosMin)) ||
-              ((ival <= Value::ImmDoubleNegMax) &&
-               (ival >= Value::ImmDoubleNegMin)));
-    return Value(RotateLeft(ival, 1));
+
+#if defined(ENABLE_DEBUG)
+    uint64_t dtag = (ival >> Value::DoubleTagShift) & Value::DoubleTagMaskLow;
+    WH_ASSERT(dtag == Value::DoubleTag_PosSmall ||
+              dtag == Value::DoubleTag_PosBig   ||
+              dtag == Value::DoubleTag_NegSmall ||
+              dtag == Value::DoubleTag_NegBig);
+#endif // defined(ENABLE_DEBUG)
+
+    return Value(ival);
 }
 
 Value
 MagicValue(uint64_t val)
 {
-    WH_ASSERT((val & Value::TagMaskHigh) == 0);
+    WH_ASSERT((val & Value::RegularTagMaskHigh) == 0);
     return Value::MakeTagValue(ValueTag::Magic, val);
-}
-
-Value
-MagicValue(Magic magic)
-{
-    return Value::MakeTagValue(ValueTag::Magic, UInt64(magic));
 }
 
 Value

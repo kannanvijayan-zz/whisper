@@ -31,28 +31,53 @@ namespace Whisper {
 //  ImmString16     - immediate 16-bit character string.
 //  ImmDoubleLow    - immediate doubles (1.0 > value && -1.0 < value)
 //  ImmDoubleHigh   - immediate doubles (1.0 <= value || -1.0 >= value)
-//  ImmDoubleX      - immediate NaN, Inf, -Inf, and -0 (low 2 bits hold value).
+//  SpecialImmDouble - immediate NaN, Inf, -Inf, and -0 (low 2 bits).
 //  HeapDouble      - heap double.
 //  Int32           - 32-bit integer.
 //  Magic           - magic value.
 //
 // Object:
-//  0000-W000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Object pointer
-//  0000-W001 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Foreign pointer
+//  0000-00*W PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Object pointer
+//  0000-01*W PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - Foreign pointer
 //
 //      W is the weak bit.  If W=1, the reference is weak.
 //
 // Null & Undefined:
-//  0001-0000 0000-0000 0000-0000 ... 0000-0000     - Null value
-//  0010-0000 0000-0000 0000-0000 ... 0000-0000     - Undefined value
+//  0000-10** ****-**** ****-**** ... ****-****     - Null value
+//  0001-00** ****-**** ****-**** ... ****-****     - Undefined value
 //
 // Boolean:
-//  0011-0000 0000-0000 0000-0000 ... 0000-000V     - Boolean value
+//  0001-10** ****-**** ****-**** ... ****-****     - Boolean value
+//
+// ImmDoubleLow, ImmDoubleHigh, SpecialImmDouble, and HeapDouble:
+//  001E-EEEE EEEM-MMMM MMMM-MMMM ... MMMM-MMMM     - PosImmDoubleSmall
+//  010E-EEEE EEEM-MMMM MMMM-MMMM ... MMMM-MMMM     - PosImmDoubleBig
+//  101E-EEEE EEEM-MMMM MMMM-MMMM ... MMMM-MMMM     - NegImmDoubleSmall
+//  110E-EEEE EEEM-MMMM MMMM-MMMM ... MMMM-MMMM     - NegImmDoubleBig
+//  0110-0*** ****-**** ****-**** ... ****-**XX     - SpecialImmDouble
+//  1000-0W** PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - HeapDouble pointer
+//
+//      [Pos|Neg]ImmDouble[Small|Big] are "regular" double values which
+//      are immediately representable.  The only requirement is that
+//       they have an exponent value in the range [256, -255].
+//
+//      The doubles in the above range are represented directly, with no
+//      boxing or unboxing required.
+//
+//      SpecialImmDouble can represent -0.0, NaN, Inf, and -Inf.  Each of these
+//      options is enumerated in the low 2 bits (XX):
+//          00 => -0.0
+//          01 => NaN
+//          10 => Inf
+//          11 => -Inf
+//
+//      In a heap double reference, W is the weak bit.  If W=1, the
+//      reference is weak.
 //
 // HeapString & ImmString8 & ImmString16:
-//  0100-W000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - HeapString pointer
-//  0101-0LLL AAAA-AAAA BBBB-BBBB ... GGGG-GGGG     - Immediate 8-bit string
-//  0110-0000 0000-0000 AAAA-AAAA ... CCCC-CCCC     - Immediate 16-bit string
+//  0110-1W** PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - HeapString pointer
+//  0111-0LLL AAAA-AAAA BBBB-BBBB ... GGGG-GGGG     - Immediate 8-bit string
+//  0111-1*LL 0000-0000 AAAA-AAAA ... CCCC-CCCC     - Immediate 16-bit string
 //
 //      In a heap string reference, W is the weak bit.  If W=1, the
 //      reference is weak.
@@ -69,47 +94,24 @@ namespace Whisper {
 //      strings with other 16-bit immediate strings, by simply rotating
 //      the value left by 8 bits and doing an integer compare.
 //
-// ImmDoubleLow, ImmDoubleHigh, ImmDoubleX, and HeapDouble:
-//  0111-EEEE EEEM-MMMM MMMM-MMMM ... MMMM-MMMS     - ImmDoubleLow
-//  1000-EEEE EEEM-MMMM MMMM-MMMM ... MMMM-MMMS     - ImmDoubleHigh
-//  1001-0000 0000-0000 0000-0000 ... 0000-00XX     - ImmDoubleX
-//  1010-W000 PPPP-PPPP PPPP-PPPP ... PPPP-PPPP     - HeapDouble pointer
-//
-//      ImmDoubleLo and ImmDoubleHi are "regular" double values which
-//      are immediately representable.  The only requirement is that
-//       they have an exponent value in the range [128, -127].
-//
-//      The boxed representation is achieved by rotating the native double
-//      representation left by 1 bit.  Given the exponent requirement,
-//      this naturally ensures that the top 4 bits of the boxed representation
-//      are either 0x7 or 0x8.
-//
-//      ImmDoubleX can represent -0.0, NaN, Inf, and -Inf.  Each of these
-//      options is enumerated in the low 2 bits (XX):
-//          00 => -0.0, 
-//          01 => NaN
-//          10 => Inf
-//          11 => -Inf
-//
-//      In a heap double reference, W is the weak bit.  If W=1, the
-//      reference is weak.
-//
 // UNUSED:
-//  1011-**** ****-**** ****-**** ... ****-****
+//  1000-1*** ****-**** ****-**** ... ****-****
+//  1001-0*** ****-**** ****-**** ... ****-****
+//  1001-1*** ****-**** ****-**** ... ****-****
 //
 // Int32:
-//  1100-0000 0000-0000 0000-0000 ... IIII-IIII     - Int32 value.
+//  1110-0*** ****-**** ****-**** ... IIII-IIII     - Int32 value.
 //
 //      Only the low 32 bits are used for integer values.
 //
 // Magic:
-//  1101-MMMM MMMM-MMMM MMMM-MMMM ... MMMM-MMMM     - Magic value.
+//  1110-1*** MMMM-MMMM MMMM-MMMM ... MMMM-MMMM     - Magic value.
 //
-//      The low 60 bits can be used to store any required magic value
-//      info.
+//      Magic values are used in implementation objects to store
+//      arbitrary packed info, such as a combination of bitfields and
+//      flags.
 //
 // UNUSED:
-//  1110-**** ****-**** ****-**** ... ****-****
 //  1111-**** ****-**** ****-**** ... ****-****
 //
 //
@@ -136,28 +138,44 @@ enum class ValueType : uint8_t
 // Tag enumeration for values.
 enum class ValueTag : uint8_t
 {
-    Object          = 0x0,
+    Object              = 0x00, // 0000-0
 
-    Null            = 0x1,
-    Undefined       = 0x2,
-    Boolean         = 0x3,
+    Null                = 0x01, // 0000-1
+    Undefined           = 0x02, // 0001-0
+    Boolean             = 0x03, // 0001-1
 
-    HeapString      = 0x4,
-    ImmString8      = 0x5,
-    ImmString16     = 0x6,
+    PosImmDoubleBig     = 0x04, // 0010-0 to 0011-1 (0x04 to 0x07)
+    PosImmDoubleBig_2   = 0x05,
+    PosImmDoubleBig_3   = 0x06,
+    PosImmDoubleBig_4   = 0x07,
+    PosImmDoubleSmall   = 0x08, // 0100-0 to 0101-1 (0x08 to 0x0B)
+    PosImmDoubleSmall_2 = 0x09,
+    PosImmDoubleSmall_3 = 0x0A,
+    PosImmDoubleSmall_4 = 0x0B,
+    NegImmDoubleBig     = 0x14, // 1010-0 to 1011-1 (0x14 to 0x17)
+    NegImmDoubleBig_1   = 0x15,
+    NegImmDoubleBig_2   = 0x16,
+    NegImmDoubleBig_3   = 0x17,
+    NegImmDoubleSmall   = 0x18, // 1100-0 to 1101-1 (0x18 to 0x1B)
+    NegImmDoubleSmall_2 = 0x19,
+    NegImmDoubleSmall_3 = 0x1A,
+    NegImmDoubleSmall_4 = 0x1B,
+    SpecialImmDouble    = 0x0C, // 0110-0
+    HeapDouble          = 0x10, // 1000-0
 
-    ImmDoubleLow    = 0x7,
-    ImmDoubleHigh   = 0x8,
-    ImmDoubleX      = 0x9,
-    HeapDouble      = 0xA,
+    HeapString          = 0x0D, // 0110-1
+    ImmString8          = 0x0E, // 0111-0
+    ImmString16         = 0x0F, // 0111-1
 
-    UNUSED_B        = 0xB,
+    UNUSED_11           = 0x11, // 1000-1
+    UNUSED_12           = 0x12, // 1001-0
+    UNUSED_13           = 0x13, // 1001-1
 
-    Int32           = 0xC,
-    Magic           = 0xD,
+    Int32               = 0x1C, // 1110-0
+    Magic               = 0x1D, // 1110-1
 
-    UNUSED_E        = 0xE,
-    UNUSED_F        = 0xF
+    UNUSED_1E           = 0x1E, // 1111-0
+    UNUSED_1F           = 0x1F  // 1111-1
 };
 
 inline uint8_t constexpr ValueTagNumber(ValueTag type) {
@@ -165,37 +183,65 @@ inline uint8_t constexpr ValueTagNumber(ValueTag type) {
 }
 
 inline bool IsValidValueTag(ValueTag tag) {
-    return tag == ValueTag::Object        || tag == ValueTag::Null         ||
-           tag == ValueTag::Undefined     || tag == ValueTag::Boolean      ||
-           tag == ValueTag::HeapString    || tag == ValueTag::ImmString8   ||
-           tag == ValueTag::ImmString16   || tag == ValueTag::ImmDoubleLow ||
-           tag == ValueTag::ImmDoubleHigh || tag == ValueTag::ImmDoubleX   ||
-           tag == ValueTag::HeapDouble    || tag == ValueTag::Int32        ||
+    return tag == ValueTag::Object              ||
+           tag == ValueTag::Null                ||
+           tag == ValueTag::Undefined           ||
+           tag == ValueTag::Boolean             ||
+           tag == ValueTag::PosImmDoubleBig     ||
+           tag == ValueTag::PosImmDoubleSmall   ||
+           tag == ValueTag::NegImmDoubleBig     ||
+           tag == ValueTag::NegImmDoubleSmall   ||
+           tag == ValueTag::SpecialImmDouble    ||
+           tag == ValueTag::HeapDouble          ||
+           tag == ValueTag::HeapString          ||
+           tag == ValueTag::ImmString8          ||
+           tag == ValueTag::ImmString16         ||
+           tag == ValueTag::Int32               ||
            tag == ValueTag::Magic;
 }
-
-
-enum class Magic : uint32_t
-{
-    INVALID         = 0,
-    LIMIT
-};
 
 class Value
 {
   public:
-    // Constants relating to tag bits.
-    static constexpr unsigned TagBits = 4;
-    static constexpr unsigned TagShift = 60;
-    static constexpr uint64_t TagMaskLow = 0xFu;
-    static constexpr uint64_t TagMaskHigh = TagMaskLow << TagShift;
+    // Constants relating to regular (non-double) tag bits.
+    static constexpr unsigned RegularTagBits = 5;
+    static constexpr unsigned RegularTagShift = 59;
+    static constexpr uint64_t RegularTagMaskLow = 0x1Fu;
+    static constexpr uint64_t RegularTagMaskHigh =
+        RegularTagMaskLow << RegularTagShift;
 
-    // High 16 bits of pointer values do not contain address bits.
-    static constexpr unsigned PtrHighBits = 8;
-    static constexpr unsigned PtrTypeShift = 56;
-    static constexpr unsigned PtrTypeMask = 0xFu;
+    // The weak bit is the same bit across all pointer-type values.
+    static constexpr unsigned WeakBit = 58;
+    static constexpr uint64_t WeakMask = UInt64(1) << WeakBit;
+
+    // High 6 bits of pointer values describe pointer type (native or foreign)
+    static constexpr unsigned PtrTypeBits = 6;
+    static constexpr unsigned PtrTypeShift = 58;
+    static constexpr uint64_t PtrTypeMaskLow = 0x3Fu;
     static constexpr unsigned PtrType_Native = 0x0u;
     static constexpr unsigned PtrType_Foreign = 0x1u;
+
+    static constexpr unsigned PtrValueBits = 56;
+    static constexpr uint64_t PtrValueMask = (UInt64(1) << PtrValueBits) - 1;
+
+    // Constants for double tag bits
+    static constexpr unsigned DoubleTagBits = 3;
+    static constexpr unsigned DoubleTagShift = 61;
+    static constexpr uint64_t DoubleTagMaskLow = 0x7u;
+    static constexpr uint64_t DoubleTagMaskHigh =
+        DoubleTagMaskLow << DoubleTagShift;
+
+    static constexpr unsigned DoubleTag_PosSmall = 0x1;     // 001*-**** ...
+    static constexpr unsigned DoubleTag_PosBig = 0x2;       // 010*-**** ...
+    static constexpr unsigned DoubleTag_NegSmall = 0x5;     // 101*-**** ...
+    static constexpr unsigned DoubleTag_NegBig = 0x6;       // 110*-**** ...
+
+    // Immediate values for special doubles.
+    static constexpr uint64_t SpecialImmDoubleValueMask = 0x3;
+    static constexpr unsigned NegZeroVal = 0x0;
+    static constexpr unsigned NaNVal     = 0x1;
+    static constexpr unsigned PosInfVal  = 0x2;
+    static constexpr unsigned NegInfVal  = 0x3;
 
     // Constants relating to string bits.
     static constexpr unsigned ImmString8MaxLength = 7;
@@ -209,39 +255,6 @@ class Value
     static constexpr uint64_t ImmString16LengthMaskLow = 0x3;
     static constexpr uint64_t ImmString16LengthMaskHigh =
         ImmString16LengthMaskLow << ImmString16LengthShift;
-
-    // The weak bit is the same bit across all pointer-type values.
-    static constexpr unsigned WeakBit = 59;
-    static constexpr uint64_t WeakMask = UInt64(1) << WeakBit;
-
-    // Bounds for representable simple ImmDouble:
-    // In order of: [PosMax, PosMin, NegMax, NegMin]
-    //           SEEE-EEEE EEEE-MMMM MMMM-MMMM .... MMMM-MMMM
-    // PosMax: 0100-0111 1111-1111 1111-1111 .... 1111-1111
-    // PosMin: 0011-1000 0000-0000 0000-0000 .... 0000-0000
-    // NegMax: 1011-1000 0000-0000 0000-0000 .... 0000-0000
-    // MegMin: 1100-0111 1111-1111 1111-1111 .... 1111-1111
-    template <bool NEG, unsigned EXP, bool MANT>
-    struct GenerateDouble_ {
-        static constexpr uint64_t Value =
-            (UInt64(NEG) << 63) |
-            (UInt64(EXP) << 52) |
-            (MANT ? ((UInt64(MANT) << 52) - 1u) : 0);
-    };
-    static constexpr uint64_t ImmDoublePosMax =
-        GenerateDouble_<false, 0x47f, true>::Value;
-    static constexpr uint64_t ImmDoublePosMin =
-        GenerateDouble_<false, 0x380, false>::Value;
-    static constexpr uint64_t ImmDoubleNegMax =
-        GenerateDouble_<true, 0x380, false>::Value;
-    static constexpr uint64_t ImmDoubleNegMin =
-        GenerateDouble_<true, 0x47f, true>::Value;
-
-    // Immediate values for special doubles.
-    static constexpr unsigned NegZeroVal = 0x0;
-    static constexpr unsigned NaNVal     = 0x1;
-    static constexpr unsigned PosInfVal  = 0x2;
-    static constexpr unsigned NegInfVal  = 0x3;
 
     // Invalid value is a null-pointer
     static constexpr uint64_t Invalid = 0u;
@@ -258,13 +271,12 @@ class Value
 
     ValueTag getTag() const;
     bool checkTag(ValueTag tag) const;
-    uint64_t removeTag() const;
 
     template <typename T=void>
     inline T *getPtr() const;
 
     template <typename T>
-    static inline Value MakePtr(ValueTag tag, T *ptr);
+    static inline Value MakePtr(ValueTag tag, T *ptr, bool weak=false);
 
     static Value MakeTag(ValueTag tag);
     static Value MakeTagValue(ValueTag tag, uint64_t ival);
@@ -308,11 +320,12 @@ class Value
 
     bool isImmString16() const;
 
-    bool isImmDoubleLow() const;
+    bool isPosImmDoubleSmall() const;
+    bool isPosImmDoubleBig() const;
+    bool isNegImmDoubleSmall() const;
+    bool isNegImmDoubleBig() const;
 
-    bool isImmDoubleHigh() const;
-
-    bool isImmDoubleX() const;
+    bool isImmDouble() const;
 
     bool isNegZero() const;
 
@@ -380,17 +393,15 @@ class Value
     template <typename CharT>
     inline unsigned readImmString(CharT *buf) const;
 
-    double getImmDoubleHiLoValue() const;
+    double getRegularImmDoubleValue() const;
 
-    double getImmDoubleXValue() const;
+    double getSpecialImmDoubleValue() const;
 
     double getImmDoubleValue() const;
 
     VM::HeapDouble *getHeapDouble() const;
 
     uint64_t getMagicInt() const;
-
-    Magic getMagic() const;
 
     int32_t getInt32() const;
 
@@ -412,7 +423,6 @@ class Value
     template <typename CharT>
     friend Value StringValue(unsigned length, const CharT *data);
     friend Value MagicValue(uint64_t val);
-    friend Value MagicValue(Magic m);
     friend Value IntegerValue(int32_t i);
     friend Value DoubleValue(VM::HeapDouble *d);
     friend Value NaNValue();
@@ -461,8 +471,6 @@ Value NegInfValue();
 Value DoubleValue(double dval);
 
 Value MagicValue(uint64_t val);
-
-Value MagicValue(Magic magic);
 
 Value IntegerValue(int32_t ival);
 
