@@ -17,6 +17,7 @@
     _(Shape,                            true)                   \
     \
     _(Script,                           true)                   \
+    _(StackFrame,                       true)                   \
     \
     _(Object,                           true)                   \
     _(Global,                           true)                   \

@@ -20,10 +20,9 @@ class Tuple : public HeapThing, public TypedHeapThing<HeapType::Tuple>
     Tuple(const Tuple &other);
 
     const Value &element(uint32_t idx) const;
-    Value &element(uint32_t idx);
+    void setElement(uint32_t idx, const Value &val);
 
     const Value &operator [](uint32_t idx) const;
-    Value &operator [](uint32_t idx);
 
     uint32_t size() const;
 };

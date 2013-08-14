@@ -23,6 +23,7 @@ whisper_SOURCES = \
     vm/tuple.cpp \
     vm/shape_tree.cpp \
     vm/script.cpp \
+    vm/stack_frame.cpp \
     vm/property_map_thing.cpp \
     vm/object.cpp \
     vm/global.cpp \

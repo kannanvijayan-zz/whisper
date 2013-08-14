@@ -35,20 +35,15 @@ Tuple::element(uint32_t idx) const
     return valueRef(idx);
 }
 
-Value &
-Tuple::element(uint32_t idx)
+void
+Tuple::setElement(uint32_t idx, const Value &val)
 {
-    return valueRef(idx);
+    noteWrite(&valueRef(idx));
+    valueRef(idx) = val;
 }
 
 const Value &
 Tuple::operator [](uint32_t idx) const
-{
-    return valueRef(idx);
-}
-
-Value &
-Tuple::operator [](uint32_t idx)
 {
     return valueRef(idx);
 }
