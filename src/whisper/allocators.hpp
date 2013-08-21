@@ -246,7 +246,7 @@ class PoolAllocator
     {
         size_t arraySize = NumFreeLists * sizeof(FreeList *);
         void *arrayPtr = bumpAllocator_.allocate(arraySize, BasicAlignment);
-        freeLists_ = reinterpret_cast<FreeList **>(arrayPtr);
+        freeLists_ = static_cast<FreeList **>(arrayPtr);
 
         for (unsigned i = 0; i < NumFreeLists; i++)
             freeLists_[i] = nullptr;
