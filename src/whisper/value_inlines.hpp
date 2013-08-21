@@ -12,7 +12,7 @@ inline T *
 Value::getPtr() const
 {
     WH_ASSERT(isObject() || isHeapString() || isHeapDouble());
-    return reinterpret_cast<T *>(tagged_ & PtrValueBits);
+    return reinterpret_cast<T *>(tagged_ & PtrValueMask);
 }
 
 template <typename T>
@@ -22,7 +22,7 @@ Value::MakePtr(ValueTag tag, T *ptr, bool weak)
     WH_ASSERT(tag == ValueTag::Object || tag == ValueTag::HeapString ||
               tag == ValueTag::HeapDouble);
     uint64_t ptrval = reinterpret_cast<uint64_t>(ptr);
-    ptrval &= PtrValueBits;
+    ptrval &= PtrValueMask;
     ptrval |= UInt64(tag) << RegularTagShift;
     if (weak)
         ptrval |= WeakMask;

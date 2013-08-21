@@ -11,9 +11,11 @@
 #include "value.hpp"
 #include "slab.hpp"
 #include "vm/heap_thing.hpp"
+#include "vm/heap_thing_inlines.hpp"
 #include "vm/double.hpp"
 #include "vm/string.hpp"
 #include "runtime.hpp"
+#include "runtime_inlines.hpp"
 #include "rooting.hpp"
 #include "ref_scanner.hpp"
 
@@ -22,7 +24,8 @@
 
 #include "vm/tuple.hpp"
 #include "vm/shape_tree.hpp"
-#include "vm/class.hpp"
+#include "vm/bytecode.hpp"
+#include "vm/script.hpp"
 
 #include "interp/bytecode_generator.hpp"
 
@@ -103,7 +106,7 @@ int main(int argc, char **argv) {
     RunContext cx = thrcx->makeRunContext();
     cx.makeActive();
 
-    // Create a bytecode generator for the script.
+    // Generate bytecode.
     Interp::BytecodeGenerator bcgen(&cx, wrappedAllocator, program, annotator,
                                     false);
     VM::Bytecode *bc = bcgen.generateBytecode();
@@ -111,14 +114,19 @@ int main(int argc, char **argv) {
         std::cerr << "Codgen error: " << bcgen.error() << "!" << std::endl;;
         return 1;
     }
-
     WH_ASSERT(bc != nullptr);
+
+    // Print bytecode.
     const uint8_t *bcdata = bc->data();
     std::cerr << "Bytecode length: " << bc->length() << std::endl;
     for (uint32_t i = 0; i < bc->length(); i++) {
         std::cerr << "Bytecode: " << (int)bcdata[i] << std::endl;
     }
 
+    VM::Script::Config scriptConfig(false, VM::Script::Global);
+    /*VM::Script *script = */cx.create<VM::Script>(true, bc, scriptConfig);
+
+    // Print memory contents.
     VM::SpewHeapThingSlab(cx.hatchery());
 
     return 0;

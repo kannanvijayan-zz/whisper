@@ -53,6 +53,8 @@ struct Script : public HeapThing, public TypedHeapThing<HeapType::Script>
     {
         bool isStrict;
         Mode mode;
+
+        Config(bool isStrict, Mode mode) : isStrict(isStrict), mode(mode) {}
     };
 
   private:

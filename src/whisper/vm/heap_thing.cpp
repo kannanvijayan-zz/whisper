@@ -1,4 +1,5 @@
 
+#define __STDC_FORMAT_MACROS
 #include "spew.hpp"
 #include "vm/heap_thing.hpp"
 #include "vm/heap_thing_inlines.hpp"
@@ -41,7 +42,7 @@ SpewHeapThingMemory(const uint8_t *startu8, const uint8_t *endu8)
         uint32_t words = DivUp<uint32_t>(size, sizeof(uint64_t));
         const uint64_t *dataEnd = cur + 1 + words;
         for (const uint64_t *data = cur + 1; data < dataEnd; data++)
-            SpewMemoryNote("{%016p}  %016x", data, *data);
+            SpewMemoryNote("{%016p}  %016" PRIx64, data, *data);
 
         cur += 1 + words;
         WH_ASSERT(cur <= end);
