@@ -22,7 +22,7 @@ HeapTypeString(HeapType ht)
 }
 
 void
-SpewHeapThingMemory(const uint8_t *startu8, const uint8_t *endu8)
+SpewHeapThingArea(const uint8_t *startu8, const uint8_t *endu8)
 {
     const uint64_t *start = reinterpret_cast<const uint64_t *>(startu8);
     const uint64_t *end = reinterpret_cast<const uint64_t *>(endu8);
@@ -32,17 +32,17 @@ SpewHeapThingMemory(const uint8_t *startu8, const uint8_t *endu8)
         const HeapThingHeader *hdr =
             reinterpret_cast<const HeapThingHeader *>(cur);
 
-        SpewMemoryNote("{%016p}  <%s> [card=%u] [size=%u] [flags=%02x]",
-                        hdr, HeapTypeString(hdr->type()),
-                        (unsigned) hdr->cardNo(),
-                        (unsigned) hdr->size(),
-                        (unsigned) hdr->flags());
+        SpewSlabNote("{%016p}  <%s> [card=%u] [size=%u] [flags=%02x]",
+                     hdr, HeapTypeString(hdr->type()),
+                     (unsigned) hdr->cardNo(),
+                     (unsigned) hdr->size(),
+                     (unsigned) hdr->flags());
 
         uint32_t size = hdr->size();
         uint32_t words = DivUp<uint32_t>(size, sizeof(uint64_t));
         const uint64_t *dataEnd = cur + 1 + words;
         for (const uint64_t *data = cur + 1; data < dataEnd; data++)
-            SpewMemoryNote("{%016p}  %016" PRIx64, data, *data);
+            SpewSlabNote("{%016p}  %016" PRIx64, data, *data);
 
         cur += 1 + words;
         WH_ASSERT(cur <= end);
@@ -52,17 +52,20 @@ SpewHeapThingMemory(const uint8_t *startu8, const uint8_t *endu8)
 void
 SpewHeapThingSlab(Slab *slab)
 {
+    if (ChannelSpewLevel(SpewChannel::Slab) > SpewLevel::Note)
+        return;
+
     uint8_t *headStart = slab->headStartAlloc();
     uint8_t *headEnd = slab->headEndAlloc();
-    SpewHeapThingMemory(headStart, headEnd);
+    SpewHeapThingArea(headStart, headEnd);
 
-    SpewMemoryNote("...");
+    SpewSlabNote("...");
 
     // tailStart > tailEnd (since tail allocation grows down).
     // So reverse them when printing memory.
     uint8_t *tailStart = slab->tailStartAlloc();
     uint8_t *tailEnd = slab->tailEndAlloc();
-    SpewHeapThingMemory(tailEnd, tailStart);
+    SpewHeapThingArea(tailEnd, tailStart);
 }
 
 //

@@ -15,7 +15,7 @@ namespace Interp {
  * common ops.
  *
  * The logical layout of an interpreter frame's execution context
- * includes the following memory spaces:
+ * includes the following "register" spaces:
  *      Constants - an addressable constant pool.
  *      Arguments - the actual arguments list.
  *      Locals    - the locals list.
@@ -36,19 +36,27 @@ namespace Interp {
  *
  *          Has zero subsequent bytes.
  *
- *      Immediate<N> (I<N>)
+ *      Integer<N> (I<N>)
  *
  *          There are 4 variants of this kind, for N=1, N=2, N=3, and N=4,
- *          encoding integers of varying widths.
+ *          encoding signed integers of varying widths.
+ *
+ *          The subsequent integers are read in little-endian format.
+ *          The high bit of the last value is sign extended.
+ *
+ *      Unsigned<N> (U<N>)
+ *
+ *          There are 4 variants of this kind, for N=1, N=2, N=3, and N=4,
+ *          encoding unsigned integers of varying widths.
  *
  *          The subsequent integers are read in little-endian format.
  *
- *      Value (V)
+ *      Value (V, VV, VVV, etc..)
  *
- *          Exactly one input operand is provided, which may come from one
- *          of the virtual register files, or be an immediate.
+ *          One or more input operands are provided, each which may come
+ *          from one of the virtual register files, or be an immediate.
  *
- *          The operand area's first byte is encoded:
+ *          Each operand area's first byte is encoded:
  *
  *              VVVV-RRRR
  *
@@ -88,25 +96,30 @@ namespace Interp {
  *                  if 0011 - Immediate value specified by VVVV.
  *                  if 0111 - Immediate value specified by VVVV and following
  *                      byte.
- *                  if 1011 - Immediate value specified by VVVV and following
+ *                  if 0111 - Immediate value specified by VVVV and following
  *                      two bytes.
- *                  if 1111 - Immediate value specified by VVVV and following
- *                      three bytes.
+ *                  if 1111 - Immediate negative value specified by VVVV.
  *
+ *          Note that the above encoding allows for a maximum of 0xFFFFFFF,
+ *          or roughly 256 million registers in each of the respective files.
  */
 
-enum class OperandFormat : uint8_t
+enum class OpcodeFormat : uint8_t
 {
     E               = 0x00,
-    I1              = 0x01,
-    I2              = 0x02,
-    I3              = 0x03,
-    I4              = 0x04,
-    V               = 0x05,
-    VV              = 0x06,
-    VVV             = 0x07
+    I1, I2, I3, I4,
+    U1, U2, U3, U4,
+    V, VV, VVV
 };
 
+
+//
+// Enumeration of all the spaces an operand can reference.
+// |StackTop| is the logical operand space representing the top of
+// the stack.  This is a useful concept to describe instructions
+// which read multiple values from the top of the stack and write back
+// to the top of the stack.
+//
 enum class OperandSpace : uint8_t
 {
     Constant    = 0,
@@ -114,8 +127,11 @@ enum class OperandSpace : uint8_t
     Local       = 2,
     Stack       = 3,
     Immediate,
-    StackTop
+    StackTop,
+    LIMIT
 };
+
+const char *OperandSpaceString(OperandSpace space);
 
 constexpr unsigned OperandSignificantBits = 28;
 constexpr uint32_t OperandMaxIndex = 0x0fffffffUL;
@@ -123,6 +139,10 @@ constexpr int32_t OperandMaxUnsignedValue = 0x0fffffffUL;
 constexpr int32_t OperandMaxSignedValue = 0x07ffffffL;
 constexpr int32_t OperandMinSignedValue = -OperandMaxSignedValue - 1;
 
+//
+// OperandLocation is a helper class used mostly for code generation.
+// It encapsulates the notion of the specific location of an operand.
+//
 class OperandLocation
 {
   private:
@@ -134,6 +154,8 @@ class OperandLocation
     static constexpr uint32_t IsSignedBit = 0x10000000;
 
   public:
+    OperandLocation();
+
     static OperandLocation Constant(uint32_t index);
     static OperandLocation Argument(uint32_t index);
     static OperandLocation Local(uint32_t index);
@@ -143,6 +165,8 @@ class OperandLocation
     static OperandLocation StackTop();
 
     OperandSpace space() const;
+
+    bool isValid() const;
 
     bool isConstant() const;
     bool isArgument() const;
@@ -162,6 +186,9 @@ class OperandLocation
     bool isWritable() const;
 };
 
+//
+// Flags describing opcodes.
+//
 enum OpcodeFlags : uint32_t
 {
     OPF_None                = 0x0,
@@ -181,14 +208,21 @@ enum class Opcode : uint16_t
 
 void InitializeOpcodeInfo();
 
+uint32_t ReadOpcode(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
+                    Opcode *opcode);
 bool IsValidOpcode(Opcode op);
 
 const char *GetOpcodeName(Opcode opcode);
-OperandFormat GetOperandFormat(Opcode opcode);
+OpcodeFormat GetOpcodeFormat(Opcode opcode);
 int8_t GetOpcodeSection(Opcode opcode);
 OpcodeFlags GetOpcodeFlags(Opcode opcode);
 uint8_t GetOpcodeEncoding(Opcode opcode);
 
+uint8_t GetOpcodeOperandCount(OpcodeFormat fmt);
+uint32_t ReadOperandLocation(const uint8_t *bytecodeData,
+                             const uint8_t *bytecodeEnd,
+                             OpcodeFormat fmt, uint8_t operandNo,
+                             OperandLocation *location);
     
 
 } // namespace Interp

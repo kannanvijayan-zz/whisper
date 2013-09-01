@@ -35,6 +35,9 @@ _(Add_VVS,      VV,     0,      OPF_None                           )\
 _(Add_VVV,      VVV,    0,      OPF_None                           )\
 
 
+#define WHISPER_BYTECODE_MAX_SECTION    (1)
+
+
 } // namespace Interp
 } // namespace Whisper
 

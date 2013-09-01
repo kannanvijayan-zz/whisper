@@ -34,9 +34,16 @@ ParseSpewLevel(const char *s)
 {
     for (int i = 0; LEVEL_INFO[i].str != nullptr; i++) {
         LevelInfo &inf = LEVEL_INFO[i];
-        if (!strcmp(inf.str, s) && (s[inf.len] == '\0' || s[inf.len] == ','))
-            return inf.level;
+
+        if (strncmp(inf.str, s, inf.len) != 0)
+            break;
+
+        if (s[inf.len] != '\0' && s[inf.len] != ',')
+            break;
+
+        return inf.level;
     }
+
     return SpewLevel::Warn;
 }
 
@@ -160,6 +167,12 @@ Spew(SpewChannel chan, SpewLevel level, const char *fmt, ...)
     va_end(args);
 
     fprintf(stderr, "[%s] %s: %s\n", levelName, SpewChannelString(chan), buf);
+}
+
+SpewLevel
+ChannelSpewLevel(SpewChannel chan)
+{
+    return SPEW_LEVELS[static_cast<int>(chan)];
 }
 
 

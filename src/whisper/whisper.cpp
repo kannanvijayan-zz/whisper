@@ -129,5 +129,8 @@ int main(int argc, char **argv) {
     // Print memory contents.
     VM::SpewHeapThingSlab(cx.hatchery());
 
+    // Print bytecode contents.
+    VM::SpewBytecodeObject(bc);
+
     return 0;
 }

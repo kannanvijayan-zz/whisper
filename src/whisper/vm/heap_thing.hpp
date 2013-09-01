@@ -30,8 +30,7 @@ IsValidHeapType(HeapType ht) {
     return (ht > HeapType::INVALID) && (ht < HeapType::LIMIT);
 }
 
-const char *
-HeapTypeString(HeapType ht);
+const char *HeapTypeString(HeapType ht);
 
 void SpewHeapThingSlab(Slab *slab);
 

@@ -38,6 +38,7 @@ enum class SpewLevel
 
 void InitializeSpew();
 void Spew(SpewChannel chan, SpewLevel level, const char *fmt, ...);
+SpewLevel ChannelSpewLevel(SpewChannel channel);
 
 #define DEFSPEW_(n) \
     template <typename... Args> \
@@ -59,6 +60,9 @@ void Spew(SpewChannel chan, SpewLevel level, const char *fmt, ...);
 #else // !defined(ENABLE_SPEW)
 
 inline void InitializeSpew() {}
+inline SpewLevel ChannelSpewLevel(SpewChannel channel) {
+    return SpewLevel::None;
+}
 
 #define SpewDebugNote(...)
 #define SpewDebugWarn(...)

@@ -30,6 +30,8 @@ typedef Root<Bytecode *> RootedBytecode;
 typedef Handle<Bytecode *> HandleBytecode;
 typedef MutableHandle<Bytecode *> MutHandleBytecode;
 
+void SpewBytecodeObject(Bytecode *bc);
+
 
 } // namespace VM
 } // namespace Whisper
