@@ -44,17 +44,17 @@ constexpr uint64_t UInt64(IntT val) {
 }
 
 template <typename IntT>
-constexpr uint64_t UInt32(IntT val) {
+constexpr uint32_t UInt32(IntT val) {
     return static_cast<uint32_t>(val);
 }
 
 template <typename IntT>
-constexpr uint64_t Int64(IntT val) {
+constexpr int64_t Int64(IntT val) {
     return static_cast<int64_t>(val);
 }
 
 template <typename IntT>
-constexpr uint64_t Int32(IntT val) {
+constexpr int32_t Int32(IntT val) {
     return static_cast<int32_t>(val);
 }
 

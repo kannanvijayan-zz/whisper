@@ -93,12 +93,13 @@ namespace Interp {
  *                  if 1110 - Stack register file, where VVVV and the
  *                      following three bytes specify the register number.
  *
- *                  if 0011 - Immediate value specified by VVVV.
- *                  if 0111 - Immediate value specified by VVVV and following
- *                      byte.
- *                  if 0111 - Immediate value specified by VVVV and following
- *                      two bytes.
- *                  if 1111 - Immediate negative value specified by VVVV.
+ *                  if 0011 - Immediate unsigned value specified by VVVV.
+ *                  if 0111 - Immediate signed value specified by VVVV and
+ *                      following byte.
+ *                  if 1011 - Immediate signed value specified by VVVV and
+ *                      following two bytes.
+ *                  if 1111 - Immediate signed value specified by VVVV and
+ *                      following three bytes.
  *
  *          Note that the above encoding allows for a maximum of 0xFFFFFFF,
  *          or roughly 256 million registers in each of the respective files.

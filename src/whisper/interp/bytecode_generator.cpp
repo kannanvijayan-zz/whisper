@@ -119,6 +119,25 @@ BytecodeGenerator::generateExpression(AST::ExpressionNode *expr,
 
         // Now generate the binary expression.
         emitBinaryOp(binExpr, lhsLocation, rhsLocation, outputLocation);
+
+    // Handle unary expression.
+    } else if (expr->isUnaryExpression()) {
+        AST::BaseUnaryExpressionNode *unExpr = expr->toUnaryExpression();
+
+        // See if input is addressable.
+        OperandLocation inputLocation = OperandLocation::StackTop();
+
+        // If input is not directly addressable, generate the code for it
+        // and deposit onto stack top.
+        if (!getAddressableLocation(unExpr->subexpression(), inputLocation)) {
+            WH_ASSERT(inputLocation.isStackTop());
+            generateExpression(unExpr->subexpression(), inputLocation);
+        }
+
+        // Now generate the unary expression.
+        emitUnaryOp(unExpr, inputLocation, outputLocation);
+
+    // Handle numeric literals.
     } else if (expr->isNumericLiteral()) {
         AST::NumericLiteralNode *lit = expr->toNumericLiteral();
         WH_ASSERT(lit->hasAnnotation());
@@ -131,7 +150,12 @@ BytecodeGenerator::generateExpression(AST::ExpressionNode *expr,
 
         // Int32s are just always emitted inline.
         emitPushInt32(annot->int32Value());
-        
+
+    // Handle parenthesized expressions.
+    } else if (expr->isParenthesizedExpression()) {
+        return generateExpression(
+                    expr->toParenthesizedExpression()->subexpression(),
+                    outputLocation);
     } else {
         SpewBytecodeError("Cannot handle expr node: %s", expr->typeString());
         emitError("Cannot handle expression");
@@ -157,6 +181,26 @@ BytecodeGenerator::getAddressableLocation(AST::ExpressionNode *expr,
             return false;
 
         location = OperandLocation::Immediate(annot->int32Value());
+        return true;
+    }
+
+    if (expr->isParenthesizedExpression()) {
+        auto subExpr = expr->toParenthesizedExpression()->subexpression();
+        return getAddressableLocation(subExpr, location);
+    }
+
+    if (expr->isNegativeExpression()) {
+        auto subExpr = expr->toNegativeExpression()->subexpression();
+        if (!getAddressableLocation(subExpr, location))
+            return false;
+
+        if (!location.isImmediate())
+            return false;
+
+        if (location.signedValue() < 0)
+            return false;
+
+        location = OperandLocation::Immediate(-location.signedValue());
         return true;
     }
 
@@ -197,16 +241,61 @@ BytecodeGenerator::emitPushInt32(int32_t value)
 }
 
 void
-BytecodeGenerator::emitBinaryOp(AST::BaseBinaryExpressionNode *binExpr,
+BytecodeGenerator::emitUnaryOp(AST::BaseUnaryExpressionNode *expr,
+                               const OperandLocation &inputLocation,
+                               const OperandLocation &outputLocation)
+{
+    // Calculate base opcode for this binary operation.
+    Opcode opcode = Opcode::INVALID;
+    switch (expr->type()) {
+      case AST::NegativeExpression:
+        opcode = Opcode::Neg_SS;
+        break;
+      default:
+        break;
+    }
+    if (opcode == Opcode::INVALID)
+        emitError("Unhandled unary op.");
+
+    // Calculate offset of actual opcode from the 'SSS' opcode variant.
+    uint8_t formatOffset = 0;
+    if (!inputLocation.isStackTop())
+        formatOffset |= (1 << 1);
+    if (!outputLocation.isStackTop())
+        formatOffset |= (1 << 0);
+
+    // Calculate actual opcode.
+    opcode = static_cast<Opcode>(static_cast<uint16_t>(opcode) + formatOffset);
+
+    // Emit op and operand locations.
+    emitOp(opcode);
+    emitOperandLocation(inputLocation);
+    emitOperandLocation(outputLocation);
+}
+
+void
+BytecodeGenerator::emitBinaryOp(AST::BaseBinaryExpressionNode *expr,
                                 const OperandLocation &lhsLocation,
                                 const OperandLocation &rhsLocation,
                                 const OperandLocation &outputLocation)
 {
     // Calculate base opcode for this binary operation.
     Opcode opcode = Opcode::INVALID;
-    switch (binExpr->type()) {
+    switch (expr->type()) {
       case AST::AddExpression:
         opcode = Opcode::Add_SSS;
+        break;
+      case AST::SubtractExpression:
+        opcode = Opcode::Sub_SSS;
+        break;
+      case AST::MultiplyExpression:
+        opcode = Opcode::Mul_SSS;
+        break;
+      case AST::DivideExpression:
+        opcode = Opcode::Div_SSS;
+        break;
+      case AST::ModuloExpression:
+        opcode = Opcode::Mod_SSS;
         break;
       default:
         break;

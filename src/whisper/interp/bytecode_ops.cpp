@@ -78,7 +78,7 @@ OperandLocation::Immediate(int32_t value)
 {
     WH_ASSERT(value >= OperandMinSignedValue &&
               value <= OperandMaxSignedValue);
-    uint32_t v = static_cast<uint32_t>(value) & OperandMaxUnsignedValue;
+    uint32_t v = UInt32(value) & OperandMaxUnsignedValue;
     v |= IsSignedBit;
     return OperandLocation(OperandSpace::Immediate, v);
 }
@@ -172,8 +172,8 @@ OperandLocation::signedValue() const
     WH_ASSERT(isImmediate() && isSigned());
     uint32_t uval = indexOrValue_ & OperandMaxUnsignedValue;
     if (uval > OperandMaxSignedValue)
-        uval |= static_cast<uint32_t>(0xF) << OperandSignificantBits;
-    return static_cast<int32_t>(uval);
+        uval |= UInt32(0xF) << OperandSignificantBits;
+    return Int32(uval);
 }
 
 bool
@@ -367,20 +367,20 @@ ReadImmediateOperand(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
     uint32_t val = 0;
     uint8_t i = 0;
     for (; i < BYTES; i++) {
-        val |= static_cast<uint32_t>(bytecodeData[i]) << (i*8);
+        val |= UInt32(bytecodeData[i]) << (i*8);
     }
 
     if (SIGNED && (bytecodeData[i-1] & 0x80)) {
         for (; i < 4; i++)
-            val |= static_cast<uint32_t>(0xFF) << (i*8);
+            val |= UInt32(0xFF) << (i*8);
     }
 
     if (SIGNED) {
         if (location)
-            *location = OperandLocation::Immediate(static_cast<int32_t>(val));
+            *location = OperandLocation::Immediate(Int32(val));
     } else {
         if (location)
-            *location = OperandLocation::Immediate(static_cast<uint32_t>(val));
+            *location = OperandLocation::Immediate(val);
     }
     return BYTES;
 }
@@ -399,7 +399,7 @@ ReadValueOperandNumber(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
 
     uint32_t val = *result;
     for (uint8_t i = 0; i < bytes; i++)
-        val |= static_cast<uint32_t>(bytecodeData[i]) << (4 + i*8);
+        val |= UInt32(bytecodeData[i]) << (4 + i*8);
 
     *result = val;
 }
@@ -414,14 +414,9 @@ ReadValueOperand(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
     // If low 2 bits are 0x3, then this is an encoded immediate.
     uint8_t idxBytes = firstByte & 0x3;
     OperandSpace opSpace;
-    bool negate = false;
     if (idxBytes == 0x3) {
         opSpace = OperandSpace::Immediate;
         idxBytes = (firstByte >> 2) & 0x3;
-        if (idxBytes == 0x3) {
-            idxBytes = 0;
-            negate = true;
-        }
     } else {
         opSpace = static_cast<OperandSpace>((firstByte >> 2) & 0x3);
     }
@@ -429,15 +424,16 @@ ReadValueOperand(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
     WH_ASSERT_IF(bytecodeEnd, (bytecodeData + 1 + idxBytes) <= bytecodeEnd);
 
     uint32_t val = firstByte >> 4;
-    int32_t sval = 0;
     ReadValueOperandNumber(bytecodeData+1, bytecodeEnd, idxBytes, &val);
-    if (negate) {
-        WH_ASSERT(opSpace == OperandSpace::Immediate);
-        WH_ASSERT(idxBytes == 0);
-        sval = -static_cast<int32_t>(val + 1);
+
+    // Sign extend the value if it is signed.
+    if (opSpace == OperandSpace::Immediate) {
+        uint32_t signBit = UInt32(1) << ((idxBytes * 8) + 3);
+        if (val & signBit)
+            val |= ~((signBit << 1) - 1);
     }
 
-    // Read.
+    // Generate OperandLocation value.
     switch (opSpace) {
       case OperandSpace::Constant:
         if (location)
@@ -460,12 +456,8 @@ ReadValueOperand(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
         break;
 
       case OperandSpace::Immediate:
-        if (negate) {
-            if (location)
-                *location = OperandLocation::Immediate(sval);
-        } else {
-            if (location)
-                *location = OperandLocation::Immediate(val);
+        if (location) {
+            *location = OperandLocation::Immediate(Int32(val));
         }
         break;
 

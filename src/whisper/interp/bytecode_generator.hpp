@@ -90,6 +90,9 @@ class BytecodeGenerator
 
 
     void emitPushInt32(int32_t value);
+    void emitUnaryOp(AST::BaseUnaryExpressionNode *expr,
+                     const OperandLocation &inputLocation,
+                     const OperandLocation &outputLocation);
     void emitBinaryOp(AST::BaseBinaryExpressionNode *expr,
                       const OperandLocation &lhsLocation,
                       const OperandLocation &rhsLocation,

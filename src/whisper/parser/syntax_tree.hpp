@@ -269,6 +269,7 @@ class BaseNode
     virtual inline bool isStatement() const {
         return false;
     }
+
     virtual inline bool isBinaryExpression() const {
         return false;
     }
@@ -279,6 +280,18 @@ class BaseNode
     inline BaseBinaryExpressionNode *toBinaryExpression() {
         WH_ASSERT(isBinaryExpression());
         return reinterpret_cast<BaseBinaryExpressionNode *>(this);
+    }
+
+    virtual inline bool isUnaryExpression() const {
+        return false;
+    }
+    inline const BaseUnaryExpressionNode *toUnaryExpression() const {
+        WH_ASSERT(isUnaryExpression());
+        return reinterpret_cast<const BaseUnaryExpressionNode *>(this);
+    }
+    inline BaseUnaryExpressionNode *toUnaryExpression() {
+        WH_ASSERT(isUnaryExpression());
+        return reinterpret_cast<BaseUnaryExpressionNode *>(this);
     }
 
     bool isLeftHandSideExpression();
@@ -880,6 +893,10 @@ class BaseUnaryExpressionNode : public ExpressionNode
 
     inline ExpressionNode *subexpression() const {
         return subexpression_;
+    }
+
+    virtual inline bool isUnaryExpression() const override {
+        return true;
     }
 };
 
