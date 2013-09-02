@@ -166,6 +166,8 @@ bool
 BytecodeGenerator::getAddressableLocation(AST::ExpressionNode *expr,
                                           OperandLocation &location)
 {
+    // Numeric integer literals within the appropriate range
+    // are addressable.
     if (expr->isNumericLiteral()) {
         AST::NumericLiteralNode *lit = expr->toNumericLiteral();
         WH_ASSERT(lit->hasAnnotation());
@@ -184,13 +186,18 @@ BytecodeGenerator::getAddressableLocation(AST::ExpressionNode *expr,
         return true;
     }
 
+    // Handle parenthesized expressions.
     if (expr->isParenthesizedExpression()) {
         auto subExpr = expr->toParenthesizedExpression()->subexpression();
         return getAddressableLocation(subExpr, location);
     }
 
+    // Handle negative literals.
     if (expr->isNegativeExpression()) {
         auto subExpr = expr->toNegativeExpression()->subexpression();
+        if (!subExpr->isNumericLiteral())
+            return false;
+
         if (!getAddressableLocation(subExpr, location))
             return false;
 
