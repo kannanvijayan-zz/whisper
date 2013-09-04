@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
         std::cerr << "Bytecode: " << buf << std::endl;
     }
 
-    VM::Script::Config scriptConfig(false, VM::Script::Global);
+    VM::Script::Config scriptConfig(false, VM::Script::TopLevel);
     /*VM::Script *script = */cx.create<VM::Script>(true, bc, scriptConfig);
 
     // Print memory contents.

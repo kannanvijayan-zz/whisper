@@ -48,7 +48,7 @@
 //
 // ShapeTree objects may optionally have a 'parent' shape tree, pointing
 // to another ShapeTree.  In these cases, the parent shape tree corresponds
-// to the shape of the prototype of the object of the
+// to the shape of the prototype of the object being described.
 //
 // All objects whose shape is captured by a particular shape tree have
 // the same number of fixed slots.  The ShapeTree object holds this

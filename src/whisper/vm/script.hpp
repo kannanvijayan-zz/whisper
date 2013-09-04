@@ -27,7 +27,7 @@ namespace VM {
 // The header flags for this object are used to store the following
 // information:
 //  strict - whether the script executes in strict mode.
-//  type - one of {Global, Function, Eval}
+//  mode - one of {TopLevel, Function, Eval}
 //
 //
 struct Script : public HeapThing, public TypedHeapThing<HeapType::Script>
@@ -40,7 +40,7 @@ struct Script : public HeapThing, public TypedHeapThing<HeapType::Script>
 
     enum Mode : uint32_t
     {
-        Global,
+        TopLevel,
         Function,
         Eval
     };
