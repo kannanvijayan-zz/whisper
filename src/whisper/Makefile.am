@@ -27,6 +27,7 @@ whisper_SOURCES = \
     vm/property_map_thing.cpp \
     vm/object.cpp \
     vm/global.cpp \
+    vm/scope.cpp \
     interp/bytecode_ops.cpp \
     interp/bytecode_generator.cpp \
     whisper.cpp

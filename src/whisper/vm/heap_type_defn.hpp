@@ -22,10 +22,11 @@
     _(Object,                           true)                   \
     _(Global,                           true)                   \
     \
-    _(DeclEnv,                          true)                   \
-    _(ObjEnv,                           true)                   \
-    _(FuncEnv,                          true)                   \
-    _(GlobalEnv,                        true)                   \
+    _(ObjectScopeDescriptor,            true)                   \
+    _(ObjectScope,                      true)                   \
+    _(DeclarativeScopeDescriptor,       true)                   \
+    _(DeclarativeScope,                 true)                   \
+    _(GlobalScope,                      true)                   \
     \
     _(ConstantPool,                     true)                   \
 
