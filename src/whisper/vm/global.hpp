@@ -5,7 +5,7 @@
 #include "debug.hpp"
 #include "value.hpp"
 #include "rooting.hpp"
-#include "vm/property_map_thing.hpp"
+#include "vm/object.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -16,11 +16,11 @@ struct PropertyMapTypeTraits<HeapType::Global>
     static constexpr uint32_t NumInternalSlots = 0;
 };
 
-class Global : public PropertyMapThing,
+class Global : public ObjectImpl,
                public TypedHeapThing<HeapType::Global>
 {
   public:
-    Global(Shape *shape, Global *prototype);
+    Global(Shape *shape);
 };
 
 typedef HeapThingWrapper<Global> WrappedGlobal;

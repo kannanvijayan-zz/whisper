@@ -41,24 +41,18 @@ DeclarativeScopeDescriptor::DeclarativeScopeDescriptor(
 //
 
 DeclarativeScope::DeclarativeScope(Shape *shape,
-                                   PropertyMapThing *prototype,
                                    DeclarativeScopeDescriptor *descriptor,
                                    HeapThing *outerScope)
-  : PropertyMapThing(shape, prototype),
-    descriptor_(descriptor),
-    outerScope_(outerScope)
+  : PropertyMapThing(shape), descriptor_(descriptor), outerScope_(outerScope)
 {}
 
 //
 // GlobalScope
 //
 
-GlobalScope::GlobalScope(Shape *shape, PropertyMapThing *prototype,
-                         Global *globalObject)
-  : PropertyMapThing(shape, prototype),
-    globalObject_(globalObject)
+GlobalScope::GlobalScope(Shape *shape, Global *globalObject)
+  : PropertyMapThing(shape), globalObject_(globalObject)
 {}
-
 
 
 } // namespace VM

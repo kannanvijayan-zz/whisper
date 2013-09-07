@@ -9,8 +9,8 @@ namespace Whisper {
 namespace VM {
 
 
-Global::Global(Shape *shape, Global *prototype)
-  : PropertyMapThing(shape, prototype)
+Global::Global(Shape *shape)
+  : ObjectImpl(shape)
 {
 }
 

@@ -19,22 +19,23 @@
     _(Script,                           true)                   \
     _(StackFrame,                       true)                   \
     \
-    _(Object,                           true)                   \
-    _(Global,                           true)                   \
-    \
     _(ObjectScopeDescriptor,            true)                   \
     _(ObjectScope,                      true)                   \
     _(DeclarativeScopeDescriptor,       true)                   \
     _(DeclarativeScope,                 true)                   \
     _(GlobalScope,                      true)                   \
     \
+    _(Object,                           true)                   \
+    _(Global,                           true)                   \
+    \
     _(ConstantPool,                     true)                   \
 
 
-// Listing of all PropertyMap types.
+// Listing of minimum
 #define WHISPER_DEFN_PROPMAP_TYPES(_)                           \
     /* Name */                                                  \
-    _(Object)
+    _(Object)                                                   \
+    _(Global)
 
 
 #endif // WHISPER__VM__HEAP_TYPE_DEFN_HPP

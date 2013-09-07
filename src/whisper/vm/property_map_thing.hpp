@@ -16,7 +16,6 @@ namespace VM {
 // various common JS objects which act as maps of properties to values.
 //
 // All PropertyMapThings have the following characteristics:
-//  Contain a prototype slot.
 //  Are descried by a shape tree.
 //  Contain a dynamicSlots slot
 //  Contain a number of fixed slots.
@@ -29,7 +28,6 @@ namespace VM {
 //      | header        |
 //      +---------------+
 //      | shape         |
-//      | prototype     |
 //      | dynamicSlots  |
 //      | <OBJECT       |
 //      |  SPECIFIC     |
@@ -74,9 +72,8 @@ class PropertyMapThing : public ShapedHeapThing
   public:
     // Implicit slots for PropertyMapThing is:
     //      shape
-    //      prototype
     //      dynamicSlots
-    static constexpr uint32_t BaseImplicitSlots = 3;
+    static constexpr uint32_t BaseImplicitSlots = 2;
 
     // Static function to calculate implicit slots.
     static uint32_t NumInternalSlots(HeapType ht);
@@ -84,18 +81,15 @@ class PropertyMapThing : public ShapedHeapThing
     static constexpr uint32_t PreventExtensionsFlag = 0x01;
 
   private:
-    NullableHeapThingValue<PropertyMapThing> prototype_;
     NullableHeapThingValue<Tuple> dynamicSlots_;
 
   public:
-    PropertyMapThing(Shape *shape, PropertyMapThing *prototype);
+    PropertyMapThing(Shape *shape);
 
     bool isExtensible() const;
     void preventExtensions();
 
     uint32_t numImplicitSlots() const;
-
-    PropertyMapThing *prototype() const;
 
     bool hasDynamicSlots() const;
     Tuple *maybeDynamicSlots() const;

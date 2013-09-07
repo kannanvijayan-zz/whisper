@@ -8,9 +8,13 @@
 namespace Whisper {
 namespace VM {
 
+ObjectImpl::ObjectImpl(Shape *shape)
+  : PropertyMapThing(shape)
+{
+}
 
-Object::Object(Shape *shape, Object *prototype)
-  : PropertyMapThing(shape, prototype)
+Object::Object(Shape *shape)
+  : ObjectImpl(shape)
 {
 }
 

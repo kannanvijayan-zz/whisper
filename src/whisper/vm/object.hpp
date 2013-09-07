@@ -10,17 +10,23 @@
 namespace Whisper {
 namespace VM {
 
+
+class ObjectImpl : public PropertyMapThing
+{
+  public:
+    ObjectImpl(Shape *shape);
+};
+
 template <>
 struct PropertyMapTypeTraits<HeapType::Object>
 {
     static constexpr uint32_t NumInternalSlots = 0;
 };
 
-class Object : public PropertyMapThing,
-               public TypedHeapThing<HeapType::Object>
+class Object : public ObjectImpl, public TypedHeapThing<HeapType::Object>
 {
   public:
-    Object(Shape *shape, Object *prototype);
+    Object(Shape *shape);
 };
 
 typedef HeapThingWrapper<Object> WrappedObject;

@@ -3,6 +3,7 @@
 #include "vm/heap_thing_inlines.hpp"
 #include "vm/property_map_thing.hpp"
 #include "vm/object.hpp"
+#include "vm/global.hpp"
 
 #include <algorithm>
 
@@ -25,9 +26,8 @@ PropertyMapThing::NumInternalSlots(HeapType ht)
     }
 }
 
-PropertyMapThing::PropertyMapThing(Shape *shape, PropertyMapThing *prototype)
-  : ShapedHeapThing(shape),
-    prototype_(prototype)
+PropertyMapThing::PropertyMapThing(Shape *shape)
+  : ShapedHeapThing(shape)
 {}
 
 bool
@@ -47,12 +47,6 @@ uint32_t
 PropertyMapThing::numImplicitSlots() const
 {
     return BaseImplicitSlots + NumInternalSlots(type());
-}
-
-PropertyMapThing *
-PropertyMapThing::prototype() const
-{
-    return prototype_;
 }
 
 bool

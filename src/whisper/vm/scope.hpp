@@ -117,8 +117,7 @@ class DeclarativeScope : public PropertyMapThing,
     HeapThingValue<HeapThing> outerScope_;
 
   public:
-    DeclarativeScope(Shape *shape, PropertyMapThing *prototype,
-                     DeclarativeScopeDescriptor *descriptor,
+    DeclarativeScope(Shape *shape, DeclarativeScopeDescriptor *descriptor,
                      HeapThing *outerScope);
 };
 
@@ -135,8 +134,7 @@ class GlobalScope : public PropertyMapThing,
     HeapThingValue<Global> globalObject_;
 
   public:
-    GlobalScope(Shape *shape, PropertyMapThing *prototype,
-                Global *globalObject);
+    GlobalScope(Shape *shape, Global *globalObject);
 };
 
 typedef HeapThingWrapper<ObjectScopeDescriptor> WrappedObjectScopeDescriptor;
