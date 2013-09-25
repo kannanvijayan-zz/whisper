@@ -31,6 +31,8 @@ typedef uint64_t word_t;
 typedef int64_t sword_t;
 #endif
 
+typedef uint8_t byte_t;
+
 // NOTE: Maximal allowed character is 0x10FFFF
 // See ECMA-262 Edition 6, Clause 6.
 typedef int32_t unic_t;

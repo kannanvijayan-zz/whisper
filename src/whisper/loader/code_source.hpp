@@ -18,12 +18,6 @@ namespace Whisper {
 //
 // Represents some abstract source of loaded code.
 //
-// Code sources do not provide general random access, but they
-// allow users to mark a location.  At a later point, the stream
-// can be rewound to any position at or after the marked location.
-//
-// A set mark may be erased at a later point with 'erase'.
-//
 class CodeSource
 {
   protected:
@@ -59,7 +53,6 @@ class FileCodeSource : public CodeSource
 
   public:
     FileCodeSource(const char *filename);
-
     ~FileCodeSource();
 
     void finalize();
@@ -75,8 +68,7 @@ class FileCodeSource : public CodeSource
 // SourceStream
 //
 // A stream API built on top of a CodeStream to allow byte-by-byte
-// access.  The read interface is buffered via a direct, stack-allocated
-// buffer to avoid virtual-function-call overhead for readByte()
+// access.
 //
 class SourceStream
 {
