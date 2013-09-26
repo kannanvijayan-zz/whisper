@@ -27,6 +27,13 @@ class String : public HeapThing
     }
 };
 
+template <>
+class HeapThingTraits<String>
+{
+    static constexpr HeapType HEAP_TYPE = HeapType::String;
+    static constexpr bool TERMINAL = true;
+};
+
 
 } // namespace Runtime
 } // namespace Whisper

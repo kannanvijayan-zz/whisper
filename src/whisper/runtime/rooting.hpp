@@ -44,22 +44,19 @@ class HeapPtr
 
     inline T *get() const {
         WH_ASSERT(isValid());
-        return ptr_;
+        return maybeGet();
     }
 
     inline T &operator *() const {
-        WH_ASSERT(isValid());
-        return *ptr_;
+        return *get();
     }
 
     inline T *operator ->() const {
-        WH_ASSERT(isValid());
-        return ptr_;
+        return get();
     }
 
     inline operator T *() const {
-        WH_ASSERT(isValid());
-        return ptr_;
+        return get();
     }
 
     inline HeapPtr<T> &operator =(T *ptr) {
@@ -95,22 +92,19 @@ class HandlePtr
 
     inline T *get() const {
         WH_ASSERT(isValid());
-        return *addr_;
+        return maybeGet();
     }
 
     inline T &operator *() const {
-        WH_ASSERT(isValid());
-        return **addr_;
+        return *get();
     }
 
     inline T *operator ->() const {
-        WH_ASSERT(isValid());
-        return *addr_;
+        return get();
     }
 
     inline operator T *() const {
-        WH_ASSERT(isValid());
-        return *addr_;
+        return get();
     }
 };
 
@@ -140,22 +134,19 @@ class MutHandlePtr
 
     inline T *get() const {
         WH_ASSERT(isValid());
-        return *addr_;
+        return maybeGet();
     }
 
     inline T &operator *() const {
-        WH_ASSERT(isValid());
-        return **addr_;
+        return *get();
     }
 
     inline T *operator ->() const {
-        WH_ASSERT(isValid());
-        return *addr_;
+        return get();
     }
 
     inline operator T *() const {
-        WH_ASSERT(isValid());
-        return *addr_;
+        return get();
     }
 
     inline MutHandlePtr<T> &operator =(T *ptr) {

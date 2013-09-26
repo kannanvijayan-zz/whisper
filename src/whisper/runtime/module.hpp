@@ -146,6 +146,20 @@ class Module : public HeapThing
     }
 };
 
+template <>
+class HeapThingTraits<ModuleEntry>
+{
+    static constexpr HeapType HEAP_TYPE = HeapType::ModuleEntry;
+    static constexpr bool TERMINAL = false;
+};
+
+template <>
+class HeapThingTraits<Module>
+{
+    static constexpr HeapType HEAP_TYPE = HeapType::Module;
+    static constexpr bool TERMINAL = false;
+};
+
 
 } // namespace Runtime
 } // namespace Whisper

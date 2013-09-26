@@ -8,6 +8,7 @@
 #include "loader/code_source.hpp"
 #include "runtime/rooting.hpp"
 #include "runtime/module.hpp"
+#include "runtime/runtime.hpp"
 
 using namespace Whisper;
 

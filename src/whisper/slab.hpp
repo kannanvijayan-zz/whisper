@@ -64,7 +64,7 @@ class Slab
 {
   friend class SlabList;
   public:
-    static constexpr uint32_t AllocAlign = sizeof(void *);
+    static constexpr uint32_t AllocAlign = sizeof(word_t);
     static constexpr uint32_t CardSizeLog2 = 10;
     static constexpr uint32_t CardSize = 1 << CardSizeLog2;
     static constexpr uint32_t AlienRefSpaceSize = 512;
