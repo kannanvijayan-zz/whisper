@@ -29,7 +29,7 @@ namespace Whisper {
 // Within a chunk, allocation happens from high-to-low, similar to stack
 // allocation.
 //
-// This allocator is not a proper STL allocator.  See STLBumpAllocator
+// This allocator is not a proper STL allocator.  See STLAllocator
 // below.
 //
 class BumpAllocatorError {
@@ -64,7 +64,7 @@ class BumpAllocator
 
   public:
     BumpAllocator() : BumpAllocator(DefaultChunkSize) {}
-    inline BumpAllocator(size_t chunkSize)
+    BumpAllocator(size_t chunkSize)
       : chunkSize_(chunkSize),
         chainEnd_(nullptr),
         allocBottom_(nullptr),
@@ -76,7 +76,7 @@ class BumpAllocator
         pushNewChunk(chunkSize_);
     }
 
-    inline void *allocate(size_t sz, unsigned align)
+    void *allocate(size_t sz, unsigned align)
     {
         align = Max(align, BasicAlignment);
 
@@ -87,14 +87,8 @@ class BumpAllocator
             return result;
         }
 
-        // Otherwise, slow path: allocate new chunk.
-        return allocateSlow(sz, align);
-    }
-
-    void *allocateSlow(size_t sz, unsigned align)
-    {
-        // First, determine if new chunk should be standard size or
-        // custom oversized.
+        // Otherwise, allocate new chunk.  First, determine if
+        // new chunk should be standard size or custom oversized.
         size_t newChunkSize = chunkSize_;
         if (sz > (chunkSize_ - MinOverhead))
             newChunkSize = sz + MinOverhead;
@@ -102,7 +96,7 @@ class BumpAllocator
         // Allocate new chunk and use it.  If chunk is pushed successfully,
         // then it is guaranteed to be able to satisfy the allocation.
         pushNewChunk(newChunkSize);
-        uint8_t *result = AlignPtrDown(allocTop_ - sz, BasicAlignment);
+        result = AlignPtrDown(allocTop_ - sz, BasicAlignment);
         WH_ASSERT(result >= allocBottom_ && result <= allocTop_);
         allocTop_ = result;
         return result;

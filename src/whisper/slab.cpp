@@ -195,15 +195,14 @@ Slab::Slab(void *region, uint32_t regionSize,
 {
     // Calculate allocTop.
     uint8_t *slabBase = reinterpret_cast<uint8_t *>(this);
+
     uint8_t *dataSpace = slabBase + (CardSize * headerCards_);
 
     allocTop_ = dataSpace;
     allocBottom_ = dataSpace + (CardSize * dataCards_);
-
+    
     headAlloc_ = headStartAlloc();
     tailAlloc_ = tailStartAlloc();
-
-    *reinterpret_cast<Slab **>(allocTop_) = this;
 }
 
 

@@ -1,5 +1,5 @@
-#ifndef WHISPER__LOADER__CODE_SOURCE_HPP
-#define WHISPER__LOADER__CODE_SOURCE_HPP
+#ifndef WHISPER__PARSER__CODE_SOURCE_HPP
+#define WHISPER__PARSER__CODE_SOURCE_HPP
 
 #include <limits>
 #include "common.hpp"
@@ -16,7 +16,14 @@ namespace Whisper {
 //
 // CodeSource
 //
-// Represents some abstract source of loaded code.
+// Represents 
+// All methods on this class are pure virtual.
+//
+// Code sources do not provide general random access, but they
+// allow users to mark a location.  At a later point, the stream
+// can be rewound to any position at or after the marked location.
+//
+// A set mark may be erased at a later point with 'erase'.
 //
 class CodeSource
 {
@@ -53,6 +60,7 @@ class FileCodeSource : public CodeSource
 
   public:
     FileCodeSource(const char *filename);
+
     ~FileCodeSource();
 
     void finalize();
@@ -68,7 +76,8 @@ class FileCodeSource : public CodeSource
 // SourceStream
 //
 // A stream API built on top of a CodeStream to allow byte-by-byte
-// access.
+// access.  The read interface is buffered via a direct, stack-allocated
+// buffer to avoid virtual-function-call overhead for readByte()
 //
 class SourceStream
 {
@@ -100,4 +109,4 @@ class SourceStream
 
 } // namespace Whisper
 
-#endif // WHISPER__LOADER__CODE_SOURCE_HPP
+#endif // WHISPER__PARSER__CODE_SOURCE_HPP

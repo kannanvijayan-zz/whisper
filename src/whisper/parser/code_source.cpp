@@ -7,7 +7,7 @@
 #include <fstream>
 #include <algorithm>
 
-#include "loader/code_source.hpp"
+#include "code_source.hpp"
 
 namespace Whisper {
 
