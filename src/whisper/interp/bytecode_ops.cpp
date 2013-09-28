@@ -195,15 +195,18 @@ class OpcodeTraits
     OpcodeFormat format_ = OpcodeFormat::E;
     int8_t section_ = -1;
     OpcodeFlags flags_ = OPF_None;
+    uint8_t pushed_ = 0;
+    uint8_t popped_ = 0;
     uint8_t encoding_ = 0;
 
   public:
     inline OpcodeTraits() {}
 
     inline OpcodeTraits(const char *name, Opcode opcode, OpcodeFormat format,
-                        int8_t section, OpcodeFlags flags, uint8_t encoding)
+                        int8_t section, OpcodeFlags flags, uint8_t pushed,
+                        uint8_t popped, uint8_t encoding)
       : name_(name), opcode_(opcode), format_(format), section_(section),
-        flags_(flags), encoding_(encoding)
+        flags_(flags), pushed_(pushed), popped_(popped), encoding_(encoding)
     {}
 
     inline const char *name() const {
@@ -220,6 +223,12 @@ class OpcodeTraits
     }
     inline OpcodeFlags flags() const {
         return flags_;
+    }
+    inline uint8_t pushed() const {
+        return pushed_;
+    }
+    inline uint8_t popped() const {
+        return popped_;
     }
     inline uint8_t encoding() const {
         return encoding_;
@@ -244,13 +253,15 @@ InitializeOpcodeInfo()
     WH_ASSERT(!OPCODE_TRAITS_INITIALIZED);
     for (unsigned i = 0; i < static_cast<unsigned>(Opcode::LIMIT); i++) {
         OPCODE_TRAITS[i] = OpcodeTraits(nullptr, Opcode::INVALID,
-                                        OpcodeFormat::E, -1, OPF_None, 0);
+                                        OpcodeFormat::E, -1, OPF_None,
+                                        /*pushed=*/0, /*popped=*/0,
+                                        /*encoding=*/0);
     }
 
-#define INIT_(op, format, section, flags) \
+#define INIT_(op, format, section, pushed, popped, flags) \
     OPCODE_TRAITS[static_cast<unsigned>(Opcode::op)] = \
         OpcodeTraits(#op, Opcode::op, OpcodeFormat::format, section, flags, \
-                     static_cast<uint8_t>(Opcode_Sec0::op));
+                     pushed, popped, static_cast<uint8_t>(Opcode_Sec0::op));
     WHISPER_BYTECODE_SEC0_OPS(INIT_)
 #undef INIT_
     OPCODE_TRAITS_INITIALIZED = true;
@@ -456,9 +467,8 @@ ReadValueOperand(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
         break;
 
       case OperandSpace::Immediate:
-        if (location) {
+        if (location)
             *location = OperandLocation::Immediate(Int32(val));
-        }
         break;
 
       default:

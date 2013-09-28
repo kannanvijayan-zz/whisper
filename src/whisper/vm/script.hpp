@@ -70,8 +70,17 @@ struct Script : public HeapThing, public TypedHeapThing<HeapType::Script>
 
     Mode mode() const;
 
+    bool isTopLevel() const;
+    bool isFunction() const;
+    bool isEval() const;
+
     Bytecode *bytecode() const;
 };
+
+typedef HeapThingWrapper<Script> WrappedScript;
+typedef Root<Script *> RootedScript;
+typedef Handle<Script *> HandleScript;
+typedef MutableHandle<Script *> MutHandleScript;
 
 
 } // namespace VM

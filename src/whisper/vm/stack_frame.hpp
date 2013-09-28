@@ -20,7 +20,7 @@ namespace VM {
 //      +-----------------------+
 //      | CallerFrame           |
 //      +-----------------------+
-//      | Script                |
+//      | Callee                |
 //      +-----------------------+
 //      | Info                  |
 //      +-----------------------+
@@ -40,7 +40,7 @@ namespace VM {
 // CallerFrame - points to the caller StackFrame.  For the initial stack
 //  frame, this is null.
 //
-// Script - the Script object that's executing in this frame.
+// Callee - the Script or function object that's executing in this frame.
 //
 // Info - a Magic bitfield storing information about the frame.
 //      * The maximum stack depth (20 bits).
@@ -69,12 +69,13 @@ struct StackFrame : public HeapThing,
     struct Config
     {
         uint32_t maxStackDepth;
+        uint32_t numActualArgs;
     };
 
   private:
     // Pointer to bytecode for the script.
     NullableHeapThingValue<StackFrame> callerFrame_;
-    HeapThingValue<Script> script_;
+    HeapThingValue<HeapThing> callee_;
     Value info_;
 
     void initialize(const Config &config);
@@ -83,13 +84,15 @@ struct StackFrame : public HeapThing,
     void decrCurStackDepth(uint32_t count);
 
   public:
-    StackFrame(Script *script, const Config &config);
-    StackFrame(StackFrame *callerFrame, Script *script, const Config &config);
+    StackFrame(Script *callee, const Config &config);
 
     bool hasCallerFrame() const;
     StackFrame *callerFrame() const;
 
+    bool isScriptFrame() const;
     Script *script() const;
+
+    bool isTopLevelFrame() const;
 
     uint32_t maxStackDepth() const;
     uint32_t curStackDepth() const;

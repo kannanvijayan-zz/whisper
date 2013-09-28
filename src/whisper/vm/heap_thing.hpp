@@ -10,7 +10,6 @@
 namespace Whisper {
 namespace VM {
 
-
 //
 // Enum of all possible heap thing types.
 //
@@ -24,6 +23,10 @@ enum class HeapType : uint32_t
 
     LIMIT
 };
+
+#define PREDEC_(t, ...) class t;
+    WHISPER_DEFN_HEAP_TYPES(PREDEC_)
+#undef PREDEC_
 
 inline bool
 IsValidHeapType(HeapType ht) {
@@ -234,6 +237,25 @@ class HeapThing
     Value &valueRef(uint32_t idx);
 
     const Value &valueRef(uint32_t idx) const;
+
+#define PRED_(t, ...) \
+    inline bool is##t() const { \
+        return type() == HeapType::t; \
+    }
+    WHISPER_DEFN_HEAP_TYPES(PRED_)
+#undef PRED_
+
+#define CONV_(t, ...) \
+    inline const t *to##t() const { \
+        WH_ASSERT(is##t()); \
+        return reinterpret_cast<const t *>(this);  \
+    } \
+    inline t *to##t() { \
+        WH_ASSERT(is##t()); \
+        return reinterpret_cast<t *>(this);  \
+    }
+    WHISPER_DEFN_HEAP_TYPES(CONV_)
+#undef CONV_
 };
 
 template <HeapType HT>

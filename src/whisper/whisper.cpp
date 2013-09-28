@@ -116,20 +116,6 @@ int main(int argc, char **argv) {
     }
     WH_ASSERT(bc != nullptr);
 
-    // Print bytecode.
-    const uint8_t *bcdata = bc->data();
-    std::cerr << "Bytecode length: " << bc->length() << std::endl;
-    for (uint32_t i = 0; i < bc->length(); i++) {
-        uint8_t b = bcdata[i];
-        char bin[9];
-        for (uint32_t j = 0; j < 8; j++)
-            bin[7 - j] = ((b >> j) & 1) ? '1' : '0';
-        bin[8] = '\0';
-        char buf[64];
-        snprintf(buf, 64, "%02x - %s - %d", (int)b, bin, (int)b);
-        std::cerr << "Bytecode: " << buf << std::endl;
-    }
-
     VM::Script::Config scriptConfig(false, VM::Script::TopLevel);
     /*VM::Script *script = */cx.create<VM::Script>(true, bc, scriptConfig);
 

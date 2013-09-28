@@ -37,6 +37,24 @@ Script::mode() const
     return static_cast<Mode>((flags() >> ModeShift) & ModeMask);
 }
 
+bool
+Script::isTopLevel() const
+{
+    return mode() == TopLevel;
+}
+
+bool
+Script::isFunction() const
+{
+    return mode() == Function;
+}
+
+bool
+Script::isEval() const
+{
+    return mode() == Eval;
+}
+
 Bytecode *
 Script::bytecode() const
 {

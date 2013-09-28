@@ -15,8 +15,7 @@ void
 StackFrame::initialize(const Config &config)
 {
     WH_ASSERT(config.maxStackDepth <= MaxStackDepthMaskLow);
-    uint64_t val = 0;
-    val = UInt64(config.maxStackDepth) << MaxStackDepthShift;
+    uint64_t val = UInt64(config.maxStackDepth) << MaxStackDepthShift;
     info_ = MagicValue(val);
 }
 
@@ -43,17 +42,10 @@ StackFrame::decrCurStackDepth(uint32_t count)
 }
 
 StackFrame::StackFrame(Script *script, const Config &config)
-  : script_(script)
+  : callee_(script)
 {
     initialize(config);
-}
-
-StackFrame::StackFrame(StackFrame *callerFrame, Script *script,
-                       const Config &config)
-  : callerFrame_(callerFrame),
-    script_(script)
-{
-    initialize(config);
+    WH_ASSERT(config.numActualArgs == numActualArgs());
 }
 
 bool
@@ -69,10 +61,23 @@ StackFrame::callerFrame() const
     return callerFrame_;
 }
 
+bool
+StackFrame::isScriptFrame() const
+{
+    return callee_->isScript();
+}
+
 Script *
 StackFrame::script() const
 {
-    return script_;
+    WH_ASSERT(isScriptFrame());
+    return callee_->toScript();
+}
+
+bool
+StackFrame::isTopLevelFrame() const
+{
+    return isScriptFrame() && script()->isTopLevel();
 }
 
 uint32_t
