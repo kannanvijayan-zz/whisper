@@ -21,8 +21,13 @@ namespace VM {
 //      +-----------------------+
 //      | Header                |
 //      +-----------------------+
+//      | Info                  |
+//      +-----------------------+
 //      | Bytecode              |
 //      +-----------------------+
+//
+// The first word is a MagicValue holding:
+//  MaxStackDepth - the maximum value stack depth required by the bytecode.
 //
 // The header flags for this object are used to store the following
 // information:
@@ -49,15 +54,25 @@ struct Script : public HeapThing, public TypedHeapThing<HeapType::Script>
     static constexpr uint32_t ModeMask = 0x3;
     static constexpr unsigned ModeShift = 1;
 
+    static constexpr unsigned MaxStackDepthBits = 20;
+    static constexpr unsigned MaxStackDepthShift = 20;
+    static constexpr uint64_t MaxStackDepthMaskLow =
+        (UInt64(1) << MaxStackDepthBits) - 1;
+
     struct Config
     {
         bool isStrict;
         Mode mode;
+        uint32_t maxStackDepth;
 
-        Config(bool isStrict, Mode mode) : isStrict(isStrict), mode(mode) {}
+        Config(bool isStrict, Mode mode, uint32_t maxStackDepth)
+          : isStrict(isStrict), mode(mode), maxStackDepth(maxStackDepth)
+        {}
     };
 
   private:
+    Value info_;
+
     // Pointer to bytecode for the script.
     HeapThingValue<Bytecode> bytecode_;
 
@@ -73,6 +88,8 @@ struct Script : public HeapThing, public TypedHeapThing<HeapType::Script>
     bool isTopLevel() const;
     bool isFunction() const;
     bool isEval() const;
+
+    uint32_t maxStackDepth() const;
 
     Bytecode *bytecode() const;
 };

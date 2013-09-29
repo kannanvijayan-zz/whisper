@@ -11,6 +11,12 @@ namespace VM {
 // StackFrame
 //
 
+/*static*/ uint32_t
+StackFrame::CalculateSize(const Config &config)
+{
+    return FixedSlots + config.maxStackDepth + config.numActualArgs;
+}
+
 void
 StackFrame::initialize(const Config &config)
 {

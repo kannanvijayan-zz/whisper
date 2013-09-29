@@ -69,6 +69,12 @@ BytecodeGenerator::generateBytecode()
     return bytecode_;
 }
 
+uint32_t
+BytecodeGenerator::maxStackDepth() const
+{
+    return maxStackDepth_;
+}
+
 void
 BytecodeGenerator::generate()
 {

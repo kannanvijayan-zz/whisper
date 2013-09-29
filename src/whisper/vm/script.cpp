@@ -17,6 +17,10 @@ Script::initialize(const Config &config)
         flags |= IsStrict;
     flags |= static_cast<uint32_t>(config.mode) << ModeShift;
     initFlags(flags);
+
+    WH_ASSERT(config.maxStackDepth < MaxStackDepthMaskLow);
+    uint64_t val = UInt64(config.maxStackDepth) << MaxStackDepthShift;
+    info_ = MagicValue(val);
 }
 
 Script::Script(Bytecode *bytecode, const Config &config)
@@ -53,6 +57,12 @@ bool
 Script::isEval() const
 {
     return mode() == Eval;
+}
+
+uint32_t
+Script::maxStackDepth() const
+{
+    return (info_.getMagicInt() >> MaxStackDepthShift) & MaxStackDepthMaskLow;
 }
 
 Bytecode *

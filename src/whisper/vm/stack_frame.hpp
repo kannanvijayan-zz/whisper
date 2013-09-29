@@ -72,6 +72,8 @@ struct StackFrame : public HeapThing,
         uint32_t numActualArgs;
     };
 
+    static uint32_t CalculateSize(const Config &config);
+
   private:
     // Pointer to bytecode for the script.
     NullableHeapThingValue<StackFrame> callerFrame_;
@@ -104,6 +106,11 @@ struct StackFrame : public HeapThing,
     const Value &peekValue(uint32_t offset = 0) const;
     void popValue(uint32_t count = 1);
 };
+
+typedef HeapThingWrapper<StackFrame> WrappedStackFrame;
+typedef Root<StackFrame *> RootedStackFrame;
+typedef Handle<StackFrame *> HandleStackFrame;
+typedef MutableHandle<StackFrame *> MutHandleStackFrame;
 
 
 } // namespace VM

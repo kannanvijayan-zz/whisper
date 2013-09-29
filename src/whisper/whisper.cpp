@@ -17,6 +17,7 @@
 #include "runtime.hpp"
 #include "runtime_inlines.hpp"
 #include "rooting.hpp"
+#include "rooting_inlines.hpp"
 #include "ref_scanner.hpp"
 
 #include "vm/reference.hpp"
@@ -28,6 +29,7 @@
 #include "vm/script.hpp"
 
 #include "interp/bytecode_generator.hpp"
+#include "interp/interpreter.hpp"
 
 using namespace Whisper;
 
@@ -103,24 +105,29 @@ int main(int argc, char **argv) {
     ThreadContext *thrcx = runtime.threadContext();
 
     // Create a run context for execution.
-    RunContext cx = thrcx->makeRunContext();
-    cx.makeActive();
+    RunContext runcx = thrcx->makeRunContext();
+    runcx.makeActive();
+
+    RunContext *cx = &runcx;
 
     // Generate bytecode.
-    Interp::BytecodeGenerator bcgen(&cx, wrappedAllocator, program, annotator,
+    Interp::BytecodeGenerator bcgen(cx, wrappedAllocator, program, annotator,
                                     false);
-    VM::Bytecode *bc = bcgen.generateBytecode();
+    VM::RootedBytecode bc(cx, bcgen.generateBytecode());
     if (bcgen.hasError()) {
-        std::cerr << "Codgen error: " << bcgen.error() << "!" << std::endl;;
+        std::cerr << "Codgen error: " << bcgen.error() << "!" << std::endl;
         return 1;
     }
     WH_ASSERT(bc != nullptr);
 
-    VM::Script::Config scriptConfig(false, VM::Script::TopLevel);
-    /*VM::Script *script = */cx.create<VM::Script>(true, bc, scriptConfig);
+    VM::Script::Config scriptConfig(false, VM::Script::TopLevel,
+                                    bcgen.maxStackDepth());
+    VM::RootedScript script(cx, cx->create<VM::Script>(true, bc, scriptConfig));
+    std::cerr << "Created script with max stack depth " <<
+                 script->maxStackDepth() << std::endl;
 
     // Print memory contents.
-    VM::SpewHeapThingSlab(cx.hatchery());
+    VM::SpewHeapThingSlab(cx->hatchery());
 
     // Print bytecode contents.
     VM::SpewBytecodeObject(bc);

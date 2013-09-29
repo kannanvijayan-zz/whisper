@@ -30,4 +30,5 @@ whisper_SOURCES = \
     vm/scope.cpp \
     interp/bytecode_ops.cpp \
     interp/bytecode_generator.cpp \
+    interp/interpreter.cpp \
     whisper.cpp

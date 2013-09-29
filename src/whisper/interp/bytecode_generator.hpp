@@ -82,6 +82,8 @@ class BytecodeGenerator
 
     VM::Bytecode *generateBytecode();
 
+    uint32_t maxStackDepth() const;
+
   private:
     void generate();
     void generateExpressionStatement(AST::ExpressionStatementNode *exprStmt);
