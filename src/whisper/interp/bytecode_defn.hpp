@@ -11,6 +11,7 @@ namespace Interp {
 _(Section1,     E,      -1,     0,0,            OPF_SectionPrefix  )\
 \
 _(Nop,          E,      0,      0,0,            OPF_None           )\
+_(Pop,          E,      0,      1,0,            OPF_None           )\
 \
 _(PushInt8,     I1,     0,      0,1,            OPF_None           )\
 _(PushInt16,    I2,     0,      0,1,            OPF_None           )\

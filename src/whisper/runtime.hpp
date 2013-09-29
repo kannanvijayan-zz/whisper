@@ -133,7 +133,7 @@ class RunContext
     inline ObjT *create(bool allowGC, Args... args);
 
     template <typename ObjT, typename... Args>
-    inline ObjT *create(bool allowGC, uint32_t size, Args... args);
+    inline ObjT *createSized(bool allowGC, uint32_t size, Args... args);
 
     void makeActive();
 

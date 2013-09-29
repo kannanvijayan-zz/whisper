@@ -61,6 +61,9 @@ class BytecodeGenerator
 
     /// Intermediate state. ///
 
+    // Flag controlling whether stack depth should be calculated.
+    bool calculateStackDepth_ = false;
+
     // The current bytecode size.
     uint32_t currentBytecodeSize_ = 0;
 
@@ -97,6 +100,7 @@ class BytecodeGenerator
                       const OperandLocation &lhsLocation,
                       const OperandLocation &rhsLocation,
                       const OperandLocation &outputLocation);
+    void emitPop(uint16_t num=1);
     void emitOperandLocation(const OperandLocation &location);
     void emitOp(Opcode op);
     void emitConstantOperand(uint32_t idx);

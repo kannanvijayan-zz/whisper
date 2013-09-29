@@ -219,6 +219,9 @@ int8_t GetOpcodeSection(Opcode opcode);
 OpcodeFlags GetOpcodeFlags(Opcode opcode);
 uint8_t GetOpcodeEncoding(Opcode opcode);
 
+uint8_t GetOpcodePopped(Opcode opcode);
+uint8_t GetOpcodePushed(Opcode opcode);
+
 uint8_t GetOpcodeOperandCount(OpcodeFormat fmt);
 uint32_t ReadOperandLocation(const uint8_t *bytecodeData,
                              const uint8_t *bytecodeEnd,

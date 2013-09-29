@@ -195,18 +195,18 @@ class OpcodeTraits
     OpcodeFormat format_ = OpcodeFormat::E;
     int8_t section_ = -1;
     OpcodeFlags flags_ = OPF_None;
-    uint8_t pushed_ = 0;
     uint8_t popped_ = 0;
+    uint8_t pushed_ = 0;
     uint8_t encoding_ = 0;
 
   public:
     inline OpcodeTraits() {}
 
     inline OpcodeTraits(const char *name, Opcode opcode, OpcodeFormat format,
-                        int8_t section, OpcodeFlags flags, uint8_t pushed,
-                        uint8_t popped, uint8_t encoding)
+                        int8_t section, OpcodeFlags flags, uint8_t popped,
+                        uint8_t pushed, uint8_t encoding)
       : name_(name), opcode_(opcode), format_(format), section_(section),
-        flags_(flags), pushed_(pushed), popped_(popped), encoding_(encoding)
+        flags_(flags), popped_(popped), pushed_(pushed), encoding_(encoding)
     {}
 
     inline const char *name() const {
@@ -258,10 +258,10 @@ InitializeOpcodeInfo()
                                         /*encoding=*/0);
     }
 
-#define INIT_(op, format, section, pushed, popped, flags) \
+#define INIT_(op, format, section, popped, pushed, flags) \
     OPCODE_TRAITS[static_cast<unsigned>(Opcode::op)] = \
         OpcodeTraits(#op, Opcode::op, OpcodeFormat::format, section, flags, \
-                     pushed, popped, static_cast<uint8_t>(Opcode_Sec0::op));
+                     popped, pushed, static_cast<uint8_t>(Opcode_Sec0::op));
     WHISPER_BYTECODE_SEC0_OPS(INIT_)
 #undef INIT_
     OPCODE_TRAITS_INITIALIZED = true;
@@ -336,6 +336,20 @@ GetOpcodeEncoding(Opcode opcode)
 {
     WH_ASSERT(IsValidOpcode(opcode));
     return OPCODE_TRAITS[static_cast<unsigned>(opcode)].encoding();
+}
+
+uint8_t
+GetOpcodePopped(Opcode opcode)
+{
+    WH_ASSERT(IsValidOpcode(opcode));
+    return OPCODE_TRAITS[static_cast<unsigned>(opcode)].popped();
+}
+
+uint8_t
+GetOpcodePushed(Opcode opcode)
+{
+    WH_ASSERT(IsValidOpcode(opcode));
+    return OPCODE_TRAITS[static_cast<unsigned>(opcode)].pushed();
 }
 
 uint8_t

@@ -29,12 +29,12 @@ template <typename ObjT, typename... Args>
 inline ObjT *
 RunContext::create(bool allowGC, Args... args)
 {
-    return create<ObjT, Args...>(allowGC, sizeof(ObjT), args...);
+    return createSized<ObjT, Args...>(allowGC, sizeof(ObjT), args...);
 }
 
 template <typename ObjT, typename... Args>
 inline ObjT *
-RunContext::create(bool allowGC, uint32_t size, Args... args)
+RunContext::createSized(bool allowGC, uint32_t size, Args... args)
 {
     // Allocate the space for the object.
     uint8_t *mem = allocate<ObjT>(size);

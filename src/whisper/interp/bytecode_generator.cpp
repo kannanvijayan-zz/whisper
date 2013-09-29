@@ -44,21 +44,26 @@ BytecodeGenerator::generateBytecode()
 {
     // Scan bytecode initially to calculate info and check for errors.
     try {
+        calculateStackDepth_ = true;
         generate();
     } catch (BytecodeGeneratorError &exc) {
         WH_ASSERT(hasError());
         return nullptr;
     }
 
+    SpewBytecodeNote("Got max stack depth: %d", (int) maxStackDepth_);
+    SpewBytecodeNote("Final stack depth: %d", (int) currentStackDepth_);
+
     WH_ASSERT(currentBytecodeSize_ > 0);
     bytecodeSize_ = currentBytecodeSize_;
     currentBytecodeSize_ = 0;
 
     // Bytecode scanning worked out.  Allocate a bytecode object.
-    bytecode_ = cx_->create<VM::Bytecode>(true, bytecodeSize_);
+    bytecode_ = cx_->createSized<VM::Bytecode>(true, bytecodeSize_);
     WH_ASSERT(bytecode_);
 
     // Fill the bytecode object.
+    calculateStackDepth_ = false;
     generate();
 
     return bytecode_;
@@ -88,7 +93,12 @@ BytecodeGenerator::generateExpressionStatement(
             AST::ExpressionStatementNode *exprStmt)
 {
     OperandLocation outputLocation = OperandLocation::StackTop();
-    return generateExpression(exprStmt->expression(), outputLocation);
+
+    // Generate the expression.
+    generateExpression(exprStmt->expression(), outputLocation);
+
+    // Pop the value left on the stack by the expression.
+    emitPop();
 }
 
 void
@@ -330,6 +340,13 @@ BytecodeGenerator::emitBinaryOp(AST::BaseBinaryExpressionNode *expr,
 }
 
 void
+BytecodeGenerator::emitPop(uint16_t num)
+{
+    for (uint16_t i = 0; i < num; i++)
+        emitOp(Opcode::Pop);
+}
+
+void
 BytecodeGenerator::emitOperandLocation(const OperandLocation &location)
 {
     switch (location.space()) {
@@ -366,6 +383,17 @@ BytecodeGenerator::emitOp(Opcode op)
     // Ops in other sections have section prefix.
     WH_ASSERT(GetOpcodeSection(op) == 0);
     emitByte(static_cast<uint8_t>(op));
+
+    // Adjust stack depth calculations.  Only do this when doing
+    // bytecode generation, not scanning.
+    if (calculateStackDepth_) {
+        WH_ASSERT(GetOpcodePopped(op) <= currentStackDepth_);
+
+        currentStackDepth_ -= GetOpcodePopped(op);
+        currentStackDepth_ += GetOpcodePushed(op);
+        if (currentStackDepth_ > maxStackDepth_)
+            maxStackDepth_ = currentStackDepth_;
+    }
 }
 
 void
