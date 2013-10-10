@@ -357,16 +357,16 @@ BytecodeGenerator::emitOperandLocation(const OperandLocation &location)
 {
     switch (location.space()) {
       case OperandSpace::Constant:
-        emitConstantOperand(location.index());
+        emitConstantOperand(location.constantIndex());
         break;
       case OperandSpace::Argument:
-        emitArgumentOperand(location.index());
+        emitArgumentOperand(location.argumentIndex());
         break;
       case OperandSpace::Local:
-        emitLocalOperand(location.index());
+        emitLocalOperand(location.localIndex());
         break;
       case OperandSpace::Stack:
-        emitStackOperand(location.index());
+        emitStackOperand(location.stackIndex());
         break;
       case OperandSpace::Immediate:
         if (location.isUnsigned())

@@ -23,6 +23,7 @@ StackFrame::initialize(const Config &config)
     WH_ASSERT(config.maxStackDepth <= MaxStackDepthMaskLow);
     uint64_t val = UInt64(config.maxStackDepth) << MaxStackDepthShift;
     info_ = MagicValue(val);
+    info2_ = MagicValue(0);
 }
 
 void
@@ -112,6 +113,19 @@ StackFrame::actualArg(uint32_t idx) const
     return valueRef(FixedSlots + maxStackDepth() + idx);
 }
 
+uint32_t
+StackFrame::pcOffset() const
+{
+    WH_ASSERT(PcOffsetShift == 0);
+    return UInt32(info2_.getMagicInt());
+}
+
+void 
+StackFrame::setPcOffset(uint32_t newPcOffset)
+{
+    info2_ = MagicValue(UInt64(newPcOffset));
+}
+
 void
 StackFrame::pushValue(const Value &val)
 {
@@ -126,7 +140,7 @@ const Value &
 StackFrame::peekValue(uint32_t offset) const
 {
     WH_ASSERT(offset < curStackDepth());
-    uint32_t idx = (FixedSlots + curStackDepth()) - offset;
+    uint32_t idx = (FixedSlots + curStackDepth()) - (offset + 1);
     return valueRef(idx);
 }
 

@@ -152,12 +152,39 @@ OperandLocation::isSigned() const
 }
 
 uint32_t
-OperandLocation::index() const
+OperandLocation::constantIndex() const
+{
+    WH_ASSERT(isConstant());
+    return indexOrValue_;
+}
+
+uint32_t
+OperandLocation::argumentIndex() const
+{
+    WH_ASSERT(isArgument());
+    return indexOrValue_;
+}
+
+uint32_t
+OperandLocation::localIndex() const
+{
+    WH_ASSERT(isLocal());
+    return indexOrValue_;
+}
+
+uint32_t
+OperandLocation::stackIndex() const
+{
+    WH_ASSERT(isStack());
+    return indexOrValue_;
+}
+
+uint32_t
+OperandLocation::anyIndex() const
 {
     WH_ASSERT(isConstant() || isArgument() || isLocal() || isStack());
     return indexOrValue_;
 }
-
 
 uint32_t
 OperandLocation::unsignedValue() const
@@ -500,6 +527,10 @@ ReadOperandLocation(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
     WH_ASSERT(fmt != OpcodeFormat::E);
     WH_ASSERT_IF(bytecodeEnd, bytecodeData < bytecodeEnd);
     switch (fmt) {
+      case OpcodeFormat::E:
+        WH_UNREACHABLE("Bad opcode format.");
+        break;
+
       case OpcodeFormat::I1:
         WH_ASSERT(operandNo < 1);
         return ReadImmediateOperand<1, true>(bytecodeData, bytecodeEnd,
@@ -551,9 +582,6 @@ ReadOperandLocation(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
       case OpcodeFormat::VVV:
         WH_ASSERT(operandNo < 3);
         return ReadValueOperand(bytecodeData, bytecodeEnd, location);
-
-      default:
-        break;
     }
     WH_UNREACHABLE("Invalid operand format.");
     return 0;

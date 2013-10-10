@@ -42,11 +42,11 @@ RootBase::kind() const
 //
 
 Root<Value>::Root(RunContext *cx)
-  : TypedRootBase<Value>(cx, RootKind::Value)
+  : TypedRootBase<Value>(cx, RootKind::Value, UndefinedValue())
 {}
 
 Root<Value>::Root(ThreadContext *cx)
-  : TypedRootBase<Value>(cx, RootKind::Value)
+  : TypedRootBase<Value>(cx, RootKind::Value, UndefinedValue())
 {}
 
 Root<Value>::Root(RunContext *cx, const Value &val)
@@ -303,6 +303,262 @@ int32_t
 Root<Value>::getInt32() const
 {
     return thing_.getInt32();
+}
+
+//
+// Handle<Value>
+//
+
+Handle<Value>::Handle(const Value &val)
+  : TypedHandleBase<Value>(val)
+{}
+
+#if defined(ENABLE_DEBUG)
+bool
+Handle<Value>::isValid() const
+{
+    return ref_.isValid();
+}
+#endif // defined(ENABLE_DEBUG)
+
+bool
+Handle<Value>::isObject() const
+{
+    return ref_.isObject();
+}
+
+bool
+Handle<Value>::isNativeObject() const
+{
+    return ref_.isNativeObject();
+}
+
+bool
+Handle<Value>::isForeignObject() const
+{
+    return ref_.isForeignObject();
+}
+
+bool
+Handle<Value>::isNull() const
+{
+    return ref_.isNull();
+}
+
+bool
+Handle<Value>::isUndefined() const
+{
+    return ref_.isUndefined();
+}
+
+bool
+Handle<Value>::isBoolean() const
+{
+    return ref_.isBoolean();
+}
+
+bool
+Handle<Value>::isHeapString() const
+{
+    return ref_.isHeapString();
+}
+
+bool
+Handle<Value>::isImmString8() const
+{
+    return ref_.isImmString8();
+}
+
+bool
+Handle<Value>::isImmString16() const
+{
+    return ref_.isImmString16();
+}
+
+bool
+Handle<Value>::isPosImmDoubleSmall() const
+{
+    return ref_.isPosImmDoubleSmall();
+}
+
+bool
+Handle<Value>::isPosImmDoubleBig() const
+{
+    return ref_.isPosImmDoubleBig();
+}
+
+bool
+Handle<Value>::isNegImmDoubleSmall() const
+{
+    return ref_.isNegImmDoubleSmall();
+}
+
+bool
+Handle<Value>::isNegImmDoubleBig() const
+{
+    return ref_.isNegImmDoubleBig();
+}
+
+bool
+Handle<Value>::isRegularImmDouble() const
+{
+    return ref_.isRegularImmDouble();
+}
+
+bool
+Handle<Value>::isSpecialImmDouble() const
+{
+    return ref_.isSpecialImmDouble();
+}
+
+bool
+Handle<Value>::isNegZero() const
+{
+    return ref_.isNegZero();
+}
+
+bool
+Handle<Value>::isNaN() const
+{
+    return ref_.isNaN();
+}
+
+bool
+Handle<Value>::isPosInf() const
+{
+    return ref_.isPosInf();
+}
+
+bool
+Handle<Value>::isNegInf() const
+{
+    return ref_.isNegInf();
+}
+
+bool
+Handle<Value>::isHeapDouble() const
+{
+    return ref_.isHeapDouble();
+}
+
+bool
+Handle<Value>::isInt32() const
+{
+    return ref_.isInt32();
+}
+
+bool
+Handle<Value>::isMagic() const
+{
+    return ref_.isMagic();
+}
+
+bool
+Handle<Value>::isString() const
+{
+    return ref_.isString();
+}
+
+bool
+Handle<Value>::isImmString() const
+{
+    return ref_.isImmString();
+}
+
+bool
+Handle<Value>::isNumber() const
+{
+    return ref_.isNumber();
+}
+
+bool
+Handle<Value>::isDouble() const
+{
+    return ref_.isDouble();
+}
+
+bool
+Handle<Value>::isImmDouble() const
+{
+    return ref_.isImmDouble();
+}
+
+bool
+Handle<Value>::getBoolean() const
+{
+    return ref_.getBoolean();
+}
+
+VM::HeapString *
+Handle<Value>::getHeapString() const
+{
+    return ref_.getHeapString();
+}
+
+unsigned
+Handle<Value>::immString8Length() const
+{
+    return ref_.immString8Length();
+}
+
+uint8_t
+Handle<Value>::getImmString8Char(unsigned idx) const
+{
+    return ref_.getImmString8Char(idx);
+}
+
+unsigned
+Handle<Value>::immString16Length() const
+{
+    return ref_.immString16Length();
+}
+
+uint16_t
+Handle<Value>::getImmString16Char(unsigned idx) const
+{
+    return ref_.getImmString16Char(idx);
+}
+
+unsigned
+Handle<Value>::immStringLength() const
+{
+    return ref_.immStringLength();
+}
+
+uint16_t
+Handle<Value>::getImmStringChar(unsigned idx) const
+{
+    return ref_.getImmStringChar(idx);
+}
+
+double
+Handle<Value>::getRegularImmDoubleValue() const
+{
+    return ref_.getRegularImmDoubleValue();
+}
+
+double
+Handle<Value>::getSpecialImmDoubleValue() const
+{
+    return ref_.getSpecialImmDoubleValue();
+}
+
+double
+Handle<Value>::getImmDoubleValue() const
+{
+    return ref_.getImmDoubleValue();
+}
+
+VM::HeapDouble *
+Handle<Value>::getHeapDouble() const
+{
+    return ref_.getHeapDouble();
+}
+
+int32_t
+Handle<Value>::getInt32() const
+{
+    return ref_.getInt32();
 }
 
 

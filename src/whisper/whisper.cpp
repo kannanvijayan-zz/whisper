@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
     ThreadContext *thrcx = runtime.threadContext();
 
     // Create a run context for execution.
-    RunContext runcx = thrcx->makeRunContext();
+    RunContext runcx(thrcx);
     runcx.makeActive();
 
     RunContext *cx = &runcx;

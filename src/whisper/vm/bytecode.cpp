@@ -20,6 +20,19 @@ Bytecode::data() const
     return recastThis<uint8_t>();
 }
 
+const uint8_t *
+Bytecode::dataAt(uint32_t pcOffset) const
+{
+    WH_ASSERT(pcOffset < length());
+    return data() + pcOffset;
+}
+
+const uint8_t *
+Bytecode::dataEnd() const
+{
+    return data() + length();
+}
+
 uint8_t *
 Bytecode::writableData()
 {
@@ -77,7 +90,7 @@ SpewBytecodeObject(Bytecode *bc)
                 else
                     val = location.unsignedValue();
             } else {
-                val = location.index();
+                val = location.anyIndex();
             }
 
             bufIdx += snprintf(buf + bufIdx, BufSize - bufIdx, "%s[%s %d]",

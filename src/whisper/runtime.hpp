@@ -10,6 +10,14 @@
 
 namespace Whisper {
 
+class RootBase;
+class Slab;
+class ThreadContext;
+class RunContext;
+
+namespace VM {
+    class StackFrame;
+}
 
 //
 // Runtime
@@ -22,11 +30,6 @@ namespace Whisper {
 // but every thread which wishes to interact with the runtime
 // in a subtantial way must have an associated one.
 //
-
-class RootBase;
-class Slab;
-class ThreadContext;
-class RunContext;
 
 class Runtime
 {
@@ -80,6 +83,7 @@ class ThreadContext
     Slab *nursery_;
     SlabList tenured_;
     RunContext *activeRunContext_;
+    RunContext *runContextList_;
     RootBase *roots_;
 
   public:
@@ -93,7 +97,7 @@ class ThreadContext
     RunContext *activeRunContext() const;
     RootBase *roots() const;
 
-    RunContext makeRunContext();
+    void addRunContext(RunContext *cx);
 };
 
 
@@ -109,14 +113,20 @@ class ThreadContext
 // the hatchery Slab pointer from the ThreadContext, for quick
 // access without an extra indirection.
 //
+// All RunContexts for a given thread are linked together with an
+// embedded singly linked list.
+//
 
 class RunContext
 {
   friend class Runtime;
   friend class ThreadContext;
+
   private:
     ThreadContext *threadContext_;
+    RunContext *next_;
     Slab *hatchery_;
+    VM::StackFrame *topStackFrame_;
 
   public:
     RunContext(ThreadContext *threadContext);
@@ -136,6 +146,8 @@ class RunContext
     inline ObjT *createSized(bool allowGC, uint32_t size, Args... args);
 
     void makeActive();
+
+    void registerTopStackFrame(VM::StackFrame *topStackFrame);
 
   private:
     void syncHatchery();

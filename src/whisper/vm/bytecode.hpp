@@ -20,6 +20,8 @@ struct Bytecode : public HeapThing, public TypedHeapThing<HeapType::Bytecode>
     Bytecode();
 
     const uint8_t *data() const;
+    const uint8_t *dataAt(uint32_t pcOffset) const;
+    const uint8_t *dataEnd() const;
     uint8_t *writableData();
 
     uint32_t length() const;

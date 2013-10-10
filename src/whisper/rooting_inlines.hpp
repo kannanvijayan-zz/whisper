@@ -161,14 +161,20 @@ PointerRootBase<T>::operator bool() const
 template <typename T>
 inline
 TypedHandleBase<T>::TypedHandleBase(TypedRootBase<T> &rootBase)
-  : rootBase_(rootBase)
+  : ref_(rootBase.get())
+{}
+
+template <typename T>
+inline
+TypedHandleBase<T>::TypedHandleBase(const T &ref)
+  : ref_(ref)
 {}
 
 template <typename T>
 inline const T &
 TypedHandleBase<T>::get() const
 {
-    return rootBase_.get();
+    return ref_;
 }
 
 template <typename T>
@@ -192,14 +198,14 @@ template <typename T>
 inline T *
 PointerHandleBase<T>::operator ->() const
 {
-    return this->rootBase_.get();
+    return this->ref_;
 }
 
 template <typename T>
 inline
 PointerHandleBase<T>::operator bool() const
 {
-    return this->rootBase_.get() == nullptr;
+    return this->ref_ == nullptr;
 }
 
 //
@@ -208,22 +214,22 @@ PointerHandleBase<T>::operator bool() const
 
 template <typename T>
 inline
-TypedMutableHandleBase<T>::TypedMutableHandleBase(TypedRootBase<T> &rootBase)
-  : rootBase_(rootBase)
+TypedMutableHandleBase<T>::TypedMutableHandleBase(T &ref)
+  : ref_(ref)
 {}
 
 template <typename T>
 inline T &
 TypedMutableHandleBase<T>::get() const
 {
-    return rootBase_.get();
+    return ref_;
 }
 
 template <typename T>
 inline void
 TypedMutableHandleBase<T>::set(const T &t) const
 {
-    rootBase_.set(t);
+    ref_ = t;
 }
 
 template <typename T>
@@ -237,21 +243,21 @@ template <typename T>
 inline TypedMutableHandleBase<T> &
 TypedMutableHandleBase<T>::operator =(const TypedRootBase<T> &rootBase)
 {
-    rootBase_.set(rootBase.get());
+    ref_ = rootBase.get();
 }
 
 template <typename T>
 inline TypedMutableHandleBase<T> &
 TypedMutableHandleBase<T>::operator =(const TypedHandleBase<T> &hBase)
 {
-    rootBase_.set(hBase.get());
+    ref_ = set(hBase.get());
 }
 
 template <typename T>
 inline TypedMutableHandleBase<T> &
 TypedMutableHandleBase<T>::operator =(const TypedMutableHandleBase<T> &hBase)
 {
-    rootBase_.set(hBase.get());
+    ref_ = set(hBase.get());
 }
 
 

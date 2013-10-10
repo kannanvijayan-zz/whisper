@@ -113,10 +113,12 @@ template <typename T>
 class TypedHandleBase
 {
   protected:
-    TypedRootBase<T> &rootBase_;
+    const T &ref_;
+
+    inline TypedHandleBase(TypedRootBase<T> &rootBase);
+    inline TypedHandleBase(const T &ref);
 
   public:
-    inline TypedHandleBase(TypedRootBase<T> &rootBase);
     inline const T &get() const;
     inline operator const T &() const;
 };
@@ -146,10 +148,11 @@ template <typename T>
 class TypedMutableHandleBase
 {
   protected:
-    TypedRootBase<T> &rootBase_;
+    T &ref_;
+
+    inline TypedMutableHandleBase(T &ref);
 
   public:
-    inline TypedMutableHandleBase(TypedRootBase<T> &rootBase);
     inline T &get() const;
     inline void set(const T &t) const;
     inline operator T &() const;
@@ -183,11 +186,12 @@ class MutableHandle
 
 
 //
-// Root-wrapped Value
+// Rooted Value
 //
 template <>
 class Root<Value> : public TypedRootBase<Value>
 {
+  public:
     Root(RunContext *cx);
     Root(ThreadContext *cx);
     Root(RunContext *cx, const Value &val);
@@ -272,6 +276,12 @@ class Root<Value> : public TypedRootBase<Value>
     int32_t getInt32() const;
 };
 
+typedef Root<Value> RootedValue;
+
+//
+// Rooted Pointer
+//
+
 template <typename T>
 class Root<T *> : public PointerRootBase<T>
 {
@@ -287,11 +297,195 @@ class Root<T *> : public PointerRootBase<T>
     inline Root<T *> &operator =(T *other);
 };
 
+
+//
+// Handle Value
+//
+
+template <>
+class Handle<Value> : public TypedHandleBase<Value>
+{
+    Handle(const Value &val);
+
+#if defined(ENABLE_DEBUG)
+    bool isValid() const;
+#endif // defined(ENABLE_DEBUG)
+
+    //
+    // Checker methods
+    //
+
+    bool isObject() const;
+    bool isNativeObject() const;
+
+    template <typename T>
+    inline bool isNativeObjectOf() const;
+
+    bool isForeignObject() const;
+    bool isNull() const;
+    bool isUndefined() const;
+    bool isBoolean() const;
+    bool isHeapString() const;
+    bool isImmString8() const;
+    bool isImmString16() const;
+    bool isPosImmDoubleSmall() const;
+    bool isPosImmDoubleBig() const;
+    bool isNegImmDoubleSmall() const;
+    bool isNegImmDoubleBig() const;
+    bool isRegularImmDouble() const;
+    bool isSpecialImmDouble() const;
+    bool isNegZero() const;
+    bool isNaN() const;
+    bool isPosInf() const;
+    bool isNegInf() const;
+    bool isHeapDouble() const;
+    bool isInt32() const;
+    bool isMagic() const;
+
+    // Helper functions to check combined types.
+    bool isString() const;
+    bool isImmString() const;
+    bool isNumber() const;
+    bool isDouble() const;
+    bool isImmDouble() const;
+
+    //
+    // Getter methods
+    //
+    template <typename T>
+    T *getNativeObject() const;
+
+    template <typename T>
+    T *getForeignObject() const;
+
+    bool getBoolean() const;
+
+    VM::HeapString *getHeapString() const;
+    unsigned immString8Length() const;
+    uint8_t getImmString8Char(unsigned idx) const;
+
+    template <typename CharT>
+    unsigned readImmString8(CharT *buf) const;
+
+    unsigned immString16Length() const;
+    uint16_t getImmString16Char(unsigned idx) const;
+
+    template <typename CharT>
+    unsigned readImmString16(CharT *buf) const;
+
+    unsigned immStringLength() const;
+    uint16_t getImmStringChar(unsigned idx) const;
+
+    template <typename CharT>
+    unsigned readImmString(CharT *buf) const;
+
+    double getRegularImmDoubleValue() const;
+    double getSpecialImmDoubleValue() const;
+    double getImmDoubleValue() const;
+    VM::HeapDouble *getHeapDouble() const;
+    int32_t getInt32() const;
+};
+
+typedef Handle<Value> HandleValue;
+
+//
+// Handle Pointer
+//
+
 template <typename T>
 class Handle<T *> : public PointerHandleBase<T>
 {
   public:
     Handle(Root<T *> &root);
+};
+
+
+//
+// MutableHandle Value
+//
+
+template <>
+class MutableHandle<Value> : public TypedMutableHandleBase<Value>
+{
+    MutableHandle(Value &val);
+
+#if defined(ENABLE_DEBUG)
+    bool isValid() const;
+#endif // defined(ENABLE_DEBUG)
+
+    //
+    // Checker methods
+    //
+
+    bool isObject() const;
+    bool isNativeObject() const;
+
+    template <typename T>
+    inline bool isNativeObjectOf() const;
+
+    bool isForeignObject() const;
+    bool isNull() const;
+    bool isUndefined() const;
+    bool isBoolean() const;
+    bool isHeapString() const;
+    bool isImmString8() const;
+    bool isImmString16() const;
+    bool isPosImmDoubleSmall() const;
+    bool isPosImmDoubleBig() const;
+    bool isNegImmDoubleSmall() const;
+    bool isNegImmDoubleBig() const;
+    bool isRegularImmDouble() const;
+    bool isSpecialImmDouble() const;
+    bool isNegZero() const;
+    bool isNaN() const;
+    bool isPosInf() const;
+    bool isNegInf() const;
+    bool isHeapDouble() const;
+    bool isInt32() const;
+    bool isMagic() const;
+
+    // Helper functions to check combined types.
+    bool isString() const;
+    bool isImmString() const;
+    bool isNumber() const;
+    bool isDouble() const;
+    bool isImmDouble() const;
+
+    //
+    // Getter methods
+    //
+    template <typename T>
+    T *getNativeObject() const;
+
+    template <typename T>
+    T *getForeignObject() const;
+
+    bool getBoolean() const;
+
+    VM::HeapString *getHeapString() const;
+    unsigned immString8Length() const;
+    uint8_t getImmString8Char(unsigned idx) const;
+
+    template <typename CharT>
+    unsigned readImmString8(CharT *buf) const;
+
+    unsigned immString16Length() const;
+    uint16_t getImmString16Char(unsigned idx) const;
+
+    template <typename CharT>
+    unsigned readImmString16(CharT *buf) const;
+
+    unsigned immStringLength() const;
+    uint16_t getImmStringChar(unsigned idx) const;
+
+    template <typename CharT>
+    unsigned readImmString(CharT *buf) const;
+
+    double getRegularImmDoubleValue() const;
+    double getSpecialImmDoubleValue() const;
+    double getImmDoubleValue() const;
+    VM::HeapDouble *getHeapDouble() const;
+    int32_t getInt32() const;
 };
 
 template <typename T>

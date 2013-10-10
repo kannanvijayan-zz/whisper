@@ -4,6 +4,7 @@
 #include "slab.hpp"
 #include "runtime.hpp"
 #include "runtime_inlines.hpp"
+#include "vm/stack_frame.hpp"
 
 namespace Whisper {
 
@@ -86,7 +87,6 @@ Runtime::maybeThreadContext()
     return reinterpret_cast<ThreadContext *>(pthread_getspecific(threadKey_));
 }
 
-
 bool
 Runtime::hasThreadContext()
 {
@@ -115,6 +115,7 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery)
     nursery_(nullptr),
     tenured_(),
     activeRunContext_(nullptr),
+    runContextList_(nullptr),
     roots_(nullptr)
 {}
 
@@ -160,10 +161,13 @@ ThreadContext::roots() const
     return roots_;
 }
 
-RunContext
-ThreadContext::makeRunContext()
+void
+ThreadContext::addRunContext(RunContext *runcx)
 {
-    return RunContext(this);
+    WH_ASSERT(runcx->threadContext() == this);
+    WH_ASSERT(runcx->next_ == nullptr);
+    runcx->next_ = runContextList_;
+    runContextList_ = runcx;
 }
 
 //
@@ -172,8 +176,11 @@ ThreadContext::makeRunContext()
 
 RunContext::RunContext(ThreadContext *threadContext)
   : threadContext_(threadContext),
-    hatchery_(threadContext_->hatchery())
-{}
+    hatchery_(threadContext_->hatchery()),
+    topStackFrame_(nullptr)
+{
+    threadContext_->addRunContext(this);
+}
 
 ThreadContext *
 RunContext::threadContext() const
@@ -203,6 +210,14 @@ RunContext::makeActive()
         threadContext_->activeRunContext_ = this;
         syncHatchery();
     }
+}
+
+void
+RunContext::registerTopStackFrame(VM::StackFrame *topStackFrame)
+{
+    // No stack frame should have been registered yet.
+    WH_ASSERT(topStackFrame_ == nullptr);
+    topStackFrame_ = topStackFrame;
 }
 
 void

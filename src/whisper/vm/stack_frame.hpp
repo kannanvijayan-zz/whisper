@@ -24,6 +24,8 @@ namespace VM {
 //      +-----------------------+
 //      | Info                  |
 //      +-----------------------+
+//      | Info2                 |
+//      +-----------------------+
 //      | StackVal              |
 //      +-----------------------+
 //      | ...                   |
@@ -46,6 +48,9 @@ namespace VM {
 //      * The maximum stack depth (20 bits).
 //      * The current stack depth (20 bits).
 //
+// Info2
+//      * The current pc (32 bits).
+//
 //      The number of actual arguments can be computed from the object
 //      size and the maximum stack depth.
 //
@@ -63,6 +68,8 @@ struct StackFrame : public HeapThing,
     static constexpr uint64_t MaxStackDepthMaskLow =
         (UInt64(1) << MaxStackDepthBits) - 1;
 
+    static constexpr unsigned PcOffsetShift = 0;
+
     // Three fixed slots: callerFrame, callee, info
     static constexpr uint32_t FixedSlots = 3;
 
@@ -79,6 +86,7 @@ struct StackFrame : public HeapThing,
     NullableHeapThingValue<StackFrame> callerFrame_;
     HeapThingValue<HeapThing> callee_;
     Value info_;
+    Value info2_;
 
     void initialize(const Config &config);
 
@@ -101,6 +109,9 @@ struct StackFrame : public HeapThing,
 
     uint32_t numActualArgs() const;
     const Value &actualArg(uint32_t idx) const;
+
+    uint32_t pcOffset() const;
+    void setPcOffset(uint32_t newPcOffset);
 
     void pushValue(const Value &val);
     const Value &peekValue(uint32_t offset = 0) const;

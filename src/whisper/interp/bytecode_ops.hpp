@@ -179,7 +179,11 @@ class OperandLocation
     bool isUnsigned() const;
     bool isSigned() const;
 
-    uint32_t index() const;
+    uint32_t constantIndex() const;
+    uint32_t argumentIndex() const;
+    uint32_t localIndex() const;
+    uint32_t stackIndex() const;
+    uint32_t anyIndex() const;
 
     uint32_t unsignedValue() const;
     int32_t signedValue() const;
