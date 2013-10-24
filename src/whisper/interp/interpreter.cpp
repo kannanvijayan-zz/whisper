@@ -160,6 +160,9 @@ Interpreter::interpret()
           case Opcode::Neg_SV: // V
           case Opcode::Neg_VS: // V
           case Opcode::Neg_VV: // VV
+            if (!interpretNeg(op, &opBytes))
+                return false;
+            break;
 
           default:
             WH_UNREACHABLE("Unhandled op.");
@@ -468,7 +471,32 @@ Interpreter::interpretMod(Opcode op, int32_t *opBytes)
         return true;
     }
 
-    WH_UNREACHABLE("Non-int32 divide not implemented yet!");
+    WH_UNREACHABLE("Non-int32 modulo not implemented yet!");
+    return false;
+}
+
+
+bool
+Interpreter::interpretNeg(Opcode op, int32_t *opBytes)
+{
+    Root<Value> input(cx_, Value::Undefined());
+    OperandLocation outLoc;
+
+    readUnaryOperandValues(op, Opcode::Neg_SS, &input, &outLoc, opBytes);
+
+    if (input->isInt32()) {
+        int32_t inputVal = input->int32Value();
+
+        bool overflow = (inputVal == INT32_MIN);
+        if (!overflow) {
+            int32_t resultVal = -inputVal;
+            SpewInterpOpNote("  Int32 neg -%d => %d", inputVal, resultVal);
+            writeOperand(outLoc, Value::Int32(resultVal));
+            return true;
+        }
+    }
+
+    WH_UNREACHABLE("Non-int32 negate not implemented yet!");
     return false;
 }
 
@@ -521,6 +549,47 @@ Interpreter::readBinaryOperandValues(Opcode op, Opcode baseOp,
     // the right order (rhs, then lhs).
     rhs = readOperand(rhsLoc);
     lhs = readOperand(lhsLoc);
+}
+
+
+void
+Interpreter::readUnaryOperandLocations(Opcode op, Opcode baseOp,
+                                       OperandLocation *inLoc,
+                                       OperandLocation *outLoc,
+                                       int32_t *opBytes)
+{
+    unsigned opcodeOffset = OpcodeNumber(op) - OpcodeNumber(baseOp);
+    WH_ASSERT(opcodeOffset < 4);
+    bool inputIsValue = opcodeOffset & (1 << 2);
+    bool outIsValue = opcodeOffset & (1 << 0);
+
+    const OpcodeFormat V = OpcodeFormat::V;
+
+    if (inputIsValue)
+        *opBytes += ReadOperandLocation(pc_ + *opBytes, pcEnd_, V, 0, inLoc);
+    else
+        *inLoc = OperandLocation::StackTop();
+
+    if (outIsValue)
+        *opBytes += ReadOperandLocation(pc_ + *opBytes, pcEnd_, V, 0, outLoc);
+    else
+        *outLoc = OperandLocation::StackTop();
+}
+
+
+void
+Interpreter::readUnaryOperandValues(Opcode op, Opcode baseOp,
+                                    MutHandle<Value> in,
+                                    OperandLocation *outLoc,
+                                    int32_t *opBytes)
+{
+    OperandLocation inLoc;
+    readUnaryOperandLocations(op, baseOp, &inLoc, outLoc, opBytes);
+
+    // Read the operands.  Read the rhs first because if both lhs and
+    // rhs are read from the StackTop, then they should be popped in
+    // the right order (rhs, then lhs).
+    in = readOperand(inLoc);
 }
 
 

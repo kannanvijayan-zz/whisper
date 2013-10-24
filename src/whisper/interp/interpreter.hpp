@@ -55,6 +55,8 @@ class Interpreter
     bool interpretDiv(Opcode op, int32_t *opBytes);
     bool interpretMod(Opcode op, int32_t *opBytes);
 
+    bool interpretNeg(Opcode op, int32_t *opBytes);
+
     void readBinaryOperandLocations(Opcode op, Opcode baseOp,
                                     OperandLocation *lhsLoc,
                                     OperandLocation *rhsLoc,
@@ -64,6 +66,16 @@ class Interpreter
     void readBinaryOperandValues(Opcode op, Opcode baseOp,
                                  MutHandle<Value> lhs,
                                  MutHandle<Value> rhs,
+                                 OperandLocation *outLoc,
+                                 int32_t *opBytes);
+
+    void readUnaryOperandLocations(Opcode op, Opcode baseOp,
+                                   OperandLocation *inLoc,
+                                   OperandLocation *outLoc,
+                                   int32_t *opBytes);
+
+    void readUnaryOperandValues(Opcode op, Opcode baseOp,
+                                 MutHandle<Value> in,
                                  OperandLocation *outLoc,
                                  int32_t *opBytes);
 };
