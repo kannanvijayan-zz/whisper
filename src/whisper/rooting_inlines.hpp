@@ -59,6 +59,20 @@ TypedRootBase<T>::get()
 }
 
 template <typename T>
+inline const T *
+TypedRootBase<T>::addr() const
+{
+    return &thing_;
+}
+
+template <typename T>
+inline T *
+TypedRootBase<T>::addr()
+{
+    return &thing_;
+}
+
+template <typename T>
 void
 TypedRootBase<T>::set(const T &val)
 {
@@ -85,28 +99,6 @@ TypedRootBase<T>::operator =(const T &other)
 {
     thing_ = other;
     return *this;
-}
-
-template <typename T>
-inline TypedRootBase<T> &
-TypedRootBase<T>::operator =(const TypedRootBase<T> &other)
-{
-    thing_ = other.thing_;
-    return *this;
-}
-
-template <typename T>
-inline TypedRootBase<T> &
-TypedRootBase<T>::operator =(const TypedHandleBase<T> &other)
-{
-    thing_ = other.get();
-}
-
-template <typename T>
-inline TypedRootBase<T> &
-TypedRootBase<T>::operator =(const TypedMutableHandleBase<T> &other)
-{
-    thing_ = other.get();
 }
 
 //
@@ -151,8 +143,94 @@ template <typename T>
 inline
 PointerRootBase<T>::operator bool() const
 {
-    return this->thing_ == nullptr;
+    return this->thing_ != nullptr;
 }
+
+//
+// TypedHeapBase<typename T>
+//
+
+template <typename T>
+inline
+TypedHeapBase<T>::TypedHeapBase(const T &ref)
+  : val_(ref)
+{}
+
+template <typename T>
+inline const T &
+TypedHeapBase<T>::get() const
+{
+    return val_;
+}
+
+template <typename T>
+inline T &
+TypedHeapBase<T>::get()
+{
+    return val_;
+}
+
+template <typename T>
+inline const T *
+TypedHeapBase<T>::addr() const
+{
+    return &val_;
+}
+
+template <typename T>
+inline T *
+TypedHeapBase<T>::addr()
+{
+    return &val_;
+}
+
+template <typename T>
+inline void 
+TypedHeapBase<T>::set(const T &t, VM::HeapThing *holder)
+{
+    // TODO: mark write barriers if needed.
+    val_ = t;
+}
+
+template <typename T>
+inline
+TypedHeapBase<T>::operator const T &() const
+{
+    return get();
+}
+
+template <typename T>
+inline
+TypedHeapBase<T>::operator T &()
+{
+    return get();
+}
+
+
+//
+// PointerHeapBase<typename T>
+//
+
+template <typename T>
+inline
+PointerHeapBase<T>::PointerHeapBase(T *ptr)
+  : TypedHeapBase<T *>(ptr)
+{}
+
+template <typename T>
+inline T *
+PointerHeapBase<T>::operator ->() const
+{
+    return this->get();
+}
+
+template <typename T>
+inline
+PointerHeapBase<T>::operator bool() const
+{
+    return this->val_ != nullptr;
+}
+
 
 //
 // TypedHandleBase<typename T>
@@ -162,6 +240,12 @@ template <typename T>
 inline
 TypedHandleBase<T>::TypedHandleBase(TypedRootBase<T> &rootBase)
   : ref_(rootBase.get())
+{}
+
+template <typename T>
+inline
+TypedHandleBase<T>::TypedHandleBase(TypedHeapBase<T> &heapBase)
+  : ref_(heapBase.get())
 {}
 
 template <typename T>
@@ -190,7 +274,19 @@ TypedHandleBase<T>::operator const T &() const
 
 template <typename T>
 inline
+PointerHandleBase<T>::PointerHandleBase(T * const &locn)
+  : TypedHandleBase<T *>(locn)
+{}
+
+template <typename T>
+inline
 PointerHandleBase<T>::PointerHandleBase(TypedRootBase<T *> &base)
+  : TypedHandleBase<T *>(base)
+{}
+
+template <typename T>
+inline
+PointerHandleBase<T>::PointerHandleBase(TypedHeapBase<T *> &base)
   : TypedHandleBase<T *>(base)
 {}
 
@@ -205,132 +301,72 @@ template <typename T>
 inline
 PointerHandleBase<T>::operator bool() const
 {
-    return this->ref_ == nullptr;
+    return this->ref_ != nullptr;
 }
 
 //
-// TypedMutableHandleBase<typename T>
+// TypedMutHandleBase<typename T>
 //
 
 template <typename T>
 inline
-TypedMutableHandleBase<T>::TypedMutableHandleBase(T &ref)
-  : ref_(ref)
-{}
+TypedMutHandleBase<T>::TypedMutHandleBase(T *ptr)
+  : ref_(*ptr)
+{
+    WH_ASSERT(ptr != nullptr);
+}
 
 template <typename T>
 inline T &
-TypedMutableHandleBase<T>::get() const
+TypedMutHandleBase<T>::get() const
 {
     return ref_;
 }
 
 template <typename T>
 inline void
-TypedMutableHandleBase<T>::set(const T &t) const
+TypedMutHandleBase<T>::set(const T &t) const
 {
     ref_ = t;
 }
 
 template <typename T>
 inline
-TypedMutableHandleBase<T>::operator T &() const
+TypedMutHandleBase<T>::operator T &() const
 {
     return get();
 }
 
 template <typename T>
-inline TypedMutableHandleBase<T> &
-TypedMutableHandleBase<T>::operator =(const TypedRootBase<T> &rootBase)
+inline TypedMutHandleBase<T> &
+TypedMutHandleBase<T>::operator =(const T &val)
 {
-    ref_ = rootBase.get();
-}
-
-template <typename T>
-inline TypedMutableHandleBase<T> &
-TypedMutableHandleBase<T>::operator =(const TypedHandleBase<T> &hBase)
-{
-    ref_ = set(hBase.get());
-}
-
-template <typename T>
-inline TypedMutableHandleBase<T> &
-TypedMutableHandleBase<T>::operator =(const TypedMutableHandleBase<T> &hBase)
-{
-    ref_ = set(hBase.get());
+    set(val);
 }
 
 
 //
-// PointerMutableHandleBase<typename T>
+// PointerMutHandleBase<typename T>
 //
 
 template <typename T>
 inline
-PointerMutableHandleBase<T>::PointerMutableHandleBase(TypedRootBase<T *> &base)
-  : TypedMutableHandleBase<T *>(base)
+PointerMutHandleBase<T>::PointerMutHandleBase(T **ptr)
+  : TypedMutHandleBase<T *>(ptr)
 {}
 
 template <typename T>
 inline T *
-PointerMutableHandleBase<T>::operator ->() const
+PointerMutHandleBase<T>::operator ->() const
 {
-    return this->rootBase_.get();
+    return this->ref_;
 }
 
 template <typename T>
 inline
-PointerMutableHandleBase<T>::operator bool() const
+PointerMutHandleBase<T>::operator bool() const
 {
-    return this->rootBase_.get() == nullptr;
-}
-
-
-
-//
-// Root-wrapped Value
-//
-
-template <typename T>
-inline bool
-Root<Value>::isNativeObjectOf() const
-{
-    return thing_.isNativeObjectOf<T>();
-}
-
-template <typename T>
-inline T *
-Root<Value>::getNativeObject() const
-{
-    return thing_.getNativeObject<T>();
-}
-
-template <typename T>
-inline T *
-Root<Value>::getForeignObject() const
-{
-    return thing_.getForeignObject<T>();
-}
-
-template <typename CharT>
-inline unsigned
-Root<Value>::readImmString8(CharT *buf) const
-{
-    return thing_.readImmString8<CharT>(buf);
-}
-
-template <typename CharT>
-inline unsigned
-Root<Value>::readImmString16(CharT *buf) const
-{
-    return thing_.readImmString16<CharT>(buf);
-}
-
-template <typename CharT>
-inline unsigned
-Root<Value>::readImmString(CharT *buf) const
-{
-    return thing_.readImmString<CharT>(buf);
+    return this->ref_ != nullptr;
 }
 
 //
@@ -375,35 +411,21 @@ Root<T *>::Root(ThreadContext *cx, T *ptr)
 
 template <typename T>
 inline Root<T *> &
-Root<T *>::operator =(const Root<T *> &other)
+Root<T *>::operator =(T * const &other)
 {
     this->TypedRootBase<T *>::operator =(other);
     return *this;
 }
 
-template <typename T>
-inline Root<T *> &
-Root<T *>::operator =(const Handle<T *> &other)
-{
-    this->TypedRootBase<T *>::operator =(other);
-    return *this;
-}
+//
+// Heap<T *>
+//
 
 template <typename T>
-inline Root<T *> &
-Root<T *>::operator =(const MutableHandle<T *> &other)
-{
-    this->TypedRootBase<T *>::operator =(other);
-    return *this;
-}
-
-template <typename T>
-inline Root<T *> &
-Root<T *>::operator =(T *other)
-{
-    this->TypedRootBase<T *>::operator =(other);
-    return *this;
-}
+inline
+Heap<T *>::Heap(T *ptr)
+  : PointerHeapBase<T>(ptr)
+{}
 
 
 //
@@ -412,51 +434,81 @@ Root<T *>::operator =(T *other)
 
 template <typename T>
 inline
-Handle<T *>::Handle(Root<T *> &root)
-  : PointerHandleBase<T>(root)
-{}
-
-
-//
-// MutableHandle<T *>
-//
-
+Handle<T *>::Handle(T * const &locn)
+  : PointerHandleBase<T>(locn)
+{
+    static_assert(std::is_base_of<VM::HeapThing, T>::value,
+                  "Type is not a heap thing.");
+}
 
 template <typename T>
 inline
-MutableHandle<T *>::MutableHandle(Root<T *> &root)
-  : PointerMutableHandleBase<T>(root)
-{}
+Handle<T *>::Handle(const Root<T *> &root)
+  : PointerHandleBase<T>(root)
+{
+    static_assert(std::is_base_of<VM::HeapThing, T>::value,
+                  "Type is not a heap thing.");
+}
 
 template <typename T>
-inline MutableHandle<T *> &
-MutableHandle<T *>::operator =(const Root<T *> &other)
+inline
+Handle<T *>::Handle(const Heap<T *> &root)
+  : PointerHandleBase<T>(root)
 {
-    this->TypedMutableHandleBase<T *>::operator =(other);
+    static_assert(std::is_base_of<VM::HeapThing, T>::value,
+                  "Type is not a heap thing.");
+}
+
+template <typename T>
+/*static*/ inline Handle<T *>
+Handle<T *>::FromTracedLocation(T * const &locn)
+{
+    return Handle<T *>(locn);
+}
+
+
+//
+// MutHandle<T *>
+//
+
+template <typename T>
+inline
+MutHandle<T *>::MutHandle(Root<T *> *root)
+  : PointerMutHandleBase<T>(*root)
+{
+    static_assert(std::is_base_of<VM::HeapThing, T>::value,
+                  "Type is not a heap thing.");
+}
+
+template <typename T>
+inline MutHandle<T *> &
+MutHandle<T *>::operator =(const Root<T *> &other)
+{
+    this->TypedMutHandleBase<T *>::operator =(other);
     return *this;
 }
 
 template <typename T>
-inline MutableHandle<T *> &
-MutableHandle<T *>::operator =(const Handle<T *> &other)
+inline MutHandle<T *> &
+MutHandle<T *>::operator =(const Handle<T *> &other)
 {
-    this->TypedMutableHandleBase<T *>::operator =(other);
+    this->TypedMutHandleBase<T *>::operator =(other);
     return *this;
 }
 
 template <typename T>
-inline MutableHandle<T *> &
-MutableHandle<T *>::operator =(const MutableHandle<T *> &other)
+inline MutHandle<T *> &
+MutHandle<T *>::operator =(const MutHandle<T *> &other)
 {
-    this->TypedMutableHandleBase<T *>::operator =(other);
+    this->TypedMutHandleBase<T *>::operator =(other);
     return *this;
 }
 
 template <typename T>
-inline MutableHandle<T *> &
-MutableHandle<T *>::operator =(T *other)
+inline MutHandle<T *> &
+MutHandle<T *>::operator =(T *other)
 {
-    this->TypedMutableHandleBase<T *>::operator =(other);
+    this->TypedMutHandleBase<T *>::operator =(other);
     return *this;
 }
 

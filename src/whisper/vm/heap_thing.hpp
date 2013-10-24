@@ -11,6 +11,14 @@ namespace Whisper {
 namespace VM {
 
 //
+// Pre-declare heap thing classes.
+//
+
+#define PREDEC_(t, ...) class t;
+    WHISPER_DEFN_HEAP_TYPES(PREDEC_)
+#undef PREDEC_
+
+//
 // Enum of all possible heap thing types.
 //
 enum class HeapType : uint32_t
@@ -24,10 +32,6 @@ enum class HeapType : uint32_t
     LIMIT
 };
 
-#define PREDEC_(t, ...) class t;
-    WHISPER_DEFN_HEAP_TYPES(PREDEC_)
-#undef PREDEC_
-
 inline bool
 IsValidHeapType(HeapType ht) {
     return (ht > HeapType::INVALID) && (ht < HeapType::LIMIT);
@@ -36,7 +40,6 @@ IsValidHeapType(HeapType ht) {
 const char *HeapTypeString(HeapType ht);
 
 void SpewHeapThingSlab(Slab *slab);
-
 
 template <HeapType HT> struct HeapTypeTraits {};
 #define TRAITS_(t, traced) \
@@ -61,7 +64,7 @@ template <HeapType HT> struct HeapTypeTraits {};
 // A heap thing header word has the following structure:
 //
 // 64        56        48        40
-// 1111-00FF FFFF-SSSS SSSS-SSSS SSSS-SSSS
+// 0000-FFFF FFFF-SSSS SSSS-SSSS SSSS-SSSS
 //
 // 32        24        16        08
 // SSSS-SSSS SSSS-TTTT TTTT-00CC CCCC-CCCC
@@ -91,8 +94,8 @@ template <HeapType HT> struct HeapTypeTraits {};
 //      For normal objects which are composed of values, the size will
 //      be a multiple of 8.
 //
-//  FF-FFFF
-//      This 6-bit field has an interpretation that depends on the type.
+//  FFFF-FFFF
+//      This 8-bit field has an interpretation that depends on the type.
 //      It's basically a small number of "free" bits which a type can
 //      use to track information about an object.
 //
@@ -122,12 +125,9 @@ class HeapThingHeader
     static constexpr uint64_t SizeMask = UINT32_MAX;
     static constexpr unsigned SizeShift = 20;
 
-    static constexpr uint64_t FlagsBits = 6;
+    static constexpr uint64_t FlagsBits = 8;
     static constexpr uint64_t FlagsMask = (1ULL << FlagsBits) - 1;
     static constexpr unsigned FlagsShift = 52;
-
-    static constexpr uint64_t Tag = 0xFu;
-    static constexpr unsigned TagShift = 60;
 
   protected:
     HeapThingHeader(HeapType type, uint32_t cardNo, uint32_t size);
@@ -212,31 +212,9 @@ class HeapThing
 
     uint32_t objectSize() const;
 
-    uint32_t objectValueCount() const;
-
     uint32_t flags() const;
 
     uint32_t reservedSpace() const;
-
-    template <typename T>
-    inline T *dataPointer(uint32_t offset);
-
-    template <typename T>
-    inline const T *dataPointer(uint32_t offset) const;
-
-    template <typename T>
-    inline T &dataRef(uint32_t offset);
-
-    template <typename T>
-    inline const T &dataRef(uint32_t offset) const;
-
-    Value *valuePointer(uint32_t idx);
-
-    const Value *valuePointer(uint32_t idx) const;
-
-    Value &valueRef(uint32_t idx);
-
-    const Value &valueRef(uint32_t idx) const;
 
 #define PRED_(t, ...) \
     inline bool is##t() const { \
@@ -271,39 +249,6 @@ class TypedHeapThing
 
 // A Value subclass that allows heap things or undefined.
 template <typename T, bool Null=false> class HeapThingValue {};
-
-template <typename T>
-class HeapThingValue<T, false> : public Value
-{
-  public:
-    inline explicit HeapThingValue(T *thing);
-
-    inline T *getHeapThing() const;
-    inline operator T *() const;
-    inline T *operator ->() const;
-
-    inline HeapThingValue<T> &operator =(T *thing);
-};
-
-template <typename T>
-class HeapThingValue<T, true> : public Value
-{
-  public:
-    inline HeapThingValue();
-    inline explicit HeapThingValue(T *thing);
-
-    bool hasHeapThing() const;
-    inline T *maybeGetHeapThing() const;
-    inline T *getHeapThing() const;
-    inline operator T *() const;
-    inline T *operator ->() const;
-
-    inline HeapThingValue<T, true> &operator =(T *thing);
-};
-
-template <typename T>
-using NullableHeapThingValue = HeapThingValue<T, true>;
-
 
 } // namespace VM
 } // namespace Whisper

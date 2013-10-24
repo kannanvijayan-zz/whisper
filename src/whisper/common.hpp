@@ -39,23 +39,43 @@ constexpr unic_t MaxUnicode = 0x10FFFFu;
 
 // Helper to convert integer to [u]int[64|32]_t
 template <typename IntT>
-constexpr uint64_t UInt64(IntT val) {
+constexpr uint64_t ToUInt64(IntT val) {
     return static_cast<uint64_t>(val);
 }
 
 template <typename IntT>
-constexpr uint32_t UInt32(IntT val) {
+constexpr uint32_t ToUInt32(IntT val) {
     return static_cast<uint32_t>(val);
 }
 
 template <typename IntT>
-constexpr int64_t Int64(IntT val) {
+constexpr uint16_t ToUInt16(IntT val) {
+    return static_cast<uint16_t>(val);
+}
+
+template <typename IntT>
+constexpr uint8_t ToUInt8(IntT val) {
+    return static_cast<uint8_t>(val);
+}
+
+template <typename IntT>
+constexpr int64_t ToInt64(IntT val) {
     return static_cast<int64_t>(val);
 }
 
 template <typename IntT>
-constexpr int32_t Int32(IntT val) {
+constexpr int32_t ToInt32(IntT val) {
     return static_cast<int32_t>(val);
+}
+
+template <typename IntT>
+constexpr int16_t ToInt16(IntT val) {
+    return static_cast<int16_t>(val);
+}
+
+template <typename IntT>
+constexpr int8_t ToInt8(IntT val) {
+    return static_cast<int8_t>(val);
 }
 
 // Casting between pointers and words.

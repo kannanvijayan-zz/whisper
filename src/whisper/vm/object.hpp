@@ -11,25 +11,15 @@ namespace Whisper {
 namespace VM {
 
 
-class ObjectImpl : public PropertyMapThing
+//
+// Object is a helper class that can be used to reference actual object
+// classes, such as NativeObject, ProxyObject, ForeignObject, etc.
+//
+class Object : public HeapThing
 {
   public:
-    ObjectImpl(Shape *shape);
+    Object();
 };
-
-template <>
-struct PropertyMapTypeTraits<HeapType::Object>
-{
-    static constexpr uint32_t NumInternalSlots = 0;
-};
-
-class Object : public ObjectImpl, public TypedHeapThing<HeapType::Object>
-{
-  public:
-    Object(Shape *shape);
-};
-
-typedef HeapThingWrapper<Object> WrappedObject;
 
 
 } // namespace VM

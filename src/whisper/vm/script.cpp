@@ -1,4 +1,5 @@
 #include "value_inlines.hpp"
+#include "rooting_inlines.hpp"
 #include "vm/script.hpp"
 #include "vm/heap_thing_inlines.hpp"
 
@@ -15,16 +16,13 @@ Script::initialize(const Config &config)
     uint32_t flags = 0;
     if (config.isStrict)
         flags |= IsStrict;
-    flags |= static_cast<uint32_t>(config.mode) << ModeShift;
+    flags |= ToUInt32(config.mode) << ModeShift;
     initFlags(flags);
-
-    WH_ASSERT(config.maxStackDepth < MaxStackDepthMaskLow);
-    uint64_t val = UInt64(config.maxStackDepth) << MaxStackDepthShift;
-    info_ = MagicValue(val);
 }
 
 Script::Script(Bytecode *bytecode, const Config &config)
-  : bytecode_(bytecode)
+  : bytecode_(bytecode),
+    maxStackDepth_(config.maxStackDepth)
 {
     initialize(config);
 }
@@ -59,16 +57,16 @@ Script::isEval() const
     return mode() == Eval;
 }
 
-uint32_t
-Script::maxStackDepth() const
-{
-    return (info_.getMagicInt() >> MaxStackDepthShift) & MaxStackDepthMaskLow;
-}
-
-Bytecode *
+Handle<Bytecode *>
 Script::bytecode() const
 {
     return bytecode_;
+}
+
+uint32_t
+Script::maxStackDepth() const
+{
+    return maxStackDepth_;
 }
 
 

@@ -19,24 +19,24 @@ namespace VM {
 //      | Header                |
 //      +-----------------------+
 //      | CallerFrame           |
-//      +-----------------------+
 //      | Callee                |
-//      +-----------------------+
-//      | Info                  |
-//      +-----------------------+
-//      | Info2                 |
-//      +-----------------------+
-//      | StackVal              |
-//      +-----------------------+
-//      | ...                   |
-//      +-----------------------+
-//      | StackVal              |
+//      | PcOffset              |
+//      | NumPassedArgs         |
+//      | NumArgs               |
+//      | NumLocals             |
+//      | StackDepth            |
 //      +-----------------------+
 //      | ArgVal                |
-//      +-----------------------+
 //      | ...                   |
-//      +-----------------------+
 //      | ArgVal                |
+//      +-----------------------+
+//      | LocalVal              |
+//      | ...                   |
+//      | LocalVal              |
+//      +-----------------------+
+//      | StackVal              |
+//      | ...                   |
+//      | StackVal              |
 //      +-----------------------+
 //
 // CallerFrame - points to the caller StackFrame.  For the initial stack
@@ -44,84 +44,97 @@ namespace VM {
 //
 // Callee - the Script or function object that's executing in this frame.
 //
-// Info - a Magic bitfield storing information about the frame.
-//      * The maximum stack depth (20 bits).
-//      * The current stack depth (20 bits).
-//
-// Info2
-//      * The current pc (32 bits).
-//
-//      The number of actual arguments can be computed from the object
-//      size and the maximum stack depth.
-//
 struct StackFrame : public HeapThing,
                     public TypedHeapThing<HeapType::StackFrame>
 {
   public:
-    static constexpr unsigned CurStackDepthBits = 20;
-    static constexpr unsigned CurStackDepthShift = 0;
-    static constexpr uint64_t CurStackDepthMaskLow =
-        (UInt64(1) << CurStackDepthBits) - 1;
-
-    static constexpr unsigned MaxStackDepthBits = 20;
-    static constexpr unsigned MaxStackDepthShift = 20;
-    static constexpr uint64_t MaxStackDepthMaskLow =
-        (UInt64(1) << MaxStackDepthBits) - 1;
-
-    static constexpr unsigned PcOffsetShift = 0;
-
-    // Three fixed slots: callerFrame, callee, info
-    static constexpr uint32_t FixedSlots = 3;
-
     struct Config
     {
+        uint32_t numPassedArgs;
+        uint32_t numArgs;
+        uint32_t numLocals;
         uint32_t maxStackDepth;
-        uint32_t numActualArgs;
     };
 
     static uint32_t CalculateSize(const Config &config);
 
   private:
-    // Pointer to bytecode for the script.
-    NullableHeapThingValue<StackFrame> callerFrame_;
-    HeapThingValue<HeapThing> callee_;
-    Value info_;
-    Value info2_;
+    // Pointer to caller frame.
+    Heap<StackFrame *> callerFrame_;
 
-    void initialize(const Config &config);
+    // Either Script or Function executing in this frame.
+    Heap<HeapThing *> callee_;
 
-    void incrCurStackDepth();
-    void decrCurStackDepth(uint32_t count);
+    // The current bytecode pc offset.
+    uint32_t pcOffset_;
+
+    // The number of actual arguments provided by the caller.
+    uint32_t numPassedArgs_;
+
+    // The number of arguments on frame == max(actualArgs_, formalArgs_)
+    uint32_t numArgs_;
+
+    // The number of locals.
+    uint32_t numLocals_;
+
+    // The current stack depth.
+    uint32_t stackDepth_;
 
   public:
     StackFrame(Script *callee, const Config &config);
 
     bool hasCallerFrame() const;
-    StackFrame *callerFrame() const;
+    Handle<StackFrame *> callerFrame() const;
 
     bool isScriptFrame() const;
-    Script *script() const;
+    Handle<Script *> script() const;
 
     bool isTopLevelFrame() const;
 
-    uint32_t maxStackDepth() const;
-    uint32_t curStackDepth() const;
-
-    uint32_t numActualArgs() const;
-    const Value &actualArg(uint32_t idx) const;
-
     uint32_t pcOffset() const;
     void setPcOffset(uint32_t newPcOffset);
+    uint32_t numPassedArgs() const;
+    uint32_t numArgs() const;
+    uint32_t numLocals() const;
+    uint32_t stackDepth() const;
+    uint32_t maxStackDepth() const;
 
-    void pushValue(const Value &val);
-    const Value &peekValue(uint32_t offset = 0) const;
-    void popValue(uint32_t count = 1);
+    Handle<Value> getArg(uint32_t idx) const;
+    Handle<Value> getLocal(uint32_t idx) const;
+
+    void pushStack(const Value &val);
+    Handle<Value> peekStack(int32_t offset = -1) const;
+    Handle<Value> getStack(uint32_t offset) const;
+    void popStack(uint32_t count = 1);
+
+  private:
+    const Value *argStart() const;
+    Value *argStart();
+
+    const Value *localStart() const;
+    Value *localStart();
+
+    const Value *stackStart() const;
+    Value *stackStart();
+
+    const Value &argAt(uint32_t idx) const;
+    Value &argAt(uint32_t idx);
+
+    const Value &localAt(uint32_t idx) const;
+    Value &localAt(uint32_t idx);
+
+    const Value &stackAt(uint32_t idx) const;
+    Value &stackAt(uint32_t idx);
+
+    const Heap<Value> &argRef(uint32_t idx) const;
+    Heap<Value> &argRef(uint32_t idx);
+
+    const Heap<Value> &localRef(uint32_t idx) const;
+    Heap<Value> &localRef(uint32_t idx);
+
+    const Heap<Value> &stackRef(uint32_t idx) const;
+    Heap<Value> &stackRef(uint32_t idx);
 };
-
-typedef HeapThingWrapper<StackFrame> WrappedStackFrame;
-typedef Root<StackFrame *> RootedStackFrame;
-typedef Handle<StackFrame *> HandleStackFrame;
-typedef MutableHandle<StackFrame *> MutHandleStackFrame;
 
 
 } // namespace VM

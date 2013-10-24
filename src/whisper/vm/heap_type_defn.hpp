@@ -25,6 +25,8 @@
     _(DeclarativeScope,                 true)                   \
     _(GlobalScope,                      true)                   \
     \
+    _(PropertyTraps,                    false)                  \
+    \
     _(Object,                           true)                   \
     _(Global,                           true)                   \
     \

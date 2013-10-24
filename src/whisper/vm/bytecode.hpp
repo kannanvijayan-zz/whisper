@@ -27,11 +27,6 @@ struct Bytecode : public HeapThing, public TypedHeapThing<HeapType::Bytecode>
     uint32_t length() const;
 };
 
-typedef HeapThingWrapper<Bytecode> WrappedBytecode;
-typedef Root<Bytecode *> RootedBytecode;
-typedef Handle<Bytecode *> HandleBytecode;
-typedef MutableHandle<Bytecode *> MutHandleBytecode;
-
 void SpewBytecodeObject(Bytecode *bc);
 
 

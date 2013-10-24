@@ -288,7 +288,7 @@ BytecodeGenerator::emitUnaryOp(AST::BaseUnaryExpressionNode *expr,
         formatOffset |= (1 << 0);
 
     // Calculate actual opcode.
-    opcode = static_cast<Opcode>(static_cast<uint16_t>(opcode) + formatOffset);
+    opcode = static_cast<Opcode>(ToUInt16(opcode) + formatOffset);
 
     // Emit op and operand locations.
     emitOp(opcode);
@@ -336,7 +336,7 @@ BytecodeGenerator::emitBinaryOp(AST::BaseBinaryExpressionNode *expr,
         formatOffset |= (1 << 0);
 
     // Calculate actual opcode.
-    opcode = static_cast<Opcode>(static_cast<uint16_t>(opcode) + formatOffset);
+    opcode = static_cast<Opcode>(ToUInt16(opcode) + formatOffset);
 
     // Emit op and operand locations.
     emitOp(opcode);
@@ -388,7 +388,7 @@ BytecodeGenerator::emitOp(Opcode op)
     // Ops in section 0 get emitted without prefix.
     // Ops in other sections have section prefix.
     WH_ASSERT(GetOpcodeSection(op) == 0);
-    emitByte(static_cast<uint8_t>(op));
+    emitByte(ToUInt8(op));
 
     // Adjust stack depth calculations.  Only do this when doing
     // bytecode generation, not scanning.
@@ -521,13 +521,13 @@ BytecodeGenerator::emitImmediateSignedOperand(int32_t val)
 void
 BytecodeGenerator::emitIndexedOperand(OperandSpace space, uint32_t idx)
 {
-    WH_ASSERT(static_cast<uint8_t>(space) <= 0x3);
+    WH_ASSERT(ToUInt8(space) <= 0x3);
 
     if (idx <= 0xFu) {
         // Single-byte encoding of operand.
         // Low bits hold size (0)
         uint8_t byte = 0;
-        byte |= (static_cast<uint8_t>(space) << 2);
+        byte |= (ToUInt8(space) << 2);
         byte |= idx << 4;
         emitByte(byte);
         return;
@@ -537,7 +537,7 @@ BytecodeGenerator::emitIndexedOperand(OperandSpace space, uint32_t idx)
         // Two-byte encoding of operand.
         // Low bits hold size (1)
         uint8_t byte = 1;
-        byte |= (static_cast<uint8_t>(space) << 2);
+        byte |= (ToUInt8(space) << 2);
         byte |= (idx & 0xFu) << 4;
         emitByte(byte);
         emitByte(idx >> 4);
@@ -549,7 +549,7 @@ BytecodeGenerator::emitIndexedOperand(OperandSpace space, uint32_t idx)
     // Four-byte encoding of operand.
     // Low bits hold size (2)
     uint8_t byte = 2;
-    byte |= (static_cast<uint8_t>(space) << 2);
+    byte |= (ToUInt8(space) << 2);
     byte |= (idx & 0xFu) << 4;
     emitByte(byte);
     emitByte((idx >> 4) & 0xFFu);

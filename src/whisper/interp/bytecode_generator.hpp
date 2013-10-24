@@ -45,7 +45,7 @@ class BytecodeGenerator
     bool strict_;
 
     // Bytecode.
-    VM::RootedBytecode bytecode_;
+    Root<VM::Bytecode *> bytecode_;
 
     // Error message.
     const char *error_ = nullptr;

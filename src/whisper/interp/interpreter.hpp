@@ -14,7 +14,7 @@ namespace Interp {
 /**
  * Start a top-level interpretation.
  */
-bool InterpretScript(RunContext *cx, VM::HandleScript script);
+bool InterpretScript(RunContext *cx, Handle<VM::Script *> script);
 
 
 /**
@@ -28,26 +28,39 @@ class Interpreter
     RunContext *cx_;
 
     // The current active stack frame.
-    VM::RootedStackFrame frame_;
+    Root<VM::StackFrame *> frame_;
 
     // The script and bytecode being executed.
-    VM::RootedScript script_;
-    VM::RootedBytecode bytecode_;
+    Root<VM::Script *> script_;
+    Root<VM::Bytecode *> bytecode_;
 
     // Pc info.
     const uint8_t *pc_;
     const uint8_t *pcEnd_;
 
   public:
-    Interpreter(RunContext *cx, VM::HandleStackFrame frame);
+    Interpreter(RunContext *cx, Handle<VM::StackFrame *> frame);
 
     bool interpret();
 
   private:
     Value readOperand(const OperandLocation &loc);
 
-    bool interpretPushInt(Opcode op, uint32_t *opBytes);
-    bool interpretIf(Opcode op, uint32_t *opBytes);
+    bool interpretStop(Opcode op, int32_t *opBytes);
+    bool interpretPushInt(Opcode op, int32_t *opBytes);
+    bool interpretAdd(Opcode op, int32_t *opBytes);
+
+    void readBinaryOperandLocations(Opcode op, Opcode baseOp,
+                                    OperandLocation *lhsLoc,
+                                    OperandLocation *rhsLoc,
+                                    OperandLocation *outLoc,
+                                    int32_t *opBytes);
+
+    void readBinaryOperandValues(Opcode op, Opcode baseOp,
+                                 MutHandle<Value> lhs,
+                                 MutHandle<Value> rhs,
+                                 OperandLocation *outLoc,
+                                 int32_t *opBytes);
 };
 
 

@@ -50,7 +50,7 @@ Reference::Reference(const Value &base, const Value &name, const Value &thisv)
 }
 
 Reference::Reference(const Value &base, const Value &name, bool strict)
-  : base_(base), name_(name), thisv_(UndefinedValue()),
+  : base_(base), name_(name), thisv_(Value::Undefined()),
     isStrict_(strict), isSuper_(false)
 {
     WH_ASSERT(IsValidName(name));

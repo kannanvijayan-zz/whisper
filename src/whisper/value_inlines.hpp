@@ -7,133 +7,50 @@
 namespace Whisper {
 
 
-template <typename T>
-inline T *
-Value::getPtr() const
-{
-    WH_ASSERT(isObject() || isHeapString() || isHeapDouble());
-    return reinterpret_cast<T *>(tagged_ & PtrValueMask);
-}
-
-template <typename T>
-/*static*/ inline Value
-Value::MakePtr(ValueTag tag, T *ptr, bool weak)
-{
-    WH_ASSERT(tag == ValueTag::Object || tag == ValueTag::HeapString ||
-              tag == ValueTag::HeapDouble);
-    uint64_t ptrval = reinterpret_cast<uint64_t>(ptr);
-    ptrval &= PtrValueMask;
-    ptrval |= UInt64(tag) << RegularTagShift;
-    if (weak)
-        ptrval |= WeakMask;
-    return Value(ptrval);
-}
-
-template <typename T>
-inline bool
-Value::isNativeObjectOf() const
-{
-    static_assert(std::is_base_of<VM::HeapThing, T>::value,
-                  "Type is not a heap thing.");
-    if (!isNativeObject())
-        return false;
-    return getPtr<T>()->type() == T::Type;
-}
-
-template <typename T>
-inline T *
-Value::getNativeObject() const
-{
-    WH_ASSERT(isNativeObject());
-    return getPtr<T>();
-}
-
-template <typename T>
-inline T *
-Value::getForeignObject() const
-{
-    WH_ASSERT(isForeignObject());
-    return getPtr<T>();
-}
-
 template <typename CharT>
 inline uint32_t
 Value::readImmString8(CharT *buf) const
 {
-    WH_ASSERT(isImmString8());
-    uint32_t length = immString8Length();
-    for (uint32_t i = 0; i < length; i++)
-        buf[i] = (tagged_ >> (48 - (8 * i))) & 0xFFu;
-    return length;
+    WH_ASSERT(this->isImmString8());
+    unsigned len = immString8Length();
+    uint64_t data = tagged_ >> ImmString8DataShift;
+    for (unsigned i = 0; i < len; i++) {
+        buf[i] = data & 0xFFu;
+        data >>= 8;
+    }
+    return len;
 }
 
-template <typename CharT>
+template <typename CharT, bool Trunc>
 inline uint32_t
 Value::readImmString16(CharT *buf) const
 {
-    WH_ASSERT(isImmString16());
-    uint32_t length = immString16Length();
-    for (uint32_t i = 0; i < length; i++)
-        buf[i] = (tagged_ >> (32 - (16 * i))) & 0xFFu;
-    return length;
+    static_assert(Trunc || sizeof(CharT) >= sizeof(uint16_t),
+                  "Character type too small for non-truncating read.");
+    WH_ASSERT(this->isImmString16());
+    unsigned len = immString16Length();
+    uint64_t data = tagged_ >> ImmString16DataShift;
+    for (unsigned i = 0; i < len; i++) {
+        buf[i] = data & 0xFFFFu;
+        data >>= 16;
+    }
+    return len;
 }
 
-template <typename CharT>
-inline unsigned
+template <typename CharT, bool Trunc>
+inline uint32_t
 Value::readImmString(CharT *buf) const
 {
-    WH_ASSERT(isImmString());
-    return isImmString8() ? readImmString8<CharT>(buf)
-                          : readImmString16<CharT>(buf);
+    static_assert(Trunc || sizeof(CharT) >= sizeof(uint16_t),
+                  "Character type too small for non-truncating read.");
+    WH_ASSERT(isImmString8() || isImmString16());
+
+    if (this->isImmString8())
+        return this->readImmString8<CharT>(buf);
+
+    return this->readImmString16<CharT, Trunc>(buf);
 }
 
-template <typename CharT>
-inline Value
-String8Value(unsigned length, const CharT *data)
-{
-    WH_ASSERT(length < Value::ImmString8MaxLength);
-    uint64_t val = length;
-    for (unsigned i = 0; i < Value::ImmString8MaxLength; i++) {
-        val <<= 8;
-        if (i < length) {
-            WH_ASSERT(data[i] == data[i] & 0xFFu);
-            val |= data[i];
-        }
-    }
-    return Value::MakeTagValue(ValueTag::ImmString8, val);
-}
-
-template <typename CharT>
-inline Value
-String16Value(unsigned length, const CharT *data)
-{
-    WH_ASSERT(length < Value::ImmString16MaxLength);
-    uint64_t val = length;
-    for (unsigned i = 0; i < Value::ImmString16MaxLength; i++) {
-        val <<= 16;
-        if (i < length) {
-            WH_ASSERT(data[i] == data[i] & 0xFFFFu);
-            val |= data[i];
-        }
-    }
-    return Value::MakeTagValue(ValueTag::ImmString16, val);
-}
-
-template <typename CharT>
-inline Value
-StringValue(unsigned length, const CharT *data)
-{
-    bool make8 = true;
-    for (unsigned i = 0; i < length; i++) {
-        WH_ASSERT(data[i] == data[i] & 0xFFFFu);
-        if (data[i] != data[i] & 0xFFu) {
-            make8 = false;
-            break;
-        }
-    }
-
-    return make8 ? String8Value(length, data) : String16Value(length, data);
-}
 
 
 } // namespace Whisper

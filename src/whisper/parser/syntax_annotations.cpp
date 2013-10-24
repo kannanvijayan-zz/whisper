@@ -117,8 +117,8 @@ SyntaxAnnotator::annotateNumericLiteral(NumericLiteralNode *node,
     }
 
     // Otherwise, value fits within an int32.. use it.
-    WH_ASSERT((dval - static_cast<int32_t>(dval)) == 0);
-    accum = static_cast<int32_t>(dval);
+    WH_ASSERT((dval - ToInt32(dval)) == 0);
+    accum = ToInt32(dval);
     node->setAnnotation(make<NumericLiteralAnnotation>(accum));
 }
 

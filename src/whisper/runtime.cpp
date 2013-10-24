@@ -176,6 +176,7 @@ ThreadContext::addRunContext(RunContext *runcx)
 
 RunContext::RunContext(ThreadContext *threadContext)
   : threadContext_(threadContext),
+    next_(nullptr),
     hatchery_(threadContext_->hatchery()),
     topStackFrame_(nullptr)
 {

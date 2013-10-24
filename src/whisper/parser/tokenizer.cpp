@@ -42,22 +42,22 @@ static uint32_t
 ComputeLastBytesPacked(const char *str, uint8_t length)
 {
     if (length == 2) {
-        return (static_cast<uint32_t>(str[0]) << 8)
-             | (static_cast<uint32_t>(str[1]) << 0);
+        return (ToUInt32(str[0]) << 8)
+             | (ToUInt32(str[1]) << 0);
     }
 
     if (length == 3) {
-        return (static_cast<uint32_t>(str[0]) << 16)
-             | (static_cast<uint32_t>(str[1]) << 8)
-             | (static_cast<uint32_t>(str[2]) << 0);
+        return (ToUInt32(str[0]) << 16)
+             | (ToUInt32(str[1]) << 8)
+             | (ToUInt32(str[2]) << 0);
     }
 
 
     str += length - 4;
-    return (static_cast<uint32_t>(str[0]) << 24)
-         | (static_cast<uint32_t>(str[1]) << 16)
-         | (static_cast<uint32_t>(str[2]) << 8)
-         | (static_cast<uint32_t>(str[3]) << 0);
+    return (ToUInt32(str[0]) << 24)
+         | (ToUInt32(str[1]) << 16)
+         | (ToUInt32(str[2]) << 8)
+         | (ToUInt32(str[3]) << 0);
 }
 
 unsigned InitializeKeywordSection(unsigned len, unsigned start)

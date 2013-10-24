@@ -78,10 +78,9 @@ HeapThingHeader::HeapThingHeader(HeapType type, uint32_t cardNo, uint32_t size)
     WH_ASSERT(cardNo <= CardNoMask);
     WH_ASSERT(size <= SizeMask);
 
-    header_ |= Tag << TagShift;
-    header_ |= static_cast<uint64_t>(size) << SizeShift;
-    header_ |= static_cast<uint64_t>(type) << TypeShift;
-    header_ |= static_cast<uint64_t>(cardNo) << CardNoShift;
+    header_ |= ToUInt64(size) << SizeShift;
+    header_ |= ToUInt64(type) << TypeShift;
+    header_ |= ToUInt64(cardNo) << CardNoShift;
 }
 
 
@@ -114,14 +113,14 @@ HeapThingHeader::initFlags(uint32_t fl)
 {
     WH_ASSERT(fl <= FlagsMask);
     WH_ASSERT(flags() == 0);
-    header_ |= static_cast<uint64_t>(fl) << FlagsShift;
+    header_ |= ToUInt64(fl) << FlagsShift;
 }
 
 void
 HeapThingHeader::addFlags(uint32_t fl)
 {
     WH_ASSERT(fl <= FlagsMask);
-    header_ |= static_cast<uint64_t>(fl) << FlagsShift;
+    header_ |= ToUInt64(fl) << FlagsShift;
 }
 
 //
@@ -182,13 +181,6 @@ HeapThing::objectSize() const
 }
 
 uint32_t 
-HeapThing::objectValueCount() const
-{
-    WH_ASSERT(IsIntAligned<uint32_t>(objectSize(), sizeof(Value)));
-    return objectSize() / sizeof(Value);
-}
-
-uint32_t 
 HeapThing::flags() const
 {
     return header()->flags();
@@ -198,30 +190,6 @@ uint32_t
 HeapThing::reservedSpace() const
 {
     return AlignIntUp<uint32_t>(objectSize(), Slab::AllocAlign);
-}
-
-Value *
-HeapThing::valuePointer(uint32_t idx)
-{
-    return dataPointer<Value>(idx * 8);
-}
-
-const Value *
-HeapThing::valuePointer(uint32_t idx) const
-{
-    return dataPointer<Value>(idx * 8);
-}
-
-Value &
-HeapThing::valueRef(uint32_t idx)
-{
-    return dataRef<Value>(idx * 8);
-}
-
-const Value &
-HeapThing::valueRef(uint32_t idx) const
-{
-    return dataRef<Value>(idx * 8);
 }
 
 

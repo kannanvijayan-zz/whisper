@@ -6,6 +6,40 @@ namespace Whisper {
 namespace Interp {
 
 //
+// OpcodeFormat
+//
+
+bool
+IsValidOpcodeFormat(OpcodeFormat fmt)
+{
+    switch (fmt) {
+      case OpcodeFormat::E:
+      case OpcodeFormat::I1:
+      case OpcodeFormat::I2:
+      case OpcodeFormat::I3:
+      case OpcodeFormat::I4:
+      case OpcodeFormat::Ix:
+      case OpcodeFormat::U1:
+      case OpcodeFormat::U2:
+      case OpcodeFormat::U3:
+      case OpcodeFormat::U4:
+      case OpcodeFormat::V:
+      case OpcodeFormat::VV:
+      case OpcodeFormat::VVV:
+        return true;
+    }
+    return false;
+}
+
+uint32_t
+OpcodeFormatNumber(OpcodeFormat fmt)
+{
+    WH_ASSERT(IsValidOpcodeFormat(fmt));
+    return ToUInt32(fmt);
+}
+
+
+//
 // OperandSpaceString
 //
 
@@ -78,7 +112,7 @@ OperandLocation::Immediate(int32_t value)
 {
     WH_ASSERT(value >= OperandMinSignedValue &&
               value <= OperandMaxSignedValue);
-    uint32_t v = UInt32(value) & OperandMaxUnsignedValue;
+    uint32_t v = ToUInt32(value) & OperandMaxUnsignedValue;
     v |= IsSignedBit;
     return OperandLocation(OperandSpace::Immediate, v);
 }
@@ -199,8 +233,8 @@ OperandLocation::signedValue() const
     WH_ASSERT(isImmediate() && isSigned());
     uint32_t uval = indexOrValue_ & OperandMaxUnsignedValue;
     if (uval > OperandMaxSignedValue)
-        uval |= UInt32(0xF) << OperandSignificantBits;
-    return Int32(uval);
+        uval |= ToUInt32(0xF) << OperandSignificantBits;
+    return ToInt32(uval);
 }
 
 bool
@@ -271,6 +305,12 @@ enum class Opcode_Sec0 : uint8_t
     LIMIT
 };
 
+uint16_t
+OpcodeNumber(Opcode opcode)
+{
+    return ToUInt16(opcode);
+}
+
 static bool OPCODE_TRAITS_INITIALIZED = false;
 static OpcodeTraits OPCODE_TRAITS[static_cast<unsigned>(Opcode::LIMIT)];
 
@@ -288,7 +328,7 @@ InitializeOpcodeInfo()
 #define INIT_(op, format, section, popped, pushed, flags) \
     OPCODE_TRAITS[static_cast<unsigned>(Opcode::op)] = \
         OpcodeTraits(#op, Opcode::op, OpcodeFormat::format, section, flags, \
-                     popped, pushed, static_cast<uint8_t>(Opcode_Sec0::op));
+                     popped, pushed, ToUInt8(Opcode_Sec0::op));
     WHISPER_BYTECODE_SEC0_OPS(INIT_)
 #undef INIT_
     OPCODE_TRAITS_INITIALIZED = true;
@@ -382,32 +422,10 @@ GetOpcodePushed(Opcode opcode)
 uint8_t
 GetOpcodeOperandCount(OpcodeFormat fmt)
 {
-    switch (fmt) {
-      case OpcodeFormat::E:
-        return 0;
-
-      case OpcodeFormat::I1:
-      case OpcodeFormat::I2:
-      case OpcodeFormat::I3:
-      case OpcodeFormat::I4:
-      case OpcodeFormat::U1:
-      case OpcodeFormat::U2:
-      case OpcodeFormat::U3:
-      case OpcodeFormat::U4:
-      case OpcodeFormat::V:
-        return 1;
-
-      case OpcodeFormat::VV:
-        return 2;
-
-      case OpcodeFormat::VVV:
-        return 3;
-
-      default:
-        break;
-    }
-    WH_UNREACHABLE("Invalid operand format.");
-    return 0xFF;
+    uint8_t result = 0;
+    for (uint32_t val = ToUInt32(fmt); val > 0; val >>= 4)
+        result++;
+    return result;
 }
 
 template <unsigned BYTES, bool SIGNED>
@@ -418,23 +436,54 @@ ReadImmediateOperand(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
     WH_ASSERT_IF(bytecodeEnd, (bytecodeData + BYTES) <= bytecodeEnd);
     uint32_t val = 0;
     uint8_t i = 0;
-    for (; i < BYTES; i++) {
-        val |= UInt32(bytecodeData[i]) << (i*8);
-    }
+    for (; i < BYTES; i++)
+        val |= ToUInt32(bytecodeData[i]) << (i*8);
 
     if (SIGNED && (bytecodeData[i-1] & 0x80)) {
         for (; i < 4; i++)
-            val |= UInt32(0xFF) << (i*8);
+            val |= ToUInt32(0xFF) << (i*8);
     }
 
     if (SIGNED) {
         if (location)
-            *location = OperandLocation::Immediate(Int32(val));
+            *location = OperandLocation::Immediate(ToInt32(val));
     } else {
         if (location)
             *location = OperandLocation::Immediate(val);
     }
     return BYTES;
+}
+
+template <bool SIGNED>
+static uint32_t
+ReadImmediateXOperand(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
+                      OperandLocation *location)
+{
+    WH_ASSERT_IF(bytecodeEnd, bytecodeData < bytecodeEnd);
+
+    uint32_t val = 0;
+    uint8_t i = 0;
+    // Read bytes while high bit is 1 (up to 4 bytes).
+    for (;; i++) {
+        WH_ASSERT_IF(bytecodeEnd, (bytecodeData + i) < bytecodeEnd);
+        uint8_t b = bytecodeData[i];
+        val |= ToUInt32(b & 0x7Fu) << (i*7);
+        if ((b & 0x80u) == 0)
+            break;
+    }
+
+    // Test last data bit of last byte to see if value is negative.
+    if (SIGNED && (bytecodeData[i-1] & 0x40))
+        val |= ToUInt32(-1) << (i*7);
+
+    if (SIGNED) {
+        if (location)
+            *location = OperandLocation::Immediate(ToInt32(val));
+    } else {
+        if (location)
+            *location = OperandLocation::Immediate(val);
+    }
+    return i;
 }
 
 static void
@@ -451,7 +500,7 @@ ReadValueOperandNumber(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
 
     uint32_t val = *result;
     for (uint8_t i = 0; i < bytes; i++)
-        val |= UInt32(bytecodeData[i]) << (4 + i*8);
+        val |= ToUInt32(bytecodeData[i]) << (4 + i*8);
 
     *result = val;
 }
@@ -480,7 +529,7 @@ ReadValueOperand(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
 
     // Sign extend the value if it is signed.
     if (opSpace == OperandSpace::Immediate) {
-        uint32_t signBit = UInt32(1) << ((idxBytes * 8) + 3);
+        uint32_t signBit = ToUInt32(1) << ((idxBytes * 8) + 3);
         if (val & signBit)
             val |= ~((signBit << 1) - 1);
     }
@@ -509,7 +558,7 @@ ReadValueOperand(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
 
       case OperandSpace::Immediate:
         if (location)
-            *location = OperandLocation::Immediate(Int32(val));
+            *location = OperandLocation::Immediate(ToInt32(val));
         break;
 
       default:
@@ -525,63 +574,56 @@ ReadOperandLocation(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
                     OperandLocation *location)
 {
     WH_ASSERT(fmt != OpcodeFormat::E);
+    WH_ASSERT(operandNo < GetOpcodeOperandCount(fmt));
     WH_ASSERT_IF(bytecodeEnd, bytecodeData < bytecodeEnd);
-    switch (fmt) {
-      case OpcodeFormat::E:
-        WH_UNREACHABLE("Bad opcode format.");
-        break;
 
+    // Find the right reduced operand.
+    uint32_t fmtPart = OpcodeFormatNumber(fmt);
+    fmtPart >>= operandNo * OpcodeFormatComponentBits;
+    fmtPart &= OpcodeFormatMask;
+
+    switch (static_cast<OpcodeFormat>(fmtPart)) {
       case OpcodeFormat::I1:
-        WH_ASSERT(operandNo < 1);
         return ReadImmediateOperand<1, true>(bytecodeData, bytecodeEnd,
                                              location);
 
       case OpcodeFormat::I2:
-        WH_ASSERT(operandNo < 1);
         return ReadImmediateOperand<2, true>(bytecodeData, bytecodeEnd,
                                              location);
 
       case OpcodeFormat::I3:
-        WH_ASSERT(operandNo < 1);
         return ReadImmediateOperand<3, true>(bytecodeData, bytecodeEnd,
                                              location);
 
       case OpcodeFormat::I4:
-        WH_ASSERT(operandNo < 1);
         return ReadImmediateOperand<4, true>(bytecodeData, bytecodeEnd,
                                              location);
 
+      case OpcodeFormat::Ix:
+        return ReadImmediateXOperand<true>(bytecodeData, bytecodeEnd,
+                                           location);
+
       case OpcodeFormat::U1:
-        WH_ASSERT(operandNo < 1);
         return ReadImmediateOperand<1, false>(bytecodeData, bytecodeEnd,
                                               location);
 
       case OpcodeFormat::U2:
-        WH_ASSERT(operandNo < 1);
         return ReadImmediateOperand<2, false>(bytecodeData, bytecodeEnd,
                                               location);
 
       case OpcodeFormat::U3:
-        WH_ASSERT(operandNo < 1);
         return ReadImmediateOperand<3, false>(bytecodeData, bytecodeEnd,
                                               location);
 
       case OpcodeFormat::U4:
-        WH_ASSERT(operandNo < 1);
         return ReadImmediateOperand<4, false>(bytecodeData, bytecodeEnd,
                                               location);
 
       case OpcodeFormat::V:
-        WH_ASSERT(operandNo < 1);
         return ReadValueOperand(bytecodeData, bytecodeEnd, location);
 
-      case OpcodeFormat::VV:
-        WH_ASSERT(operandNo < 2);
-        return ReadValueOperand(bytecodeData, bytecodeEnd, location);
-
-      case OpcodeFormat::VVV:
-        WH_ASSERT(operandNo < 3);
-        return ReadValueOperand(bytecodeData, bytecodeEnd, location);
+      default:
+        break;
     }
     WH_UNREACHABLE("Invalid operand format.");
     return 0;

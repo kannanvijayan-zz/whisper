@@ -1,6 +1,8 @@
 #include "value_inlines.hpp"
+#include "rooting_inlines.hpp"
 #include "vm/stack_frame.hpp"
 #include "vm/heap_thing_inlines.hpp"
+#include "vm/script.hpp"
 
 #include <algorithm>
 
@@ -14,54 +16,34 @@ namespace VM {
 /*static*/ uint32_t
 StackFrame::CalculateSize(const Config &config)
 {
-    return FixedSlots + config.maxStackDepth + config.numActualArgs;
-}
+    WH_ASSERT(config.numArgs >= config.numPassedArgs);
 
-void
-StackFrame::initialize(const Config &config)
-{
-    WH_ASSERT(config.maxStackDepth <= MaxStackDepthMaskLow);
-    uint64_t val = UInt64(config.maxStackDepth) << MaxStackDepthShift;
-    info_ = MagicValue(val);
-    info2_ = MagicValue(0);
-}
-
-void
-StackFrame::incrCurStackDepth()
-{
-    WH_ASSERT(curStackDepth() < CurStackDepthMaskLow);
-    WH_ASSERT(CurStackDepthShift == 0);
-
-    // Adding 1 to curStackDepth, which lives in the low bits.
-    // The add cannot overflow.
-    info_ = MagicValue(info_.getMagicInt() + 1);
-}
-
-void
-StackFrame::decrCurStackDepth(uint32_t count)
-{
-    WH_ASSERT(curStackDepth() >= count);
-    WH_ASSERT(CurStackDepthShift == 0);
-
-    // Subtracting 1 to curStackDepth, which lives in the low bits.
-    // The sub cannot overflow.
-    info_ = MagicValue(info_.getMagicInt() - count);
+    uint32_t size = AlignIntUp<uint32_t>(sizeof(StackFrame), sizeof(Value));
+    size += config.numPassedArgs * sizeof(Value);
+    size += config.numLocals * sizeof(Value);
+    size += config.maxStackDepth * sizeof(Value);
+    return size;
 }
 
 StackFrame::StackFrame(Script *script, const Config &config)
-  : callee_(script)
+  : callerFrame_(nullptr),
+    callee_(script),
+    pcOffset_(0),
+    numPassedArgs_(config.numPassedArgs),
+    numArgs_(config.numArgs),
+    numLocals_(config.numLocals),
+    stackDepth_(0)
 {
-    initialize(config);
-    WH_ASSERT(config.numActualArgs == numActualArgs());
+    WH_ASSERT(config.numPassedArgs == numPassedArgs_);
 }
 
 bool
 StackFrame::hasCallerFrame() const
 {
-    return callerFrame_.hasHeapThing();
+    return callerFrame_;
 }
 
-StackFrame *
+Handle<StackFrame *>
 StackFrame::callerFrame() const
 {
     WH_ASSERT(hasCallerFrame());
@@ -74,11 +56,11 @@ StackFrame::isScriptFrame() const
     return callee_->isScript();
 }
 
-Script *
+Handle<Script *>
 StackFrame::script() const
 {
-    WH_ASSERT(isScriptFrame());
-    return callee_->toScript();
+    WH_ASSERT(callee_->isScript());
+    return reinterpret_cast<const Heap<Script *> &>(callee_);
 }
 
 bool
@@ -88,74 +70,215 @@ StackFrame::isTopLevelFrame() const
 }
 
 uint32_t
-StackFrame::maxStackDepth() const
-{
-    return (info_.getMagicInt() >> MaxStackDepthShift) & MaxStackDepthMaskLow;
-}
-
-uint32_t
-StackFrame::curStackDepth() const
-{
-    return (info_.getMagicInt() >> CurStackDepthShift) & CurStackDepthMaskLow;
-}
-
-uint32_t
-StackFrame::numActualArgs() const
-{
-    WH_ASSERT(objectValueCount() >= (FixedSlots + maxStackDepth()));
-    return objectValueCount() - (FixedSlots + maxStackDepth());
-}
-
-const Value &
-StackFrame::actualArg(uint32_t idx) const
-{
-    WH_ASSERT(idx < numActualArgs());
-    return valueRef(FixedSlots + maxStackDepth() + idx);
-}
-
-uint32_t
 StackFrame::pcOffset() const
 {
-    WH_ASSERT(PcOffsetShift == 0);
-    return UInt32(info2_.getMagicInt());
+    return pcOffset_;
 }
 
 void 
 StackFrame::setPcOffset(uint32_t newPcOffset)
 {
-    info2_ = MagicValue(UInt64(newPcOffset));
+    pcOffset_ = newPcOffset;
+}
+
+uint32_t
+StackFrame::numPassedArgs() const
+{
+    return numPassedArgs_;
+}
+
+uint32_t
+StackFrame::numArgs() const
+{
+    return numArgs_;
+}
+
+uint32_t
+StackFrame::numLocals() const
+{
+    return numLocals_;
+}
+
+uint32_t
+StackFrame::stackDepth() const
+{
+    return stackDepth_;
+}
+
+uint32_t
+StackFrame::maxStackDepth() const
+{
+    return script()->maxStackDepth();
+}
+
+Handle<Value>
+StackFrame::getArg(uint32_t idx) const
+{
+    WH_ASSERT(idx < numArgs());
+    return argRef(idx);
+}
+
+Handle<Value>
+StackFrame::getLocal(uint32_t idx) const
+{
+    WH_ASSERT(idx < numLocals());
+    return localRef(idx);
 }
 
 void
-StackFrame::pushValue(const Value &val)
+StackFrame::pushStack(const Value &val)
 {
-    WH_ASSERT(curStackDepth() < maxStackDepth());
-    uint32_t idx = FixedSlots + curStackDepth();
-    noteWrite(&valueRef(idx));
-    incrCurStackDepth();
-    valueRef(idx) = val;
+    WH_ASSERT(stackDepth_ < maxStackDepth());
+    stackRef(stackDepth_).set(val, this);
+    stackDepth_++;
+}
+
+Handle<Value>
+StackFrame::peekStack(int32_t offset) const
+{
+    WH_ASSERT(offset < 0);
+    WH_ASSERT(ToUInt32(-offset) <= stackDepth_);
+    return stackRef(stackDepth_ + offset);
+}
+
+Handle<Value>
+StackFrame::getStack(uint32_t offset) const
+{
+    WH_ASSERT(offset < stackDepth_);
+    return stackRef(offset);
+}
+
+void
+StackFrame::popStack(uint32_t count)
+{
+    WH_ASSERT(stackDepth_ > 0);
+    WH_ASSERT(count <= stackDepth_);
+
+    if (count == 0)
+        return;
+
+    Value *start = &stackAt(stackDepth_ - count);
+    Value *end = start + count;
+    std::fill(start, end, Value::Undefined());
+    stackDepth_ -= count;
+}
+
+const Value *
+StackFrame::argStart() const
+{
+    const char *thisp = reinterpret_cast<const char *>(this);
+    uint32_t adj = AlignIntUp<uint32_t>(sizeof(StackFrame), sizeof(Value));
+    return reinterpret_cast<const Value *>(thisp + adj);
+}
+
+Value *
+StackFrame::argStart()
+{
+    char *thisp = reinterpret_cast<char *>(this);
+    uint32_t adj = AlignIntUp<uint32_t>(sizeof(StackFrame), sizeof(Value));
+    return reinterpret_cast<Value *>(thisp + adj);
+}
+
+const Value *
+StackFrame::localStart() const
+{
+    return argStart() + numArgs();
+}
+
+Value *
+StackFrame::localStart()
+{
+    return argStart() + numArgs();
+}
+
+const Value *
+StackFrame::stackStart() const
+{
+    return localStart() + numLocals();
+}
+
+Value *
+StackFrame::stackStart()
+{
+    return localStart() + numLocals();
 }
 
 const Value &
-StackFrame::peekValue(uint32_t offset) const
+StackFrame::argAt(uint32_t idx) const
 {
-    WH_ASSERT(offset < curStackDepth());
-    uint32_t idx = (FixedSlots + curStackDepth()) - (offset + 1);
-    return valueRef(idx);
+    WH_ASSERT(idx < numArgs());
+    return argStart()[idx];
 }
 
-void
-StackFrame::popValue(uint32_t count)
+Value &
+StackFrame::argAt(uint32_t idx)
 {
-    // Do not need to noteWrite here because we are writing non-heapthing
-    // references for sure.
+    WH_ASSERT(idx < numArgs());
+    return argStart()[idx];
+}
 
-    WH_ASSERT(curStackDepth() > 0);
-    WH_ASSERT(count <= curStackDepth());
-    uint32_t idxEnd = FixedSlots + curStackDepth();
-    uint32_t idxStart = idxEnd - count;
-    std::fill(&valueRef(idxStart), &valueRef(idxEnd), UndefinedValue());
-    decrCurStackDepth(count);
+const Value &
+StackFrame::localAt(uint32_t idx) const
+{
+    WH_ASSERT(idx < numLocals());
+    return localStart()[idx];
+}
+
+Value &
+StackFrame::localAt(uint32_t idx)
+{
+    WH_ASSERT(idx < numLocals());
+    return localStart()[idx];
+}
+
+const Value &
+StackFrame::stackAt(uint32_t idx) const
+{
+    WH_ASSERT(idx < maxStackDepth());
+    return stackStart()[idx];
+}
+
+Value &
+StackFrame::stackAt(uint32_t idx)
+{
+    WH_ASSERT(idx < maxStackDepth());
+    return stackStart()[idx];
+}
+
+const Heap<Value> &
+StackFrame::argRef(uint32_t idx) const
+{
+    return reinterpret_cast<const Heap<Value> &>(argAt(idx));
+}
+
+Heap<Value> &
+StackFrame::argRef(uint32_t idx)
+{
+    return reinterpret_cast<Heap<Value> &>(argAt(idx));
+}
+
+const Heap<Value> &
+StackFrame::localRef(uint32_t idx) const
+{
+    return reinterpret_cast<const Heap<Value> &>(localAt(idx));
+}
+
+Heap<Value> &
+StackFrame::localRef(uint32_t idx)
+{
+    return reinterpret_cast<Heap<Value> &>(localAt(idx));
+}
+
+const Heap<Value> &
+StackFrame::stackRef(uint32_t idx) const
+{
+    return reinterpret_cast<const Heap<Value> &>(stackAt(idx));
+}
+
+Heap<Value> &
+StackFrame::stackRef(uint32_t idx)
+{
+    return reinterpret_cast<Heap<Value> &>(stackAt(idx));
 }
 
 

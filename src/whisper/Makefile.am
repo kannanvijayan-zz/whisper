@@ -18,17 +18,18 @@ whisper_SOURCES = \
     vm/double.cpp \
     vm/string.cpp \
     vm/bytecode.cpp \
-    vm/reference.cpp \
-    vm/property_descriptor.cpp \
-    vm/tuple.cpp \
-    vm/shape_tree.cpp \
     vm/script.cpp \
     vm/stack_frame.cpp \
-    vm/property_map_thing.cpp \
-    vm/object.cpp \
-    vm/global.cpp \
-    vm/scope.cpp \
     interp/bytecode_ops.cpp \
     interp/bytecode_generator.cpp \
     interp/interpreter.cpp \
     whisper.cpp
+
+#    vm/reference.cpp \
+#    vm/property_descriptor.cpp \
+#    vm/tuple.cpp \
+#    vm/shape_tree.cpp \
+#    vm/property_map_thing.cpp \
+#    vm/object.cpp \
+#    vm/global.cpp \
+#    vm/scope.cpp

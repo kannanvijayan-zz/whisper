@@ -12,7 +12,7 @@ namespace Whisper {
 namespace Interp {
 
 bool
-InterpretScript(RunContext *cx, VM::HandleScript script)
+InterpretScript(RunContext *cx, Handle<VM::Script *> script)
 {
     WH_ASSERT(script->isTopLevel());
 
@@ -20,11 +20,13 @@ InterpretScript(RunContext *cx, VM::HandleScript script)
 
     // Create a new stack frame for this script.
     VM::StackFrame::Config config;
+    config.numPassedArgs = 0;
+    config.numArgs = 0;
+    config.numLocals = 0;
     config.maxStackDepth = script->maxStackDepth();
-    config.numActualArgs = 0;
 
     uint32_t size = VM::StackFrame::CalculateSize(config);
-    VM::RootedStackFrame stackFrame(cx,
+    Root<VM::StackFrame *> stackFrame(cx,
         cx->createSized<VM::StackFrame>(true, size, script, config));
 
     // Register the stack frame with the runtime.
@@ -34,7 +36,7 @@ InterpretScript(RunContext *cx, VM::HandleScript script)
     return interp.interpret();
 }
 
-Interpreter::Interpreter(RunContext *cx, VM::HandleStackFrame frame)
+Interpreter::Interpreter(RunContext *cx, Handle<VM::StackFrame *> frame)
   : cx_(cx),
     frame_(cx, frame),
     script_(cx, frame_->script()),
@@ -46,12 +48,16 @@ Interpreter::Interpreter(RunContext *cx, VM::HandleStackFrame frame)
 bool
 Interpreter::interpret()
 {
-    uint32_t opBytes = 0;
+    int32_t opBytes = 0;
 
     for (;;) {
         // Move to next op.
         pc_ += opBytes;
-        WH_ASSERT(pc_ < pcEnd_);
+        WH_ASSERT(pc_ >= bytecode_->data());
+
+        // If natural end of interpretation reached, stop.
+        if (pc_ == pcEnd_)
+            return true;
 
         Opcode op;
         opBytes = Interp::ReadOpcode(pc_, pcEnd_, &op);
@@ -61,8 +67,13 @@ Interpreter::interpret()
             break;
 
           case Opcode::Pop:
-            WH_ASSERT(frame_->curStackDepth() > 0);
-            frame_->popValue();
+            WH_ASSERT(frame_->stackDepth() > 0);
+            frame_->popStack();
+            break;
+
+          case Opcode::Stop:
+            if (!interpretStop(op, &opBytes))
+                return false;
             break;
 
           case Opcode::PushInt8:
@@ -75,20 +86,12 @@ Interpreter::interpret()
 
           case Opcode::Ret_S:
             // TODO: implement
-            WH_UNREACHABLE("Unhandled op.");
+            WH_UNREACHABLE("Unhandled op Ret_S.");
             break;
 
           case Opcode::Ret_V:
             // TODO: implement
-            WH_UNREACHABLE("Unhandled op.");
-            break;
-
-          case Opcode::If_S:
-          case Opcode::If_V:
-          case Opcode::IfNot_S:
-          case Opcode::IfNot_V:
-            if (!interpretIf(op, &opBytes))
-                return false;
+            WH_UNREACHABLE("Unhandled op Ret_V.");
             break;
 
           case Opcode::Add_SSS: // E
@@ -99,6 +102,9 @@ Interpreter::interpret()
           case Opcode::Add_VSV: // VV
           case Opcode::Add_VVS: // VV
           case Opcode::Add_VVV: // VVV
+            if (!interpretAdd(op, &opBytes))
+                return false;
+            break;
 
           case Opcode::Sub_SSS: // E
           case Opcode::Sub_SSV: // V
@@ -156,41 +162,56 @@ Interpreter::readOperand(const OperandLocation &location)
     switch (location.space()) {
       case OperandSpace::Constant:
         WH_UNREACHABLE("Constant is unhandled!");
-        return UndefinedValue();
+        return Value::Undefined();
 
       case OperandSpace::Argument:
-        return frame_->actualArg(location.argumentIndex());
+        return frame_->getArg(location.argumentIndex());
 
       case OperandSpace::Local:
-        return frame_->actualArg(location.localIndex());
+        return frame_->getLocal(location.localIndex());
 
       case OperandSpace::Stack:
-        return frame_->peekValue(location.stackIndex());
+        return frame_->peekStack(location.stackIndex());
 
       case OperandSpace::Immediate:
         if (location.isSigned()) {
-            return IntegerValue(location.signedValue());
+            return Value::Int32(location.signedValue());
         } else {
             WH_ASSERT(location.unsignedValue() < 0xFu);
-            return IntegerValue(location.unsignedValue());
+            return Value::Int32(location.unsignedValue());
         }
 
       case OperandSpace::StackTop:
         {
-            Value result = frame_->peekValue(location.stackIndex());
-            frame_->popValue();
+            Value result = frame_->peekStack(-1);
+            frame_->popStack();
             return result;
         }
 
       default:
         WH_UNREACHABLE("Invalid operand kind.");
     }
-    return UndefinedValue();
+    return Value::Undefined();
 }
 
 
 bool
-Interpreter::interpretPushInt(Opcode op, uint32_t *opBytes)
+Interpreter::interpretStop(Opcode op, int32_t *opBytes)
+{
+    WH_ASSERT(frame_->stackDepth() == 0);
+    VM::Script::Mode mode = script_->mode();
+
+    // TopLevel scripts don't return value.
+    if (mode == VM::Script::TopLevel)
+        return true;
+
+    WH_UNREACHABLE("Can't handle Eval and Function scripts yet.");
+    return false;
+}
+
+
+bool
+Interpreter::interpretPushInt(Opcode op, int32_t *opBytes)
 {
     OpcodeFormat fmt = OpcodeFormat::E;
     switch (op) {
@@ -220,48 +241,96 @@ Interpreter::interpretPushInt(Opcode op, uint32_t *opBytes)
     *opBytes += ReadOperandLocation(pc_, pcEnd_, fmt, 0, &oploc);
     WH_ASSERT(oploc.isImmediate() && oploc.isSigned());
 
-    frame_->pushValue(IntegerValue(oploc.signedValue()));
+    frame_->pushStack(Value::Int32(oploc.signedValue()));
 
     return true;
 }
 
+
 bool
-Interpreter::interpretIf(Opcode op, uint32_t *opBytes)
+Interpreter::interpretAdd(Opcode op, int32_t *opBytes)
 {
-    bool negate = false;
-    OpcodeFormat fmt = OpcodeFormat::E;
-    switch (op) {
-      case Opcode::IfNot_S:
-        negate = true;
-      case Opcode::If_S:
-        break;
+    Root<Value> lhs(cx_, Value::Undefined());
+    Root<Value> rhs(cx_, Value::Undefined());
+    Root<Value> result(cx_, Value::Undefined());
+    OperandLocation outLoc;
 
-      case Opcode::IfNot_V:
-        negate = true;
-      case Opcode::If_V:
-        fmt = OpcodeFormat::V;
-        break;
+    readBinaryOperandValues(op, Opcode::Add_SSS, &lhs, &rhs, &outLoc, opBytes);
 
-      default:
-        WH_UNREACHABLE("Invalid op.");
+    if (lhs->isInt32() && rhs->isInt32()) {
+        int32_t lhsVal = lhs->int32Value();
+        int32_t rhsVal = rhs->int32Value();
+        int32_t resultVal = lhsVal + rhsVal;
+
+        // Check for int32 overflow.
+        bool lhsSign = lhsVal >> 31;
+        bool rhsSign = rhsVal >> 31;
+        bool overflow = false;
+        if (lhsSign == rhsSign) {
+            bool resultSign = resultVal >> 31;
+            if (resultSign != lhsSign)
+                overflow = true;
+        }
+
+        if (!overflow) {
+            result = Value::Int32(resultVal);
+            return true;
+        }
     }
 
-    WH_ASSERT(GetOpcodeFormat(op) == fmt);
+    WH_UNREACHABLE("Non-int32 add not implemented yet!");
+    return false;
+}
 
-    OperandLocation oploc;
-    if (fmt == OpcodeFormat::E)
-        oploc = OperandLocation::StackTop();
+
+void
+Interpreter::readBinaryOperandLocations(Opcode op, Opcode baseOp,
+                                        OperandLocation *lhsLoc,
+                                        OperandLocation *rhsLoc,
+                                        OperandLocation *outLoc,
+                                        int32_t *opBytes)
+{
+    unsigned opcodeOffset = OpcodeNumber(op) - OpcodeNumber(baseOp);
+    WH_ASSERT(opcodeOffset < 8);
+    bool lhsOnStack = opcodeOffset & (1 << 2);
+    bool rhsOnStack = opcodeOffset & (1 << 1);
+    bool outputStack = opcodeOffset & (1 << 0);
+
+    const OpcodeFormat V = OpcodeFormat::V;
+
+    if (!lhsOnStack)
+        *opBytes += ReadOperandLocation(pc_, pcEnd_, V, 0, lhsLoc);
     else
-        *opBytes += ReadOperandLocation(pc_, pcEnd_, fmt, 0, &oploc);
+        *lhsLoc = OperandLocation::StackTop();
 
-    RootedValue v(cx_, readOperand(oploc));
-    if (negate) {
-        // negate value v.
-    }
+    if (!rhsOnStack)
+        *opBytes += ReadOperandLocation(pc_, pcEnd_, V, 0, rhsLoc);
+    else
+        *rhsLoc = OperandLocation::StackTop();
 
-    // TODO: read operand, branch on result.
+    if (!outputStack)
+        *opBytes += ReadOperandLocation(pc_, pcEnd_, V, 0, outLoc);
+    else
+        *outLoc = OperandLocation::StackTop();
+}
 
-    return true;
+
+void
+Interpreter::readBinaryOperandValues(Opcode op, Opcode baseOp,
+                                     MutHandle<Value> lhs,
+                                     MutHandle<Value> rhs,
+                                     OperandLocation *outLoc,
+                                     int32_t *opBytes)
+{
+    OperandLocation lhsLoc;
+    OperandLocation rhsLoc;
+    readBinaryOperandLocations(op, baseOp, &lhsLoc, &rhsLoc, outLoc, opBytes);
+
+    // Read the operands.  Read the rhs first because if both lhs and
+    // rhs are read from the StackTop, then they should be popped in
+    // the right order (rhs, then lhs).
+    rhs = readOperand(rhsLoc);
+    lhs = readOperand(lhsLoc);
 }
 
 

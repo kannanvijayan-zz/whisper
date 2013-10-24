@@ -113,16 +113,16 @@ int main(int argc, char **argv) {
     // Generate bytecode.
     Interp::BytecodeGenerator bcgen(cx, wrappedAllocator, program, annotator,
                                     false);
-    VM::RootedBytecode bc(cx, bcgen.generateBytecode());
+    Root<VM::Bytecode *> bc(cx, bcgen.generateBytecode());
     if (bcgen.hasError()) {
         std::cerr << "Codgen error: " << bcgen.error() << "!" << std::endl;
         return 1;
     }
     WH_ASSERT(bc != nullptr);
 
-    VM::Script::Config scriptConfig(false, VM::Script::TopLevel,
+    VM::Script::Config scriptCfg(false, VM::Script::TopLevel,
                                     bcgen.maxStackDepth());
-    VM::RootedScript script(cx, cx->create<VM::Script>(true, bc, scriptConfig));
+    Root<VM::Script *> script(cx, cx->create<VM::Script>(true, bc, scriptCfg));
     std::cerr << "Created script with max stack depth " <<
                  script->maxStackDepth() << std::endl;
 
@@ -131,6 +131,11 @@ int main(int argc, char **argv) {
 
     // Print bytecode contents.
     VM::SpewBytecodeObject(bc);
+
+    // Interpret the script.
+    std::cerr << "Running script" << std::endl;
+    bool interpResult = Interp::InterpretScript(cx, script);
+    std::cerr << "Script result: " << interpResult << std::endl;
 
     return 0;
 }

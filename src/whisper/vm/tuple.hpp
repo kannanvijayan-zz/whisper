@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "value.hpp"
+#include "rooting.hpp"
 #include "vm/heap_thing.hpp"
 
 namespace Whisper {
@@ -19,12 +20,15 @@ class Tuple : public HeapThing, public TypedHeapThing<HeapType::Tuple>
     Tuple();
     Tuple(const Tuple &other);
 
-    const Value &element(uint32_t idx) const;
-    void setElement(uint32_t idx, const Value &val);
-
-    const Value &operator [](uint32_t idx) const;
-
     uint32_t size() const;
+
+    Handle<Value> get(uint32_t idx) const;
+    Handle<Value> operator [](uint32_t idx) const;
+    void set(uint32_t idx, const Value &val);
+
+  private:
+    const Heap<Value> &element(uint32_t idx) const;
+    Heap<Value> &element(uint32_t idx);
 };
 
 

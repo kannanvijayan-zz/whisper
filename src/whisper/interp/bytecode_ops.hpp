@@ -105,13 +105,41 @@ namespace Interp {
  *          or roughly 256 million registers in each of the respective files.
  */
 
-enum class OpcodeFormat : uint8_t
+//
+// OpcodeFormat describes the format of operands accepted by any
+// given opcode.
+//
+// The enum values for the complex, multi-operand formats are simply
+// bit-concatenations of the corresponding single-operand formats.
+// This allows routines working with OpcodeFormat to use this structure
+// to avoid having to deal with an unnecessarily large number of
+// combinatorial formats.
+//
+static constexpr unsigned OpcodeFormatComponentBits = 4;
+static constexpr unsigned OpcodeFormatMask = 0xFu;
+enum class OpcodeFormat : uint32_t
 {
-    E               = 0x00,
-    I1, I2, I3, I4,
-    U1, U2, U3, U4,
-    V, VV, VVV
+    E               = 0x0,
+    I1              = 0x1,
+    I2              = 0x2,
+    I3              = 0x3,
+    I4              = 0x4,
+    Ix              = 0x5,
+    U1              = 0x6,
+    U2              = 0x7,
+    U3              = 0x8,
+    U4              = 0x9,
+    V               = 0xA,
+
+    VV              = (V << OpcodeFormatComponentBits) |
+                      V,
+    VVV             = (V << (OpcodeFormatComponentBits * 2)) |
+                      (V << OpcodeFormatComponentBits) |
+                      V
 };
+
+bool IsValidOpcodeFormat(OpcodeFormat fmt);
+uint32_t OpcodeFormatNumber(OpcodeFormat fmt);
 
 
 //
@@ -210,6 +238,8 @@ enum class Opcode : uint16_t
 #undef OP_ENUM_
     LIMIT
 };
+
+uint16_t OpcodeNumber(Opcode opcode);
 
 void InitializeOpcodeInfo();
 

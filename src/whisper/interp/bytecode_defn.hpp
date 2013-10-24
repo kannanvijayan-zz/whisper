@@ -12,6 +12,7 @@ _(Section1,     E,      -1,     0,0,            OPF_SectionPrefix  )\
 \
 _(Nop,          E,      0,      0,0,            OPF_None           )\
 _(Pop,          E,      0,      1,0,            OPF_None           )\
+_(Stop,         E,      0,      0,0,            OPF_None           )\
 \
 _(PushInt8,     I1,     0,      0,1,            OPF_None           )\
 _(PushInt16,    I2,     0,      0,1,            OPF_None           )\
@@ -20,11 +21,6 @@ _(PushInt32,    I4,     0,      0,1,            OPF_None           )\
 \
 _(Ret_S,        E,      0,      1,0,            OPF_Control        )\
 _(Ret_V,        V,      0,      0,0,            OPF_Control        )\
-\
-_(If_S,         E,      0,      1,0,            OPF_Control        )\
-_(If_V,         V,      0,      0,0,            OPF_Control        )\
-_(IfNot_S,      E,      0,      1,0,            OPF_Control        )\
-_(IfNot_V,      V,      0,      0,0,            OPF_Control        )\
 \
 _(Add_SSS,      E,      0,      2,1,            OPF_None           )\
 _(Add_SSV,      V,      0,      2,0,            OPF_None           )\

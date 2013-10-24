@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "value.hpp"
+#include "rooting.hpp"
 #include "vm/heap_thing.hpp"
 
 #include <type_traits>
@@ -105,44 +106,28 @@ class ShapeTree : public HeapThing, public TypedHeapThing<HeapType::ShapeTree>
         uint32_t version;
     };
 
+    static constexpr uint32_t NumFixedSlotsMax = 0x7Fu;
+    static constexpr uint32_t VersionMax = 0x1FFFFFFu;
+
   private:
-    NullableHeapThingValue<ShapeTree> parentTree_;
-    NullableHeapThingValue<Shape> firstRoot_;
-    NullableHeapThingValue<ShapeTreeChild> childTrees_;
+    Heap<ShapeTree *> parentTree_;
+    Heap<Shape *> firstRoot_;
+    Heap<ShapeTreeChild *> childTrees_;
 
-    // The info word below is a magic word storing information
-    // about the structure of the object.
-    // This info is organized as follows:
-    //  Bits 0 to 7         - the number of fixed slots in the object.
-    //  Bits 8 to 31        - the tree's version.  This gets incremented
-    //                        every time the shape tree changes.
-    Value info_;
-
-    static constexpr unsigned NumFixedSlotsBits = 8;
-    static constexpr unsigned NumFixedSlotsShift = 0;
-    static constexpr uint64_t NumFixedSlotsMax =
-        (UInt64(1) << NumFixedSlotsBits) - 1;
-    static constexpr uint64_t NumFixedSlotsMask =
-        UInt64(NumFixedSlotsMax) << NumFixedSlotsShift;
-
-    static constexpr unsigned VersionBits = 24;
-    static constexpr unsigned VersionShift = 8;
-    static constexpr uint64_t VersionMax = (UInt64(1) << VersionBits) - 1;
-    static constexpr uint64_t VersionMask = UInt64(VersionMax) << VersionShift;
+    uint32_t numFixedSlots_ : 7;
+    uint32_t version_ : 25;
 
     void initialize(const Config &config);
 
   public:
     ShapeTree(ShapeTree *parentTree, Shape *firstRoot, const Config &config);
 
-    Shape *firstRoot();
-
     bool hasParentTree() const;
+    Handle<ShapeTree *> parentTree() const;
 
-    ShapeTree *parentTree() const;
+    Handle<Shape *> firstRoot() const;
 
     uint32_t numFixedSlots() const;
-
     uint32_t version() const;
 };
 
@@ -156,14 +141,14 @@ class ShapeTreeChild : public HeapThing,
   friend class Shape;
   friend class ShapeTree;
   private:
-    NullableHeapThingValue<ShapeTreeChild> next_;
-    HeapThingValue<ShapeTree> child_;
+    Heap<ShapeTreeChild *> next_;
+    Heap<ShapeTree *> child_;
 
   public:
     ShapeTreeChild(ShapeTreeChild *next, ShapeTree *child);
 
-    ShapeTreeChild *next() const;
-    ShapeTree *child() const;
+    Handle<ShapeTreeChild *> next() const;
+    Handle<ShapeTree *> child() const;
 };
 
 //
@@ -208,33 +193,51 @@ class Shape : public HeapThing, public TypedHeapThing<HeapType::Shape>
         IsWritable      = 0x20
     };
 
+    struct Config
+    {
+        bool hasValue;
+        bool hasGetter;
+        bool hasSetter;
+        bool isConfigurable;
+        bool isEnumerable;
+        bool isWritable;
+
+        Config();
+
+        Config &setHasValue(bool hasValue);
+        Config &setHasGetter(bool hasGetter);
+        Config &setHasSetter(bool hasSetter);
+        Config &setIsConfigurable(bool isConfigurable);
+        Config &setIsEnumerable(bool isEnumerable);
+        Config &setIsWritable(bool isWritable);
+    };
+
   protected:
-    HeapThingValue<ShapeTree> tree_;
-    NullableHeapThingValue<Shape> parent_;
-    Value name_;
-    NullableHeapThingValue<Shape> firstChild_;
-    NullableHeapThingValue<Shape> nextSibling_;
+    Heap<ShapeTree *> tree_;
+    Heap<Shape *> parent_;
+    Heap<Value> name_;
+    Heap<Shape *> firstChild_;
+    Heap<Shape *> nextSibling_;
 
     Shape(ShapeTree *tree, Shape *parent, const Value &name,
-          bool hasValue, bool hasGetter, bool hasSetter,
-          bool isConfigurable, bool isEnumerable, bool isWritable);
+          const Config &config);
 
   public:
-    ShapeTree *tree() const;
+    Handle<ShapeTree *> tree() const;
 
     bool hasParent() const;
-    Shape *maybeParent() const;
-    Shape *parent() const;
+    Handle<Shape *> maybeParent() const;
+    Handle<Shape *> parent() const;
 
-    const Value &name() const;
+    Handle<Value> name() const;
 
     bool hasFirstChild() const;
-    Shape *maybeFirstChild() const;
-    Shape *firstChild() const;
+    Handle<Shape *> maybeFirstChild() const;
+    Handle<Shape *> firstChild() const;
 
     bool hasNextSibling() const;
-    Shape *maybeNextSibling() const;
-    Shape *nextSibling() const;
+    Handle<Shape *> maybeNextSibling() const;
+    Handle<Shape *> nextSibling() const;
 
     void addChild(Shape *child);
 
@@ -269,17 +272,12 @@ class Shape : public HeapThing, public TypedHeapThing<HeapType::Shape>
 class ValueShape : public Shape
 {
   friend class ShapeTree;
-  public:
-    static constexpr unsigned SlotIndexShift = 0;
-    static constexpr uint64_t SlotIndexMask = (UInt64(1) << 32) - 1u;
-
-    static constexpr unsigned IsDynamicSlotShift = 32;
   private:
-    Value slotInfo_;
+    uint32_t slotIndex_;
 
   public:
     ValueShape(ShapeTree *tree, Shape *parent, const Value &name,
-               uint32_t slotIndex, bool isDynamicSlot,
+               uint32_t slotIndex,
                bool isConfigurable, bool isEnumerable);
 
     uint32_t slotIndex() const;
@@ -290,58 +288,58 @@ class ConstantShape : public Shape
 {
   friend class ShapeTree;
   protected:
-    Value constant_;
+    Heap<Value> constant_;
 
   public:
     ConstantShape(ShapeTree *tree, Shape *parent, const Value &name,
                   const Value &constant,
                   bool isConfigurable, bool isEnumerable);
 
-    const Value &constant() const;
+    Handle<Value> constant() const;
 };
 
 class GetterShape : public Shape
 {
   friend class ShapeTree;
   protected:
-    Value getter_;
+    Heap<Value> getter_;
 
   public:
     GetterShape(ShapeTree *tree, Shape *parent, const Value &name,
                 const Value &getter,
                 bool isConfigurable, bool isEnumerable);
 
-    const Value &getter() const;
+    Handle<Value> getter() const;
 };
 
 class SetterShape : public Shape
 {
   friend class ShapeTree;
   protected:
-    Value setter_;
+    Heap<Value> setter_;
 
   public:
     SetterShape(ShapeTree *tree, Shape *parent, const Value &name,
                 const Value &setter,
                 bool isConfigurable, bool isEnumerable);
 
-    const Value &setter() const;
+    Handle<Value> setter() const;
 };
 
 class AccessorShape : public Shape
 {
   friend class ShapeTree;
   protected:
-    Value getter_;
-    Value setter_;
+    Heap<Value> getter_;
+    Heap<Value> setter_;
 
   public:
     AccessorShape(ShapeTree *tree, Shape *parent, const Value &name,
                   const Value &getter, const Value &setter,
                   bool isConfigurable, bool isEnumerable);
 
-    const Value &getter() const;
-    const Value &setter() const;
+    Handle<Value> getter() const;
+    Handle<Value> setter() const;
 };
 
 
@@ -351,12 +349,12 @@ class AccessorShape : public Shape
 class ShapedHeapThing : public HeapThing
 {
   protected:
-    HeapThingValue<Shape> shape_;
+    Heap<Shape *> shape_;
 
     ShapedHeapThing(Shape *shape);
 
   public:
-    Shape *shape() const;
+    Handle<Shape *> shape() const;
     void setShape(Shape *shape);
 };
 
