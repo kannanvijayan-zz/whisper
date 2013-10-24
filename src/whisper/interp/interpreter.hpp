@@ -45,10 +45,15 @@ class Interpreter
 
   private:
     Value readOperand(const OperandLocation &loc);
+    void writeOperand(const OperandLocation &loc, const Value &val);
 
     bool interpretStop(Opcode op, int32_t *opBytes);
     bool interpretPushInt(Opcode op, int32_t *opBytes);
     bool interpretAdd(Opcode op, int32_t *opBytes);
+    bool interpretSub(Opcode op, int32_t *opBytes);
+    bool interpretMul(Opcode op, int32_t *opBytes);
+    bool interpretDiv(Opcode op, int32_t *opBytes);
+    bool interpretMod(Opcode op, int32_t *opBytes);
 
     void readBinaryOperandLocations(Opcode op, Opcode baseOp,
                                     OperandLocation *lhsLoc,

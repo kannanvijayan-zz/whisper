@@ -118,6 +118,13 @@ StackFrame::getArg(uint32_t idx) const
     return argRef(idx);
 }
 
+void
+StackFrame::setArg(uint32_t idx, const Value &val)
+{
+    WH_ASSERT(idx < numArgs());
+    argRef(idx).set(val, this);
+}
+
 Handle<Value>
 StackFrame::getLocal(uint32_t idx) const
 {
@@ -126,19 +133,10 @@ StackFrame::getLocal(uint32_t idx) const
 }
 
 void
-StackFrame::pushStack(const Value &val)
+StackFrame::setLocal(uint32_t idx, const Value &val)
 {
-    WH_ASSERT(stackDepth_ < maxStackDepth());
-    stackRef(stackDepth_).set(val, this);
-    stackDepth_++;
-}
-
-Handle<Value>
-StackFrame::peekStack(int32_t offset) const
-{
-    WH_ASSERT(offset < 0);
-    WH_ASSERT(ToUInt32(-offset) <= stackDepth_);
-    return stackRef(stackDepth_ + offset);
+    WH_ASSERT(idx < numArgs());
+    localRef(idx).set(val, this);
 }
 
 Handle<Value>
@@ -146,6 +144,13 @@ StackFrame::getStack(uint32_t offset) const
 {
     WH_ASSERT(offset < stackDepth_);
     return stackRef(offset);
+}
+
+void 
+StackFrame::setStack(uint32_t offset, const Value &val)
+{
+    WH_ASSERT(offset < stackDepth_);
+    stackRef(offset).set(val, this);
 }
 
 void
@@ -161,6 +166,28 @@ StackFrame::popStack(uint32_t count)
     Value *end = start + count;
     std::fill(start, end, Value::Undefined());
     stackDepth_ -= count;
+}
+
+void
+StackFrame::pushStack(const Value &val)
+{
+    WH_ASSERT(stackDepth_ < maxStackDepth());
+    stackRef(stackDepth_).set(val, this);
+    stackDepth_++;
+}
+
+Handle<Value>
+StackFrame::peekStack(uint32_t offset) const
+{
+    WH_ASSERT(offset < stackDepth_);
+    return stackRef(stackDepth_ - (offset + 1));
+}
+
+void
+StackFrame::pokeStack(uint32_t offset, const Value &val)
+{
+    WH_ASSERT(offset < stackDepth_);
+    stackRef(stackDepth_ - (offset + 1)).set(val, this);
 }
 
 const Value *

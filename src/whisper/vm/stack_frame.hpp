@@ -100,12 +100,19 @@ struct StackFrame : public HeapThing,
     uint32_t maxStackDepth() const;
 
     Handle<Value> getArg(uint32_t idx) const;
-    Handle<Value> getLocal(uint32_t idx) const;
+    void setArg(uint32_t idx, const Value &val);
 
-    void pushStack(const Value &val);
-    Handle<Value> peekStack(int32_t offset = -1) const;
+    Handle<Value> getLocal(uint32_t idx) const;
+    void setLocal(uint32_t idx, const Value &val);
+
     Handle<Value> getStack(uint32_t offset) const;
+    void setStack(uint32_t offset, const Value &val);
+
     void popStack(uint32_t count = 1);
+    void pushStack(const Value &val);
+
+    Handle<Value> peekStack(uint32_t offset) const;
+    void pokeStack(uint32_t offset, const Value &val);
 
   private:
     const Value *argStart() const;

@@ -305,10 +305,43 @@ enum class Opcode_Sec0 : uint8_t
     LIMIT
 };
 
+bool
+IsValidOpcode(Opcode op)
+{
+    switch (op) {
+#define OP_CASE_(name, fmt, section, pop, push, flags) \
+      case Opcode::name: \
+        if (flags & OPF_SectionPrefix) \
+            return false;
+        return true;
+    WHISPER_BYTECODE_SEC0_OPS(OP_CASE_)
+#undef OP_CASE_
+      default:
+        break;
+    }
+    return true;
+}
+
 uint16_t
 OpcodeNumber(Opcode opcode)
 {
     return ToUInt16(opcode);
+}
+
+const char *
+OpcodeString(Opcode opcode)
+{
+    switch (opcode) {
+      case Opcode::INVALID:
+        return "INVALID";
+#define OP_STR_(name, ...) \
+      case Opcode::name: return #name;
+    WHISPER_BYTECODE_SEC0_OPS(OP_STR_)
+#undef OP_STR_
+      case Opcode::LIMIT:
+        return "LIMIT";
+    }
+    return "UNKNOWN";
 }
 
 static bool OPCODE_TRAITS_INITIALIZED = false;
@@ -356,18 +389,6 @@ ReadOpcode(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
     if (opcode)
         *opcode = static_cast<Opcode>(opval);
     return nread;
-}
-
-bool
-IsValidOpcode(Opcode op)
-{
-    WH_ASSERT(OPCODE_TRAITS_INITIALIZED);
-
-    if (op == Opcode::INVALID || op >= Opcode::LIMIT)
-        return false;
-
-    // A valid opcode has a valid section (>= 0).
-    return OPCODE_TRAITS[static_cast<unsigned>(op)].section() >= 0;
 }
 
 const char *

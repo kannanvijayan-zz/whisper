@@ -1,5 +1,6 @@
 
 #include "common.hpp"
+#include "spew.hpp"
 #include "runtime.hpp"
 #include "runtime_inlines.hpp"
 #include "rooting_inlines.hpp"
@@ -61,6 +62,7 @@ Interpreter::interpret()
 
         Opcode op;
         opBytes = Interp::ReadOpcode(pc_, pcEnd_, &op);
+        SpewInterpOpNote("Op %s", OpcodeString(op));
 
         switch (op) {
           case Opcode::Nop:
@@ -114,6 +116,9 @@ Interpreter::interpret()
           case Opcode::Sub_VSV: // VV
           case Opcode::Sub_VVS: // VV
           case Opcode::Sub_VVV: // VVV
+            if (!interpretSub(op, &opBytes))
+                return false;
+            break;
 
           case Opcode::Mul_SSS: // E
           case Opcode::Mul_SSV: // V
@@ -123,6 +128,9 @@ Interpreter::interpret()
           case Opcode::Mul_VSV: // VV
           case Opcode::Mul_VVS: // VV
           case Opcode::Mul_VVV: // VVV
+            if (!interpretMul(op, &opBytes))
+                return false;
+            break;
 
           case Opcode::Div_SSS: // E
           case Opcode::Div_SSV: // V
@@ -132,6 +140,9 @@ Interpreter::interpret()
           case Opcode::Div_VSV: // VV
           case Opcode::Div_VVS: // VV
           case Opcode::Div_VVV: // VVV
+            if (!interpretDiv(op, &opBytes))
+                return false;
+            break;
 
           case Opcode::Mod_SSS: // E
           case Opcode::Mod_SSV: // V
@@ -141,6 +152,9 @@ Interpreter::interpret()
           case Opcode::Mod_VSV: // VV
           case Opcode::Mod_VVS: // VV
           case Opcode::Mod_VVV: // VVV
+            if (!interpretMod(op, &opBytes))
+                return false;
+            break;
 
           case Opcode::Neg_SS: // E
           case Opcode::Neg_SV: // V
@@ -157,33 +171,33 @@ Interpreter::interpret()
 
 
 Value
-Interpreter::readOperand(const OperandLocation &location)
+Interpreter::readOperand(const OperandLocation &loc)
 {
-    switch (location.space()) {
+    switch (loc.space()) {
       case OperandSpace::Constant:
         WH_UNREACHABLE("Constant is unhandled!");
         return Value::Undefined();
 
       case OperandSpace::Argument:
-        return frame_->getArg(location.argumentIndex());
+        return frame_->getArg(loc.argumentIndex());
 
       case OperandSpace::Local:
-        return frame_->getLocal(location.localIndex());
+        return frame_->getLocal(loc.localIndex());
 
       case OperandSpace::Stack:
-        return frame_->peekStack(location.stackIndex());
+        return frame_->peekStack(loc.stackIndex());
 
       case OperandSpace::Immediate:
-        if (location.isSigned()) {
-            return Value::Int32(location.signedValue());
+        if (loc.isSigned()) {
+            return Value::Int32(loc.signedValue());
         } else {
-            WH_ASSERT(location.unsignedValue() < 0xFu);
-            return Value::Int32(location.unsignedValue());
+            WH_ASSERT(loc.unsignedValue() < 0xFu);
+            return Value::Int32(loc.unsignedValue());
         }
 
       case OperandSpace::StackTop:
         {
-            Value result = frame_->peekStack(-1);
+            Value result = frame_->peekStack(0);
             frame_->popStack();
             return result;
         }
@@ -192,6 +206,38 @@ Interpreter::readOperand(const OperandLocation &location)
         WH_UNREACHABLE("Invalid operand kind.");
     }
     return Value::Undefined();
+}
+
+void
+Interpreter::writeOperand(const OperandLocation &loc, const Value &val)
+{
+    switch (loc.space()) {
+      case OperandSpace::Constant:
+        WH_UNREACHABLE("Constant is not a valid write location!");
+        break;
+
+      case OperandSpace::Argument:
+        frame_->setArg(loc.argumentIndex(), val);
+        break;
+
+      case OperandSpace::Local:
+        frame_->setLocal(loc.localIndex(), val);
+        break;
+
+      case OperandSpace::Stack:
+        frame_->pokeStack(loc.stackIndex(), val);
+
+      case OperandSpace::Immediate:
+        WH_UNREACHABLE("Immediate is not a valid write location!");
+        break;
+
+      case OperandSpace::StackTop:
+        frame_->pushStack(val);
+        break;
+
+      default:
+        WH_UNREACHABLE("Invalid operand kind.");
+    }
 }
 
 
@@ -238,7 +284,7 @@ Interpreter::interpretPushInt(Opcode op, int32_t *opBytes)
     WH_ASSERT(GetOpcodeFormat(op) == fmt);
 
     OperandLocation oploc;
-    *opBytes += ReadOperandLocation(pc_, pcEnd_, fmt, 0, &oploc);
+    *opBytes += ReadOperandLocation(pc_ + *opBytes, pcEnd_, fmt, 0, &oploc);
     WH_ASSERT(oploc.isImmediate() && oploc.isSigned());
 
     frame_->pushStack(Value::Int32(oploc.signedValue()));
@@ -252,7 +298,6 @@ Interpreter::interpretAdd(Opcode op, int32_t *opBytes)
 {
     Root<Value> lhs(cx_, Value::Undefined());
     Root<Value> rhs(cx_, Value::Undefined());
-    Root<Value> result(cx_, Value::Undefined());
     OperandLocation outLoc;
 
     readBinaryOperandValues(op, Opcode::Add_SSS, &lhs, &rhs, &outLoc, opBytes);
@@ -263,9 +308,9 @@ Interpreter::interpretAdd(Opcode op, int32_t *opBytes)
         int32_t resultVal = lhsVal + rhsVal;
 
         // Check for int32 overflow.
+        bool overflow = false;
         bool lhsSign = lhsVal >> 31;
         bool rhsSign = rhsVal >> 31;
-        bool overflow = false;
         if (lhsSign == rhsSign) {
             bool resultSign = resultVal >> 31;
             if (resultSign != lhsSign)
@@ -273,12 +318,157 @@ Interpreter::interpretAdd(Opcode op, int32_t *opBytes)
         }
 
         if (!overflow) {
-            result = Value::Int32(resultVal);
+            SpewInterpOpNote("  Int32 add %d + %d => %d",
+                             lhsVal, rhsVal, resultVal);
+            writeOperand(outLoc, Value::Int32(resultVal));
             return true;
         }
     }
 
     WH_UNREACHABLE("Non-int32 add not implemented yet!");
+    return false;
+}
+
+
+bool
+Interpreter::interpretSub(Opcode op, int32_t *opBytes)
+{
+    Root<Value> lhs(cx_, Value::Undefined());
+    Root<Value> rhs(cx_, Value::Undefined());
+    OperandLocation outLoc;
+
+    readBinaryOperandValues(op, Opcode::Sub_SSS, &lhs, &rhs, &outLoc, opBytes);
+
+    if (lhs->isInt32() && rhs->isInt32()) {
+        int32_t lhsVal = lhs->int32Value();
+        int32_t rhsVal = rhs->int32Value();
+        int32_t resultVal = lhsVal - rhsVal;
+
+        // Check for int32 overflow.
+        bool overflow = false;
+        if (rhsVal == INT32_MIN) {
+            overflow = true;
+        } else {
+            bool lhsSign = lhsVal >> 31;
+            bool negRhsSign = -rhsVal >> 31;
+            if (lhsSign == negRhsSign) {
+                bool resultSign = resultVal >> 31;
+                if (resultSign != lhsSign)
+                    overflow = true;
+            }
+        }
+
+        if (!overflow) {
+            SpewInterpOpNote("  Int32 sub %d - %d => %d",
+                             lhsVal, rhsVal, resultVal);
+            writeOperand(outLoc, Value::Int32(resultVal));
+            return true;
+        }
+    }
+
+    WH_UNREACHABLE("Non-int32 subtract not implemented yet!");
+    return false;
+}
+
+
+static unsigned
+NumSignificantBits(int32_t val)
+{
+    unsigned result = 0;
+    while (val != 0 && val != -1) {
+        result += 1;
+        val >>= 1;
+    }
+    // one extra bit needed to represent sign.
+    result += 1;
+    return result;
+}
+
+
+bool
+Interpreter::interpretMul(Opcode op, int32_t *opBytes)
+{
+    Root<Value> lhs(cx_, Value::Undefined());
+    Root<Value> rhs(cx_, Value::Undefined());
+    OperandLocation outLoc;
+
+    readBinaryOperandValues(op, Opcode::Mul_SSS, &lhs, &rhs, &outLoc, opBytes);
+
+    if (lhs->isInt32() && rhs->isInt32()) {
+        int32_t lhsVal = lhs->int32Value();
+        int32_t rhsVal = rhs->int32Value();
+
+        // Check number of significant bits in each number.
+        unsigned lhsBits = NumSignificantBits(lhsVal);
+        unsigned rhsBits = NumSignificantBits(rhsVal);
+
+        // Check for int32 overflow.
+        bool overflow = (lhsBits + rhsBits > 31);
+
+        if (!overflow) {
+            int32_t resultVal = lhsVal * rhsVal;
+            SpewInterpOpNote("  Int32 mul %d * %d => %d",
+                             lhsVal, rhsVal, resultVal);
+            writeOperand(outLoc, Value::Int32(resultVal));
+            return true;
+        }
+    }
+
+    WH_UNREACHABLE("Non-int32 multiply not implemented yet!");
+    return false;
+}
+
+
+bool
+Interpreter::interpretDiv(Opcode op, int32_t *opBytes)
+{
+    Root<Value> lhs(cx_, Value::Undefined());
+    Root<Value> rhs(cx_, Value::Undefined());
+    OperandLocation outLoc;
+
+    readBinaryOperandValues(op, Opcode::Div_SSS, &lhs, &rhs, &outLoc, opBytes);
+
+    if (lhs->isInt32() && rhs->isInt32()) {
+        int32_t lhsVal = lhs->int32Value();
+        int32_t rhsVal = rhs->int32Value();
+
+        bool overflow = (lhsVal % rhsVal) != 0;
+
+        if (!overflow) {
+            int32_t resultVal = lhsVal / rhsVal;
+            SpewInterpOpNote("  Int32 div %d / %d => %d",
+                             lhsVal, rhsVal, resultVal);
+            writeOperand(outLoc, Value::Int32(resultVal));
+            return true;
+        }
+    }
+
+    WH_UNREACHABLE("Non-int32 divide not implemented yet!");
+    return false;
+}
+
+
+bool
+Interpreter::interpretMod(Opcode op, int32_t *opBytes)
+{
+    Root<Value> lhs(cx_, Value::Undefined());
+    Root<Value> rhs(cx_, Value::Undefined());
+    OperandLocation outLoc;
+
+    readBinaryOperandValues(op, Opcode::Mod_SSS, &lhs, &rhs, &outLoc, opBytes);
+
+    if (lhs->isInt32() && rhs->isInt32()) {
+        int32_t lhsVal = lhs->int32Value();
+        int32_t rhsVal = rhs->int32Value();
+
+        int32_t resultVal = lhsVal % rhsVal;
+        SpewInterpOpNote("  Int32 mod %d %% %d => %d",
+                         lhsVal, rhsVal, resultVal);
+        writeOperand(outLoc, Value::Int32(resultVal));
+        return true;
+    }
+
+    WH_UNREACHABLE("Non-int32 divide not implemented yet!");
     return false;
 }
 
@@ -292,24 +482,24 @@ Interpreter::readBinaryOperandLocations(Opcode op, Opcode baseOp,
 {
     unsigned opcodeOffset = OpcodeNumber(op) - OpcodeNumber(baseOp);
     WH_ASSERT(opcodeOffset < 8);
-    bool lhsOnStack = opcodeOffset & (1 << 2);
-    bool rhsOnStack = opcodeOffset & (1 << 1);
-    bool outputStack = opcodeOffset & (1 << 0);
+    bool lhsIsValue = opcodeOffset & (1 << 2);
+    bool rhsIsValue = opcodeOffset & (1 << 1);
+    bool outIsValue = opcodeOffset & (1 << 0);
 
     const OpcodeFormat V = OpcodeFormat::V;
 
-    if (!lhsOnStack)
-        *opBytes += ReadOperandLocation(pc_, pcEnd_, V, 0, lhsLoc);
+    if (lhsIsValue)
+        *opBytes += ReadOperandLocation(pc_ + *opBytes, pcEnd_, V, 0, lhsLoc);
     else
         *lhsLoc = OperandLocation::StackTop();
 
-    if (!rhsOnStack)
-        *opBytes += ReadOperandLocation(pc_, pcEnd_, V, 0, rhsLoc);
+    if (rhsIsValue)
+        *opBytes += ReadOperandLocation(pc_ + *opBytes, pcEnd_, V, 0, rhsLoc);
     else
         *rhsLoc = OperandLocation::StackTop();
 
-    if (!outputStack)
-        *opBytes += ReadOperandLocation(pc_, pcEnd_, V, 0, outLoc);
+    if (outIsValue)
+        *opBytes += ReadOperandLocation(pc_ + *opBytes, pcEnd_, V, 0, outLoc);
     else
         *outLoc = OperandLocation::StackTop();
 }

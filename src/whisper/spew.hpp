@@ -14,7 +14,8 @@ namespace Whisper {
     _(Parser)       \
     _(Memory)       \
     _(Slab)         \
-    _(Bytecode)
+    _(Bytecode)     \
+    _(InterpOp)
 
 enum class SpewChannel
 {
@@ -83,6 +84,10 @@ inline SpewLevel ChannelSpewLevel(SpewChannel channel) {
 #define SpewBytecodeNote(...)
 #define SpewBytecodeWarn(...)
 #define SpewBytecodeError(...)
+
+#define SpewInterpOpNote(...)
+#define SpewInterpOpWarn(...)
+#define SpewInterpOpError(...)
 
 
 #endif // defined(ENABLE_SPEW)

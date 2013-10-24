@@ -239,13 +239,14 @@ enum class Opcode : uint16_t
     LIMIT
 };
 
+bool IsValidOpcode(Opcode op);
 uint16_t OpcodeNumber(Opcode opcode);
+const char *OpcodeString(Opcode opcode);
 
 void InitializeOpcodeInfo();
 
 uint32_t ReadOpcode(const uint8_t *bytecodeData, const uint8_t *bytecodeEnd,
                     Opcode *opcode);
-bool IsValidOpcode(Opcode op);
 
 const char *GetOpcodeName(Opcode opcode);
 OpcodeFormat GetOpcodeFormat(Opcode opcode);
