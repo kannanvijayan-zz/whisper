@@ -27,19 +27,19 @@ RunContext::allocate(uint32_t size)
 
 template <typename ObjT, typename... Args>
 inline ObjT *
-RunContext::create(bool allowGC, Args... args)
+RunContext::create(Args... args)
 {
-    return createSized<ObjT, Args...>(allowGC, sizeof(ObjT), args...);
+    return createSized<ObjT, Args...>(sizeof(ObjT), args...);
 }
 
 template <typename ObjT, typename... Args>
 inline ObjT *
-RunContext::createSized(bool allowGC, uint32_t size, Args... args)
+RunContext::createSized(uint32_t size, Args... args)
 {
     // Allocate the space for the object.
     uint8_t *mem = allocate<ObjT>(size);
     if (!mem) {
-        if (!allowGC)
+        if (suppressGC_)
             return nullptr;
 
         WH_ASSERT(!"GC infrastructure.");

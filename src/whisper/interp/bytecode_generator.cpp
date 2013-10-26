@@ -59,8 +59,9 @@ BytecodeGenerator::generateBytecode()
     currentBytecodeSize_ = 0;
 
     // Bytecode scanning worked out.  Allocate a bytecode object.
-    bytecode_ = cx_->createSized<VM::Bytecode>(true, bytecodeSize_);
-    WH_ASSERT(bytecode_);
+    bytecode_ = cx_->createSized<VM::Bytecode>(bytecodeSize_);
+    if (!bytecode_)
+        emitError("Could not allocate bytecode object.");
 
     // Fill the bytecode object.
     calculateStackDepth_ = false;

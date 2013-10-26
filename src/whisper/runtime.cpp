@@ -4,7 +4,9 @@
 #include "slab.hpp"
 #include "runtime.hpp"
 #include "runtime_inlines.hpp"
+#include "vm/heap_thing_inlines.hpp"
 #include "vm/stack_frame.hpp"
+#include "vm/string.hpp"
 
 namespace Whisper {
 
@@ -106,6 +108,93 @@ Runtime::threadContext()
 }
 
 //
+// StringTable
+//
+
+StringTable::Query::Query(uint32_t length, const uint8_t *data)
+  : is8Bit(true), length(length), data(data)
+{}
+
+StringTable::Query::Query(uint32_t length, const uint16_t *data)
+  : is8Bit(false), length(length), data(data)
+{}
+
+StringTable::StringOrQuery::StringOrQuery(const VM::HeapString *str)
+  : ptr(reinterpret_cast<uintptr_t>(str))
+{}
+
+StringTable::StringOrQuery::StringOrQuery(const Query *str)
+  : ptr(reinterpret_cast<uintptr_t>(str) | 1)
+{}
+
+bool
+StringTable::StringOrQuery::isHeapString() const
+{
+    return !(ptr & 1);
+}
+
+bool
+StringTable::StringOrQuery::isQuery() const
+{
+    return ptr & 1;
+}
+
+const VM::HeapString *
+StringTable::StringOrQuery::toHeapString() const
+{
+    WH_ASSERT(isHeapString());
+    return reinterpret_cast<const VM::HeapString *>(ptr);
+}
+
+const StringTable::Query *
+StringTable::StringOrQuery::toQuery() const
+{
+    WH_ASSERT(isQuery());
+    return reinterpret_cast<const Query *>(ptr);
+}
+
+StringTable::Hash::Hash(StringTable *table)
+  : table(table)
+{}
+
+/*
+static size_t Primes[] = {
+    70241, 70853, 541483, 399557,
+    280913, 77641, 136309, 1116523,
+    660559, 102673, 626963, 690721,
+    402697, 233609, 1088273, 862501
+};
+
+template <typename CharT>
+static size_t
+HashString(uint32_t spoiler, uint32_t length, const CharT *data)
+{
+    // Start with spoiler.
+    size_t perturb = spoiler;
+    size_t result = 1;
+
+    for (uint32_t i = 0; i < length; i++) {
+        uint16_t ch = data[i];
+        ch ^= (perturb & 0xFFFFu);
+        size_t prime = Primes[perturb & 0xF];
+        size_t flow = prime * ch;
+        result <<= 16;
+        result ^= flow;
+        perturb >>= 4;
+        perturb ^= flow;
+    }
+    return result;
+}
+*/
+
+size_t
+StringTable::Hash::operator ()(const StringOrQuery &str)
+{
+    return 0;
+}
+
+
+//
 // ThreadContext
 //
 
@@ -116,7 +205,8 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery)
     tenured_(),
     activeRunContext_(nullptr),
     runContextList_(nullptr),
-    roots_(nullptr)
+    roots_(nullptr),
+    suppressGC_(false)
 {}
 
 Runtime *
@@ -161,6 +251,12 @@ ThreadContext::roots() const
     return roots_;
 }
 
+bool
+ThreadContext::suppressGC() const
+{
+    return suppressGC_;
+}
+
 void
 ThreadContext::addRunContext(RunContext *runcx)
 {
@@ -178,7 +274,8 @@ RunContext::RunContext(ThreadContext *threadContext)
   : threadContext_(threadContext),
     next_(nullptr),
     hatchery_(threadContext_->hatchery()),
-    topStackFrame_(nullptr)
+    topStackFrame_(nullptr),
+    suppressGC_(threadContext_->suppressGC())
 {
     threadContext_->addRunContext(this);
 }
@@ -202,6 +299,18 @@ RunContext::hatchery() const
     return hatchery_;
 }
 
+VM::HeapString *
+RunContext::createString(uint32_t length, const uint8_t *bytes)
+{
+    return createSized<VM::LinearString>(length, bytes);
+}
+
+VM::HeapString *
+RunContext::createString(uint32_t length, const uint16_t *bytes)
+{
+    return createSized<VM::LinearString>(length, bytes);
+}
+
 void
 RunContext::makeActive()
 {
@@ -209,7 +318,10 @@ RunContext::makeActive()
                  threadContext_->hatchery_ == hatchery_);
     if (threadContext_->activeRunContext_ != this) {
         threadContext_->activeRunContext_ = this;
-        syncHatchery();
+
+        // Sync hatchery and suppressGC state.
+        hatchery_ = threadContext_->hatchery();
+        suppressGC_ = threadContext_->suppressGC();
     }
 }
 
@@ -219,13 +331,6 @@ RunContext::registerTopStackFrame(VM::StackFrame *topStackFrame)
     // No stack frame should have been registered yet.
     WH_ASSERT(topStackFrame_ == nullptr);
     topStackFrame_ = topStackFrame;
-}
-
-void
-RunContext::syncHatchery()
-{
-    WH_ASSERT(threadContext_->activeRunContext() == this);
-    hatchery_ = threadContext_->hatchery();
 }
 
 

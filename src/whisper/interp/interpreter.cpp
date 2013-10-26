@@ -28,7 +28,9 @@ InterpretScript(RunContext *cx, Handle<VM::Script *> script)
 
     uint32_t size = VM::StackFrame::CalculateSize(config);
     Root<VM::StackFrame *> stackFrame(cx,
-        cx->createSized<VM::StackFrame>(true, size, script, config));
+        cx->createSized<VM::StackFrame>(size, script, config));
+    if (!stackFrame)
+        return false;
 
     // Register the stack frame with the runtime.
     cx->registerTopStackFrame(stackFrame);

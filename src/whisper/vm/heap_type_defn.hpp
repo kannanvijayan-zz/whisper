@@ -7,7 +7,7 @@
     /* Name                             Traced */               \
     \
     _(HeapDouble,                       false)                  \
-    _(HeapString,                       false)                  \
+    _(LinearString,                     false)                  \
     _(Bytecode,                         false)                  \
     \
     _(Tuple,                            true)                   \

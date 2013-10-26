@@ -8,14 +8,21 @@
 namespace Whisper {
 namespace VM {
 
-ObjectImpl::ObjectImpl(Shape *shape)
-  : PropertyMapThing(shape)
+
+HashObject::HashObject(Handle<Object *> prototype, Handle<Tuple *> mappings)
+  : prototype_(prototype), mappings_(mappings)
+{}
+
+Handle<Object *>
+HashObject::prototype() const
 {
+    return prototype_;
 }
 
-Object::Object(Shape *shape)
-  : ObjectImpl(shape)
+Handle<Tuple *>
+HashObject::mappings() const
 {
+    return mappings_;
 }
 
 

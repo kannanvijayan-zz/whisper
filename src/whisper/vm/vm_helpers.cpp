@@ -113,18 +113,21 @@ IsNormalizedPropertyId(const Value &val)
         str16 = buf16;
     } else {
         HeapString *heapStr = val.getHeapString();
-        length = heapStr->length();
-        if (heapStr->isEightBit()) {
-            // If heap string can fit into an immstring, then it's not
-            // normalized.
-            if (length > Value::ImmString8MaxLength)
-                return false;
-            str8 = heapStr->eightBitData();
-        } else {
-            if (length > Value::ImmString16MaxLength)
-                return false;
-            str16 = heapStr->sixteenBitData();
-        }
+    
+        if (!heapStr->isLinearString())
+            return false;
+
+        LinearString *linStr = heapStr->toLinearString();
+        if (linStr->fitsImmediate())
+            return false;
+
+        if (!linStr->isPropertyName())
+            return false;
+
+        if (linStr->isEightBit())
+            str8 = linStr->eightBitData();
+        else
+            str16 = linStr->sixteenBitData();
     }
 
     // One of str8 or str16 were set above.

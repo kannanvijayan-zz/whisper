@@ -297,7 +297,7 @@ Value::getHeapString() const
     WH_ASSERT(isHeapString());
     unsigned xorMask = ValueTagNumber(ValueTag::HeapString);
     VM::HeapString *s = reinterpret_cast<VM::HeapString *>(tagged_ ^ xorMask);
-    WH_ASSERT(s->type() == VM::HeapType::HeapString);
+    WH_ASSERT(s->isValidString());
     return s;
 }
 

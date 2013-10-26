@@ -20,6 +20,7 @@ whisper_SOURCES = \
     vm/bytecode.cpp \
     vm/script.cpp \
     vm/stack_frame.cpp \
+    vm/tuple.cpp \
     interp/bytecode_ops.cpp \
     interp/bytecode_generator.cpp \
     interp/interpreter.cpp \

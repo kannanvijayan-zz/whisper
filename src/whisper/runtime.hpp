@@ -2,6 +2,7 @@
 #define WHISPER__RUNTIME_HPP
 
 #include <vector>
+#include <unordered_set>
 #include <pthread.h>
 
 #include "common.hpp"
@@ -17,6 +18,7 @@ class RunContext;
 
 namespace VM {
     class StackFrame;
+    class HeapString;
 }
 
 //
@@ -63,6 +65,54 @@ class Runtime
     ThreadContext *threadContext();
 };
 
+//
+// StringTable keeps a table of interned strings.  All strings which
+// are used as property names are interned.
+// Any two interned strings can be equality compared by comparing their
+// pointer values.
+//
+
+class StringTable
+{
+  private:
+    // Query is a stack-allocated structure used represent
+    // a length and a string pointer.
+    struct alignas(2) Query {
+        bool is8Bit;
+        uint32_t length;
+        const void *data;
+
+        Query(uint32_t length, const uint8_t *data);
+        Query(uint32_t length, const uint16_t *data);
+    };
+
+    // StringOrKey can either be a pointer to a HeapString, or
+    // a pointer to a stack-allocated StringTable::Query.
+    // They are differentiated by the low bit of the pointer.
+    struct StringOrQuery {
+        uintptr_t ptr;
+
+        StringOrQuery(const VM::HeapString *str);
+        StringOrQuery(const Query *str);
+
+        bool isHeapString() const;
+        bool isQuery() const;
+
+        const VM::HeapString *toHeapString() const;
+        const Query *toQuery() const;
+    };
+
+    // String hasher.
+    struct Hash {
+        StringTable *table;
+
+        Hash(StringTable *table);
+        size_t operator ()(const StringOrQuery &str);
+    };
+
+    uint32_t spoiler_;
+};
+
 
 //
 // ThreadContext
@@ -85,6 +135,7 @@ class ThreadContext
     RunContext *activeRunContext_;
     RunContext *runContextList_;
     RootBase *roots_;
+    bool suppressGC_;
 
   public:
     ThreadContext(Runtime *runtime, Slab *hatchery);
@@ -96,6 +147,7 @@ class ThreadContext
     SlabList &tenured();
     RunContext *activeRunContext() const;
     RootBase *roots() const;
+    bool suppressGC() const;
 
     void addRunContext(RunContext *cx);
 };
@@ -127,6 +179,7 @@ class RunContext
     RunContext *next_;
     Slab *hatchery_;
     VM::StackFrame *topStackFrame_;
+    bool suppressGC_;
 
   public:
     RunContext(ThreadContext *threadContext);
@@ -140,18 +193,19 @@ class RunContext
     // Construct an object in the hatchery.
     // Optionally GC-ing if necessary.
     template <typename ObjT, typename... Args>
-    inline ObjT *create(bool allowGC, Args... args);
+    inline ObjT *create(Args... args);
 
     template <typename ObjT, typename... Args>
-    inline ObjT *createSized(bool allowGC, uint32_t size, Args... args);
+    inline ObjT *createSized(uint32_t size, Args... args);
+
+    VM::HeapString *createString(uint32_t length, const uint8_t *bytes);
+    VM::HeapString *createString(uint32_t length, const uint16_t *bytes);
 
     void makeActive();
 
     void registerTopStackFrame(VM::StackFrame *topStackFrame);
 
   private:
-    void syncHatchery();
-
     // Allocate an object in the hatchery.  This takes an explicit
     // size because some objects are variable sized.
     // Return null if not enough space in hatchery.

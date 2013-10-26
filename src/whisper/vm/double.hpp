@@ -22,7 +22,7 @@ namespace VM {
 //      +-----------------------+
 //
 struct HeapDouble : public HeapThing,
-                    public TypedHeapThing<HeapType::HeapString>
+                    public TypedHeapThing<HeapType::HeapDouble>
 {
   private:
     double value_;
@@ -32,8 +32,6 @@ struct HeapDouble : public HeapThing,
 
     double value() const;
 };
-
-typedef HeapThingWrapper<HeapDouble> WrappedHeapDouble;
 
 
 } // namespace VM
