@@ -7,6 +7,7 @@
 #include "vm/heap_thing_inlines.hpp"
 #include "vm/stack_frame.hpp"
 #include "vm/string.hpp"
+#include "vm/double.hpp"
 
 namespace Whisper {
 
@@ -309,6 +310,15 @@ VM::HeapString *
 RunContext::createString(uint32_t length, const uint16_t *bytes)
 {
     return createSized<VM::LinearString>(length, bytes);
+}
+
+Value
+RunContext::createDouble(double d)
+{
+    if (Value::IsImmediateDouble(d))
+        return Value::Double(d);
+
+    return Value::HeapDouble(create<VM::HeapDouble>(d));
 }
 
 void

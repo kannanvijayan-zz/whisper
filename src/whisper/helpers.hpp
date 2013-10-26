@@ -110,6 +110,18 @@ inline double IntToDouble(uint64_t i) {
     return u.dval;
 }
 
+inline unsigned GetExponentField(double d) {
+    return (DoubleToInt(d) >> 52) & 0x7FFu;
+}
+
+inline uint64_t GetMantissaField(double d) {
+    return DoubleToInt(d) & ((ToUInt64(1) << 52) - 1);
+}
+
+inline bool GetSign(double d) {
+    return DoubleToInt(d) >> 63;
+}
+
 // Max of two integers.
 template <typename IntT>
 inline constexpr IntT Max(IntT a, IntT b) {

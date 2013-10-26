@@ -1,3 +1,7 @@
+
+#include <limits>
+#include <cmath>
+
 #include "helpers.hpp"
 #include "value.hpp"
 #include "value_inlines.hpp"
@@ -22,6 +26,31 @@ ValueTagNumber(ValueTag tag)
 {
     WH_ASSERT(IsValidValueTag(tag));
     return ToUInt8(tag);
+}
+
+/*static*/ bool
+Value::IsImmediateDouble(double dval)
+{
+    // NaN is representable.
+    if (dval != dval)
+        return true;
+
+    // Infinity and -Infinity are representable.
+    if (dval == std::numeric_limits<double>::infinity())
+        return true;
+    if (dval == -std::numeric_limits<double>::infinity())
+        return true;
+
+    // 0.0 or -0.0 are representable.
+    if (dval == 0)
+        return true;
+
+    // Look for exponents with high bits 100 or 011
+    unsigned exponent = GetExponentField(dval);
+    if (exponent >= 0x300 && exponent <= 0x4FF)
+        return true;
+
+    return false;
 }
 
 Value::Value() : tagged_(Invalid) {}
@@ -49,18 +78,43 @@ Value::checkTag(ValueTag tag) const
 }
 
 
-/*static*/
-Value
+/*static*/ Value
 Value::Undefined()
 {
     return Value(UndefinedVal);
 }
 
-/*static*/
-Value
+/*static*/ Value
 Value::Int32(int32_t value)
 {
     return Value((ToUInt64(value) << Int32Shift) | Int32Code);
+}
+
+/*static*/ Value
+Value::Double(double dval)
+{
+    WH_ASSERT(IsImmediateDouble(dval));
+    if (dval != dval)
+        return Value(NaNVal);
+
+    if (dval == std::numeric_limits<double>::infinity())
+        return Value(PosInfVal);
+
+    if (dval == -std::numeric_limits<double>::infinity())
+        return Value(NegInfVal);
+
+    if (dval == 0 && GetSign(dval))
+        return Value(NegZeroVal);
+
+    // Otherwise, rotate the double value.
+    return Value(RotateLeft(DoubleToInt(dval), 4));
+}
+
+/*static*/ Value
+Value::HeapDouble(VM::HeapDouble *dbl)
+{
+    WH_ASSERT(IsPtrAligned(dbl, 1u << TagBits));
+    return Value(PtrToWord(dbl) | ValueTagNumber(ValueTag::HeapDouble));
 }
 
 
