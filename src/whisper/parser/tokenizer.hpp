@@ -113,7 +113,8 @@ class Token
     {}
 
     Token(const Token &other)
-      : type_(other.type_), offset_(other.offset_), length_(other.length_),
+      : type_(other.type_), flags_(other.flags_),
+        offset_(other.offset_), length_(other.length_),
         startLine_(other.startLine_), startLineOffset_(other.startLineOffset_),
         endLine_(other.endLine_), endLineOffset_(other.endLineOffset_),
         debug_used_(false), debug_pushedBack_(false)
@@ -126,7 +127,8 @@ class Token
         Preserve
     };
     Token(const Token &other, PreserveDebugUsed preserve)
-      : type_(other.type_), offset_(other.offset_), length_(other.length_),
+      : type_(other.type_), flags_(other.flags_),
+        offset_(other.offset_), length_(other.length_),
         startLine_(other.startLine_), startLineOffset_(other.startLineOffset_),
         endLine_(other.endLine_), endLineOffset_(other.endLineOffset_),
         debug_used_(other.debug_used_),
@@ -138,6 +140,7 @@ class Token
     {
         type_ = other.type_;
         offset_ = other.offset_;
+        flags_ = other.flags_;
         length_ = other.length_;
         startLine_ = other.startLine_;
         startLineOffset_ = other.startLineOffset_;

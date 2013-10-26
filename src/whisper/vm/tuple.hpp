@@ -19,6 +19,7 @@ class Tuple : public HeapThing, public TypedHeapThing<HeapType::Tuple>
   public:
     Tuple();
     Tuple(const Tuple &other);
+    Tuple(const Value *vals);
 
     uint32_t size() const;
 

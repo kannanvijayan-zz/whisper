@@ -53,20 +53,20 @@ inline PtrT *AlignPtrUp(PtrT *ptr, IntT align) {
 }
 
 // Generation of integer types corresponding to a given size
-template <unsigned Sz> struct IntTypeBySize {};
-template <> struct IntTypeBySize<8> {
+template <unsigned Sz> struct IntTypeByBits {};
+template <> struct IntTypeByBits<8> {
     typedef int8_t  Signed;
     typedef uint8_t  Unsigned;
 };
-template <> struct IntTypeBySize<16> {
+template <> struct IntTypeByBits<16> {
     typedef int16_t  Signed;
     typedef uint16_t  Unsigned;
 };
-template <> struct IntTypeBySize<32> {
+template <> struct IntTypeByBits<32> {
     typedef int32_t  Signed;
     typedef uint32_t  Unsigned;
 };
-template <> struct IntTypeBySize<64> {
+template <> struct IntTypeByBits<64> {
     typedef int64_t  Signed;
     typedef uint64_t  Unsigned;
 };
@@ -74,21 +74,21 @@ template <> struct IntTypeBySize<64> {
 // Rotate integers.
 template <typename IntT>
 inline IntT RotateLeft(IntT val, unsigned rotate) {
-    constexpr unsigned Size = sizeof(IntT);
-    WH_ASSERT(rotate < (Size * 8));
-    typedef typename IntTypeBySize<Size>::Unsigned UIntT;
+    constexpr unsigned Bits = sizeof(IntT) * 8;
+    WH_ASSERT(rotate < Bits);
+    typedef typename IntTypeByBits<Bits>::Unsigned UIntT;
     UIntT uval = static_cast<UIntT>(val);
-    uval = (uval << rotate) | (uval >> ((Size*8) - rotate));
+    uval = (uval << rotate) | (uval >> (Bits - rotate));
     return static_cast<IntT>(uval);
 }
 
 template <typename IntT>
 inline IntT RotateRight(IntT val, unsigned rotate) {
-    constexpr unsigned Size = sizeof(IntT);
-    WH_ASSERT(rotate < (Size * 8));
-    typedef typename IntTypeBySize<Size>::Unsigned UIntT;
+    constexpr unsigned Bits = sizeof(IntT) * 8;
+    WH_ASSERT(rotate < Bits);
+    typedef typename IntTypeByBits<Bits>::Unsigned UIntT;
     UIntT uval = static_cast<UIntT>(val);
-    uval = (uval >> rotate) | (uval << ((Size*8) - rotate));
+    uval = (uval >> rotate) | (uval << (Bits - rotate));
     return static_cast<IntT>(uval);
 }
 

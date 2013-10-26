@@ -180,8 +180,8 @@ Interpreter::readOperand(const OperandLocation &loc)
 {
     switch (loc.space()) {
       case OperandSpace::Constant:
-        WH_UNREACHABLE("Constant is unhandled!");
-        return Value::Undefined();
+        WH_ASSERT(script_->constants());
+        return script_->constants()->get(0);
 
       case OperandSpace::Argument:
         return frame_->getArg(loc.argumentIndex());

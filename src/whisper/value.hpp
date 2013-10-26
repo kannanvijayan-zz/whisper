@@ -188,6 +188,8 @@ class Value
 
   public:
 
+    uint64_t raw() const;
+
     //
     // Constructors.
     //

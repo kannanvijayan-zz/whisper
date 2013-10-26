@@ -31,6 +31,13 @@ Tuple::Tuple(const Tuple &other) : HeapThing(other)
         set(i, Value::Undefined());
 }
 
+Tuple::Tuple(const Value *vals) : HeapThing()
+{
+    uint32_t count = size();
+    for (uint32_t i = 0; i < count; i++)
+        element(i).set(vals[i], this);
+}
+
 uint32_t
 Tuple::size() const
 {

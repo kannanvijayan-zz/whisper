@@ -6,6 +6,7 @@
 #include "value.hpp"
 #include "vm/heap_thing.hpp"
 #include "vm/bytecode.hpp"
+#include "vm/tuple.hpp"
 
 #include <limits>
 #include <algorithm>
@@ -17,14 +18,6 @@ namespace VM {
 //
 // Scripts represent the executable code for a function or top-level
 // script.
-//
-//      +-----------------------+
-//      | Header                |
-//      +-----------------------+
-//      | Bytecode              |
-//      +-----------------------+
-//      | MaxStackDepth         |
-//      +-----------------------+
 //
 // The header flags for this object are used to store the following
 // information:
@@ -64,12 +57,13 @@ struct Script : public HeapThing, public TypedHeapThing<HeapType::Script>
 
   private:
     Heap<Bytecode *> bytecode_;
+    Heap<Tuple *> constants_;
     uint32_t maxStackDepth_;
 
     void initialize(const Config &config);
 
   public:
-    Script(Bytecode *bytecode, const Config &config);
+    Script(Bytecode *bytecode, Tuple *constants, const Config &config);
 
     bool isStrict() const;
 
@@ -80,6 +74,7 @@ struct Script : public HeapThing, public TypedHeapThing<HeapType::Script>
     bool isEval() const;
 
     Handle<Bytecode *> bytecode() const;
+    Handle<Tuple *> constants() const;
 
     uint32_t maxStackDepth() const;
 };

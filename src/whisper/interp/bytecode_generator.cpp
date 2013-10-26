@@ -21,7 +21,8 @@ BytecodeGenerator::BytecodeGenerator(
     node_(node),
     annotator_(annotator),
     strict_(strict),
-    bytecode_(cx_)
+    bytecode_(cx_),
+    constantPool_(cx_)
 {
     WH_ASSERT(node_);
 }
@@ -68,6 +69,17 @@ BytecodeGenerator::generateBytecode()
     generate();
 
     return bytecode_;
+}
+
+VM::Tuple *
+BytecodeGenerator::constants()
+{
+    // Sometimes no constant pool is necessary.
+    if (constantPool_.size() == 0)
+        return nullptr;
+
+    // Create constant pool.
+    return cx_->createTuple(constantPool_.size(), &constantPool_.ref(0));
 }
 
 uint32_t
@@ -190,16 +202,28 @@ BytecodeGenerator::getAddressableLocation(AST::ExpressionNode *expr,
         WH_ASSERT(lit->hasAnnotation());
         AST::NumericLiteralAnnotation *annot = lit->annotation();
 
-        // Nont-int32 immediates cannot be encoded.
-        if (!annot->isInt32())
-            return false;
+        // Handle int32 immediates.
+        if (annot->isInt32()) {
+            // Ensure the value is within the immediate range.
+            int32_t val = annot->int32Value();
+            if (val < OperandMinSignedValue || val > OperandMaxSignedValue)
+                return false;
 
-        // Ensure the value is within the immediate range.
-        int32_t val = annot->int32Value();
-        if (val < OperandMinSignedValue || val > OperandMaxSignedValue)
-            return false;
+            location = OperandLocation::Immediate(annot->int32Value());
+            return true;
+        }
 
-        location = OperandLocation::Immediate(annot->int32Value());
+        // Otherwise, handle doubles.
+        WH_ASSERT(annot->isDouble());
+        double dbl = annot->doubleValue();
+        Value dval = cx_->createDouble(dbl);
+
+        uint32_t constIdx = constantPool_.size();
+        if (constIdx > OperandMaxIndex)
+            emitError("Too many constant values in script.");
+        constantPool_.append(dval);
+        SpewBytecodeNote("Generating double constant: %llx", dval.raw());
+        location = OperandLocation::Constant(constIdx);
         return true;
     }
 

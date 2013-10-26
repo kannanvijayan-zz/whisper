@@ -564,6 +564,22 @@ VectorRootBase<T>::get(uint32_t idx)
 }
 
 template <typename T>
+inline const T &
+VectorRootBase<T>::ref(uint32_t idx) const
+{
+    WH_ASSERT(idx < things_.size());
+    return things_[idx];
+}
+
+template <typename T>
+inline T &
+VectorRootBase<T>::ref(uint32_t idx)
+{
+    WH_ASSERT(idx < things_.size());
+    return things_[idx];
+}
+
+template <typename T>
 inline Handle<T>
 VectorRootBase<T>::operator [](uint32_t idx) const
 {
@@ -575,6 +591,13 @@ inline MutHandle<T>
 VectorRootBase<T>::operator [](uint32_t idx)
 {
     return get(idx);
+}
+
+template <typename T>
+inline uint32_t
+VectorRootBase<T>::size() const
+{
+    return things_.size();
 }
 
 template <typename T>

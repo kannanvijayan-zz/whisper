@@ -8,6 +8,7 @@
 #include "vm/stack_frame.hpp"
 #include "vm/string.hpp"
 #include "vm/double.hpp"
+#include "vm/tuple.hpp"
 
 namespace Whisper {
 
@@ -319,6 +320,12 @@ RunContext::createDouble(double d)
         return Value::Double(d);
 
     return Value::HeapDouble(create<VM::HeapDouble>(d));
+}
+
+VM::Tuple *
+RunContext::createTuple(uint32_t count, const Value *vals)
+{
+    return createSized<VM::Tuple>(count * sizeof(Value), vals);
 }
 
 void

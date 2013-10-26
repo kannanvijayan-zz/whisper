@@ -387,9 +387,13 @@ class VectorRootBase : public RootBase
     inline Handle<T> get(uint32_t idx) const;
     inline MutHandle<T> get(uint32_t idx);
 
+    inline const T &ref(uint32_t idx) const;
+    inline T &ref(uint32_t idx);
+
     inline Handle<T> operator [](uint32_t idx) const;
     inline MutHandle<T> operator [](uint32_t idx);
 
+    inline uint32_t size() const;
     inline void append(const T &val);
 };
 

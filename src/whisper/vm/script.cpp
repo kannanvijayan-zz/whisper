@@ -20,8 +20,9 @@ Script::initialize(const Config &config)
     initFlags(flags);
 }
 
-Script::Script(Bytecode *bytecode, const Config &config)
+Script::Script(Bytecode *bytecode, Tuple *constants, const Config &config)
   : bytecode_(bytecode),
+    constants_(constants),
     maxStackDepth_(config.maxStackDepth)
 {
     initialize(config);
@@ -61,6 +62,12 @@ Handle<Bytecode *>
 Script::bytecode() const
 {
     return bytecode_;
+}
+
+Handle<Tuple *>
+Script::constants() const
+{
+    return constants_;
 }
 
 uint32_t

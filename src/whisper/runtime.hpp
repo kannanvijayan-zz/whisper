@@ -20,6 +20,7 @@ class RunContext;
 namespace VM {
     class StackFrame;
     class HeapString;
+    class Tuple;
 }
 
 //
@@ -203,6 +204,8 @@ class RunContext
     VM::HeapString *createString(uint32_t length, const uint16_t *bytes);
 
     Value createDouble(double d);
+
+    VM::Tuple *createTuple(uint32_t count, const Value *vals);
 
     void makeActive();
 

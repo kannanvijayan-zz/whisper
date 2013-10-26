@@ -78,6 +78,13 @@ Value::checkTag(ValueTag tag) const
 }
 
 
+uint64_t
+Value::raw() const
+{
+    return tagged_;
+}
+
+
 /*static*/ Value
 Value::Undefined()
 {

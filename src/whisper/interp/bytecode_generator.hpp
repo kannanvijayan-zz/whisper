@@ -58,6 +58,9 @@ class BytecodeGenerator
     // The maximum stack depth.
     uint32_t maxStackDepth_ = 0;
 
+    // Rooted vector of all generated constants.
+    VectorRoot<Value> constantPool_;
+
 
     /// Intermediate state. ///
 
@@ -81,6 +84,7 @@ class BytecodeGenerator
     const char *error() const;
 
     VM::Bytecode *generateBytecode();
+    VM::Tuple *constants();
 
     uint32_t maxStackDepth() const;
 
