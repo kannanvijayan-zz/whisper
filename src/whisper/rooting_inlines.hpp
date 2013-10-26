@@ -473,11 +473,28 @@ Handle<T *>::FromTracedLocation(T * const &locn)
 
 template <typename T>
 inline
+MutHandle<T *>::MutHandle(T **ptr)
+  : PointerMutHandleBase<T>(ptr)
+{
+    static_assert(std::is_base_of<VM::HeapThing, T>::value,
+                  "Type is not a heap thing.");
+}
+
+template <typename T>
+inline
 MutHandle<T *>::MutHandle(Root<T *> *root)
   : PointerMutHandleBase<T>(*root)
 {
     static_assert(std::is_base_of<VM::HeapThing, T>::value,
                   "Type is not a heap thing.");
+}
+
+template <typename T>
+inline
+MutHandle<T *>
+MutHandle<T *>::FromTracedLocation(T **locn)
+{
+    return MutHandle<T *>(locn);
 }
 
 template <typename T>
@@ -511,6 +528,70 @@ MutHandle<T *>::operator =(T *other)
     this->TypedMutHandleBase<T *>::operator =(other);
     return *this;
 }
+
+//
+// VectorRootBase<T>
+//
+
+template <typename T>
+inline
+VectorRootBase<T>::VectorRootBase(ThreadContext *threadContext, RootKind kind)
+  : RootBase(threadContext, kind),
+    things_()
+{}
+
+template <typename T>
+inline
+VectorRootBase<T>::VectorRootBase(RunContext *runContext, RootKind kind)
+  : RootBase(runContext->threadContext(), kind),
+    things_()
+{}
+
+template <typename T>
+inline Handle<T>
+VectorRootBase<T>::get(uint32_t idx) const
+{
+    WH_ASSERT(idx < things_.size());
+    return Handle<T>::FromTracedLocation(things_[idx]);
+}
+
+template <typename T>
+inline MutHandle<T>
+VectorRootBase<T>::get(uint32_t idx)
+{
+    WH_ASSERT(idx < things_.size());
+    return MutHandle<T>::FromTracedLocation(&things_[idx]);
+}
+
+template <typename T>
+inline Handle<T>
+VectorRootBase<T>::operator [](uint32_t idx) const
+{
+    return get(idx);
+}
+
+template <typename T>
+inline MutHandle<T>
+VectorRootBase<T>::operator [](uint32_t idx)
+{
+    return get(idx);
+}
+
+//
+// VectorRoot<T *>
+//
+
+template <typename T>
+inline
+VectorRoot<T *>::VectorRoot(RunContext *cx)
+  : VectorRootBase<T *>(cx, RootKind::HeapThingVector)
+{}
+
+template <typename T>
+inline
+VectorRoot<T *>::VectorRoot(ThreadContext *cx)
+  : VectorRootBase<T *>(cx, RootKind::HeapThingVector)
+{}
 
 
 } // namespace Whisper

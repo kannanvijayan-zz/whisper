@@ -1,6 +1,7 @@
 #ifndef WHISPER__ROOTING_HPP
 #define WHISPER__ROOTING_HPP
 
+#include <vector>
 #include "common.hpp"
 #include "debug.hpp"
 #include "value.hpp"
@@ -21,6 +22,8 @@ enum class RootKind : uint8_t
     INVALID = 0,
     Value,
     HeapThing,
+    ValueVector,
+    HeapThingVector,
     LIMIT
 };
 
@@ -351,13 +354,64 @@ class MutHandle<Value> : public TypedMutHandleBase<Value>
 template <typename T>
 class MutHandle<T *> : public PointerMutHandleBase<T>
 {
+  private:
+    inline MutHandle(T **ptr);
+
   public:
     inline MutHandle(Root<T *> *root);
+    static inline MutHandle<T *> FromTracedLocation(T **locn);
 
     inline MutHandle<T *> &operator =(const Root<T *> &other);
     inline MutHandle<T *> &operator =(const Handle<T *> &other);
     inline MutHandle<T *> &operator =(const MutHandle<T *> &other);
     inline MutHandle<T *> &operator =(T *other);
+};
+
+
+//
+// VectorRootBase<...>
+//
+// Type-specialized base class for vectors of rooted things.
+//
+
+template <typename T>
+class VectorRootBase : public RootBase
+{
+  protected:
+    std::vector<T> things_;
+
+    inline VectorRootBase(ThreadContext *threadContext, RootKind kind);
+    inline VectorRootBase(RunContext *runContext, RootKind kind);
+
+  public:
+    inline Handle<T> get(uint32_t idx) const;
+    inline MutHandle<T> get(uint32_t idx);
+
+    inline Handle<T> operator [](uint32_t idx) const;
+    inline MutHandle<T> operator [](uint32_t idx);
+};
+
+template <typename T>
+class VectorRoot
+{
+    VectorRoot(const VectorRoot<T> &other) = delete;
+    VectorRoot(VectorRoot<T> &&other) = delete;
+};
+
+template <>
+class VectorRoot<Value> : public VectorRootBase<Value>
+{
+  public:
+    VectorRoot(RunContext *cx);
+    VectorRoot(ThreadContext *cx);
+};
+
+template <typename T>
+class VectorRoot<T *> : public VectorRootBase<T *>
+{
+  public:
+    VectorRoot(RunContext *cx);
+    VectorRoot(ThreadContext *cx);
 };
 
 

@@ -171,5 +171,17 @@ MutHandle<Value>::operator =(const Value &other)
     return *this;
 }
 
+//
+// VectorRoot<Value>
+//
+
+VectorRoot<Value>::VectorRoot(RunContext *cx)
+  : VectorRootBase<Value>(cx, RootKind::ValueVector)
+{}
+
+VectorRoot<Value>::VectorRoot(ThreadContext *cx)
+  : VectorRootBase<Value>(cx, RootKind::ValueVector)
+{}
+
 
 } // namespace Whisper
