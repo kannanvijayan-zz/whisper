@@ -577,6 +577,14 @@ VectorRootBase<T>::operator [](uint32_t idx)
     return get(idx);
 }
 
+template <typename T>
+inline void
+VectorRootBase<T>::append(const T &val)
+{
+    things_.push_back(val);
+}
+
+
 //
 // VectorRoot<T *>
 //

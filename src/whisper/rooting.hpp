@@ -389,6 +389,8 @@ class VectorRootBase : public RootBase
 
     inline Handle<T> operator [](uint32_t idx) const;
     inline MutHandle<T> operator [](uint32_t idx);
+
+    inline void append(const T &val);
 };
 
 template <typename T>
