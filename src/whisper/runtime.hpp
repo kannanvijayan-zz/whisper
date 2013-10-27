@@ -203,7 +203,7 @@ class RunContext
     VM::HeapString *createString(uint32_t length, const uint8_t *bytes);
     VM::HeapString *createString(uint32_t length, const uint16_t *bytes);
 
-    Value createDouble(double d);
+    Value createNumber(double d);
 
     VM::Tuple *createTuple(uint32_t count, const Value *vals);
 

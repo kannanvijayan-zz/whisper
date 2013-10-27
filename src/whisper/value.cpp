@@ -29,16 +29,14 @@ ValueTagNumber(ValueTag tag)
 }
 
 /*static*/ bool
-Value::IsImmediateDouble(double dval)
+Value::IsImmediateNumber(double dval)
 {
     // NaN is representable.
-    if (dval != dval)
+    if (DoubleIsNaN(dval))
         return true;
 
     // Infinity and -Infinity are representable.
-    if (dval == std::numeric_limits<double>::infinity())
-        return true;
-    if (dval == -std::numeric_limits<double>::infinity())
+    if (DoubleIsPosInf(dval) || DoubleIsNegInf(dval))
         return true;
 
     // 0.0 or -0.0 are representable.
@@ -46,7 +44,7 @@ Value::IsImmediateDouble(double dval)
         return true;
 
     // Look for exponents with high bits 100 or 011
-    unsigned exponent = GetExponentField(dval);
+    unsigned exponent = GetDoubleExponentField(dval);
     if (exponent >= 0x300 && exponent <= 0x4FF)
         return true;
 
@@ -100,21 +98,34 @@ Value::Int32(int32_t value)
 /*static*/ Value
 Value::Double(double dval)
 {
-    WH_ASSERT(IsImmediateDouble(dval));
+    WH_ASSERT(IsImmediateNumber(dval));
+    WH_ASSERT_IF(dval == 0.0, GetDoubleSign(dval));
+
     if (dval != dval)
-        return Value(NaNVal);
+        return NaN();
 
     if (dval == std::numeric_limits<double>::infinity())
-        return Value(PosInfVal);
+        return PosInf();
 
     if (dval == -std::numeric_limits<double>::infinity())
-        return Value(NegInfVal);
+        return NegInf();
 
-    if (dval == 0 && GetSign(dval))
-        return Value(NegZeroVal);
+    if (dval == 0 && GetDoubleSign(dval))
+        return NegZero();
 
     // Otherwise, rotate the double value.
     return Value(RotateLeft(DoubleToInt(dval), 4));
+}
+
+/*static*/ Value
+Value::Number(double dval)
+{
+    WH_ASSERT(IsImmediateNumber(dval));
+    bool isInt32 = (static_cast<int32_t>(dval) == dval);
+    if (isInt32)
+        return Int32(dval);
+
+    return Double(dval);
 }
 
 /*static*/ Value
@@ -122,6 +133,30 @@ Value::HeapDouble(VM::HeapDouble *dbl)
 {
     WH_ASSERT(IsPtrAligned(dbl, 1u << TagBits));
     return Value(PtrToWord(dbl) | ValueTagNumber(ValueTag::HeapDouble));
+}
+
+/*static*/ Value
+Value::NaN()
+{
+    return Value(NaNVal);
+}
+
+/*static*/ Value
+Value::PosInf()
+{
+    return Value(PosInfVal);
+}
+
+/*static*/ Value
+Value::NegInf()
+{
+    return Value(NegInfVal);
+}
+
+/*static*/ Value
+Value::NegZero()
+{
+    return Value(NegZeroVal);
 }
 
 
@@ -367,6 +402,30 @@ Value::int32Value() const
 {
     WH_ASSERT(isInt32());
     return ToInt32(tagged_ >> Int32Shift);
+}
+
+double
+Value::numberValue() const
+{
+    WH_ASSERT(isNumber());
+
+    if (isInt32())
+        return int32Value();
+
+    if (isNaN())
+        return std::numeric_limits<double>::quiet_NaN();
+
+    if (isNegInf())
+        return -std::numeric_limits<double>::infinity();
+
+    if (isPosInf())
+        return std::numeric_limits<double>::infinity();
+
+    if (isNegZero())
+        return -static_cast<double>(0.0);
+
+    WH_ASSERT(isImmDoubleLow() || isImmDoubleHigh());
+    return IntToDouble(RotateRight<uint64_t>(tagged_, 4));
 }
 
 unsigned

@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include <new>
+#include <limits>
 
 namespace Whisper {
 
@@ -110,16 +111,32 @@ inline double IntToDouble(uint64_t i) {
     return u.dval;
 }
 
-inline unsigned GetExponentField(double d) {
+inline unsigned GetDoubleExponentField(double d) {
     return (DoubleToInt(d) >> 52) & 0x7FFu;
 }
 
-inline uint64_t GetMantissaField(double d) {
+inline uint64_t GetDoubleMantissaField(double d) {
     return DoubleToInt(d) & ((ToUInt64(1) << 52) - 1);
 }
 
-inline bool GetSign(double d) {
+inline bool GetDoubleSign(double d) {
     return DoubleToInt(d) >> 63;
+}
+
+inline bool DoubleIsNaN(double d) {
+    return d != d;
+}
+
+inline bool DoubleIsPosInf(double d) {
+    return d == std::numeric_limits<double>::infinity();
+}
+
+inline bool DoubleIsNegInf(double d) {
+    return d == -std::numeric_limits<double>::infinity();
+}
+
+inline bool DoubleIsNegZero(double d) {
+    return d == 0.0 && GetDoubleSign(d);
 }
 
 // Max of two integers.

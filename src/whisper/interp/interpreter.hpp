@@ -46,6 +46,7 @@ class Interpreter
   private:
     Value readOperand(const OperandLocation &loc);
     void writeOperand(const OperandLocation &loc, const Value &val);
+    bool returnOperand(const OperandLocation &loc, const Value &val);
 
     bool interpretStop(Opcode op, int32_t *opBytes);
     bool interpretPushInt(Opcode op, int32_t *opBytes);

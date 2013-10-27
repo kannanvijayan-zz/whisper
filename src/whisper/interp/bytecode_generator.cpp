@@ -216,7 +216,7 @@ BytecodeGenerator::getAddressableLocation(AST::ExpressionNode *expr,
         // Otherwise, handle doubles.
         WH_ASSERT(annot->isDouble());
         double dbl = annot->doubleValue();
-        Value dval = cx_->createDouble(dbl);
+        Value dval = cx_->createNumber(dbl);
 
         uint32_t constIdx = constantPool_.size();
         if (constIdx > OperandMaxIndex)

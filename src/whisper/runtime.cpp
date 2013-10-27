@@ -314,10 +314,10 @@ RunContext::createString(uint32_t length, const uint16_t *bytes)
 }
 
 Value
-RunContext::createDouble(double d)
+RunContext::createNumber(double d)
 {
-    if (Value::IsImmediateDouble(d))
-        return Value::Double(d);
+    if (Value::IsImmediateNumber(d))
+        return Value::Number(d);
 
     return Value::HeapDouble(create<VM::HeapDouble>(d));
 }

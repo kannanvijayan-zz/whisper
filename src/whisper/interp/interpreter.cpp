@@ -247,6 +247,14 @@ Interpreter::writeOperand(const OperandLocation &loc, const Value &val)
 
 
 bool
+Interpreter::returnOperand(const OperandLocation &loc, const Value &val)
+{
+    writeOperand(loc, val);
+    return true;
+}
+
+
+bool
 Interpreter::interpretStop(Opcode op, int32_t *opBytes)
 {
     WH_ASSERT(frame_->stackDepth() == 0);
@@ -437,9 +445,25 @@ Interpreter::interpretDiv(Opcode op, int32_t *opBytes)
         int32_t lhsVal = lhs->int32Value();
         int32_t rhsVal = rhs->int32Value();
 
-        bool overflow = (lhsVal % rhsVal) != 0;
+        if (rhsVal == 0) {
+            // +N/0 is +Inf
+            if (lhsVal > 0) {
+                SpewInterpOpNote("  Int32 div %d / 0 => PosInf", lhsVal);
+                return returnOperand(outLoc, Value::PosInf());
+            }
 
-        if (!overflow) {
+            // -N/0 is -Inf
+            if (lhsVal < 0) {
+                SpewInterpOpNote("  Int32 div %d / 0 => NegInf", lhsVal);
+                return returnOperand(outLoc, Value::NegInf());
+            }
+
+            // 0/0 is NaN
+            SpewInterpOpNote("  Int32 div 0 / 0 => NaN");
+            return returnOperand(outLoc, Value::NaN());
+        }
+
+        if (lhsVal % rhsVal == 0) {
             int32_t resultVal = lhsVal / rhsVal;
             SpewInterpOpNote("  Int32 div %d / %d => %d",
                              lhsVal, rhsVal, resultVal);
@@ -448,7 +472,54 @@ Interpreter::interpretDiv(Opcode op, int32_t *opBytes)
         }
     }
 
-    WH_UNREACHABLE("Non-int32 divide not implemented yet!");
+    if (lhs->isNumber() && rhs->isNumber()) {
+        double lhsVal = lhs->numberValue();
+        double rhsVal = rhs->numberValue();
+
+        if (DoubleIsNaN(lhsVal) || DoubleIsNaN(rhsVal)) {
+            SpewInterpOpNote("  Double div %lf / %lf => NaN", lhsVal, rhsVal);
+            return returnOperand(outLoc, Value::NaN());
+        }
+
+        if (rhsVal == 0.0f) {
+            bool rhsIsNeg = GetDoubleSign(rhsVal);
+
+            if (lhsVal == 0.0f) {
+                SpewInterpOpNote("  Double div %lf / %lf => NaN",
+                                 lhsVal, rhsVal);
+                return returnOperand(outLoc, Value::NaN());
+            }
+
+            if (lhsVal < 0.0f) {
+                if (rhsIsNeg) {
+                    SpewInterpOpNote("  Double div %lf / %lf => PosInf",
+                                     lhsVal, rhsVal);
+                    return returnOperand(outLoc, Value::PosInf());
+                }
+
+                SpewInterpOpNote("  Double div %lf / %lf => NegInf",
+                                 lhsVal, rhsVal);
+                return returnOperand(outLoc, Value::NegInf());
+            }
+
+            if (rhsIsNeg) {
+                SpewInterpOpNote("  Double div %lf / %lf => NegInf",
+                                 lhsVal, rhsVal);
+                return returnOperand(outLoc, Value::NegInf());
+            }
+
+            SpewInterpOpNote("  Double div %lf / %lf => PosInf",
+                             lhsVal, rhsVal);
+            return returnOperand(outLoc, Value::PosInf());
+        }
+
+        double resultVal = lhsVal / rhsVal;
+        SpewInterpOpNote("  Double div %lf / %lf => %lf",
+                         lhsVal, rhsVal, resultVal);
+        return returnOperand(outLoc, cx_->createNumber(resultVal));
+    }
+
+    WH_UNREACHABLE("Non-number divide not implemented yet!");
     return false;
 }
 

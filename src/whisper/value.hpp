@@ -171,7 +171,7 @@ class Value
     static constexpr uint64_t Invalid = 0u;
 
     // Check if a double value can be encoded as an immediate.
-    static bool IsImmediateDouble(double dval);
+    static bool IsImmediateNumber(double dval);
 
   protected:
     uint64_t tagged_;
@@ -196,7 +196,13 @@ class Value
     static Value Undefined();
     static Value Int32(int32_t value);
     static Value Double(double dval);
+    static Value Number(double dval);
     static Value HeapDouble(VM::HeapDouble *dbl);
+
+    static Value NaN();
+    static Value PosInf();
+    static Value NegInf();
+    static Value NegZero();
 
 #if defined(ENABLE_DEBUG)
 
@@ -257,6 +263,7 @@ class Value
     VM::HeapString *getHeapString() const;
 
     int32_t int32Value() const;
+    double numberValue() const;
 
     unsigned immString8Length() const;
     uint8_t getImmString8Char(unsigned idx) const;
