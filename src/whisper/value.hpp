@@ -259,8 +259,8 @@ class Value
     //
 
     VM::Object *objectPtr() const;
-
-    VM::HeapString *getHeapString() const;
+    VM::HeapString *heapStringPtr() const;
+    VM::HeapDouble *heapDoublePtr() const;
 
     int32_t int32Value() const;
     double numberValue() const;

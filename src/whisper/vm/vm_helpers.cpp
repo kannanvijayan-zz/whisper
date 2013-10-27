@@ -112,7 +112,7 @@ IsNormalizedPropertyId(const Value &val)
         length = val.readImmString16(buf16);
         str16 = buf16;
     } else {
-        HeapString *heapStr = val.getHeapString();
+        HeapString *heapStr = val.heapStringPtr();
     
         if (!heapStr->isLinearString())
             return false;

@@ -6,6 +6,7 @@
 #include "value.hpp"
 #include "value_inlines.hpp"
 #include "vm/string.hpp"
+#include "vm/double.hpp"
 
 namespace Whisper {
 
@@ -388,12 +389,22 @@ Value::objectPtr() const
 }
 
 VM::HeapString *
-Value::getHeapString() const
+Value::heapStringPtr() const
 {
     WH_ASSERT(isHeapString());
     unsigned xorMask = ValueTagNumber(ValueTag::HeapString);
     VM::HeapString *s = reinterpret_cast<VM::HeapString *>(tagged_ ^ xorMask);
     WH_ASSERT(s->isValidString());
+    return s;
+}
+
+VM::HeapDouble *
+Value::heapDoublePtr() const
+{
+    WH_ASSERT(isHeapDouble());
+    unsigned xorMask = ValueTagNumber(ValueTag::HeapDouble);
+    VM::HeapDouble *s = reinterpret_cast<VM::HeapDouble *>(tagged_ ^ xorMask);
+    WH_ASSERT(s->isHeapDouble());
     return s;
 }
 
@@ -424,8 +435,11 @@ Value::numberValue() const
     if (isNegZero())
         return -static_cast<double>(0.0);
 
-    WH_ASSERT(isImmDoubleLow() || isImmDoubleHigh());
-    return IntToDouble(RotateRight<uint64_t>(tagged_, 4));
+    if (isImmDoubleLow() || isImmDoubleHigh())
+        return IntToDouble(RotateRight<uint64_t>(tagged_, 4));
+
+    WH_ASSERT(isHeapDouble());
+    return heapDoublePtr()->value();
 }
 
 unsigned
