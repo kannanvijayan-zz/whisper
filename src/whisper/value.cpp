@@ -32,6 +32,10 @@ ValueTagNumber(ValueTag tag)
 /*static*/ bool
 Value::IsImmediateNumber(double dval)
 {
+    // Int32s are representable.
+    if (ToInt32(dval) == dval)
+        return true;
+
     // NaN is representable.
     if (DoubleIsNaN(dval))
         return true;
@@ -115,15 +119,17 @@ Value::Double(double dval)
         return NegZero();
 
     // Otherwise, rotate the double value.
-    return Value(RotateLeft(DoubleToInt(dval), 4));
+    Value result = Value(RotateLeft(DoubleToInt(dval), 4));
+    WH_ASSERT(result.isImmDoubleLow() || result.isImmDoubleHigh());
+    return result;
 }
 
 /*static*/ Value
 Value::Number(double dval)
 {
     WH_ASSERT(IsImmediateNumber(dval));
-    bool isInt32 = (static_cast<int32_t>(dval) == dval);
-    if (isInt32)
+
+    if (ToInt32(dval) == dval)
         return Int32(dval);
 
     return Double(dval);

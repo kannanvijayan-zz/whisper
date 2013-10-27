@@ -1,4 +1,6 @@
 
+#include <cmath>
+
 #include "common.hpp"
 #include "spew.hpp"
 #include "runtime.hpp"
@@ -320,22 +322,29 @@ Interpreter::interpretAdd(Opcode op, int32_t *opBytes)
         int32_t rhsVal = rhs->int32Value();
         int32_t resultVal = lhsVal + rhsVal;
 
-        // Check for int32 overflow.
-        bool overflow = false;
-        bool lhsSign = lhsVal >> 31;
-        bool rhsSign = rhsVal >> 31;
-        if (lhsSign == rhsSign) {
-            bool resultSign = resultVal >> 31;
-            if (resultSign != lhsSign)
-                overflow = true;
-        }
+        // Common case: add two positive ints yielding positive int
+        if ((lhsVal >= 0) && (rhsVal >= 0) && (resultVal >= 0))
+            return returnOperand(outLoc, Value::Int32(resultVal));
 
-        if (!overflow) {
-            SpewInterpOpNote("  Int32 add %d + %d => %d",
-                             lhsVal, rhsVal, resultVal);
-            writeOperand(outLoc, Value::Int32(resultVal));
-            return true;
-        }
+        // Overflow can never occur if sign of lhs and rhs are different.
+        if ((lhsVal >= 0 && rhsVal < 0) || (lhsVal < 0 && rhsVal >= 0))
+            return returnOperand(outLoc, Value::Int32(resultVal));
+
+        // Least common case: add two negative ints yielding negative int
+        if ((lhsVal < 0) && (rhsVal < 0) && (resultVal < 0))
+            return returnOperand(outLoc, Value::Int32(resultVal));
+
+        // None of the above, so it must be overflow.
+    }
+
+    if (lhs->isNumber() && rhs->isNumber()) {
+        double lhsVal = lhs->numberValue();
+        double rhsVal = rhs->numberValue();
+
+        if (DoubleIsNaN(lhsVal) || DoubleIsNaN(rhsVal))
+            return returnOperand(outLoc, Value::NaN());
+
+        return returnOperand(outLoc, cx_->createNumber(lhsVal + rhsVal));
     }
 
     WH_UNREACHABLE("Non-int32 add not implemented yet!");
@@ -357,29 +366,34 @@ Interpreter::interpretSub(Opcode op, int32_t *opBytes)
         int32_t rhsVal = rhs->int32Value();
         int32_t resultVal = lhsVal - rhsVal;
 
-        // Check for int32 overflow.
-        bool overflow = false;
-        if (rhsVal == INT32_MIN) {
-            overflow = true;
-        } else {
-            bool lhsSign = lhsVal >> 31;
-            bool negRhsSign = -rhsVal >> 31;
-            if (lhsSign == negRhsSign) {
-                bool resultSign = resultVal >> 31;
-                if (resultSign != lhsSign)
-                    overflow = true;
-            }
-        }
+        // |lhs - rhs| will not overflow if:
+        //   lhs >= 0 and rhsVal >= 0 - worst case: 0 - INT_MAX == INT_MIN + 1
+        //   lhs < 0 and rhsVal < 0 - worst case: -1 - INT_MIN == INT_MAX
+        if ((lhsVal >= 0 && rhsVal >= 0) || (lhsVal < 0 && rhsVal < 0))
+            return returnOperand(outLoc, Value::Int32(resultVal));
 
-        if (!overflow) {
-            SpewInterpOpNote("  Int32 sub %d - %d => %d",
-                             lhsVal, rhsVal, resultVal);
-            writeOperand(outLoc, Value::Int32(resultVal));
-            return true;
-        }
+        // We now know that the sign of |lhsVal| and |rhsVal| are different,
+        // so we have |(-x) - y| or |x - (-y)|.
+        // If an overflow occurrs, the result will have opposite sign
+        // from |lhsVal|.  In the most extreme case, we have
+        //   INT32_MIN - INT32_MAX == INT32_MAX - (INT32_MAX-1) == 1
+        // or
+        //   INT32_MAX - INT32_MIN == INT32_MIN - (INT32_MIN+1) == -1
+        if ((resultVal >= 0) == (lhsVal >= 0))
+            return returnOperand(outLoc, Value::Int32(resultVal));
     }
 
-    WH_UNREACHABLE("Non-int32 subtract not implemented yet!");
+    if (lhs->isNumber() && rhs->isNumber()) {
+        double lhsVal = lhs->numberValue();
+        double rhsVal = rhs->numberValue();
+
+        if (DoubleIsNaN(lhsVal) || DoubleIsNaN(rhsVal))
+            return returnOperand(outLoc, Value::NaN());
+
+        return returnOperand(outLoc, cx_->createNumber(lhsVal - rhsVal));
+    }
+
+    WH_UNREACHABLE("Non-number subtract not implemented yet!");
     return false;
 }
 
@@ -418,16 +432,21 @@ Interpreter::interpretMul(Opcode op, int32_t *opBytes)
         // Check for int32 overflow.
         bool overflow = (lhsBits + rhsBits > 31);
 
-        if (!overflow) {
-            int32_t resultVal = lhsVal * rhsVal;
-            SpewInterpOpNote("  Int32 mul %d * %d => %d",
-                             lhsVal, rhsVal, resultVal);
-            writeOperand(outLoc, Value::Int32(resultVal));
-            return true;
-        }
+        if (!overflow)
+            return returnOperand(outLoc, Value::Int32(lhsVal * rhsVal));
     }
 
-    WH_UNREACHABLE("Non-int32 multiply not implemented yet!");
+    if (lhs->isNumber() && rhs->isNumber()) {
+        double lhsVal = lhs->numberValue();
+        double rhsVal = rhs->numberValue();
+
+        if (DoubleIsNaN(lhsVal) || DoubleIsNaN(rhsVal))
+            return returnOperand(outLoc, Value::NaN());
+
+        return returnOperand(outLoc, cx_->createNumber(lhsVal * rhsVal));
+    }
+
+    WH_UNREACHABLE("Non-number multiply not implemented yet!");
     return false;
 }
 
@@ -447,76 +466,48 @@ Interpreter::interpretDiv(Opcode op, int32_t *opBytes)
 
         if (rhsVal == 0) {
             // +N/0 is +Inf
-            if (lhsVal > 0) {
-                SpewInterpOpNote("  Int32 div %d / 0 => PosInf", lhsVal);
+            if (lhsVal > 0)
                 return returnOperand(outLoc, Value::PosInf());
-            }
 
             // -N/0 is -Inf
-            if (lhsVal < 0) {
-                SpewInterpOpNote("  Int32 div %d / 0 => NegInf", lhsVal);
+            if (lhsVal < 0)
                 return returnOperand(outLoc, Value::NegInf());
-            }
 
             // 0/0 is NaN
-            SpewInterpOpNote("  Int32 div 0 / 0 => NaN");
             return returnOperand(outLoc, Value::NaN());
         }
 
-        if (lhsVal % rhsVal == 0) {
-            int32_t resultVal = lhsVal / rhsVal;
-            SpewInterpOpNote("  Int32 div %d / %d => %d",
-                             lhsVal, rhsVal, resultVal);
-            writeOperand(outLoc, Value::Int32(resultVal));
-            return true;
-        }
+        if (lhsVal % rhsVal == 0)
+            return returnOperand(outLoc, Value::Int32(lhsVal / rhsVal));
     }
 
     if (lhs->isNumber() && rhs->isNumber()) {
         double lhsVal = lhs->numberValue();
         double rhsVal = rhs->numberValue();
 
-        if (DoubleIsNaN(lhsVal) || DoubleIsNaN(rhsVal)) {
-            SpewInterpOpNote("  Double div %lf / %lf => NaN", lhsVal, rhsVal);
+        if (DoubleIsNaN(lhsVal) || DoubleIsNaN(rhsVal))
             return returnOperand(outLoc, Value::NaN());
-        }
 
         if (rhsVal == 0.0f) {
             bool rhsIsNeg = GetDoubleSign(rhsVal);
 
-            if (lhsVal == 0.0f) {
-                SpewInterpOpNote("  Double div %lf / %lf => NaN",
-                                 lhsVal, rhsVal);
+            if (lhsVal == 0.0f)
                 return returnOperand(outLoc, Value::NaN());
-            }
 
             if (lhsVal < 0.0f) {
-                if (rhsIsNeg) {
-                    SpewInterpOpNote("  Double div %lf / %lf => PosInf",
-                                     lhsVal, rhsVal);
+                if (rhsIsNeg)
                     return returnOperand(outLoc, Value::PosInf());
-                }
 
-                SpewInterpOpNote("  Double div %lf / %lf => NegInf",
-                                 lhsVal, rhsVal);
                 return returnOperand(outLoc, Value::NegInf());
             }
 
-            if (rhsIsNeg) {
-                SpewInterpOpNote("  Double div %lf / %lf => NegInf",
-                                 lhsVal, rhsVal);
+            if (rhsIsNeg)
                 return returnOperand(outLoc, Value::NegInf());
-            }
 
-            SpewInterpOpNote("  Double div %lf / %lf => PosInf",
-                             lhsVal, rhsVal);
             return returnOperand(outLoc, Value::PosInf());
         }
 
-        double resultVal = lhsVal / rhsVal;
-        SpewInterpOpNote("  Double div %lf / %lf => %lf",
-                         lhsVal, rhsVal, resultVal);
-        return returnOperand(outLoc, cx_->createNumber(resultVal));
+        return returnOperand(outLoc, cx_->createNumber(lhsVal / rhsVal));
     }
 
     WH_UNREACHABLE("Non-number divide not implemented yet!");
@@ -536,15 +527,17 @@ Interpreter::interpretMod(Opcode op, int32_t *opBytes)
     if (lhs->isInt32() && rhs->isInt32()) {
         int32_t lhsVal = lhs->int32Value();
         int32_t rhsVal = rhs->int32Value();
-
-        int32_t resultVal = lhsVal % rhsVal;
-        SpewInterpOpNote("  Int32 mod %d %% %d => %d",
-                         lhsVal, rhsVal, resultVal);
-        writeOperand(outLoc, Value::Int32(resultVal));
-        return true;
+        if (lhsVal >= 0 && rhsVal >= 0)
+            return returnOperand(outLoc, Value::Int32(lhsVal % rhsVal));
     }
 
-    WH_UNREACHABLE("Non-int32 modulo not implemented yet!");
+    if (lhs->isNumber() && rhs->isNumber()) {
+        int32_t lhsVal = lhs->numberValue();
+        int32_t rhsVal = rhs->numberValue();
+        return returnOperand(outLoc, cx_->createNumber(fmod(lhsVal, rhsVal)));
+    }
+
+    WH_UNREACHABLE("Non-number modulo not implemented yet!");
     return false;
 }
 
