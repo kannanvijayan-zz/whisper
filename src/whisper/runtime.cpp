@@ -301,16 +301,39 @@ RunContext::hatchery() const
     return hatchery_;
 }
 
-VM::HeapString *
+Value
 RunContext::createString(uint32_t length, const uint8_t *bytes)
 {
-    return createSized<VM::LinearString>(length, bytes);
+    if (length < Value::ImmString8MaxLength)
+        return Value::ImmString8(length, bytes);
+
+    return Value::HeapString(createSized<VM::LinearString>(length, bytes));
 }
 
-VM::HeapString *
+Value
 RunContext::createString(uint32_t length, const uint16_t *bytes)
 {
-    return createSized<VM::LinearString>(length, bytes);
+    // Check if this is really an 8-bit string in 16-bit clothes.
+    if (length <= Value::ImmString8MaxLength) {
+        bool isEightBit = true;
+        for (unsigned i = 0; i < length; i++) {
+            if (bytes[i] >= 0xFFu) {
+                isEightBit = false;
+                break;
+            }
+        }
+        if (isEightBit) {
+            uint8_t buf[Value::ImmString8MaxLength];
+            for (unsigned i = 0; i < length; i++)
+                buf[i] = bytes[i];
+            return Value::ImmString8(length, buf);
+        }
+    }
+
+    if (length < Value::ImmString16MaxLength)
+        return Value::ImmString16(length, bytes);
+
+    return Value::HeapString(createSized<VM::LinearString>(length, bytes));
 }
 
 Value

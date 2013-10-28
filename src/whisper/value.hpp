@@ -57,8 +57,8 @@ namespace Whisper {
 //  0000-0000 0000-0000 ... 0000-0000 0000-0000 0001-0101 - PosInf
 //  0000-0000 0000-0000 ... 0000-0000 0000-0000 0001-1101 - NegZero
 //  0000-0000 0000-0000 ... IIII-IIII IIII-IIII 0010-0101 - Int32
-//  AAAA-AAAA BBBB-BBBB ... GGGG-GGGG GGGG-GGGG SSS0-0110 - ImmString8
-//  AAAA-AAAA AAAA-AAAA ... CCCC-CCCC 0000-0000 0SS1-0110 - ImmString16
+//  GGGG-GGGG FFFF-FFFF ... BBBB-BBBB AAAA-AAAA SSS0-0110 - ImmString8
+//  CCCC-CCCC CCCC-CCCC ... AAAA-AAAA 0000-0000 0SS1-0110 - ImmString16
 //  0000-0000 0000-0000 ... 0000-0000 0000-0000 0001-1110 - Undefined
 //  0000-0000 0000-0000 ... 0000-0000 0000-0000 0101-1110 - Null
 //  0000-0000 0000-0000 ... 0000-0000 0000-0000 0011-1110 - False
@@ -203,6 +203,10 @@ class Value
     static Value PosInf();
     static Value NegInf();
     static Value NegZero();
+
+    static Value ImmString8(unsigned length, const uint8_t *data);
+    static Value ImmString16(unsigned length, const uint16_t *data);
+    static Value HeapString(VM::HeapString *str);
 
 #if defined(ENABLE_DEBUG)
 

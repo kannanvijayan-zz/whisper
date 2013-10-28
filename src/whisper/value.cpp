@@ -138,6 +138,7 @@ Value::Number(double dval)
 /*static*/ Value
 Value::HeapDouble(VM::HeapDouble *dbl)
 {
+    WH_ASSERT(dbl != nullptr);
     WH_ASSERT(IsPtrAligned(dbl, 1u << TagBits));
     return Value(PtrToWord(dbl) | ValueTagNumber(ValueTag::HeapDouble));
 }
@@ -165,6 +166,35 @@ Value::NegZero()
 {
     return Value(NegZeroVal);
 }
+
+/*static*/ Value
+Value::ImmString8(unsigned length, const uint8_t *data)
+{
+    WH_ASSERT(length <= ImmString8MaxLength);
+    uint64_t val = ImmString8Code | (length << ImmStringLengthShift);
+    for (unsigned i = 0; i < length; i++)
+        val |= data[i] << (ImmString8DataShift + (i*8));
+    return Value(val);
+}
+
+/*static*/ Value
+Value::ImmString16(unsigned length, const uint16_t *data)
+{
+    WH_ASSERT(length <= ImmString16MaxLength);
+    uint64_t val = ImmString16Code | (length << ImmStringLengthShift);
+    for (unsigned i = 0; i < length; i++)
+        val |= data[i] << (ImmString16DataShift + (i*16));
+    return Value(val);
+}
+
+/*static*/ Value
+Value::HeapString(VM::HeapString *str)
+{
+    WH_ASSERT(str != nullptr);
+    WH_ASSERT(IsPtrAligned(str, 1u << TagBits));
+    return Value(PtrToWord(str) | ValueTagNumber(ValueTag::HeapString));
+}
+
 
 
 #if defined(ENABLE_DEBUG)

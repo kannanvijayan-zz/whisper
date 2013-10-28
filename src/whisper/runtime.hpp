@@ -200,8 +200,8 @@ class RunContext
     template <typename ObjT, typename... Args>
     inline ObjT *createSized(uint32_t size, Args... args);
 
-    VM::HeapString *createString(uint32_t length, const uint8_t *bytes);
-    VM::HeapString *createString(uint32_t length, const uint16_t *bytes);
+    Value createString(uint32_t length, const uint8_t *bytes);
+    Value createString(uint32_t length, const uint16_t *bytes);
 
     Value createNumber(double d);
 
