@@ -9,6 +9,7 @@
 #include "vm/heap_thing_inlines.hpp"
 #include "vm/stack_frame.hpp"
 #include "vm/bytecode.hpp"
+#include "vm/arithmetic_ops.hpp"
 #include "interp/interpreter.hpp"
 
 namespace Whisper {
@@ -249,14 +250,6 @@ Interpreter::writeOperand(const OperandLocation &loc, const Value &val)
 
 
 bool
-Interpreter::returnOperand(const OperandLocation &loc, const Value &val)
-{
-    writeOperand(loc, val);
-    return true;
-}
-
-
-bool
 Interpreter::interpretStop(Opcode op, int32_t *opBytes)
 {
     WH_ASSERT(frame_->stackDepth() == 0);
@@ -317,38 +310,12 @@ Interpreter::interpretAdd(Opcode op, int32_t *opBytes)
 
     readBinaryOperandValues(op, Opcode::Add_SSS, &lhs, &rhs, &outLoc, opBytes);
 
-    if (lhs->isInt32() && rhs->isInt32()) {
-        int32_t lhsVal = lhs->int32Value();
-        int32_t rhsVal = rhs->int32Value();
-        int32_t resultVal = lhsVal + rhsVal;
+    Root<Value> result(cx_);
+    if (!VM::PerformAdd(cx_, lhs, rhs, &result))
+        return false;
 
-        // Common case: add two positive ints yielding positive int
-        if ((lhsVal >= 0) && (rhsVal >= 0) && (resultVal >= 0))
-            return returnOperand(outLoc, Value::Int32(resultVal));
-
-        // Overflow can never occur if sign of lhs and rhs are different.
-        if ((lhsVal >= 0 && rhsVal < 0) || (lhsVal < 0 && rhsVal >= 0))
-            return returnOperand(outLoc, Value::Int32(resultVal));
-
-        // Least common case: add two negative ints yielding negative int
-        if ((lhsVal < 0) && (rhsVal < 0) && (resultVal < 0))
-            return returnOperand(outLoc, Value::Int32(resultVal));
-
-        // None of the above, so it must be overflow.
-    }
-
-    if (lhs->isNumber() && rhs->isNumber()) {
-        double lhsVal = lhs->numberValue();
-        double rhsVal = rhs->numberValue();
-
-        if (DoubleIsNaN(lhsVal) || DoubleIsNaN(rhsVal))
-            return returnOperand(outLoc, Value::NaN());
-
-        return returnOperand(outLoc, cx_->createNumber(lhsVal + rhsVal));
-    }
-
-    WH_UNREACHABLE("Non-int32 add not implemented yet!");
-    return false;
+    writeOperand(outLoc, result);
+    return true;
 }
 
 
@@ -361,54 +328,12 @@ Interpreter::interpretSub(Opcode op, int32_t *opBytes)
 
     readBinaryOperandValues(op, Opcode::Sub_SSS, &lhs, &rhs, &outLoc, opBytes);
 
-    if (lhs->isInt32() && rhs->isInt32()) {
-        int32_t lhsVal = lhs->int32Value();
-        int32_t rhsVal = rhs->int32Value();
-        int32_t resultVal = lhsVal - rhsVal;
+    Root<Value> result(cx_);
+    if (!VM::PerformSub(cx_, lhs, rhs, &result))
+        return false;
 
-        // |lhs - rhs| will not overflow if:
-        //   lhs >= 0 and rhsVal >= 0 - worst case: 0 - INT_MAX == INT_MIN + 1
-        //   lhs < 0 and rhsVal < 0 - worst case: -1 - INT_MIN == INT_MAX
-        if ((lhsVal >= 0 && rhsVal >= 0) || (lhsVal < 0 && rhsVal < 0))
-            return returnOperand(outLoc, Value::Int32(resultVal));
-
-        // We now know that the sign of |lhsVal| and |rhsVal| are different,
-        // so we have |(-x) - y| or |x - (-y)|.
-        // If an overflow occurrs, the result will have opposite sign
-        // from |lhsVal|.  In the most extreme case, we have
-        //   INT32_MIN - INT32_MAX == INT32_MAX - (INT32_MAX-1) == 1
-        // or
-        //   INT32_MAX - INT32_MIN == INT32_MIN - (INT32_MIN+1) == -1
-        if ((resultVal >= 0) == (lhsVal >= 0))
-            return returnOperand(outLoc, Value::Int32(resultVal));
-    }
-
-    if (lhs->isNumber() && rhs->isNumber()) {
-        double lhsVal = lhs->numberValue();
-        double rhsVal = rhs->numberValue();
-
-        if (DoubleIsNaN(lhsVal) || DoubleIsNaN(rhsVal))
-            return returnOperand(outLoc, Value::NaN());
-
-        return returnOperand(outLoc, cx_->createNumber(lhsVal - rhsVal));
-    }
-
-    WH_UNREACHABLE("Non-number subtract not implemented yet!");
-    return false;
-}
-
-
-static unsigned
-NumSignificantBits(int32_t val)
-{
-    unsigned result = 0;
-    while (val != 0 && val != -1) {
-        result += 1;
-        val >>= 1;
-    }
-    // one extra bit needed to represent sign.
-    result += 1;
-    return result;
+    writeOperand(outLoc, result);
+    return true;
 }
 
 
@@ -421,33 +346,12 @@ Interpreter::interpretMul(Opcode op, int32_t *opBytes)
 
     readBinaryOperandValues(op, Opcode::Mul_SSS, &lhs, &rhs, &outLoc, opBytes);
 
-    if (lhs->isInt32() && rhs->isInt32()) {
-        int32_t lhsVal = lhs->int32Value();
-        int32_t rhsVal = rhs->int32Value();
+    Root<Value> result(cx_);
+    if (!VM::PerformMul(cx_, lhs, rhs, &result))
+        return false;
 
-        // Check number of significant bits in each number.
-        unsigned lhsBits = NumSignificantBits(lhsVal);
-        unsigned rhsBits = NumSignificantBits(rhsVal);
-
-        // Check for int32 overflow.
-        bool overflow = (lhsBits + rhsBits > 31);
-
-        if (!overflow)
-            return returnOperand(outLoc, Value::Int32(lhsVal * rhsVal));
-    }
-
-    if (lhs->isNumber() && rhs->isNumber()) {
-        double lhsVal = lhs->numberValue();
-        double rhsVal = rhs->numberValue();
-
-        if (DoubleIsNaN(lhsVal) || DoubleIsNaN(rhsVal))
-            return returnOperand(outLoc, Value::NaN());
-
-        return returnOperand(outLoc, cx_->createNumber(lhsVal * rhsVal));
-    }
-
-    WH_UNREACHABLE("Non-number multiply not implemented yet!");
-    return false;
+    writeOperand(outLoc, result);
+    return true;
 }
 
 
@@ -460,58 +364,12 @@ Interpreter::interpretDiv(Opcode op, int32_t *opBytes)
 
     readBinaryOperandValues(op, Opcode::Div_SSS, &lhs, &rhs, &outLoc, opBytes);
 
-    if (lhs->isInt32() && rhs->isInt32()) {
-        int32_t lhsVal = lhs->int32Value();
-        int32_t rhsVal = rhs->int32Value();
+    Root<Value> result(cx_);
+    if (!VM::PerformDiv(cx_, lhs, rhs, &result))
+        return false;
 
-        if (rhsVal == 0) {
-            // +N/0 is +Inf
-            if (lhsVal > 0)
-                return returnOperand(outLoc, Value::PosInf());
-
-            // -N/0 is -Inf
-            if (lhsVal < 0)
-                return returnOperand(outLoc, Value::NegInf());
-
-            // 0/0 is NaN
-            return returnOperand(outLoc, Value::NaN());
-        }
-
-        if (lhsVal % rhsVal == 0)
-            return returnOperand(outLoc, Value::Int32(lhsVal / rhsVal));
-    }
-
-    if (lhs->isNumber() && rhs->isNumber()) {
-        double lhsVal = lhs->numberValue();
-        double rhsVal = rhs->numberValue();
-
-        if (DoubleIsNaN(lhsVal) || DoubleIsNaN(rhsVal))
-            return returnOperand(outLoc, Value::NaN());
-
-        if (rhsVal == 0.0f) {
-            bool rhsIsNeg = GetDoubleSign(rhsVal);
-
-            if (lhsVal == 0.0f)
-                return returnOperand(outLoc, Value::NaN());
-
-            if (lhsVal < 0.0f) {
-                if (rhsIsNeg)
-                    return returnOperand(outLoc, Value::PosInf());
-
-                return returnOperand(outLoc, Value::NegInf());
-            }
-
-            if (rhsIsNeg)
-                return returnOperand(outLoc, Value::NegInf());
-
-            return returnOperand(outLoc, Value::PosInf());
-        }
-
-        return returnOperand(outLoc, cx_->createNumber(lhsVal / rhsVal));
-    }
-
-    WH_UNREACHABLE("Non-number divide not implemented yet!");
-    return false;
+    writeOperand(outLoc, result);
+    return true;
 }
 
 
@@ -524,21 +382,12 @@ Interpreter::interpretMod(Opcode op, int32_t *opBytes)
 
     readBinaryOperandValues(op, Opcode::Mod_SSS, &lhs, &rhs, &outLoc, opBytes);
 
-    if (lhs->isInt32() && rhs->isInt32()) {
-        int32_t lhsVal = lhs->int32Value();
-        int32_t rhsVal = rhs->int32Value();
-        if (lhsVal >= 0 && rhsVal >= 0)
-            return returnOperand(outLoc, Value::Int32(lhsVal % rhsVal));
-    }
+    Root<Value> result(cx_);
+    if (!VM::PerformMod(cx_, lhs, rhs, &result))
+        return false;
 
-    if (lhs->isNumber() && rhs->isNumber()) {
-        int32_t lhsVal = lhs->numberValue();
-        int32_t rhsVal = rhs->numberValue();
-        return returnOperand(outLoc, cx_->createNumber(fmod(lhsVal, rhsVal)));
-    }
-
-    WH_UNREACHABLE("Non-number modulo not implemented yet!");
-    return false;
+    writeOperand(outLoc, result);
+    return true;
 }
 
 
@@ -550,20 +399,12 @@ Interpreter::interpretNeg(Opcode op, int32_t *opBytes)
 
     readUnaryOperandValues(op, Opcode::Neg_SS, &input, &outLoc, opBytes);
 
-    if (input->isInt32()) {
-        int32_t inputVal = input->int32Value();
+    Root<Value> result(cx_);
+    if (!VM::PerformNeg(cx_, input, &result))
+        return false;
 
-        bool overflow = (inputVal == INT32_MIN);
-        if (!overflow) {
-            int32_t resultVal = -inputVal;
-            SpewInterpOpNote("  Int32 neg -%d => %d", inputVal, resultVal);
-            writeOperand(outLoc, Value::Int32(resultVal));
-            return true;
-        }
-    }
-
-    WH_UNREACHABLE("Non-int32 negate not implemented yet!");
-    return false;
+    writeOperand(outLoc, result);
+    return true;
 }
 
 

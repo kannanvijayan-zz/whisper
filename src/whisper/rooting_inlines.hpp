@@ -342,6 +342,7 @@ inline TypedMutHandleBase<T> &
 TypedMutHandleBase<T>::operator =(const T &val)
 {
     set(val);
+    return *this;
 }
 
 
