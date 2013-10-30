@@ -92,51 +92,24 @@ IsNormalizedPropertyId<uint16_t>(const uint16_t *str, uint32_t length);
 bool
 IsNormalizedPropertyId(const Value &val)
 {
-    if (!val.isInt32() && !val.isString())
-        return false;
-
-    // Check for int32.
-    if (val.isInt32())
+    // All immediate strings are normalized property ids.
+    if (val.isImmString())
         return true;
 
-    // Value is a string.
-    uint32_t length;
-    uint8_t buf8[Value::ImmString8MaxLength];
-    uint16_t buf16[Value::ImmString16MaxLength];
-    const uint8_t *str8 = nullptr;
-    const uint16_t *str16 = nullptr;
-    if (val.isImmString8()) {
-        length = val.readImmString8(buf8);
-        str8 = buf8;
-    } else if (val.isImmString16()) {
-        length = val.readImmString16(buf16);
-        str16 = buf16;
-    } else {
-        HeapString *heapStr = val.heapStringPtr();
-    
-        if (!heapStr->isLinearString())
-            return false;
+    // The only remaining strings should be heap strings.
+    WH_ASSERT_IF(val.isString(), val.isHeapString());
 
-        LinearString *linStr = heapStr->toLinearString();
-        if (linStr->fitsImmediate())
-            return false;
+    if (!val.isHeapString())
+        return false;
 
-        if (!linStr->isPropertyName())
-            return false;
+    // All normalized heap strings are linear.
+    VM::HeapString *heapStr = val.heapStringPtr();
+    if (!heapStr->isLinearString())
+        return false;
 
-        if (linStr->isEightBit())
-            str8 = linStr->eightBitData();
-        else
-            str16 = linStr->sixteenBitData();
-    }
-
-    // One of str8 or str16 were set above.
-    WH_ASSERT(str8 || str16);
-    WH_ASSERT(!str8 && !str16);
-    if (str8)
-        return IsNormalizedPropertyId(str8, length);
-
-    return IsNormalizedPropertyId(str16, length);
+    // The linear string must be interned and identified as a property name.
+    VM::LinearString *linearStr = heapStr->toLinearString();
+    return linearStr->isInterned() && linearStr->isPropertyName();
 }
 
 

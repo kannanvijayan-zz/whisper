@@ -36,7 +36,8 @@ namespace Whisper {
 //    110
 //      SSS00 - 8-bit immediate string (up to 7 chars).
 //      ???01 - UNUSED
-//      ?SS10 - 16-bit immediate string (up to 3 chars).
+//      SS010 - 16-bit immediate string (up to 3 chars).
+//      00110 - Index string (value is positive int32).
 //      00011 - Undefined
 //      01011 - Null
 //      00111 - False
@@ -56,9 +57,10 @@ namespace Whisper {
 //  0000-0000 0000-0000 ... 0000-0000 0000-0000 0000-1101 - NegInf
 //  0000-0000 0000-0000 ... 0000-0000 0000-0000 0001-0101 - PosInf
 //  0000-0000 0000-0000 ... 0000-0000 0000-0000 0001-1101 - NegZero
-//  0000-0000 0000-0000 ... IIII-IIII IIII-IIII 0010-0101 - Int32
+//  IIII-IIII IIII-IIII ... IIII-IIII IIII-IIII 0010-0101 - Int32
 //  GGGG-GGGG FFFF-FFFF ... BBBB-BBBB AAAA-AAAA SSS0-0110 - ImmString8
-//  CCCC-CCCC CCCC-CCCC ... AAAA-AAAA 0000-0000 0SS1-0110 - ImmString16
+//  CCCC-CCCC CCCC-CCCC ... AAAA-AAAA 0000-0000 SS01-0110 - ImmString16
+//  IIII-IIII IIII-IIII ... IIII-IIII IIII-IIII 0011-0110 - ImmIndexString
 //  0000-0000 0000-0000 ... 0000-0000 0000-0000 0001-1110 - Undefined
 //  0000-0000 0000-0000 ... 0000-0000 0000-0000 0101-1110 - Null
 //  0000-0000 0000-0000 ... 0000-0000 0000-0000 0011-1110 - False
@@ -102,6 +104,7 @@ enum class ValueRepr : uint8_t
     Int32,
     ImmString8,
     ImmString16,
+    ImmIndexString,
     Undefined,
     Null,
     False,
@@ -144,19 +147,24 @@ class Value
     static constexpr unsigned Int32Code = 0x20 | 0x5;
 
 
-    static constexpr unsigned ImmStringMask = 0x1f;
-    static constexpr unsigned ImmStringLengthShift = 5;
-
+    static constexpr unsigned ImmString8Mask = 0x1f;
     static constexpr unsigned ImmString8Code = 0x00 | 0x6;
     static constexpr unsigned ImmString8LengthMask = 0x07;
+    static constexpr unsigned ImmString8LengthShift = 5;
     static constexpr unsigned ImmString8MaxLength = 7;
     static constexpr unsigned ImmString8DataShift = 8;
 
+    static constexpr unsigned ImmString16Mask = 0x3f;
     static constexpr unsigned ImmString16Code = 0x10 | 0x6;
     static constexpr unsigned ImmString16LengthMask = 0x03;
+    static constexpr unsigned ImmString16LengthShift = 6;
     static constexpr unsigned ImmString16MaxLength = 3;
     static constexpr unsigned ImmString16DataShift = 16;
 
+    static constexpr unsigned ImmIndexStringMask = 0x3f;
+    static constexpr unsigned ImmIndexStringCode = 0x30 | 0x6;
+    static constexpr unsigned ImmIndexStringMaxLength = 10; // "2147483647"
+    static constexpr unsigned ImmIndexStringDataShift = 8;
 
     static constexpr unsigned RestMask = 0xff;
     static constexpr unsigned UndefinedVal = 0x18 | 0x6;
@@ -172,6 +180,12 @@ class Value
 
     // Check if a double value can be encoded as an immediate.
     static bool IsImmediateNumber(double dval);
+
+    static int32_t ImmediateIndexValue(uint32_t length, const uint8_t *str);
+    static int32_t ImmediateIndexValue(uint32_t length, const uint16_t *str);
+
+    static bool IsImmediateIndexString(uint32_t length, const uint8_t *str);
+    static bool IsImmediateIndexString(uint32_t length, const uint16_t *str);
 
   protected:
     uint64_t tagged_;
@@ -206,6 +220,7 @@ class Value
 
     static Value ImmString8(unsigned length, const uint8_t *data);
     static Value ImmString16(unsigned length, const uint16_t *data);
+    static Value ImmIndexString(int32_t idx);
     static Value HeapString(VM::HeapString *str);
 
 #if defined(ENABLE_DEBUG)
@@ -240,6 +255,7 @@ class Value
 
     bool isImmString8() const;
     bool isImmString16() const;
+    bool isImmIndexString() const;
 
     bool isUndefined() const;
     bool isNull() const;
@@ -255,6 +271,7 @@ class Value
     bool isImmediate() const;
 
     bool isNumber() const;
+    bool isImmString() const;
     bool isString() const;
     bool isBoolean() const;
 
@@ -280,6 +297,13 @@ class Value
 
     template <typename CharT, bool Trunc=false>
     inline uint32_t readImmString16(CharT *buf) const;
+
+    int32_t immIndexStringValue() const;
+    unsigned immIndexStringLength() const;
+    uint8_t getImmIndexStringChar(unsigned idx) const;
+
+    template <typename CharT, bool Trunc=false>
+    inline uint32_t readImmIndexString(CharT *buf) const;
 
     unsigned immStringLength() const;
     uint16_t getImmStringChar(unsigned idx) const;

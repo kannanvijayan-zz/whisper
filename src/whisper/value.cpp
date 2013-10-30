@@ -56,6 +56,65 @@ Value::IsImmediateNumber(double dval)
     return false;
 }
 
+template <typename CharT>
+static int32_t
+ImmediateIndexValueHelper(uint32_t length, const CharT *str)
+{
+    if (length > Value::ImmIndexStringMaxLength || length == 0)
+        return -1;
+
+    if (str[0] == static_cast<CharT>('0')) {
+        if (length == 1)
+            return 0;
+        return -1;
+    }
+
+    int32_t accum = 0;
+    for (uint32_t i = 0; i < length; i++) {
+        if (str[i] < static_cast<CharT>('0'))
+            return -1;
+
+        if (str[i] > static_cast<CharT>('9'))
+            return -1;
+
+        int32_t digit = ToInt32(str[i] - static_cast<CharT>('0'));
+
+        if (accum > (INT32_MAX / 10))
+            return -1;
+
+        accum *= 10;
+        accum += digit;
+        if (accum < 0)
+            return -1;
+    }
+
+    return accum;
+}
+
+/*static*/ int32_t
+Value::ImmediateIndexValue(uint32_t length, const uint8_t *str)
+{
+    return ImmediateIndexValueHelper<uint8_t>(length, str);
+}
+
+/*static*/ int32_t
+Value::ImmediateIndexValue(uint32_t length, const uint16_t *str)
+{
+    return ImmediateIndexValueHelper<uint16_t>(length, str);
+}
+
+/*static*/ bool
+Value::IsImmediateIndexString(uint32_t length, const uint8_t *str)
+{
+    return ImmediateIndexValue(length, str) == -1;
+}
+
+/*static*/ bool
+Value::IsImmediateIndexString(uint32_t length, const uint16_t *str)
+{
+    return ImmediateIndexValue(length, str) == -1;
+}
+
 Value::Value() : tagged_(Invalid) {}
 
 // Raw uint64_t constructor is private.
@@ -171,7 +230,8 @@ Value::NegZero()
 Value::ImmString8(unsigned length, const uint8_t *data)
 {
     WH_ASSERT(length <= ImmString8MaxLength);
-    uint64_t val = ImmString8Code | (length << ImmStringLengthShift);
+    WH_ASSERT(!IsImmediateIndexString(length, data));
+    uint64_t val = ImmString8Code | (length << ImmString8LengthShift);
     for (unsigned i = 0; i < length; i++)
         val |= data[i] << (ImmString8DataShift + (i*8));
     return Value(val);
@@ -181,9 +241,19 @@ Value::ImmString8(unsigned length, const uint8_t *data)
 Value::ImmString16(unsigned length, const uint16_t *data)
 {
     WH_ASSERT(length <= ImmString16MaxLength);
-    uint64_t val = ImmString16Code | (length << ImmStringLengthShift);
+    WH_ASSERT(!IsImmediateIndexString(length, data));
+    uint64_t val = ImmString16Code | (length << ImmString16LengthShift);
     for (unsigned i = 0; i < length; i++)
         val |= data[i] << (ImmString16DataShift + (i*16));
+    return Value(val);
+}
+
+/*static*/ Value
+Value::ImmIndexString(int32_t idx)
+{
+    WH_ASSERT(idx > 0);
+    uint64_t val = ImmIndexStringCode |
+                   (ToUInt64(idx) << ImmIndexStringDataShift);
     return Value(val);
 }
 
@@ -220,8 +290,9 @@ Value::isValid() const
                tagged_ == PosInfVal || tagged_ == NegZeroVal;
 
       case ValueTag::StringAndRest:
-        if (((tagged_ & ImmStringMask) == ImmString8Code) ||
-            ((tagged_ & ImmStringMask) == ImmString16Code))
+        if (((tagged_ & ImmString8Mask) == ImmString8Code) ||
+            ((tagged_ & ImmString16Mask) == ImmString16Code) ||
+            ((tagged_ & ImmIndexStringMask) == ImmIndexStringCode))
         {
             return true;
         }
@@ -254,8 +325,9 @@ Value::type() const
         return ValueType::Number;
 
       case ValueTag::StringAndRest:
-        if (((tagged_ & ImmStringMask) == ImmString8Code) ||
-            ((tagged_ & ImmStringMask) == ImmString16Code))
+        if (((tagged_ & ImmString8Mask) == ImmString8Code) ||
+            ((tagged_ & ImmString16Mask) == ImmString16Code) ||
+            ((tagged_ & ImmIndexStringMask) == ImmIndexStringCode))
         {
             return ValueType::String;
         }
@@ -341,13 +413,19 @@ Value::isInt32() const
 bool
 Value::isImmString8() const
 {
-    return (tagged_ & ImmStringMask) == ImmString8Code;
+    return (tagged_ & ImmString8Mask) == ImmString8Code;
 }
 
 bool
 Value::isImmString16() const
 {
-    return (tagged_ & ImmStringMask) == ImmString16Code;
+    return (tagged_ & ImmString16Mask) == ImmString16Code;
+}
+
+bool
+Value::isImmIndexString() const
+{
+    return (tagged_ & ImmIndexStringMask) == ImmIndexStringCode;
 }
 
 bool
@@ -410,9 +488,15 @@ Value::isBoolean() const
 }
 
 bool
+Value::isImmString() const
+{
+    return isImmString8() || isImmString16() || isImmIndexString();
+}
+
+bool
 Value::isString() const
 {
-    return isHeapString() || isImmString8() || isImmString16();
+    return isHeapString() || isImmString();
 }
 
 
@@ -482,13 +566,12 @@ unsigned
 Value::immString8Length() const
 {
     WH_ASSERT(isImmString8());
-    return (tagged_ >> ImmStringLengthShift) & ImmString8LengthMask;
+    return (tagged_ >> ImmString8LengthShift) & ImmString8LengthMask;
 }
 
 uint8_t
 Value::getImmString8Char(unsigned idx) const
 {
-    WH_ASSERT(isImmString8());
     WH_ASSERT(idx < immString8Length());
     return (tagged_ >> (ImmString8DataShift + (idx * 8))) & 0xFFu;
 }
@@ -497,37 +580,84 @@ unsigned
 Value::immString16Length() const
 {
     WH_ASSERT(isImmString16());
-    return (tagged_ >> ImmStringLengthShift) & ImmString16LengthMask;
+    return (tagged_ >> ImmString16LengthShift) & ImmString16LengthMask;
 }
 
 uint16_t
 Value::getImmString16Char(unsigned idx) const
 {
-    WH_ASSERT(isImmString16());
     WH_ASSERT(idx < immString16Length());
     return (tagged_ >> (ImmString16DataShift + (idx * 16))) & 0xFFFFu;
+}
+
+int32_t
+Value::immIndexStringValue() const
+{
+    WH_ASSERT(isImmIndexString());
+    return tagged_ >> ImmIndexStringDataShift;
+}
+
+unsigned
+Value::immIndexStringLength() const
+{
+    WH_ASSERT(isImmIndexString());
+    int32_t val = immIndexStringValue();
+    WH_ASSERT(val > 0);
+    if (val < 10)
+        return 1;
+    if (val < 100)
+        return 2;
+    if (val < 1000)
+        return 3;
+    if (val < 10000)
+        return 4;
+    if (val < 100000)
+        return 5;
+    if (val < 1000000)
+        return 6;
+    if (val < 10000000)
+        return 7;
+    if (val < 100000000)
+        return 8;
+    if (val < 1000000000)
+        return 9;
+    return 10;
+}
+
+uint8_t
+Value::getImmIndexStringChar(unsigned idx) const
+{
+    WH_ASSERT(idx < immIndexStringLength());
+    int32_t val = immIndexStringValue();
+    return ToUInt8('0') + ((val / (idx * 10)) % 10);
 }
 
 unsigned
 Value::immStringLength() const
 {
-    WH_ASSERT(isImmString8() || isImmString16());
+    WH_ASSERT(isImmString8() || isImmString16() || isImmIndexString());
 
     if (isImmString8())
         return immString8Length();
 
-    return immString16Length();
+    if (isImmString16())
+        immString16Length();
+
+    return immIndexStringLength();
 }
 
 uint16_t
 Value::getImmStringChar(unsigned idx) const
 {
-    WH_ASSERT(isImmString8() || isImmString16());
+    WH_ASSERT(isImmString8() || isImmString16() || isImmIndexString());
 
     if (isImmString8())
         return getImmString8Char(idx);
 
-    return getImmString16Char(idx);
+    if (isImmString16())
+        return getImmString16Char(idx);
+
+    return getImmIndexStringChar(idx);
 }
 
 

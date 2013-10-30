@@ -304,6 +304,12 @@ RunContext::hatchery() const
 Value
 RunContext::createString(uint32_t length, const uint8_t *bytes)
 {
+    // Check for integer index.
+    int32_t idxVal = Value::ImmediateIndexValue(length, bytes);
+    if (idxVal >= 0)
+        return Value::ImmIndexString(idxVal);
+
+    // Check if fits in immediate.
     if (length < Value::ImmString8MaxLength)
         return Value::ImmString8(length, bytes);
 
@@ -313,7 +319,12 @@ RunContext::createString(uint32_t length, const uint8_t *bytes)
 Value
 RunContext::createString(uint32_t length, const uint16_t *bytes)
 {
-    // Check if this is really an 8-bit string in 16-bit clothes.
+    // Check for integer index.
+    int32_t idxVal = Value::ImmediateIndexValue(length, bytes);
+    if (idxVal >= 0)
+        return Value::ImmIndexString(idxVal);
+
+    // Check if this is really an 8-bit immediate string in 16-bit clothes.
     if (length <= Value::ImmString8MaxLength) {
         bool isEightBit = true;
         for (unsigned i = 0; i < length; i++) {
@@ -330,6 +341,7 @@ RunContext::createString(uint32_t length, const uint16_t *bytes)
         }
     }
 
+    // Check if fits in 16-bit immediate string.
     if (length < Value::ImmString16MaxLength)
         return Value::ImmString16(length, bytes);
 
