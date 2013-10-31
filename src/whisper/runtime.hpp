@@ -137,6 +137,7 @@ class AllocationContext
     Value createNumber(double d);
 
     VM::Tuple *createTuple(uint32_t count, const Value *vals);
+    VM::Tuple *createTuple(uint32_t size);
 
   private:
     // Allocate an object.  This takes an explicit size because some

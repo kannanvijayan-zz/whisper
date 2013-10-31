@@ -32,6 +32,9 @@ class StringTable
 
         Query(uint32_t length, const uint8_t *data);
         Query(uint32_t length, const uint16_t *data);
+
+        const uint8_t *eightBitData() const;
+        const uint16_t *sixteenBitData() const;
     };
 
     // StringOrQuery can either be a pointer to a HeapString, or
@@ -50,13 +53,7 @@ class StringTable
         const Query *toQuery() const;
     };
 
-    // String hasher.
-    struct Hash {
-        StringTable *table;
-
-        Hash(StringTable *table);
-        size_t operator ()(const StringOrQuery &str);
-    };
+    static constexpr uint32_t INITIAL_TUPLE_SIZE = 512;
 
     uint32_t spoiler_;
     uint32_t entries_;
@@ -66,6 +63,21 @@ class StringTable
     StringTable(uint32_t spoiler);
 
     bool initialize(RunContext *cx);
+
+    bool lookupString(RunContext *cx, Handle<VM::HeapString *> string,
+                      MutHandle<VM::HeapString *> result);
+    bool lookupString(RunContext *cx, uint32_t length, const uint8_t *str,
+                      MutHandle<VM::HeapString *> result);
+    bool lookupString(RunContext *cx, uint32_t length, const uint16_t *str,
+                      MutHandle<VM::HeapString *> result);
+    bool addString(RunContext *cx, Handle<VM::HeapString *> string);
+
+  private:
+    bool lookupString(RunContext *cx, const StringOrQuery &str,
+                      MutHandle<VM::HeapString *> result);
+
+    size_t hash(const StringOrQuery &str);
+    int compare(Handle<VM::LinearString *> a, const StringOrQuery &b);
 };
 
 

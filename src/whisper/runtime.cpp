@@ -266,10 +266,18 @@ AllocationContext::createNumber(double d)
     return Value::HeapDouble(create<VM::HeapDouble>(d));
 }
 
+
 VM::Tuple *
 AllocationContext::createTuple(uint32_t count, const Value *vals)
 {
     return createSized<VM::Tuple>(count * sizeof(Value), vals);
+}
+
+
+VM::Tuple *
+AllocationContext::createTuple(uint32_t size)
+{
+    return createSized<VM::Tuple>(size * sizeof(Value));
 }
 
 
