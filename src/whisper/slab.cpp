@@ -140,7 +140,7 @@ Slab::NumHeaderCardsForDataCards(uint32_t dataCards)
 }
 
 /*static*/ Slab *
-Slab::AllocateStandard()
+Slab::AllocateStandard(Generation gen)
 {
     size_t size = AlignIntUp<size_t>(StandardSlabCards() * CardSize,
                                      PageSize());
@@ -153,11 +153,12 @@ Slab::AllocateStandard()
 
     return new (result) Slab(result, size,
                              StandardSlabHeaderCards(),
-                             StandardSlabDataCards());
+                             StandardSlabDataCards(),
+                             gen);
 }
 
 /*static*/ Slab *
-Slab::AllocateSingleton(uint32_t objectSize, bool needsGC)
+Slab::AllocateSingleton(uint32_t objectSize, Generation gen)
 {
     uint32_t dataCards = NumDataCardsForObjectSize(objectSize);
     uint32_t headerCards = NumHeaderCardsForDataCards(dataCards);
@@ -173,9 +174,7 @@ Slab::AllocateSingleton(uint32_t objectSize, bool needsGC)
     SpewSlabNote("Allocated singleton slab at %p (hdr=%d, data=%d)",
                  result, dataCards, headerCards);
 
-    Slab *slab = new (result) Slab(result, size, dataCards, headerCards);
-    slab->needsGC_ = needsGC;
-    return slab;
+    return new (result) Slab(result, size, dataCards, headerCards, gen);
 }
 
 /*static*/ void
@@ -189,9 +188,11 @@ Slab::Destroy(Slab *slab)
 }
 
 Slab::Slab(void *region, uint32_t regionSize,
-           uint32_t headerCards, uint32_t dataCards)
+           uint32_t headerCards, uint32_t dataCards,
+           Generation gen)
   : region_(region), regionSize_(regionSize),
-    headerCards_(headerCards), dataCards_(dataCards)
+    headerCards_(headerCards), dataCards_(dataCards),
+    gen_(gen)
 {
     // Calculate allocTop.
     uint8_t *slabBase = reinterpret_cast<uint8_t *>(this);

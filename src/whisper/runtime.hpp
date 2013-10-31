@@ -85,20 +85,22 @@ class ThreadContext
     Runtime *runtime_;
     Slab *hatchery_;
     Slab *nursery_;
-    SlabList tenured_;
+    Slab *tenured_;
+    SlabList tenuredList_;
     RunContext *activeRunContext_;
     RunContext *runContextList_;
     RootBase *roots_;
     bool suppressGC_;
 
   public:
-    ThreadContext(Runtime *runtime, Slab *hatchery);
+    ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured);
 
     Runtime *runtime() const;
     Slab *hatchery() const;
     Slab *nursery() const;
-    const SlabList &tenured() const;
-    SlabList &tenured();
+    Slab *tenured() const;
+    const SlabList &tenuredList() const;
+    SlabList &tenuredList();
     RunContext *activeRunContext() const;
     RootBase *roots() const;
     bool suppressGC() const;
@@ -186,6 +188,7 @@ class RunContext
     void registerTopStackFrame(VM::StackFrame *topStackFrame);
 
     AllocationContext inHatchery();
+    AllocationContext inTenured();
 };
 
 

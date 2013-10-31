@@ -59,14 +59,19 @@ Runtime::registerThread()
     WH_ASSERT(pthread_getspecific(threadKey_) == nullptr);
 
     // Create a new nursery slab.
-    Slab *hatchery = Slab::AllocateStandard();
+    Slab *hatchery = Slab::AllocateStandard(Slab::Hatchery);
     if (!hatchery)
         return "Could not allocate hatchery slab.";
+
+    // Create initial tenured space slab.
+    Slab *tenured = Slab::AllocateStandard(Slab::Tenured);
+    if (!tenured)
+        return "Could not allocate tenured slab.";
 
     // Allocate the ThreadContext
     ThreadContext *ctx;
     try {
-        ctx = new ThreadContext(this, hatchery);
+        ctx = new ThreadContext(this, hatchery, tenured);
         threadContexts_.push_back(ctx);
     } catch (std::bad_alloc &err) {
         return "Could not allocate ThreadContext.";
@@ -114,16 +119,23 @@ Runtime::threadContext()
 // ThreadContext
 //
 
-ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery)
+ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
   : runtime_(runtime),
     hatchery_(hatchery),
     nursery_(nullptr),
-    tenured_(),
+    tenured_(tenured),
+    tenuredList_(),
     activeRunContext_(nullptr),
     runContextList_(nullptr),
     roots_(nullptr),
     suppressGC_(false)
-{}
+{
+    WH_ASSERT(runtime != nullptr);
+    WH_ASSERT(hatchery != nullptr);
+    WH_ASSERT(tenured != nullptr);
+
+    tenuredList_.addSlab(tenured);
+}
 
 Runtime *
 ThreadContext::runtime() const
@@ -143,16 +155,22 @@ ThreadContext::nursery() const
     return nursery_;
 }
 
-const SlabList &
+Slab *
 ThreadContext::tenured() const
 {
     return tenured_;
 }
 
-SlabList &
-ThreadContext::tenured()
+const SlabList &
+ThreadContext::tenuredList() const
 {
-    return tenured_;
+    return tenuredList_;
+}
+
+SlabList &
+ThreadContext::tenuredList()
+{
+    return tenuredList_;
 }
 
 RunContext *
@@ -320,6 +338,12 @@ AllocationContext
 RunContext::inHatchery()
 {
     return AllocationContext(this, hatchery_);
+}
+
+AllocationContext
+RunContext::inTenured()
+{
+    return AllocationContext(this, threadContext_->tenured());
 }
 
 

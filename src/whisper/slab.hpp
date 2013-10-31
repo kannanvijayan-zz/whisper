@@ -69,6 +69,23 @@ class Slab
     static constexpr uint32_t CardSize = 1 << CardSizeLog2;
     static constexpr uint32_t AlienRefSpaceSize = 512;
 
+    enum Generation : uint8_t
+    {
+        // Hatchery is where new objects are created.  It contains
+        // only standard sized slabs and has a fixed maximum size.
+        Hatchery,
+
+        // Nursery is where recently created slabs are stored until
+        // a subsequent cull.  The nursery never "grows".  Whenever
+        // the hatchery becomes full, the nursery (if it contains
+        // slabs) is garbage-collected and cleared, and then the hatchery
+        // pages moved directly into it.
+        Nursery,
+
+        // Tenured generation is the oldest generation of objects.
+        Tenured
+    };
+
     static uint32_t PageSize();
 
     static uint32_t StandardSlabCards();
@@ -85,8 +102,8 @@ class Slab
     static uint32_t NumHeaderCardsForDataCards(uint32_t dataCards);
 
     // Allocate/destroy slabs.
-    static Slab *AllocateStandard();
-    static Slab *AllocateSingleton(uint32_t objectSize, bool needsGC);
+    static Slab *AllocateStandard(Generation gen);
+    static Slab *AllocateSingleton(uint32_t objectSize, Generation gen);
     static void Destroy(Slab *slab);
 
   private:
@@ -113,11 +130,12 @@ class Slab
     // Number of data cards.
     uint32_t dataCards_;
 
-    // Chunk flags.
-    bool needsGC_ = false;
+    // Slab generation.
+    Generation gen_;
 
     Slab(void *region, uint32_t regionSize,
-         uint32_t headerCards, uint32_t dataCards);
+         uint32_t headerCards, uint32_t dataCards,
+         Generation gen);
 
     ~Slab() {}
 
@@ -145,6 +163,10 @@ class Slab
 
     uint32_t dataCards() const {
         return dataCards_;
+    }
+
+    Generation gen() const {
+        return gen_;
     }
 
     uint8_t *headEndAlloc() const {
@@ -220,6 +242,7 @@ class SlabList
         } else {
             slab->previous_ = lastSlab_;
             lastSlab_->next_ = slab;
+            lastSlab_ = slab;
         }
         numSlabs_++;
     }
