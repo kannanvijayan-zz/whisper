@@ -7,9 +7,13 @@
 namespace Whisper {
 
 
+//
+// AllocationContext
+//
+
 template <typename ObjT>
 inline uint8_t *
-RunContext::allocate(uint32_t size)
+AllocationContext::allocate(uint32_t size)
 {
     WH_ASSERT(size >= sizeof(ObjT));
 
@@ -21,25 +25,25 @@ RunContext::allocate(uint32_t size)
     bool headAlloc = VM::HeapTypeTraits<ObjT::Type>::Traced;
 
     // Allocate the space.
-    return headAlloc ? hatchery_->allocateHead(allocSize)
-                     : hatchery_->allocateTail(allocSize);
+    return headAlloc ? slab_->allocateHead(allocSize)
+                     : slab_->allocateTail(allocSize);
 }
 
 template <typename ObjT, typename... Args>
 inline ObjT *
-RunContext::create(Args... args)
+AllocationContext::create(Args... args)
 {
     return createSized<ObjT, Args...>(sizeof(ObjT), args...);
 }
 
 template <typename ObjT, typename... Args>
 inline ObjT *
-RunContext::createSized(uint32_t size, Args... args)
+AllocationContext::createSized(uint32_t size, Args... args)
 {
     // Allocate the space for the object.
     uint8_t *mem = allocate<ObjT>(size);
     if (!mem) {
-        if (suppressGC_)
+        if (cx_->suppressGC())
             return nullptr;
 
         WH_ASSERT(!"GC infrastructure.");
@@ -47,7 +51,7 @@ RunContext::createSized(uint32_t size, Args... args)
     }
 
     // Figure out the card number.
-    uint32_t cardNo = hatchery_->calculateCardNumber(mem);
+    uint32_t cardNo = slab_->calculateCardNumber(mem);
 
     // Initialize the object using HeapThingWrapper, and
     // return it.

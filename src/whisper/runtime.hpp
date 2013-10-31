@@ -108,6 +108,44 @@ class ThreadContext
 
 
 //
+// AllocationContext
+//
+// An allocation context encapsulates the notion of a particular
+// memory space as well as set of allocation criteria.
+//
+
+class AllocationContext
+{
+  private:
+    RunContext *cx_;
+    Slab *slab_;
+
+  public:
+    AllocationContext(RunContext *cx, Slab *slab);
+
+    template <typename ObjT, typename... Args>
+    inline ObjT *create(Args... args);
+
+    template <typename ObjT, typename... Args>
+    inline ObjT *createSized(uint32_t size, Args... args);
+
+    Value createString(uint32_t length, const uint8_t *bytes);
+    Value createString(uint32_t length, const uint16_t *bytes);
+
+    Value createNumber(double d);
+
+    VM::Tuple *createTuple(uint32_t count, const Value *vals);
+
+  private:
+    // Allocate an object.  This takes an explicit size because some
+    // objects are variable sized.  Return null if not enough space
+    // in hatchery.
+    template <typename ObjT>
+    inline uint8_t *allocate(uint32_t size);
+};
+
+
+//
 // RunContext
 //
 // Holds the actual execution context for some active piece of code.
@@ -139,36 +177,15 @@ class RunContext
     RunContext(ThreadContext *threadContext);
 
     ThreadContext *threadContext() const;
-
     Runtime *runtime() const;
-
     Slab *hatchery() const;
-
-    // Construct an object in the hatchery.
-    // Optionally GC-ing if necessary.
-    template <typename ObjT, typename... Args>
-    inline ObjT *create(Args... args);
-
-    template <typename ObjT, typename... Args>
-    inline ObjT *createSized(uint32_t size, Args... args);
-
-    Value createString(uint32_t length, const uint8_t *bytes);
-    Value createString(uint32_t length, const uint16_t *bytes);
-
-    Value createNumber(double d);
-
-    VM::Tuple *createTuple(uint32_t count, const Value *vals);
+    bool suppressGC() const;
 
     void makeActive();
 
     void registerTopStackFrame(VM::StackFrame *topStackFrame);
 
-  private:
-    // Allocate an object in the hatchery.  This takes an explicit
-    // size because some objects are variable sized.
-    // Return null if not enough space in hatchery.
-    template <typename ObjT>
-    inline uint8_t *allocate(uint32_t size);
+    AllocationContext inHatchery();
 };
 
 

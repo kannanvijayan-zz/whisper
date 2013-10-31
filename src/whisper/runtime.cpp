@@ -182,6 +182,79 @@ ThreadContext::addRunContext(RunContext *runcx)
     runContextList_ = runcx;
 }
 
+
+//
+// AllocationContext
+//
+
+AllocationContext::AllocationContext(RunContext *cx, Slab *slab)
+  : cx_(cx), slab_(slab)
+{}
+
+
+Value
+AllocationContext::createString(uint32_t length, const uint8_t *bytes)
+{
+    // Check for integer index.
+    int32_t idxVal = Value::ImmediateIndexValue(length, bytes);
+    if (idxVal >= 0)
+        return Value::ImmIndexString(idxVal);
+
+    // Check if fits in immediate.
+    if (length < Value::ImmString8MaxLength)
+        return Value::ImmString8(length, bytes);
+
+    return Value::HeapString(createSized<VM::LinearString>(length, bytes));
+}
+
+Value
+AllocationContext::createString(uint32_t length, const uint16_t *bytes)
+{
+    // Check for integer index.
+    int32_t idxVal = Value::ImmediateIndexValue(length, bytes);
+    if (idxVal >= 0)
+        return Value::ImmIndexString(idxVal);
+
+    // Check if this is really an 8-bit immediate string in 16-bit clothes.
+    if (length <= Value::ImmString8MaxLength) {
+        bool isEightBit = true;
+        for (unsigned i = 0; i < length; i++) {
+            if (bytes[i] >= 0xFFu) {
+                isEightBit = false;
+                break;
+            }
+        }
+        if (isEightBit) {
+            uint8_t buf[Value::ImmString8MaxLength];
+            for (unsigned i = 0; i < length; i++)
+                buf[i] = bytes[i];
+            return Value::ImmString8(length, buf);
+        }
+    }
+
+    // Check if fits in 16-bit immediate string.
+    if (length < Value::ImmString16MaxLength)
+        return Value::ImmString16(length, bytes);
+
+    return Value::HeapString(createSized<VM::LinearString>(length, bytes));
+}
+
+Value
+AllocationContext::createNumber(double d)
+{
+    if (Value::IsImmediateNumber(d))
+        return Value::Number(d);
+
+    return Value::HeapDouble(create<VM::HeapDouble>(d));
+}
+
+VM::Tuple *
+AllocationContext::createTuple(uint32_t count, const Value *vals)
+{
+    return createSized<VM::Tuple>(count * sizeof(Value), vals);
+}
+
+
 //
 // RunContext
 //
@@ -215,66 +288,10 @@ RunContext::hatchery() const
     return hatchery_;
 }
 
-Value
-RunContext::createString(uint32_t length, const uint8_t *bytes)
+bool
+RunContext::suppressGC() const
 {
-    // Check for integer index.
-    int32_t idxVal = Value::ImmediateIndexValue(length, bytes);
-    if (idxVal >= 0)
-        return Value::ImmIndexString(idxVal);
-
-    // Check if fits in immediate.
-    if (length < Value::ImmString8MaxLength)
-        return Value::ImmString8(length, bytes);
-
-    return Value::HeapString(createSized<VM::LinearString>(length, bytes));
-}
-
-Value
-RunContext::createString(uint32_t length, const uint16_t *bytes)
-{
-    // Check for integer index.
-    int32_t idxVal = Value::ImmediateIndexValue(length, bytes);
-    if (idxVal >= 0)
-        return Value::ImmIndexString(idxVal);
-
-    // Check if this is really an 8-bit immediate string in 16-bit clothes.
-    if (length <= Value::ImmString8MaxLength) {
-        bool isEightBit = true;
-        for (unsigned i = 0; i < length; i++) {
-            if (bytes[i] >= 0xFFu) {
-                isEightBit = false;
-                break;
-            }
-        }
-        if (isEightBit) {
-            uint8_t buf[Value::ImmString8MaxLength];
-            for (unsigned i = 0; i < length; i++)
-                buf[i] = bytes[i];
-            return Value::ImmString8(length, buf);
-        }
-    }
-
-    // Check if fits in 16-bit immediate string.
-    if (length < Value::ImmString16MaxLength)
-        return Value::ImmString16(length, bytes);
-
-    return Value::HeapString(createSized<VM::LinearString>(length, bytes));
-}
-
-Value
-RunContext::createNumber(double d)
-{
-    if (Value::IsImmediateNumber(d))
-        return Value::Number(d);
-
-    return Value::HeapDouble(create<VM::HeapDouble>(d));
-}
-
-VM::Tuple *
-RunContext::createTuple(uint32_t count, const Value *vals)
-{
-    return createSized<VM::Tuple>(count * sizeof(Value), vals);
+    return suppressGC_;
 }
 
 void
@@ -297,6 +314,12 @@ RunContext::registerTopStackFrame(VM::StackFrame *topStackFrame)
     // No stack frame should have been registered yet.
     WH_ASSERT(topStackFrame_ == nullptr);
     topStackFrame_ = topStackFrame;
+}
+
+AllocationContext
+RunContext::inHatchery()
+{
+    return AllocationContext(this, hatchery_);
 }
 
 

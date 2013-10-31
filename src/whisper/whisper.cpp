@@ -125,8 +125,8 @@ int main(int argc, char **argv) {
 
     VM::Script::Config scriptCfg(false, VM::Script::TopLevel,
                                     bcgen.maxStackDepth());
-    Root<VM::Script *> script(cx, cx->create<VM::Script>(bc, constants,
-                                                         scriptCfg));
+    Root<VM::Script *> script(cx,
+            cx->inHatchery().create<VM::Script>(bc, constants, scriptCfg));
     std::cerr << "Created script with max stack depth " <<
                  script->maxStackDepth() << std::endl;
 

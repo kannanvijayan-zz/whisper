@@ -60,7 +60,7 @@ BytecodeGenerator::generateBytecode()
     currentBytecodeSize_ = 0;
 
     // Bytecode scanning worked out.  Allocate a bytecode object.
-    bytecode_ = cx_->createSized<VM::Bytecode>(bytecodeSize_);
+    bytecode_ = cx_->inHatchery().createSized<VM::Bytecode>(bytecodeSize_);
     if (!bytecode_)
         emitError("Could not allocate bytecode object.");
 
@@ -79,7 +79,8 @@ BytecodeGenerator::constants()
         return nullptr;
 
     // Create constant pool.
-    return cx_->createTuple(constantPool_.size(), &constantPool_.ref(0));
+    return cx_->inHatchery().createTuple(constantPool_.size(),
+                                         &constantPool_.ref(0));
 }
 
 uint32_t
@@ -216,7 +217,7 @@ BytecodeGenerator::getAddressableLocation(AST::ExpressionNode *expr,
         // Otherwise, handle doubles.
         WH_ASSERT(annot->isDouble());
         double dbl = annot->doubleValue();
-        Value dval = cx_->createNumber(dbl);
+        Value dval = cx_->inHatchery().createNumber(dbl);
 
         uint32_t constIdx = constantPool_.size();
         if (constIdx > OperandMaxIndex)
