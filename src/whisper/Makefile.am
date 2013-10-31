@@ -17,6 +17,7 @@ whisper_SOURCES = \
     vm/heap_thing.cpp \
     vm/double.cpp \
     vm/string.cpp \
+    vm/string_table.cpp \
     vm/bytecode.cpp \
     vm/script.cpp \
     vm/stack_frame.cpp \

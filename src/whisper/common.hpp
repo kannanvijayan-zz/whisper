@@ -78,6 +78,11 @@ constexpr int8_t ToInt8(IntT val) {
     return static_cast<int8_t>(val);
 }
 
+template <typename IntT>
+constexpr int8_t ToSize(IntT val) {
+    return static_cast<size_t>(val);
+}
+
 // Casting between pointers and words.
 template <typename T>
 constexpr inline word_t PtrToWord(T *ptr) {

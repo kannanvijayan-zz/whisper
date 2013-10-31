@@ -67,54 +67,6 @@ class Runtime
     ThreadContext *threadContext();
 };
 
-//
-// StringTable keeps a table of interned strings.  All strings which
-// are used as property names are interned.
-// Any two interned strings can be equality compared by comparing their
-// pointer values.
-//
-
-class StringTable
-{
-  private:
-    // Query is a stack-allocated structure used represent
-    // a length and a string pointer.
-    struct alignas(2) Query {
-        bool is8Bit;
-        uint32_t length;
-        const void *data;
-
-        Query(uint32_t length, const uint8_t *data);
-        Query(uint32_t length, const uint16_t *data);
-    };
-
-    // StringOrKey can either be a pointer to a HeapString, or
-    // a pointer to a stack-allocated StringTable::Query.
-    // They are differentiated by the low bit of the pointer.
-    struct StringOrQuery {
-        uintptr_t ptr;
-
-        StringOrQuery(const VM::HeapString *str);
-        StringOrQuery(const Query *str);
-
-        bool isHeapString() const;
-        bool isQuery() const;
-
-        const VM::HeapString *toHeapString() const;
-        const Query *toQuery() const;
-    };
-
-    // String hasher.
-    struct Hash {
-        StringTable *table;
-
-        Hash(StringTable *table);
-        size_t operator ()(const StringOrQuery &str);
-    };
-
-    uint32_t spoiler_;
-};
-
 
 //
 // ThreadContext
