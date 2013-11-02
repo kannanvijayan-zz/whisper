@@ -1,5 +1,7 @@
 
 #include "rooting_inlines.hpp"
+#include "runtime_inlines.hpp"
+#include "vm/heap_thing_inlines.hpp"
 #include "vm/string_table.hpp"
 
 namespace Whisper {
@@ -32,7 +34,7 @@ StringTable::Query::sixteenBitData() const
     return reinterpret_cast<const uint16_t *>(data);
 }
 
-StringTable::StringOrQuery::StringOrQuery(const VM::HeapString *str)
+StringTable::StringOrQuery::StringOrQuery(const HeapString *str)
   : ptr(reinterpret_cast<uintptr_t>(str))
 {}
 
@@ -52,11 +54,11 @@ StringTable::StringOrQuery::isQuery() const
     return ptr & 1;
 }
 
-const VM::HeapString *
+const HeapString *
 StringTable::StringOrQuery::toHeapString() const
 {
     WH_ASSERT(isHeapString());
-    return reinterpret_cast<const VM::HeapString *>(ptr);
+    return reinterpret_cast<const HeapString *>(ptr);
 }
 
 const StringTable::Query *
@@ -86,28 +88,115 @@ StringTable::initialize(RunContext *cx)
     return true;
 }
 
+LinearString *
+StringTable::lookupString(RunContext *cx, const HeapString *str)
+{
+    LinearString *result;
+    lookupSlot(cx, StringOrQuery(str), &result);
+    return result;
+}
 
-static constexpr size_t FNV_PRIME =
-#   if defined(ARCH_BITS_32)
-        (ToUInt32(1) << 24) | (ToUInt32(1) << 8) | 0x93;
-#   else
-        (ToUInt64(1) << 40) | (ToUInt64(1) << 8) | 0xb3;
-#   endif
+LinearString *
+StringTable::lookupString(RunContext *cx, uint32_t length, const uint8_t *str)
+{
+    Query q(length, str);
+    LinearString *result;
+    lookupSlot(cx, StringOrQuery(&q), &result);
+    return result;
+}
 
-static constexpr size_t FNV_OFFSET_BASIS =
-#   if defined(ARCH_BITS_32)
-        2166136261UL;
-#   else
-        14695981039346656037ULL;
-#   endif
+LinearString *
+StringTable::lookupString(RunContext *cx, uint32_t length, const uint16_t *str)
+{
+    Query q(length, str);
+    LinearString *result;
+    lookupSlot(cx, StringOrQuery(&q), &result);
+    return result;
+}
+
+bool
+StringTable::addString(RunContext *cx, Handle<HeapString *> string,
+                       MutHandle<LinearString *> interned)
+{
+    // Check if |string| is already a LinearString and marked as interned.
+    if (string->isLinearString() && string->toLinearString()->isInterned()) {
+        interned = string->toLinearString();
+        return true;
+    }
+
+    // Check for existing interned string in table.
+    uint32_t slot = lookupSlot(cx, StringOrQuery(string), &interned.get());
+    if (interned)
+        return true;
+
+    // Allocate tenured LinearString copy (marked interned).
+    uint32_t size = string->length() * 2;
+    interned = cx->inTenured().createSized<LinearString>(
+                            size, string, false, LinearString::Group::Unknown);
+    if (!interned)
+        return false;
+
+    // Resize table if necessary.
+    if (entries_ >= tuple_->size() * MAX_FILL_RATIO) {
+        if (!enlarge(cx))
+            return false;
+        slot = lookupSlot(cx, StringOrQuery(string), &interned.get());
+        WH_ASSERT(!interned);
+    }
+
+    // Store interned string.
+    tuple_->set(slot, Value::HeapString(interned.get()));
+    return true;
+}
+
+
+uint32_t
+StringTable::lookupSlot(RunContext *cx, const StringOrQuery &str,
+                        LinearString **result)
+{
+    uint32_t hash = hashString(str);
+    uint32_t slotCount = tuple_->size();
+
+    *result = nullptr;
+
+    WH_ASSERT(tuple_);
+    for (uint32_t i = 0; i < slotCount; i++) {
+        uint32_t slot = (hash + i) % slotCount;
+        Handle<Value> slotVal = tuple_->get(slot);
+        if (slotVal->isUndefined())
+            return slot;
+
+        if (slotVal->isHeapString()) {
+            HeapString *heapStr = slotVal->heapStringPtr();
+            WH_ASSERT(heapStr->isLinearString());
+            LinearString *linearStr = heapStr->toLinearString();
+
+            if (compareStrings(linearStr, str) == 0) {
+                *result = linearStr;
+                return slot;
+            }
+        }
+
+        // Only other option is deleted slot.
+        WH_ASSERT(slotVal->isFalse());
+    }
+
+    WH_UNREACHABLE("Completely full StringTable should not ever happen!");
+    return UINT32_MAX;
+}
+
+
+static constexpr uint32_t FNV_PRIME = 0x01000193ul;
+
+static constexpr uint32_t FNV_OFFSET_BASIS = 2166136261UL;
 
 template <typename StrT>
-static size_t
+static uint32_t
 HashString(uint32_t spoiler, uint32_t length, const StrT &data)
 {
     // Start with spoiler.
-    size_t perturb = spoiler;
-    size_t hash = FNV_OFFSET_BASIS;
+    uint32_t perturb = spoiler;
+    uint32_t hash = FNV_OFFSET_BASIS;
 
     for (uint32_t i = 0; i < length; i++) {
         uint16_t ch = data[i];
@@ -143,8 +232,8 @@ struct StrWrap
     }
 };
 
-size_t
-StringTable::hash(const StringOrQuery &str)
+uint32_t
+StringTable::hashString(const StringOrQuery &str)
 {
     if (str.isQuery()) {
         const Query *query = str.toQuery();
@@ -158,22 +247,15 @@ StringTable::hash(const StringOrQuery &str)
     const HeapString *heapStr = str.toHeapString();
 
     if (heapStr->isLinearString()) {
-        const VM::LinearString *linStr = heapStr->toLinearString();
-
-        if (linStr->isEightBit()) {
-            return HashString(spoiler_, linStr->length(),
-                              linStr->eightBitData());
-        }
-
-        return HashString(spoiler_, linStr->length(),
-                          linStr->sixteenBitData());
+        const LinearString *linStr = heapStr->toLinearString();
+        return HashString(spoiler_, linStr->length(), linStr->data());
     }
 
     return HashString(spoiler_, heapStr->length(), StrWrap(heapStr));
 }
 
 template <typename StrT1, typename StrT2>
-static size_t
+static int
 CompareStrings(uint32_t len1, const StrT1 &str1,
                uint32_t len2, const StrT2 &str2)
 {
@@ -199,80 +281,63 @@ CompareStrings(uint32_t len1, const StrT1 &str1,
 }
 
 int
-StringTable::compare(Handle<VM::LinearString *> a, const StringOrQuery &b)
+StringTable::compareStrings(LinearString *a,
+                            const StringOrQuery &b)
 {
-    bool eightBitA = a->isEightBit();
-    const void *dataA;
-    if (eightBitA)
-        dataA = a->eightBitData();
-    else
-        dataA = a->sixteenBitData();
-   
-    bool eightBitB;
-    uint32_t lengthB;
-    const void *dataB;
     if (b.isQuery()) {
         const Query *query = b.toQuery();
-        lengthB = query->length;
         if (query->isEightBit) {
-            eightBitB = true;
-            dataB = query->eightBitData();
-        } else {
-            eightBitB = false;
-            dataB = query->sixteenBitData();
+            return CompareStrings(a->length(), a->data(),
+                                  query->length, query->eightBitData());
         }
-    } else {
-        WH_ASSERT(b.isHeapString());
-        const HeapString *heapStr = b.toHeapString();
-
-        if (heapStr->isLinearString()) {
-            const VM::LinearString *linStr = heapStr->toLinearString();
-
-            lengthB = linStr->length();
-            if (linStr->isEightBit()) {
-                eightBitB = true;
-                dataB = linStr->eightBitData();
-            } else {
-                eightBitB = false;
-                dataB = linStr->sixteenBitData();
-            }
-        } else {
-            if (eightBitA) {
-                return CompareStrings(
-                    a->length(), reinterpret_cast<const uint8_t *>(dataA),
-                    heapStr->length(), StrWrap(heapStr));
-            }
-
-            return CompareStrings(
-                a->length(), reinterpret_cast<const uint16_t *>(dataA),
-                heapStr->length(), StrWrap(heapStr));
-        }
+        return CompareStrings(a->length(), a->data(),
+                              query->length, query->sixteenBitData());
     }
 
-    if (eightBitA) {
-        if (eightBitB) {
-            return CompareStrings(
-                    a->length(), reinterpret_cast<const uint8_t *>(dataA),
-                    lengthB, reinterpret_cast<const uint8_t *>(dataB));
-        }
+    WH_ASSERT(b.isHeapString());
+    const HeapString *heapStr = b.toHeapString();
 
-        // Eight-bit A, Sixteen-bit B
-        return CompareStrings(
-                a->length(), reinterpret_cast<const uint8_t *>(dataA),
-                lengthB, reinterpret_cast<const uint16_t *>(dataB));
+    if (heapStr->isLinearString()) {
+        const LinearString *linStr = heapStr->toLinearString();
+        return CompareStrings(a->length(), a->data(),
+                              linStr->length(), linStr->data());
+    }
+    return CompareStrings(a->length(), a->data(), heapStr->length(),
+                          StrWrap(heapStr));
+}
+
+bool
+StringTable::enlarge(RunContext *cx)
+{
+    Root<Tuple *> oldTuple(cx, tuple_);
+    uint32_t curSize = tuple_->size();
+    
+    // Allocate a new tuple with double capacity.
+    tuple_ = cx->inTenured().createTuple(curSize * 2);
+    if (!tuple_)
+        return false;
+
+    // Add old strings to table.
+    for (uint32_t i = 0; i < curSize; i++) {
+        Handle<Value> oldVal = tuple_->get(i);
+        WH_ASSERT(oldVal->isUndefined() || oldVal->isFalse() ||
+                  oldVal->isHeapString());
+        if (!oldVal->isHeapString())
+            continue;
+
+        WH_ASSERT(oldVal->heapStringPtr()->isLinearString());
+        LinearString *oldStr = oldVal->heapStringPtr()->toLinearString();
+        
+
+        // Check for existing interned string in table.
+        LinearString *dummy;
+        uint32_t slot = lookupSlot(cx, StringOrQuery(oldStr), &dummy);
+        WH_ASSERT(dummy == nullptr);
+
+        tuple_->set(slot, Value::HeapString(oldStr));
     }
 
-    // Sixteen-bit A, Eight-bit B
-    if (eightBitB) {
-        return CompareStrings(
-                a->length(), reinterpret_cast<const uint16_t *>(dataA),
-                lengthB, reinterpret_cast<const uint8_t *>(dataB));
-    }
-
-    // Sixteen-bit A, Sixteen-bit B
-    return CompareStrings(
-            a->length(), reinterpret_cast<const uint16_t *>(dataA),
-            lengthB, reinterpret_cast<const uint16_t *>(dataB));
+    return true;
 }
 
 

@@ -14,10 +14,20 @@ namespace VM {
 
 
 //
-// StringTable keeps a table of interned strings.  All strings which
-// are bound as property names are interned.
-// Any two interned strings can be equality compared by comparing their
-// pointer values.
+// StringTable keeps a table of interned strings.
+//
+// Interning a string may not actually add it to the table.
+// If the string is representable as an immediate, then the
+// immediate value is returned without adding the string
+// to the table, since immediate value strings are always
+// direct-comparable.
+//
+// When a string is interned, a new LinearString is created with the
+// contents and added to the table, even if the incoming
+// string is a LinearString.  This is because the interned string
+// will be created in the tenured generation, so it contributes less
+// to GC pressure, and the query string can be garbage collected
+// earlier (e.g. from the nursery).
 //
 
 class StringTable
@@ -54,6 +64,7 @@ class StringTable
     };
 
     static constexpr uint32_t INITIAL_TUPLE_SIZE = 512;
+    static constexpr float MAX_FILL_RATIO = 0.75;
 
     uint32_t spoiler_;
     uint32_t entries_;
@@ -64,20 +75,25 @@ class StringTable
 
     bool initialize(RunContext *cx);
 
-    bool lookupString(RunContext *cx, Handle<VM::HeapString *> string,
-                      MutHandle<VM::HeapString *> result);
-    bool lookupString(RunContext *cx, uint32_t length, const uint8_t *str,
-                      MutHandle<VM::HeapString *> result);
-    bool lookupString(RunContext *cx, uint32_t length, const uint16_t *str,
-                      MutHandle<VM::HeapString *> result);
-    bool addString(RunContext *cx, Handle<VM::HeapString *> string);
+    LinearString *lookupString(RunContext *cx, const HeapString *str);
+
+    LinearString *lookupString(RunContext *cx, uint32_t length,
+                               const uint8_t *str);
+
+    LinearString *lookupString(RunContext *cx, uint32_t length,
+                               const uint16_t *str);
+
+    bool addString(RunContext *cx, Handle<HeapString *> string,
+                   MutHandle<LinearString *> interned);
 
   private:
-    bool lookupString(RunContext *cx, const StringOrQuery &str,
-                      MutHandle<VM::HeapString *> result);
+    uint32_t lookupSlot(RunContext *cx, const StringOrQuery &str,
+                        LinearString **result);
 
-    size_t hash(const StringOrQuery &str);
-    int compare(Handle<VM::LinearString *> a, const StringOrQuery &b);
+    uint32_t hashString(const StringOrQuery &str);
+    int compareStrings(LinearString *a, const StringOrQuery &b);
+
+    bool enlarge(RunContext *cx);
 };
 
 

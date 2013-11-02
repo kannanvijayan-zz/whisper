@@ -109,7 +109,7 @@ IsNormalizedPropertyId(const Value &val)
 
     // The linear string must be interned and identified as a property name.
     VM::LinearString *linearStr = heapStr->toLinearString();
-    return linearStr->isInterned() && linearStr->isPropertyName();
+    return linearStr->isInterned() && linearStr->inNameGroup();
 }
 
 

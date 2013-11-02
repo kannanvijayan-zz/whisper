@@ -1,4 +1,5 @@
 
+#include "rooting_inlines.hpp"
 #include "vm/string.hpp"
 #include "vm/heap_thing_inlines.hpp"
 
@@ -55,6 +56,14 @@ HeapString::toLinearString()
     return reinterpret_cast<LinearString *>(this);
 }
 
+bool
+HeapString::linearize(RunContext *cx, MutHandle<LinearString *> out)
+{
+    WH_ASSERT(isLinearString());
+    out = toLinearString();
+    return true;
+}
+
 uint32_t
 HeapString::length() const
 {
@@ -95,77 +104,52 @@ HeapString::fitsImmediate() const
 // LinearString
 //
 
-uint8_t *
-LinearString::writableEightBitData()
-{
-    WH_ASSERT(isEightBit());
-    return recastThis<uint8_t>();
-}
-
-uint16_t *
-LinearString::writableSixteenBitData()
-{
-    WH_ASSERT(isSixteenBit());
-    return recastThis<uint16_t>();
-}
-
-LinearString::LinearString(const uint8_t *data)
-{
-    initFlags(EightBitFlagMask);
-    std::copy(data, data + objectSize(), writableEightBitData());
-}
-
-LinearString::LinearString(const uint16_t *data)
-{
-    WH_ASSERT(objectSize() % 2 == 0);
-    std::copy(data, data + (objectSize() / 2), writableSixteenBitData());
-}
-
-LinearString::LinearString(const uint8_t *data, bool interned, bool propName)
-{
-    uint32_t flags = EightBitFlagMask;
-    if (interned)
-        flags |= InternedFlagMask;
-    if (propName)
-        flags |= PropertyNameFlagMask;
-    initFlags(flags);
-    std::copy(data, data + objectSize(), writableEightBitData());
-}
-
-LinearString::LinearString(const uint16_t *data, bool interned, bool propName)
+void
+LinearString::initializeFlags(bool interned, Group group)
 {
     uint32_t flags = 0;
     if (interned)
         flags |= InternedFlagMask;
-    if (propName)
-        flags |= PropertyNameFlagMask;
+    flags |= static_cast<uint32_t>(group) << GroupShift;
     initFlags(flags);
-    std::copy(data, data + objectSize() / 2, writableSixteenBitData());
 }
 
-bool
-LinearString::isEightBit() const
+uint16_t *
+LinearString::writableData()
 {
-    return flags() & EightBitFlagMask;
+    return recastThis<uint16_t>();
 }
 
-const uint8_t *
-LinearString::eightBitData() const
+LinearString::LinearString(const HeapString *str, bool interned, Group group)
 {
-    WH_ASSERT(isEightBit());
-    return recastThis<uint8_t>();
+    WH_ASSERT(length() == str->length());
+
+    initializeFlags(interned, group);
+
+    // Only LinearString possible for now.
+    WH_ASSERT(str->isLinearString());
+    const LinearString *linStr = str->toLinearString();
+
+    const uint16_t *data = linStr->data();
+    std::copy(data, data + length(), writableData());
+
 }
 
-bool
-LinearString::isSixteenBit() const
+LinearString::LinearString(const uint8_t *data, bool interned, Group group)
 {
-    return !isEightBit();
+    initializeFlags(interned, group);
+    std::copy(data, data + length(), writableData());
+}
+
+LinearString::LinearString(const uint16_t *data, bool interned, Group group)
+{
+    initializeFlags(interned, group);
+    std::copy(data, data + length(), writableData());
 }
 
 const uint16_t *
-LinearString::sixteenBitData() const
+LinearString::data() const
 {
-    WH_ASSERT(isSixteenBit());
     return recastThis<uint16_t>();
 }
 
@@ -175,17 +159,33 @@ LinearString::isInterned() const
     return flags() & InternedFlagMask;
 }
 
-bool
-LinearString::isPropertyName() const
+LinearString::Group
+LinearString::group() const
 {
-    return flags() & PropertyNameFlagMask;
+    return static_cast<Group>((flags() >> GroupShift) & GroupMask);
+}
+
+bool
+LinearString::inUnknownGroup() const
+{
+    return group() == Group::Unknown;
+}
+
+bool
+LinearString::inIndexGroup() const
+{
+    return group() == Group::Index;
+}
+
+bool
+LinearString::inNameGroup() const
+{
+    return group() == Group::Name;
 }
 
 uint32_t
 LinearString::length() const
 {
-    if (isEightBit())
-        return objectSize();
     WH_ASSERT(objectSize() % 2 == 0);
     return objectSize() / 2;
 }
@@ -194,9 +194,7 @@ uint16_t
 LinearString::getChar(uint32_t idx) const
 {
     WH_ASSERT(idx < length());
-    if (isEightBit())
-        return eightBitData()[idx];
-    return sixteenBitData()[idx];
+    return data()[idx];
 }
 
 

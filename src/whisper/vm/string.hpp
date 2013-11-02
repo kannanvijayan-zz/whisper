@@ -3,6 +3,7 @@
 
 #include "common.hpp"
 #include "debug.hpp"
+#include "rooting.hpp"
 #include "vm/heap_type_defn.hpp"
 #include "vm/heap_thing.hpp"
 
@@ -38,6 +39,8 @@ struct HeapString
     uint32_t length() const;
     uint16_t getChar(uint32_t idx) const;
 
+    bool linearize(RunContext *cx, MutHandle<LinearString *> out);
+
     bool fitsImmediate() const;
 };
 
@@ -56,37 +59,44 @@ struct HeapString
 //      +-----------------------+
 //
 //  Flags
-//      EightBit - indicates if string contains 8 or 16 bit chars.
 //      Interned - indicates if string is interned in the string table.
-//      PropertyName - indicates if the string is a property name.
 //
-struct LinearString : public HeapThing,
-                      public HeapString,
-                      public TypedHeapThing<HeapType::LinearString>
+//      Group - one of Unknown, Index, or Name.  Identifies whether the
+//          string is a known index, known non-index (name), or not yet
+//          known.
+//
+class LinearString : public HeapThing,
+                     public HeapString,
+                     public TypedHeapThing<HeapType::LinearString>
 {
+  friend class HeapString;
   public:
-    static constexpr uint32_t EightBitFlagMask = 0x1;
-    static constexpr uint32_t InternedFlagMask = 0x2;
-    static constexpr uint32_t PropertyNameFlagMask = 0x4;
+    static constexpr uint32_t InternedFlagMask = 0x1;
+    static constexpr unsigned GroupShift = 1;
+    static constexpr unsigned GroupMask = 0x3;
 
-  protected:
-    uint8_t *writableEightBitData();
-    uint16_t *writableSixteenBitData();
+    enum class Group : uint8_t { Unknown = 0, Index = 1, Name = 2 };
+
+  private:
+    void initializeFlags(bool interned, Group group);
+    uint16_t *writableData();
     
   public:
-    LinearString(const uint8_t *data);
-    LinearString(const uint16_t *data);
-    LinearString(const uint8_t *data, bool interned, bool propName);
-    LinearString(const uint16_t *data, bool interned, bool propName);
+    LinearString(const HeapString *str, bool interned = false,
+                 Group group = Group::Unknown);
+    LinearString(const uint8_t *data, bool interned = false,
+                 Group group = Group::Unknown);
+    LinearString(const uint16_t *data, bool interned = false,
+                 Group group = Group::Unknown);
 
-    bool isEightBit() const;
-    const uint8_t *eightBitData() const;
-
-    bool isSixteenBit() const;
-    const uint16_t *sixteenBitData() const;
+    const uint16_t *data() const;
 
     bool isInterned() const;
-    bool isPropertyName() const;
+
+    Group group() const;
+    bool inUnknownGroup() const;
+    bool inIndexGroup() const;
+    bool inNameGroup() const;
 
     uint32_t length() const;
     uint16_t getChar(uint32_t idx) const;
