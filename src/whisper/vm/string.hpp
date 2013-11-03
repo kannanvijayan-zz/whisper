@@ -46,9 +46,8 @@ struct HeapString
 
 
 //
-// LinearString objects can be composed of 8 or 16 bit characters.
-// The character class is identified by the low-bit flag on
-// the string.
+// LinearString is a string representation which embeds all the 16-bit
+// characters within the object.
 //
 //      +-----------------------+
 //      | Header                |

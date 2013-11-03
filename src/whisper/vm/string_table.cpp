@@ -132,7 +132,8 @@ StringTable::addString(RunContext *cx, Handle<HeapString *> string,
     // Allocate tenured LinearString copy (marked interned).
     uint32_t size = string->length() * 2;
     interned = cx->inTenured().createSized<LinearString>(
-                            size, string, false, LinearString::Group::Unknown);
+                            size, string, /*interned=*/true,
+                            /*group=*/LinearString::Group::Unknown);
     if (!interned)
         return false;
 
