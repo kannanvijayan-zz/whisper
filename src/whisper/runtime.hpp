@@ -12,6 +12,7 @@
 
 namespace Whisper {
 
+template <typename T> class VectorRoot;
 class RootBase;
 class Slab;
 class ThreadContext;
@@ -136,7 +137,7 @@ class AllocationContext
 
     Value createNumber(double d);
 
-    VM::Tuple *createTuple(uint32_t count, const Value *vals);
+    VM::Tuple *createTuple(const VectorRoot<Value> &vals);
     VM::Tuple *createTuple(uint32_t size);
 
   private:

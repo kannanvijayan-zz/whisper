@@ -4,6 +4,7 @@
 #include "slab.hpp"
 #include "runtime.hpp"
 #include "runtime_inlines.hpp"
+#include "rooting_inlines.hpp"
 #include "vm/heap_thing_inlines.hpp"
 #include "vm/stack_frame.hpp"
 #include "vm/string.hpp"
@@ -268,9 +269,9 @@ AllocationContext::createNumber(double d)
 
 
 VM::Tuple *
-AllocationContext::createTuple(uint32_t count, const Value *vals)
+AllocationContext::createTuple(const VectorRoot<Value> &vals)
 {
-    return createSized<VM::Tuple>(count * sizeof(Value), vals);
+    return createSized<VM::Tuple>(vals.size() * sizeof(Value), &vals.ref(0));
 }
 
 

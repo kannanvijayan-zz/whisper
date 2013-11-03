@@ -79,8 +79,7 @@ BytecodeGenerator::constants()
         return nullptr;
 
     // Create constant pool.
-    return cx_->inHatchery().createTuple(constantPool_.size(),
-                                         &constantPool_.ref(0));
+    return cx_->inHatchery().createTuple(constantPool_);
 }
 
 uint32_t

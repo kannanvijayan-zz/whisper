@@ -1,17 +1,30 @@
 
-#include "vm/object.hpp"
-#include "value_inlines.hpp"
-#include "vm/heap_thing_inlines.hpp"
-#include "vm/shape_tree_inlines.hpp"
 #include <algorithm>
+
+#include "value_inlines.hpp"
+#include "rooting_inlines.hpp"
+#include "vm/heap_thing_inlines.hpp"
+#include "vm/object.hpp"
 
 namespace Whisper {
 namespace VM {
 
 
-HashObject::HashObject(Handle<Object *> prototype, Handle<Tuple *> mappings)
-  : prototype_(prototype), mappings_(mappings)
+HashObject::HashObject(Handle<Object *> prototype)
+  : prototype_(prototype), entries_(0), mappings_(nullptr)
 {}
+
+bool
+HashObject::initialize(RunContext *cx)
+{
+    WH_ASSERT(!mappings_);
+
+    mappings_.set(cx->inHatchery().createTuple(INITIAL_ENTRIES * 2), this);
+    if (!mappings_)
+        return false;
+
+    return true;
+}
 
 Handle<Object *>
 HashObject::prototype() const

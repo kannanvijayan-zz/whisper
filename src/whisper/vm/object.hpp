@@ -5,7 +5,7 @@
 #include "debug.hpp"
 #include "value.hpp"
 #include "rooting.hpp"
-#include "vm/property_map_thing.hpp"
+#include "tuple.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -35,10 +35,14 @@ class HashObject : public HeapThing
 {
   private:
     Heap<Object *> prototype_;
+    uint32_t entries_;
     Heap<Tuple *> mappings_;
 
+    static constexpr uint32_t INITIAL_ENTRIES = 4;
+
   public:
-    HashObject(Handle<Object *> prototype, Handle<Tuple *> mappings);
+    HashObject(Handle<Object *> prototype);
+    bool initialize(RunContext *cx);
 
     Handle<Object *> prototype() const;
     Handle<Tuple *> mappings() const;

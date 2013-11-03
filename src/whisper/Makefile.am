@@ -22,6 +22,7 @@ whisper_SOURCES = \
     vm/script.cpp \
     vm/stack_frame.cpp \
     vm/tuple.cpp \
+    vm/object.cpp \
     vm/arithmetic_ops.cpp \
     interp/bytecode_ops.cpp \
     interp/bytecode_generator.cpp \
@@ -30,9 +31,7 @@ whisper_SOURCES = \
 
 #    vm/reference.cpp \
 #    vm/property_descriptor.cpp \
-#    vm/tuple.cpp \
 #    vm/shape_tree.cpp \
 #    vm/property_map_thing.cpp \
-#    vm/object.cpp \
 #    vm/global.cpp \
 #    vm/scope.cpp
