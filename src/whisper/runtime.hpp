@@ -136,10 +136,10 @@ class AllocationContext
     Value createString(uint32_t length, const uint8_t *bytes);
     Value createString(uint32_t length, const uint16_t *bytes);
 
-    bool createNumber(double d, MutHandle<Value> value);
+    bool createNumber(double d, Value &output);
 
-    VM::Tuple *createTuple(const VectorRoot<Value> &vals);
-    VM::Tuple *createTuple(uint32_t size);
+    bool createTuple(const VectorRoot<Value> &vals, VM::Tuple *&output);
+    bool createTuple(uint32_t size, VM::Tuple *&output);
 
   private:
     // Allocate an object.  This takes an explicit size because some

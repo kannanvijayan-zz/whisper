@@ -19,7 +19,11 @@ HashObject::initialize(RunContext *cx)
 {
     WH_ASSERT(!mappings_);
 
-    mappings_.set(cx->inHatchery().createTuple(INITIAL_ENTRIES * 2), this);
+    Tuple *tup;
+    if (!cx->inHatchery().createTuple(INITIAL_ENTRIES * 2, tup))
+        return false;
+
+    mappings_.set(tup, this);
     if (!mappings_)
         return false;
 

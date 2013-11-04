@@ -259,7 +259,7 @@ AllocationContext::createString(uint32_t length, const uint16_t *bytes)
 }
 
 bool
-AllocationContext::createNumber(double d, MutHandle<Value> value)
+AllocationContext::createNumber(double d, Value &value)
 {
     if (Value::IsImmediateNumber(d)) {
         value = Value::Number(d);
@@ -275,17 +275,24 @@ AllocationContext::createNumber(double d, MutHandle<Value> value)
 }
 
 
-VM::Tuple *
-AllocationContext::createTuple(const VectorRoot<Value> &vals)
+bool
+AllocationContext::createTuple(const VectorRoot<Value> &vals,
+                               VM::Tuple *&output)
 {
-    return createSized<VM::Tuple>(vals.size() * sizeof(Value), &vals.ref(0));
+    output = createSized<VM::Tuple>(vals.size() * sizeof(Value), &vals.ref(0));
+    if (!output)
+        return false;
+    return true;
 }
 
 
-VM::Tuple *
-AllocationContext::createTuple(uint32_t size)
+bool
+AllocationContext::createTuple(uint32_t size, VM::Tuple *&output)
 {
-    return createSized<VM::Tuple>(size * sizeof(Value));
+    output = createSized<VM::Tuple>(size * sizeof(Value));
+    if (!output)
+        return false;
+    return true;
 }
 
 

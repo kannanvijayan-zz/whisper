@@ -121,7 +121,9 @@ int main(int argc, char **argv) {
     WH_ASSERT(bc != nullptr);
 
     // Get constant pool tuple.
-    Root<VM::Tuple *> constants(cx, bcgen.constants());
+    Root<VM::Tuple *> constants(cx);
+    if (!bcgen.constants(constants))
+        return false;
 
     VM::Script::Config scriptCfg(false, VM::Script::TopLevel,
                                     bcgen.maxStackDepth());

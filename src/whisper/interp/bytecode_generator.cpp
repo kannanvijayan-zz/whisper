@@ -71,15 +71,20 @@ BytecodeGenerator::generateBytecode()
     return bytecode_;
 }
 
-VM::Tuple *
-BytecodeGenerator::constants()
+bool
+BytecodeGenerator::constants(VM::Tuple *&tuple)
 {
     // Sometimes no constant pool is necessary.
-    if (constantPool_.size() == 0)
-        return nullptr;
+    if (constantPool_.size() == 0) {
+        tuple = nullptr;
+        return true;
+    }
 
     // Create constant pool.
-    return cx_->inHatchery().createTuple(constantPool_);
+    if (!cx_->inHatchery().createTuple(constantPool_, tuple))
+        return false;
+
+    return true;
 }
 
 uint32_t
@@ -179,7 +184,7 @@ BytecodeGenerator::generateExpression(AST::ExpressionNode *expr,
         WH_ASSERT(annot->isDouble());
 
         Root<Value> dval(cx_);
-        if (!cx_->inHatchery().createNumber(annot->doubleValue(), &dval))
+        if (!cx_->inHatchery().createNumber(annot->doubleValue(), dval))
             emitError("Could not allocate number.");
 
         uint32_t constIdx = addConstant(dval);
@@ -235,7 +240,7 @@ BytecodeGenerator::getAddressableLocation(AST::ExpressionNode *expr,
         // Otherwise, handle double value.
         WH_ASSERT(annot->isDouble());
         Root<Value> dval(cx_);
-        if (!cx_->inHatchery().createNumber(d, &dval))
+        if (!cx_->inHatchery().createNumber(d, dval))
             emitError("Could not allocate number.");
 
         uint32_t constIdx = addConstant(dval);
@@ -275,7 +280,7 @@ BytecodeGenerator::getAddressableLocation(AST::ExpressionNode *expr,
             WH_ASSERT(!constVal.isInt32());
             double dbl = -constVal.numberValue();
             Root<Value> dval(cx_);
-            if (!cx_->inHatchery().createNumber(dbl, &dval))
+            if (!cx_->inHatchery().createNumber(dbl, dval))
                 return false;
 
             // If constant was created, it MUST have been newly added.

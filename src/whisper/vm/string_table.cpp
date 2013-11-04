@@ -81,8 +81,7 @@ StringTable::initialize(RunContext *cx)
     WH_ASSERT(tuple_ == nullptr);
 
     // Allocate a new tuple with reasonable capacity in tenured space.
-    tuple_ = cx->inTenured().createTuple(INITIAL_TUPLE_SIZE);
-    if (!tuple_)
+    if (!cx->inTenured().createTuple(INITIAL_TUPLE_SIZE, tuple_))
         return false;
 
     return true;
@@ -314,8 +313,7 @@ StringTable::enlarge(RunContext *cx)
     uint32_t curSize = tuple_->size();
     
     // Allocate a new tuple with double capacity.
-    tuple_ = cx->inTenured().createTuple(curSize * 2);
-    if (!tuple_)
+    if (!cx->inTenured().createTuple(curSize * 2, tuple_))
         return false;
 
     // Add old strings to table.

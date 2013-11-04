@@ -52,7 +52,7 @@ PerformAdd(RunContext *cx, Handle<Value> lhs, Handle<Value> rhs,
             return SetOutputAndReturn(out, Value::NaN());
 
         Root<Value> result(cx);
-        if (!cx->inHatchery().createNumber(lhsVal + rhsVal, &result))
+        if (!cx->inHatchery().createNumber(lhsVal + rhsVal, result))
             return false;
 
         return SetOutputAndReturn(out, result.get());
@@ -98,7 +98,7 @@ PerformSub(RunContext *cx, Handle<Value> lhs, Handle<Value> rhs,
             return SetOutputAndReturn(out, Value::NaN());
 
         Root<Value> result(cx);
-        if (!cx->inHatchery().createNumber(lhsVal - rhsVal, &result))
+        if (!cx->inHatchery().createNumber(lhsVal - rhsVal, result))
             return false;
 
         return SetOutputAndReturn(out, result.get());
@@ -148,7 +148,7 @@ PerformMul(RunContext *cx, Handle<Value> lhs, Handle<Value> rhs,
             return SetOutputAndReturn(out, Value::NaN());
 
         Root<Value> result(cx);
-        if (!cx->inHatchery().createNumber(lhsVal * rhsVal, &result))
+        if (!cx->inHatchery().createNumber(lhsVal * rhsVal, result))
             return false;
 
         return SetOutputAndReturn(out, result.get());
@@ -211,7 +211,7 @@ PerformDiv(RunContext *cx, Handle<Value> lhs, Handle<Value> rhs,
         }
 
         Root<Value> result(cx);
-        if (!cx->inHatchery().createNumber(lhsVal / rhsVal, &result))
+        if (!cx->inHatchery().createNumber(lhsVal / rhsVal, result))
             return false;
 
         return SetOutputAndReturn(out, result.get());
@@ -238,7 +238,7 @@ PerformMod(RunContext *cx, Handle<Value> lhs, Handle<Value> rhs,
         int32_t rhsVal = rhs->numberValue();
 
         Root<Value> result(cx);
-        if (!cx->inHatchery().createNumber(fmod(lhsVal, rhsVal), &result))
+        if (!cx->inHatchery().createNumber(fmod(lhsVal, rhsVal), result))
             return false;
 
         return SetOutputAndReturn(out, result.get());

@@ -84,7 +84,7 @@ class BytecodeGenerator
     const char *error() const;
 
     VM::Bytecode *generateBytecode();
-    VM::Tuple *constants();
+    bool constants(VM::Tuple *&tup);
 
     uint32_t maxStackDepth() const;
 
