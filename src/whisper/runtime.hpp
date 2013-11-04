@@ -133,8 +133,8 @@ class AllocationContext
     template <typename ObjT, typename... Args>
     inline ObjT *createSized(uint32_t size, Args... args);
 
-    Value createString(uint32_t length, const uint8_t *bytes);
-    Value createString(uint32_t length, const uint16_t *bytes);
+    bool createString(uint32_t length, const uint8_t *bytes, Value &output);
+    bool createString(uint32_t length, const uint16_t *bytes, Value &output);
 
     bool createNumber(double d, Value &output);
 

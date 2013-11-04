@@ -211,28 +211,41 @@ AllocationContext::AllocationContext(RunContext *cx, Slab *slab)
 {}
 
 
-Value
-AllocationContext::createString(uint32_t length, const uint8_t *bytes)
+bool
+AllocationContext::createString(uint32_t length, const uint8_t *bytes,
+                                Value &output)
 {
     // Check for integer index.
     int32_t idxVal = Value::ImmediateIndexValue(length, bytes);
-    if (idxVal >= 0)
-        return Value::ImmIndexString(idxVal);
+    if (idxVal >= 0) {
+        output = Value::ImmIndexString(idxVal);
+        return true;
+    }
 
     // Check if fits in immediate.
-    if (length < Value::ImmString8MaxLength)
-        return Value::ImmString8(length, bytes);
+    if (length < Value::ImmString8MaxLength) {
+        output = Value::ImmString8(length, bytes);
+        return true;
+    }
 
-    return Value::HeapString(createSized<VM::LinearString>(length, bytes));
+    VM::LinearString *str = createSized<VM::LinearString>(length, bytes);
+    if (!str)
+        return false;
+
+    output = Value::HeapString(str);
+    return true;
 }
 
-Value
-AllocationContext::createString(uint32_t length, const uint16_t *bytes)
+bool
+AllocationContext::createString(uint32_t length, const uint16_t *bytes,
+                                Value &output)
 {
     // Check for integer index.
     int32_t idxVal = Value::ImmediateIndexValue(length, bytes);
-    if (idxVal >= 0)
-        return Value::ImmIndexString(idxVal);
+    if (idxVal >= 0) {
+        output = Value::ImmIndexString(idxVal);
+        return true;
+    }
 
     // Check if this is really an 8-bit immediate string in 16-bit clothes.
     if (length <= Value::ImmString8MaxLength) {
@@ -247,15 +260,23 @@ AllocationContext::createString(uint32_t length, const uint16_t *bytes)
             uint8_t buf[Value::ImmString8MaxLength];
             for (unsigned i = 0; i < length; i++)
                 buf[i] = bytes[i];
-            return Value::ImmString8(length, buf);
+            output = Value::ImmString8(length, buf);
+            return true;
         }
     }
 
     // Check if fits in 16-bit immediate string.
-    if (length < Value::ImmString16MaxLength)
-        return Value::ImmString16(length, bytes);
+    if (length < Value::ImmString16MaxLength) {
+        output = Value::ImmString16(length, bytes);
+        return true;
+    }
 
-    return Value::HeapString(createSized<VM::LinearString>(length, bytes));
+    VM::LinearString *str = createSized<VM::LinearString>(length, bytes);
+    if (!str)
+        return false;
+        
+    output = Value::HeapString(str);
+    return true;
 }
 
 bool
