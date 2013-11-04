@@ -94,9 +94,12 @@ class NumericLiteralAnnotation
     }
 
     NumericLiteralAnnotation(double dval)
-      : isInt32_(false)
+      : isInt32_(ToInt32(dval) == dval)
     {
-        doubleVal_ = dval;
+        if (isInt32_)
+            int32Val_ = ToInt32(dval);
+        else
+            doubleVal_ = dval;
     }
 
   public:

@@ -51,8 +51,11 @@ PerformAdd(RunContext *cx, Handle<Value> lhs, Handle<Value> rhs,
         if (DoubleIsNaN(lhsVal) || DoubleIsNaN(rhsVal))
             return SetOutputAndReturn(out, Value::NaN());
 
-        return SetOutputAndReturn(out,
-                    cx->inHatchery().createNumber(lhsVal + rhsVal));
+        Root<Value> result(cx);
+        if (!cx->inHatchery().createNumber(lhsVal + rhsVal, &result))
+            return false;
+
+        return SetOutputAndReturn(out, result.get());
     }
 
     WH_UNREACHABLE("Non-int32 add not implemented yet!");
@@ -94,8 +97,11 @@ PerformSub(RunContext *cx, Handle<Value> lhs, Handle<Value> rhs,
         if (DoubleIsNaN(lhsVal) || DoubleIsNaN(rhsVal))
             return SetOutputAndReturn(out, Value::NaN());
 
-        return SetOutputAndReturn(out,
-                    cx->inHatchery().createNumber(lhsVal - rhsVal));
+        Root<Value> result(cx);
+        if (!cx->inHatchery().createNumber(lhsVal - rhsVal, &result))
+            return false;
+
+        return SetOutputAndReturn(out, result.get());
     }
 
     WH_UNREACHABLE("Non-number subtract not implemented yet!");
@@ -141,8 +147,11 @@ PerformMul(RunContext *cx, Handle<Value> lhs, Handle<Value> rhs,
         if (DoubleIsNaN(lhsVal) || DoubleIsNaN(rhsVal))
             return SetOutputAndReturn(out, Value::NaN());
 
-        return SetOutputAndReturn(out,
-                    cx->inHatchery().createNumber(lhsVal * rhsVal));
+        Root<Value> result(cx);
+        if (!cx->inHatchery().createNumber(lhsVal * rhsVal, &result))
+            return false;
+
+        return SetOutputAndReturn(out, result.get());
     }
 
     WH_UNREACHABLE("Non-number multiply not implemented yet!");
@@ -201,8 +210,11 @@ PerformDiv(RunContext *cx, Handle<Value> lhs, Handle<Value> rhs,
             return SetOutputAndReturn(out, Value::PosInf());
         }
 
-        return SetOutputAndReturn(out,
-                    cx->inHatchery().createNumber(lhsVal / rhsVal));
+        Root<Value> result(cx);
+        if (!cx->inHatchery().createNumber(lhsVal / rhsVal, &result))
+            return false;
+
+        return SetOutputAndReturn(out, result.get());
     }
 
     WH_UNREACHABLE("Non-number divide not implemented yet!");
@@ -224,8 +236,12 @@ PerformMod(RunContext *cx, Handle<Value> lhs, Handle<Value> rhs,
     if (lhs->isNumber() && rhs->isNumber()) {
         int32_t lhsVal = lhs->numberValue();
         int32_t rhsVal = rhs->numberValue();
-        return SetOutputAndReturn(out,
-                    cx->inHatchery().createNumber(fmod(lhsVal, rhsVal)));
+
+        Root<Value> result(cx);
+        if (!cx->inHatchery().createNumber(fmod(lhsVal, rhsVal), &result))
+            return false;
+
+        return SetOutputAndReturn(out, result.get());
     }
 
     WH_UNREACHABLE("Non-number modulo not implemented yet!");

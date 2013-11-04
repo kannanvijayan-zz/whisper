@@ -13,6 +13,7 @@
 namespace Whisper {
 
 template <typename T> class VectorRoot;
+template <typename T> class MutHandle;
 class RootBase;
 class Slab;
 class ThreadContext;
@@ -135,7 +136,7 @@ class AllocationContext
     Value createString(uint32_t length, const uint8_t *bytes);
     Value createString(uint32_t length, const uint16_t *bytes);
 
-    Value createNumber(double d);
+    bool createNumber(double d, MutHandle<Value> value);
 
     VM::Tuple *createTuple(const VectorRoot<Value> &vals);
     VM::Tuple *createTuple(uint32_t size);

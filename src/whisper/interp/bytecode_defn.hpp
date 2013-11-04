@@ -18,6 +18,7 @@ _(PushInt8,     I1,     0,      0,1,            OPF_None           )\
 _(PushInt16,    I2,     0,      0,1,            OPF_None           )\
 _(PushInt24,    I3,     0,      0,1,            OPF_None           )\
 _(PushInt32,    I4,     0,      0,1,            OPF_None           )\
+_(Push,         V,      0,      0,1,            OPF_None           )\
 \
 _(Ret_S,        E,      0,      1,0,            OPF_Control        )\
 _(Ret_V,        V,      0,      0,0,            OPF_Control        )\

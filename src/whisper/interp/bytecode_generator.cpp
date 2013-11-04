@@ -172,13 +172,18 @@ BytecodeGenerator::generateExpression(AST::ExpressionNode *expr,
         WH_ASSERT(lit->hasAnnotation());
         AST::NumericLiteralAnnotation *annot = lit->annotation();
 
-        if (!annot->isInt32()) {
-            SpewBytecodeError("Cannot handle non-int NumericLiterals.");
-            emitError("Cannot handle expression.");
-        }
-
         // Int32s are just always emitted inline.
-        emitPushInt32(annot->int32Value());
+        if (annot->isInt32())
+            emitPushInt32(annot->int32Value());
+
+        WH_ASSERT(annot->isDouble());
+
+        Root<Value> dval(cx_);
+        if (!cx_->inHatchery().createNumber(annot->doubleValue(), &dval))
+            emitError("Could not allocate number.");
+
+        uint32_t constIdx = addConstant(dval);
+        emitPush(OperandLocation::Constant(constIdx));
 
     // Handle parenthesized expressions.
     } else if (expr->isParenthesizedExpression()) {
@@ -202,27 +207,39 @@ BytecodeGenerator::getAddressableLocation(AST::ExpressionNode *expr,
         WH_ASSERT(lit->hasAnnotation());
         AST::NumericLiteralAnnotation *annot = lit->annotation();
 
+        bool tryInt32 = false;
+        int32_t i = 0;
+        double d = 0.0;
+
         // Handle int32 immediates.
         if (annot->isInt32()) {
-            // Ensure the value is within the immediate range.
-            int32_t val = annot->int32Value();
-            if (val < OperandMinSignedValue || val > OperandMaxSignedValue)
-                return false;
+            i = annot->int32Value();
+            d = i;
+            tryInt32 = true;
+        } else {
+            // The annotation should already have determined that the
+            // dval cannot fit in an int23.
+            d = annot->doubleValue();
+            WH_ASSERT(ToInt32(d) != d);
+            tryInt32 = false;
+        }
 
-            location = OperandLocation::Immediate(annot->int32Value());
+        if (tryInt32 &&
+            (i >= OperandMinSignedValue) &&
+            (i <= OperandMaxSignedValue))
+        {
+            location = OperandLocation::Immediate(i);
             return true;
         }
 
-        // Otherwise, handle doubles.
+        // Otherwise, handle double value.
         WH_ASSERT(annot->isDouble());
-        double dbl = annot->doubleValue();
-        Value dval = cx_->inHatchery().createNumber(dbl);
+        Root<Value> dval(cx_);
+        if (!cx_->inHatchery().createNumber(d, &dval))
+            emitError("Could not allocate number.");
 
-        uint32_t constIdx = constantPool_.size();
-        if (constIdx > OperandMaxIndex)
-            emitError("Too many constant values in script.");
-        constantPool_.append(dval);
-        SpewBytecodeNote("Generating double constant: %llx", dval.raw());
+        uint32_t constIdx = addConstant(dval);
+        SpewBytecodeNote("Generating double constant: %llx", d);
         location = OperandLocation::Constant(constIdx);
         return true;
     }
@@ -242,14 +259,33 @@ BytecodeGenerator::getAddressableLocation(AST::ExpressionNode *expr,
         if (!getAddressableLocation(subExpr, location))
             return false;
 
-        if (!location.isImmediate())
-            return false;
+        if (location.isImmediate()) {
+            if (location.signedValue() < 0)
+                return false;
 
-        if (location.signedValue() < 0)
-            return false;
+            if (-location.signedValue() < OperandMinSignedValue)
+                return false;
 
-        location = OperandLocation::Immediate(-location.signedValue());
-        return true;
+            location = OperandLocation::Immediate(-location.signedValue());
+
+        } else if (location.isConstant()) {
+            // Negativize the constant.
+            Value constVal = getConstant(location.constantIndex());
+            WH_ASSERT(constVal.isNumber());
+            WH_ASSERT(!constVal.isInt32());
+            double dbl = -constVal.numberValue();
+            Root<Value> dval(cx_);
+            if (!cx_->inHatchery().createNumber(dbl, &dval))
+                return false;
+
+            // If constant was created, it MUST have been newly added.
+            WH_ASSERT(location.constantIndex() == constantPool_.size() - 1);
+
+            replaceConstant(location.constantIndex(), dval);
+            return true;
+        }
+
+        return false;
     }
 
     // TODO: Handle other cases.
@@ -286,6 +322,13 @@ BytecodeGenerator::emitPushInt32(int32_t value)
     emitByte((value >> 8) & 0xFF);
     emitByte((value >> 16) & 0xFF);
     emitByte(value >> 24);
+}
+
+void
+BytecodeGenerator::emitPush(const OperandLocation &location)
+{
+    emitOp(Opcode::Push);
+    emitOperandLocation(location);
 }
 
 void
@@ -592,6 +635,30 @@ BytecodeGenerator::emitByte(uint8_t byte)
         bytecode_->writableData()[currentBytecodeSize_] = byte;
 
     currentBytecodeSize_++;
+}
+
+uint32_t
+BytecodeGenerator::addConstant(Value val)
+{
+    uint32_t constIdx = constantPool_.size();
+    if (constIdx > OperandMaxIndex)
+        emitError("Too many constant values in script.");
+    constantPool_.append(val);
+    return constIdx;
+}
+
+Value
+BytecodeGenerator::getConstant(uint32_t idx)
+{
+    WH_ASSERT(idx <= OperandMaxIndex);
+    return constantPool_[idx];
+}
+
+void
+BytecodeGenerator::replaceConstant(uint32_t idx, Value val)
+{
+    WH_ASSERT(idx <= OperandMaxIndex);
+    constantPool_[idx] = val;
 }
 
 void

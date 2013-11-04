@@ -99,6 +99,8 @@ class BytecodeGenerator
 
 
     void emitPushInt32(int32_t value);
+    void emitPush(const OperandLocation &location);
+    void emitPushOperandLocation(const OperandLocation &location);
     void emitUnaryOp(AST::BaseUnaryExpressionNode *expr,
                      const OperandLocation &inputLocation,
                      const OperandLocation &outputLocation);
@@ -106,7 +108,9 @@ class BytecodeGenerator
                       const OperandLocation &lhsLocation,
                       const OperandLocation &rhsLocation,
                       const OperandLocation &outputLocation);
+
     void emitPop(uint16_t num=1);
+
     void emitOperandLocation(const OperandLocation &location);
     void emitOp(Opcode op);
     void emitConstantOperand(uint32_t idx);
@@ -118,6 +122,10 @@ class BytecodeGenerator
 
     void emitIndexedOperand(OperandSpace space, uint32_t idx);
     void emitByte(uint8_t byte);
+
+    uint32_t addConstant(Value val);
+    Value getConstant(uint32_t idx);
+    void replaceConstant(uint32_t idx, Value val);
     
     void emitError(const char *msg);
 };

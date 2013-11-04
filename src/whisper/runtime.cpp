@@ -258,13 +258,20 @@ AllocationContext::createString(uint32_t length, const uint16_t *bytes)
     return Value::HeapString(createSized<VM::LinearString>(length, bytes));
 }
 
-Value
-AllocationContext::createNumber(double d)
+bool
+AllocationContext::createNumber(double d, MutHandle<Value> value)
 {
-    if (Value::IsImmediateNumber(d))
-        return Value::Number(d);
+    if (Value::IsImmediateNumber(d)) {
+        value = Value::Number(d);
+        return true;
+    }
 
-    return Value::HeapDouble(create<VM::HeapDouble>(d));
+    VM::HeapDouble *heapDouble = create<VM::HeapDouble>(d);
+    if (!heapDouble)
+        return false;
+
+    value = Value::HeapDouble(heapDouble);
+    return true;
 }
 
 
