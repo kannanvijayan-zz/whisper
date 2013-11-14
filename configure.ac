@@ -1,7 +1,7 @@
 
 AC_INIT([whisper], [0.0.1], [kannan@vijayan.ca])
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
 
 echo "==== Testing for C++ compiler"
 AC_PROG_CXX
