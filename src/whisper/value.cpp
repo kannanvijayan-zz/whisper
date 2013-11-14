@@ -230,7 +230,6 @@ Value::NegZero()
 Value::ImmString8(unsigned length, const uint8_t *data)
 {
     WH_ASSERT(length <= ImmString8MaxLength);
-    WH_ASSERT(!IsImmediateIndexString(length, data));
     uint64_t val = ImmString8Code | (length << ImmString8LengthShift);
     for (unsigned i = 0; i < length; i++)
         val |= data[i] << (ImmString8DataShift + (i*8));
@@ -241,7 +240,6 @@ Value::ImmString8(unsigned length, const uint8_t *data)
 Value::ImmString16(unsigned length, const uint16_t *data)
 {
     WH_ASSERT(length <= ImmString16MaxLength);
-    WH_ASSERT(!IsImmediateIndexString(length, data));
     uint64_t val = ImmString16Code | (length << ImmString16LengthShift);
     for (unsigned i = 0; i < length; i++)
         val |= data[i] << (ImmString16DataShift + (i*16));
@@ -251,7 +249,7 @@ Value::ImmString16(unsigned length, const uint16_t *data)
 /*static*/ Value
 Value::ImmIndexString(int32_t idx)
 {
-    WH_ASSERT(idx > 0);
+    WH_ASSERT(idx >= 0);
     uint64_t val = ImmIndexStringCode |
                    (ToUInt64(idx) << ImmIndexStringDataShift);
     return Value(val);
