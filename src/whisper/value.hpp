@@ -166,6 +166,8 @@ class Value
     static constexpr unsigned ImmIndexStringMaxLength = 10; // "2147483647"
     static constexpr unsigned ImmIndexStringDataShift = 8;
 
+    static constexpr unsigned ImmStringMaxLength = ImmIndexStringMaxLength;
+
     static constexpr unsigned RestMask = 0xff;
     static constexpr unsigned UndefinedVal = 0x18 | 0x6;
     static constexpr unsigned NullVal = 0x58 | 0x6;
@@ -302,7 +304,7 @@ class Value
     unsigned immIndexStringLength() const;
     uint8_t getImmIndexStringChar(unsigned idx) const;
 
-    template <typename CharT, bool Trunc=false>
+    template <typename CharT>
     inline uint32_t readImmIndexString(CharT *buf) const;
 
     unsigned immStringLength() const;
