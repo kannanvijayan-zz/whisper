@@ -102,6 +102,56 @@ class LinearString : public HeapThing,
 };
 
 
+//
+// String hashing.
+//
+
+uint32_t FNVHashString(uint32_t spoiler, const Value &strVal);
+uint32_t FNVHashString(uint32_t spoiler, const HeapString *heapStr);
+uint32_t FNVHashString(uint32_t spoiler, uint32_t length, const uint8_t *str);
+uint32_t FNVHashString(uint32_t spoiler, uint32_t length, const uint16_t *str);
+
+//
+// String comparison.
+//
+
+int CompareStrings(const Value &strA, uint32_t lengthB, const uint8_t *strB);
+int CompareStrings(uint32_t lengthA, const uint8_t *strA, const Value &strB);
+
+int CompareStrings(const Value &strA, uint32_t lengthB, const uint16_t *strB);
+int CompareStrings(uint32_t lengthA, const uint16_t *strA, const Value &strB);
+
+int CompareStrings(const HeapString *strA,
+                   uint32_t lengthB, const uint8_t *strB);
+
+int CompareStrings(uint32_t lengthA, const uint8_t *strA,
+                   const HeapString *strB);
+
+int CompareStrings(const HeapString *strA,
+                   uint32_t lengthB, const uint16_t *strB);
+
+int CompareStrings(uint32_t lengthA, const uint16_t *strA,
+                   const HeapString *strB);
+
+int CompareStrings(const Value &strA, const HeapString *strB);
+int CompareStrings(const HeapString *strA, const Value &strB);
+
+int CompareStrings(const Value &strA, const Value &strB);
+int CompareStrings(const HeapString *strA, const HeapString *strB);
+
+int CompareStrings(uint32_t lengthA, const uint8_t *strA,
+                   uint32_t lengthB, const uint8_t *strB);
+
+int CompareStrings(uint32_t lengthA, const uint16_t *strA,
+                   uint32_t lengthB, const uint16_t *strB);
+
+int CompareStrings(uint32_t lengthA, const uint8_t *strA,
+                   uint32_t lengthB, const uint16_t *strB);
+
+int CompareStrings(uint32_t lengthA, const uint16_t *strA,
+                   uint32_t lengthB, const uint8_t *strB);
+
+
 } // namespace VM
 } // namespace Whisper
 

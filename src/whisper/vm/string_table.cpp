@@ -185,62 +185,17 @@ StringTable::lookupSlot(RunContext *cx, const StringOrQuery &str,
     return UINT32_MAX;
 }
 
-
-static constexpr uint32_t FNV_PRIME = 0x01000193ul;
-
-static constexpr uint32_t FNV_OFFSET_BASIS = 2166136261UL;
-
-template <typename StrT>
-static uint32_t
-HashString(uint32_t spoiler, uint32_t length, const StrT &data)
-{
-    // Start with spoiler.
-    uint32_t perturb = spoiler;
-    uint32_t hash = FNV_OFFSET_BASIS;
-
-    for (uint32_t i = 0; i < length; i++) {
-        uint16_t ch = data[i];
-        uint8_t ch_low = ch & 0xFFu;
-        uint8_t ch_high = (ch >> 8) & 0xFFu;
-
-        // Mix low byte in, perturbed.
-        hash ^= ch_low ^ (perturb & 0xFFu);
-        hash *= FNV_PRIME;
-
-        // Shift and update perturbation.
-        perturb ^= hash;
-        perturb >>= 8;
-
-        // Mix high byte in, perturbed.
-        hash ^= ch_high ^ (perturb & 0xFFu);
-        hash *= FNV_PRIME;
-
-        // Shift and update perturbation.
-        perturb ^= hash;
-        perturb >>= 8;
-    }
-    return hash;
-}
-
-struct StrWrap
-{
-    const HeapString *str;
-    StrWrap(const HeapString *str) : str(str) {}
-
-    uint16_t operator[](uint32_t idx) const {
-        return str->getChar(idx);
-    }
-};
-
 uint32_t
 StringTable::hashString(const StringOrQuery &str)
 {
     if (str.isQuery()) {
         const Query *query = str.toQuery();
-        if (query->isEightBit)
-            return HashString(spoiler_, query->length, query->eightBitData());
+        if (query->isEightBit) {
+            return FNVHashString(spoiler_, query->length,
+                                 query->eightBitData());
+        }
 
-        return HashString(spoiler_, query->length, query->sixteenBitData());
+        return FNVHashString(spoiler_, query->length, query->sixteenBitData());
     }
 
     WH_ASSERT(str.isHeapString());
@@ -248,36 +203,10 @@ StringTable::hashString(const StringOrQuery &str)
 
     if (heapStr->isLinearString()) {
         const LinearString *linStr = heapStr->toLinearString();
-        return HashString(spoiler_, linStr->length(), linStr->data());
+        return FNVHashString(spoiler_, linStr->length(), linStr->data());
     }
 
-    return HashString(spoiler_, heapStr->length(), StrWrap(heapStr));
-}
-
-template <typename StrT1, typename StrT2>
-static int
-CompareStrings(uint32_t len1, const StrT1 &str1,
-               uint32_t len2, const StrT2 &str2)
-{
-    for (uint32_t i = 0; i < len1; i++) {
-        // Check if str2 is prefix of str1.
-        if (i >= len2)
-            return 1;
-
-        // Check characters.
-        uint16_t ch1 = str1[i];
-        uint16_t ch2 = str2[i];
-        if (ch1 < ch2)
-            return -1;
-        if (ch1 > ch2)
-            return 1;
-    }
-
-    // Check if str1 is a prefix of str2
-    if (len2 > len1)
-        return -1;
-
-    return 0;
+    return FNVHashString(spoiler_, heapStr);
 }
 
 int
@@ -302,8 +231,7 @@ StringTable::compareStrings(LinearString *a,
         return CompareStrings(a->length(), a->data(),
                               linStr->length(), linStr->data());
     }
-    return CompareStrings(a->length(), a->data(), heapStr->length(),
-                          StrWrap(heapStr));
+    return CompareStrings(a->length(), a->data(), heapStr);
 }
 
 bool
