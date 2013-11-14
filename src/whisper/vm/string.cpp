@@ -517,9 +517,45 @@ IsInt32IdString(const uint16_t *str, uint32_t length, int32_t *val)
 }
 
 bool
-IsInt32IdString(HeapString *str, uint32_t length, int32_t *val)
+IsInt32IdString(HeapString *str, int32_t *val)
 {
+    if (str->isLinearString()) {
+        return IsInt32IdStringImpl(str->toLinearString()->data(),
+                                   str->toLinearString()->length(), val);
+    }
+
     return IsInt32IdStringImpl(StrWrap(str), str->length(), val);
+}
+
+bool
+IsInt32IdString(const Value &strval, int32_t *val)
+{
+    WH_ASSERT(strval.isString());
+
+    if (strval.isImmIndexString()) {
+        int32_t ival = strval.immIndexStringValue();
+        if (ival < 0)
+            return false;
+        *val = ival;
+        return true;
+    }
+
+    WH_ASSERT_IF(strval.isImmString(),
+                 strval.isImmString8() || strval.isImmString16());
+    if (strval.isImmString8()) {
+        uint8_t buf[Value::ImmString8MaxLength];
+        uint32_t length  = strval.readImmString8(buf);
+        return IsInt32IdString(buf, length, val);
+    }
+
+    if (strval.isImmString16()) {
+        uint16_t buf[Value::ImmString16MaxLength];
+        uint32_t length  = strval.readImmString16(buf);
+        return IsInt32IdString(buf, length, val);
+    }
+
+    WH_ASSERT(strval.isHeapString());
+    return IsInt32IdString(strval.heapStringPtr(), val);
 }
 
 

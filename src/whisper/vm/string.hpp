@@ -141,6 +141,7 @@ int CompareStrings(const uint16_t *strA, uint32_t lengthA,
 bool IsInt32IdString(const uint8_t *str, uint32_t length, int32_t *val);
 bool IsInt32IdString(const uint16_t *str, uint32_t length, int32_t *val);
 bool IsInt32IdString(HeapString *str, int32_t *val);
+bool IsInt32IdString(const Value &strval, int32_t *val);
 
 } // namespace VM
 } // namespace Whisper
