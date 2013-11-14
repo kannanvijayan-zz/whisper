@@ -37,18 +37,37 @@ Value::readImmString16(CharT *buf) const
     return len;
 }
 
+template <typename CharT>
+inline uint32_t
+Value::readImmIndexString(CharT *buf) const
+{
+    WH_ASSERT(this->isImmIndexString());
+    unsigned len = 0;
+    uint64_t val = tagged_ >> ImmIndexStringDataShift;
+    do {
+        buf[len] = static_cast<CharT>('0') + (val % 10);
+        val /= 10;
+        len++;
+    } while (val > 0);
+    WH_ASSERT(len <= ImmIndexStringMaxLength);
+    return len;
+}
+
 template <typename CharT, bool Trunc>
 inline uint32_t
 Value::readImmString(CharT *buf) const
 {
     static_assert(Trunc || sizeof(CharT) >= sizeof(uint16_t),
                   "Character type too small for non-truncating read.");
-    WH_ASSERT(isImmString8() || isImmString16());
+    WH_ASSERT(isImmString8() || isImmString16() || isImmIndexString());
 
     if (this->isImmString8())
         return this->readImmString8<CharT>(buf);
 
-    return this->readImmString16<CharT, Trunc>(buf);
+    if (this->isImmString16())
+        return this->readImmString16<CharT, Trunc>(buf);
+
+    return this->readImmIndexString<CharT>(buf);
 }
 
 
