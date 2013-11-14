@@ -12,11 +12,11 @@ namespace VM {
 // StringTable
 //
 
-StringTable::Query::Query(uint32_t length, const uint8_t *data)
+StringTable::Query::Query(const uint8_t *data, uint32_t length)
   : data(data), length(length), isEightBit(true)
 {}
 
-StringTable::Query::Query(uint32_t length, const uint16_t *data)
+StringTable::Query::Query(const uint16_t *data, uint32_t length)
   : data(data), length(length), isEightBit(false)
 {}
 
@@ -88,26 +88,34 @@ StringTable::initialize(RunContext *cx)
 }
 
 LinearString *
-StringTable::lookupString(RunContext *cx, const HeapString *str)
+StringTable::lookupString(RunContext *cx, HeapString *str)
 {
+    if (str->isLinearString()) {
+        LinearString *linStr = str->toLinearString();
+        if (linStr->isInterned())
+            return linStr;
+
+        return lookupString(cx, linStr->data(), linStr->length());
+    }
+
     LinearString *result;
     lookupSlot(cx, StringOrQuery(str), &result);
     return result;
 }
 
 LinearString *
-StringTable::lookupString(RunContext *cx, uint32_t length, const uint8_t *str)
+StringTable::lookupString(RunContext *cx, const uint8_t *str, uint32_t length)
 {
-    Query q(length, str);
+    Query q(str, length);
     LinearString *result;
     lookupSlot(cx, StringOrQuery(&q), &result);
     return result;
 }
 
 LinearString *
-StringTable::lookupString(RunContext *cx, uint32_t length, const uint16_t *str)
+StringTable::lookupString(RunContext *cx, const uint16_t *str, uint32_t length)
 {
-    Query q(length, str);
+    Query q(str, length);
     LinearString *result;
     lookupSlot(cx, StringOrQuery(&q), &result);
     return result;
@@ -115,37 +123,36 @@ StringTable::lookupString(RunContext *cx, uint32_t length, const uint16_t *str)
 
 bool
 StringTable::addString(RunContext *cx, Handle<HeapString *> string,
-                       MutHandle<LinearString *> interned)
+                       MutHandle<LinearString *> result)
 {
     // Check if |string| is already a LinearString and marked as interned.
     if (string->isLinearString() && string->toLinearString()->isInterned()) {
-        interned = string->toLinearString();
+        result = string->toLinearString();
         return true;
     }
 
     // Check for existing interned string in table.
-    uint32_t slot = lookupSlot(cx, StringOrQuery(string), &interned.get());
-    if (interned)
+    uint32_t slot = lookupSlot(cx, StringOrQuery(string), &result.get());
+    if (result)
         return true;
 
     // Allocate tenured LinearString copy (marked interned).
     uint32_t size = string->length() * 2;
-    interned = cx->inTenured().createSized<LinearString>(
-                            size, string, /*interned=*/true,
-                            /*group=*/LinearString::Group::Unknown);
-    if (!interned)
+    result = cx->inTenured().createSized<LinearString>(
+                            size, string, /*interned=*/true);
+    if (!result)
         return false;
 
     // Resize table if necessary.
     if (entries_ >= tuple_->size() * MAX_FILL_RATIO) {
         if (!enlarge(cx))
             return false;
-        slot = lookupSlot(cx, StringOrQuery(string), &interned.get());
-        WH_ASSERT(!interned);
+        slot = lookupSlot(cx, StringOrQuery(string), &result.get());
+        WH_ASSERT(!result);
     }
 
     // Store interned string.
-    tuple_->set(slot, Value::HeapString(interned.get()));
+    tuple_->set(slot, Value::HeapString(result.get()));
     return true;
 }
 
@@ -191,11 +198,11 @@ StringTable::hashString(const StringOrQuery &str)
     if (str.isQuery()) {
         const Query *query = str.toQuery();
         if (query->isEightBit) {
-            return FNVHashString(spoiler_, query->length,
-                                 query->eightBitData());
+            return FNVHashString(spoiler_, query->eightBitData(),
+                                 query->length);
         }
 
-        return FNVHashString(spoiler_, query->length, query->sixteenBitData());
+        return FNVHashString(spoiler_, query->sixteenBitData(), query->length);
     }
 
     WH_ASSERT(str.isHeapString());
@@ -203,7 +210,7 @@ StringTable::hashString(const StringOrQuery &str)
 
     if (heapStr->isLinearString()) {
         const LinearString *linStr = heapStr->toLinearString();
-        return FNVHashString(spoiler_, linStr->length(), linStr->data());
+        return FNVHashString(spoiler_, linStr->data(), linStr->length());
     }
 
     return FNVHashString(spoiler_, heapStr);
@@ -216,11 +223,11 @@ StringTable::compareStrings(LinearString *a,
     if (b.isQuery()) {
         const Query *query = b.toQuery();
         if (query->isEightBit) {
-            return CompareStrings(a->length(), a->data(),
-                                  query->length, query->eightBitData());
+            return CompareStrings(a->data(), a->length(),
+                                  query->eightBitData(), query->length);
         }
-        return CompareStrings(a->length(), a->data(),
-                              query->length, query->sixteenBitData());
+        return CompareStrings(a->data(), a->length(),
+                              query->sixteenBitData(), query->length);
     }
 
     WH_ASSERT(b.isHeapString());
@@ -228,10 +235,10 @@ StringTable::compareStrings(LinearString *a,
 
     if (heapStr->isLinearString()) {
         const LinearString *linStr = heapStr->toLinearString();
-        return CompareStrings(a->length(), a->data(),
-                              linStr->length(), linStr->data());
+        return CompareStrings(a->data(), a->length(),
+                              linStr->data(), linStr->length());
     }
-    return CompareStrings(a->length(), a->data(), heapStr);
+    return CompareStrings(a->data(), a->length(), heapStr);
 }
 
 bool

@@ -106,12 +106,11 @@ HeapString::fitsImmediate() const
 //
 
 void
-LinearString::initializeFlags(bool interned, Group group)
+LinearString::initializeFlags(bool interned)
 {
     uint32_t flags = 0;
     if (interned)
         flags |= InternedFlagMask;
-    flags |= static_cast<uint32_t>(group) << GroupShift;
     initFlags(flags);
 }
 
@@ -121,11 +120,11 @@ LinearString::writableData()
     return recastThis<uint16_t>();
 }
 
-LinearString::LinearString(const HeapString *str, bool interned, Group group)
+LinearString::LinearString(const HeapString *str, bool interned)
 {
     WH_ASSERT(length() == str->length());
 
-    initializeFlags(interned, group);
+    initializeFlags(interned);
 
     // Only LinearString possible for now.
     WH_ASSERT(str->isLinearString());
@@ -136,15 +135,15 @@ LinearString::LinearString(const HeapString *str, bool interned, Group group)
 
 }
 
-LinearString::LinearString(const uint8_t *data, bool interned, Group group)
+LinearString::LinearString(const uint8_t *data, bool interned)
 {
-    initializeFlags(interned, group);
+    initializeFlags(interned);
     std::copy(data, data + length(), writableData());
 }
 
-LinearString::LinearString(const uint16_t *data, bool interned, Group group)
+LinearString::LinearString(const uint16_t *data, bool interned)
 {
-    initializeFlags(interned, group);
+    initializeFlags(interned);
     std::copy(data, data + length(), writableData());
 }
 
@@ -158,30 +157,6 @@ bool
 LinearString::isInterned() const
 {
     return flags() & InternedFlagMask;
-}
-
-LinearString::Group
-LinearString::group() const
-{
-    return static_cast<Group>((flags() >> GroupShift) & GroupMask);
-}
-
-bool
-LinearString::inUnknownGroup() const
-{
-    return group() == Group::Unknown;
-}
-
-bool
-LinearString::inIndexGroup() const
-{
-    return group() == Group::Index;
-}
-
-bool
-LinearString::inNameGroup() const
-{
-    return group() == Group::Name;
 }
 
 uint32_t
@@ -222,7 +197,7 @@ static constexpr uint32_t FNV_OFFSET_BASIS = 2166136261UL;
 
 template <typename StrT>
 static inline uint32_t
-FNVHashString(uint32_t spoiler, uint32_t length, const StrT &data)
+FNVHashString(uint32_t spoiler, const StrT &data, uint32_t length)
 {
     // Start with spoiler.
     uint32_t perturb = spoiler;
@@ -260,7 +235,7 @@ FNVHashString(uint32_t spoiler, const Value &strVal)
     if (strVal.isImmString()) {
         uint16_t buf[Value::ImmStringMaxLength];
         uint32_t length = strVal.readImmString(buf);
-        return FNVHashString(spoiler, length, buf);
+        return FNVHashString(spoiler, buf, length);
     }
 
     WH_ASSERT(strVal.isHeapString());
@@ -270,19 +245,19 @@ FNVHashString(uint32_t spoiler, const Value &strVal)
 uint32_t
 FNVHashString(uint32_t spoiler, const HeapString *heapStr)
 {
-    return FNVHashString(spoiler, heapStr->length(), StrWrap(heapStr));
+    return FNVHashString(spoiler, StrWrap(heapStr), heapStr->length());
 }
 
 uint32_t
-FNVHashString(uint32_t spoiler, uint32_t length, const uint8_t *str)
+FNVHashString(uint32_t spoiler, const uint8_t *str, uint32_t length)
 {
-    return FNVHashString(spoiler, length, str);
+    return FNVHashString(spoiler, str, length);
 }
 
 uint32_t
-FNVHashString(uint32_t spoiler, uint32_t length, const uint16_t *str)
+FNVHashString(uint32_t spoiler, const uint16_t *str, uint32_t length)
 {
-    return FNVHashString(spoiler, length, str);
+    return FNVHashString(spoiler, str, length);
 }
 
 //
@@ -291,8 +266,8 @@ FNVHashString(uint32_t spoiler, uint32_t length, const uint16_t *str)
 
 template <typename StrT1, typename StrT2>
 static int
-CompareStringsImpl(uint32_t len1, const StrT1 &str1,
-               uint32_t len2, const StrT2 &str2)
+CompareStringsImpl(const StrT1 &str1, uint32_t len1,
+                   const StrT2 &str2, uint32_t len2)
 {
     for (uint32_t i = 0; i < len1; i++) {
         // Check if str2 is prefix of str1.
@@ -316,73 +291,73 @@ CompareStringsImpl(uint32_t len1, const StrT1 &str1,
 }
 
 int
-CompareStrings(const Value &strA, uint32_t lengthB, const uint8_t *strB)
+CompareStrings(const Value &strA, const uint8_t *strB, uint32_t lengthB)
 {
     WH_ASSERT(strA.isString());
 
     if (strA.isImmString()) {
         uint16_t bufA[Value::ImmStringMaxLength];
         uint32_t lengthA = strA.readImmString(bufA);
-        return CompareStringsImpl(lengthA, bufA, lengthB, strB);
+        return CompareStringsImpl(bufA, lengthA, strB, lengthB);
     }
 
     WH_ASSERT(strA.isHeapString());
-    return CompareStrings(strA.heapStringPtr(), lengthB, strB);
+    return CompareStrings(strA.heapStringPtr(), strB, lengthB);
 }
 
 int
-CompareStrings(uint32_t lengthA, const uint8_t *strA, const Value &strB)
+CompareStrings(const uint8_t *strA, uint32_t lengthA, const Value &strB)
 {
-    return -CompareStrings(strB, lengthA, strA);
+    return -CompareStrings(strB, strA, lengthA);
 }
 
 int
-CompareStrings(const Value &strA, uint32_t lengthB, const uint16_t *strB)
+CompareStrings(const Value &strA, const uint16_t *strB, uint32_t lengthB)
 {
     WH_ASSERT(strA.isString());
 
     if (strA.isImmString()) {
         uint16_t bufA[Value::ImmStringMaxLength];
         uint32_t lengthA = strA.readImmString(bufA);
-        return CompareStringsImpl(lengthA, bufA, lengthB, strB);
+        return CompareStringsImpl(bufA, lengthA, strB, lengthB);
     }
 
     WH_ASSERT(strA.isHeapString());
-    return CompareStrings(strA.heapStringPtr(), lengthB, strB);
+    return CompareStrings(strA.heapStringPtr(), strB, lengthB);
 }
 
 int
-CompareStrings(uint32_t lengthA, const uint16_t *strA, const Value &strB)
+CompareStrings(const uint16_t *strA, uint32_t lengthA, const Value &strB)
 {
-    return -CompareStrings(strB, lengthA, strA);
-}
-
-int
-CompareStrings(const HeapString *strA,
-               uint32_t lengthB, const uint8_t *strB)
-{
-    return CompareStringsImpl(strA->length(), StrWrap(strA), lengthB, strB);
-}
-
-int
-CompareStrings(uint32_t lengthA, const uint8_t *strA,
-               const HeapString *strB)
-{
-    return -CompareStrings(strB, lengthA, strA);
+    return -CompareStrings(strB, strA, lengthA);
 }
 
 int
 CompareStrings(const HeapString *strA,
-               uint32_t lengthB, const uint16_t *strB)
+               const uint8_t *strB, uint32_t lengthB)
 {
-    return CompareStringsImpl(strA->length(), StrWrap(strA), lengthB, strB);
+    return CompareStringsImpl(StrWrap(strA), strA->length(), strB, lengthB);
 }
 
 int
-CompareStrings(uint32_t lengthA, const uint16_t *strA,
+CompareStrings(const uint8_t *strA, uint32_t lengthA,
                const HeapString *strB)
 {
-    return -CompareStrings(strB, lengthA, strA);
+    return -CompareStrings(strB, strA, lengthA);
+}
+
+int
+CompareStrings(const HeapString *strA,
+               const uint16_t *strB, uint32_t lengthB)
+{
+    return CompareStringsImpl(StrWrap(strA), strA->length(), strB, lengthB);
+}
+
+int
+CompareStrings(const uint16_t *strA, uint32_t lengthA,
+               const HeapString *strB)
+{
+    return -CompareStrings(strB, strA, lengthA);
 }
 
 int
@@ -393,8 +368,8 @@ CompareStrings(const Value &strA, const HeapString *strB)
     if (strA.isImmString()) {
         uint16_t bufA[Value::ImmStringMaxLength];
         uint32_t lengthA = strA.readImmString(bufA);
-        return CompareStringsImpl(lengthA, bufA,
-                                  strB->length(), StrWrap(strB));
+        return CompareStringsImpl(bufA, lengthA,
+                                  StrWrap(strB), strB->length());
     }
 
     WH_ASSERT(strA.isHeapString());
@@ -419,14 +394,14 @@ CompareStrings(const Value &strA, const Value &strB)
         if (strB.isImmString()) {
             uint16_t bufB[Value::ImmStringMaxLength];
             uint32_t lengthB = strB.readImmString(bufB);
-            return CompareStrings(lengthA, bufA, lengthB, bufB);
+            return CompareStrings(bufA, lengthA, bufB, lengthB);
         }
 
         WH_ASSERT(strB.isHeapString());
         HeapString *heapB = strB.heapStringPtr();
 
-        return CompareStringsImpl(lengthA, bufA,
-                                  heapB->length(), StrWrap(heapB));
+        return CompareStringsImpl(bufA, lengthA,
+                                  StrWrap(heapB), heapB->length());
     }
 
     WH_ASSERT(strA.isHeapString());
@@ -435,8 +410,8 @@ CompareStrings(const Value &strA, const Value &strB)
     if (strB.isImmString()) {
         uint16_t bufB[Value::ImmStringMaxLength];
         uint32_t lengthB = strB.readImmString(bufB);
-        return CompareStringsImpl(heapA->length(), StrWrap(heapA),
-                                  lengthB, bufB);
+        return CompareStringsImpl(StrWrap(heapA), heapA->length(),
+                                  bufB, lengthB);
     }
 
     WH_ASSERT(strB.isHeapString());
@@ -448,37 +423,105 @@ CompareStrings(const Value &strA, const Value &strB)
 int
 CompareStrings(const HeapString *strA, const HeapString *strB)
 {
-    return CompareStringsImpl(strA->length(), StrWrap(strA),
-                              strB->length(), StrWrap(strB));
+    return CompareStringsImpl(StrWrap(strA), strA->length(),
+                              StrWrap(strB), strB->length());
 }
 
 int
-CompareStrings(uint32_t lengthA, const uint8_t *strA,
-               uint32_t lengthB, const uint8_t *strB)
+CompareStrings(const uint8_t *strA, uint32_t lengthA,
+               const uint8_t *strB, uint32_t lengthB)
 {
-    return CompareStringsImpl(lengthA, strA, lengthB, strB);
+    return CompareStringsImpl(strA, lengthA, strB, lengthB);
 }
 
 int
-CompareStrings(uint32_t lengthA, const uint16_t *strA,
-               uint32_t lengthB, const uint16_t *strB)
+CompareStrings(const uint16_t *strA, uint32_t lengthA,
+               const uint16_t *strB, uint32_t lengthB)
 {
-    return CompareStringsImpl(lengthA, strA, lengthB, strB);
+    return CompareStringsImpl(strA, lengthA, strB, lengthB);
 }
 
 int
-CompareStrings(uint32_t lengthA, const uint8_t *strA,
-               uint32_t lengthB, const uint16_t *strB)
+CompareStrings(const uint8_t *strA, uint32_t lengthA,
+               const uint16_t *strB, uint32_t lengthB)
 {
-    return CompareStringsImpl(lengthA, strA, lengthB, strB);
+    return CompareStringsImpl(strA, lengthA, strB, lengthB);
 }
 
 int
-CompareStrings(uint32_t lengthA, const uint16_t *strA,
-               uint32_t lengthB, const uint8_t *strB)
+CompareStrings(const uint16_t *strA, uint32_t lengthA,
+               const uint8_t *strB, uint32_t lengthB)
 {
-    return CompareStringsImpl(lengthA, strA, lengthB, strB);
+    return CompareStringsImpl(strA, lengthA, strB, lengthB);
 }
+
+//
+// Check if a string is an positive int32_t value.
+//
+
+template <typename StrT>
+static bool
+IsInt32IdStringImpl(const StrT &str, uint32_t length, int32_t *val)
+{
+    if (length == 0)
+        return false;
+
+    uint16_t firstCh = str[0];
+
+    if (length == 1)
+        return firstCh == '0';
+
+    // Only id that can start with '0' is '0' itself.
+    if (firstCh == '0')
+        return false;
+
+    // Consume first digit (must not be 0)
+    if (!isdigit(firstCh))
+        return false;
+
+    // Initialize accumulator, accumulate number.
+    uint32_t accum = (firstCh - '0');
+    for (uint32_t idx = 1; idx < length; idx++) {
+        uint16_t ch = str[idx];
+        if (!isdigit(ch))
+            return false;
+
+        uint32_t digit = ch - '0';
+        WH_ASSERT(digit < 10);
+
+        // Check if multiplying accum by 10 will overflow.
+        if (accum > ToUInt32(INT32_MAX / 10))
+            return false;
+        accum *= 10;
+
+        // Check if adding digit will overflow.
+        if (accum + digit > ToUInt32(INT32_MAX))
+            return false;
+        accum += digit;
+    }
+
+    *val = accum;
+    return true;
+}
+
+bool
+IsInt32IdString(const uint8_t *str, uint32_t length, int32_t *val)
+{
+    return IsInt32IdStringImpl(str, length, val);
+}
+
+bool
+IsInt32IdString(const uint16_t *str, uint32_t length, int32_t *val)
+{
+    return IsInt32IdStringImpl(str, length, val);
+}
+
+bool
+IsInt32IdString(HeapString *str, uint32_t length, int32_t *val)
+{
+    return IsInt32IdStringImpl(StrWrap(str), str->length(), val);
+}
+
 
 
 } // namespace VM

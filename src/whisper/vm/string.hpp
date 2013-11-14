@@ -60,10 +60,6 @@ struct HeapString
 //  Flags
 //      Interned - indicates if string is interned in the string table.
 //
-//      Group - one of Unknown, Index, or Name.  Identifies whether the
-//          string is a known index, known non-index (name), or not yet
-//          known.
-//
 class LinearString : public HeapThing,
                      public HeapString,
                      public TypedHeapThing<HeapType::LinearString>
@@ -71,31 +67,19 @@ class LinearString : public HeapThing,
   friend class HeapString;
   public:
     static constexpr uint32_t InternedFlagMask = 0x1;
-    static constexpr unsigned GroupShift = 1;
-    static constexpr unsigned GroupMask = 0x3;
-
-    enum class Group : uint8_t { Unknown = 0, Index = 1, Name = 2 };
 
   private:
-    void initializeFlags(bool interned, Group group);
+    void initializeFlags(bool interned);
     uint16_t *writableData();
     
   public:
-    LinearString(const HeapString *str, bool interned = false,
-                 Group group = Group::Unknown);
-    LinearString(const uint8_t *data, bool interned = false,
-                 Group group = Group::Unknown);
-    LinearString(const uint16_t *data, bool interned = false,
-                 Group group = Group::Unknown);
+    LinearString(const HeapString *str, bool interned = false);
+    LinearString(const uint8_t *data, bool interned = false);
+    LinearString(const uint16_t *data, bool interned = false);
 
     const uint16_t *data() const;
 
     bool isInterned() const;
-
-    Group group() const;
-    bool inUnknownGroup() const;
-    bool inIndexGroup() const;
-    bool inNameGroup() const;
 
     uint32_t length() const;
     uint16_t getChar(uint32_t idx) const;
@@ -108,29 +92,29 @@ class LinearString : public HeapThing,
 
 uint32_t FNVHashString(uint32_t spoiler, const Value &strVal);
 uint32_t FNVHashString(uint32_t spoiler, const HeapString *heapStr);
-uint32_t FNVHashString(uint32_t spoiler, uint32_t length, const uint8_t *str);
-uint32_t FNVHashString(uint32_t spoiler, uint32_t length, const uint16_t *str);
+uint32_t FNVHashString(uint32_t spoiler, const uint8_t *str, uint32_t length);
+uint32_t FNVHashString(uint32_t spoiler, const uint16_t *str, uint32_t length);
 
 //
 // String comparison.
 //
 
-int CompareStrings(const Value &strA, uint32_t lengthB, const uint8_t *strB);
-int CompareStrings(uint32_t lengthA, const uint8_t *strA, const Value &strB);
+int CompareStrings(const Value &strA, const uint8_t *strB, uint32_t lengthB);
+int CompareStrings(const uint8_t *strA, uint32_t lengthA, const Value &strB);
 
-int CompareStrings(const Value &strA, uint32_t lengthB, const uint16_t *strB);
-int CompareStrings(uint32_t lengthA, const uint16_t *strA, const Value &strB);
+int CompareStrings(const Value &strA, const uint16_t *strB, uint32_t lengthB);
+int CompareStrings(const uint16_t *strA, uint32_t lengthA, const Value &strB);
 
 int CompareStrings(const HeapString *strA,
-                   uint32_t lengthB, const uint8_t *strB);
+                   const uint8_t *strB, uint32_t lengthB);
 
-int CompareStrings(uint32_t lengthA, const uint8_t *strA,
+int CompareStrings(const uint8_t *strA, uint32_t lengthA,
                    const HeapString *strB);
 
 int CompareStrings(const HeapString *strA,
-                   uint32_t lengthB, const uint16_t *strB);
+                   const uint16_t *strB, uint32_t lengthB);
 
-int CompareStrings(uint32_t lengthA, const uint16_t *strA,
+int CompareStrings(const uint16_t *strA, uint32_t lengthA,
                    const HeapString *strB);
 
 int CompareStrings(const Value &strA, const HeapString *strB);
@@ -139,18 +123,24 @@ int CompareStrings(const HeapString *strA, const Value &strB);
 int CompareStrings(const Value &strA, const Value &strB);
 int CompareStrings(const HeapString *strA, const HeapString *strB);
 
-int CompareStrings(uint32_t lengthA, const uint8_t *strA,
-                   uint32_t lengthB, const uint8_t *strB);
+int CompareStrings(const uint8_t *strA, uint32_t lengthA,
+                   const uint8_t *strB, uint32_t lengthB);
 
-int CompareStrings(uint32_t lengthA, const uint16_t *strA,
-                   uint32_t lengthB, const uint16_t *strB);
+int CompareStrings(const uint16_t *strA, uint32_t lengthA,
+                   const uint16_t *strB, uint32_t lengthB);
 
-int CompareStrings(uint32_t lengthA, const uint8_t *strA,
-                   uint32_t lengthB, const uint16_t *strB);
+int CompareStrings(const uint8_t *strA, uint32_t lengthA,
+                   const uint16_t *strB, uint32_t lengthB);
 
-int CompareStrings(uint32_t lengthA, const uint16_t *strA,
-                   uint32_t lengthB, const uint8_t *strB);
+int CompareStrings(const uint16_t *strA, uint32_t lengthA,
+                   const uint8_t *strB, uint32_t lengthB);
 
+//
+// Check string for id.
+//
+bool IsInt32IdString(const uint8_t *str, uint32_t length, int32_t *val);
+bool IsInt32IdString(const uint16_t *str, uint32_t length, int32_t *val);
+bool IsInt32IdString(HeapString *str, int32_t *val);
 
 } // namespace VM
 } // namespace Whisper

@@ -13,63 +13,6 @@ namespace Whisper {
 namespace VM {
 
 
-template <typename CharT>
-bool
-IsInt32IdString(const CharT *str, uint32_t length, int32_t *val)
-{
-    if (length == 0)
-        return false;
-
-    if (length == 1)
-        return str[0] == '0';
-
-    uint32_t idx = 0;
-
-    // Consume any beginning '-'
-    bool neg = (str[0] == '-');
-    if (neg)
-        idx += 1;
-
-    // Consume first digit (must not be 0)
-    if (!isdigit(str[idx]))
-        return false;
-    if (str[idx] == '0')
-        return false;
-
-    // Initialize accumulator, accumulate number.
-    uint32_t uint31Max = (UINT32_MAX >> 1) + (neg ? 1u : 0u);
-    uint32_t accum = (str[idx++] - '0');
-    for (; idx < length; idx++) {
-        if (!isdigit(str[idx]))
-            return false;
-
-        uint32_t digit = (str[idx] - '0');
-        WH_ASSERT(digit < 10);
-
-        // Check if multiplying accum by 10 will overflow.
-        if (accum > (uint31Max / 10))
-            return false;
-        accum *= 10;
-
-        // Check if adding digit will overflow.
-        if (accum + digit > uint31Max)
-            return false;
-        accum += digit;
-    }
-
-    if (val)
-        *val = neg ? -accum : accum;
-
-    return true;
-}
-
-template bool
-IsInt32IdString<uint8_t>(const uint8_t *str, uint32_t length, int32_t *val);
-
-template bool
-IsInt32IdString<uint16_t>(const uint16_t *str, uint32_t length, int32_t *val);
-
-
 
 template <typename CharT>
 bool
@@ -109,7 +52,7 @@ IsNormalizedPropertyId(const Value &val)
 
     // The linear string must be interned and identified as a property name.
     VM::LinearString *linearStr = heapStr->toLinearString();
-    return linearStr->isInterned() && linearStr->inNameGroup();
+    return linearStr->isInterned();
 }
 
 

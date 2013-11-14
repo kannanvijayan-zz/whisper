@@ -7,9 +7,6 @@ namespace Whisper {
 namespace VM {
 
 template <typename CharT>
-bool IsInt32IdString(const CharT *str, uint32_t length, int32_t *val=nullptr);
-
-template <typename CharT>
 bool IsNormalizedPropertyId(const CharT *str, uint32_t length);
 
 // Check if a Value is a valid property name.
