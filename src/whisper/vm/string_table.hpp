@@ -82,7 +82,13 @@ class StringTable
     LinearString *lookupString(RunContext *cx, const uint16_t *str,
                                uint32_t length);
 
+    bool addString(RunContext *cx, const uint8_t *str, uint32_t length,
+                   MutHandle<LinearString *> result);
+    bool addString(RunContext *cx, const uint16_t *str, uint32_t length,
+                   MutHandle<LinearString *> result);
     bool addString(RunContext *cx, Handle<HeapString *> string,
+                   MutHandle<LinearString *> result);
+    bool addString(RunContext *cx, Handle<Value> strval,
                    MutHandle<LinearString *> result);
 
   private:
@@ -92,6 +98,8 @@ class StringTable
     uint32_t hashString(const StringOrQuery &str);
     int compareStrings(LinearString *a, const StringOrQuery &b);
 
+    bool insertString(RunContext *cx, Handle<LinearString *> str,
+                      uint32_t slot);
     bool enlarge(RunContext *cx);
 };
 

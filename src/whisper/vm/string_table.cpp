@@ -122,9 +122,53 @@ StringTable::lookupString(RunContext *cx, const uint16_t *str, uint32_t length)
 }
 
 bool
+StringTable::addString(RunContext *cx, const uint8_t *str, uint32_t length,
+                       MutHandle<LinearString *> result)
+{
+    WH_ASSERT(!IsInt32IdString(str, length));
+
+    // Check for existing interned string in table.
+    uint32_t slot = lookupSlot(cx, StringOrQuery(Query(str, length)),
+                               &result.get());
+    if (result)
+        return true;
+
+    // Allocate tenured LinearString copy (marked interned).
+    result = cx->inTenured().createSized<LinearString>(
+                            length * 2, str, /*interned=*/true);
+    if (!result)
+        return false;
+
+    return insertString(cx, result);
+}
+
+bool
+StringTable::addString(RunContext *cx, const uint16_t *str, uint32_t length,
+                       MutHandle<LinearString *> result)
+{
+    WH_ASSERT(!IsInt32IdString(str, length));
+
+    // Check for existing interned string in table.
+    uint32_t slot = lookupSlot(cx, StringOrQuery(Query(str, length)),
+                               &result.get());
+    if (result)
+        return true;
+
+    // Allocate tenured LinearString copy (marked interned).
+    result = cx->inTenured().createSized<LinearString>(
+                            length * 2, str, /*interned=*/true);
+    if (!result)
+        return false;
+
+    return insertString(cx, result);
+}
+
+bool
 StringTable::addString(RunContext *cx, Handle<HeapString *> string,
                        MutHandle<LinearString *> result)
 {
+    WH_ASSERT(!IsInt32IdString(string));
+
     // Check if |string| is already a LinearString and marked as interned.
     if (string->isLinearString() && string->toLinearString()->isInterned()) {
         result = string->toLinearString();
@@ -143,17 +187,25 @@ StringTable::addString(RunContext *cx, Handle<HeapString *> string,
     if (!result)
         return false;
 
-    // Resize table if necessary.
-    if (entries_ >= tuple_->size() * MAX_FILL_RATIO) {
-        if (!enlarge(cx))
-            return false;
-        slot = lookupSlot(cx, StringOrQuery(string), &result.get());
-        WH_ASSERT(!result);
+    return insertString(cx, result);
+}
+
+bool
+StringTable::addString(RunContext *cx, Handle<Value> strval,
+                       MutHandle<LinearString *> result)
+{
+    WH_ASSERT(strval.isString());
+    WH_ASSERT(!IsInt32IdString(string));
+
+    if (strval.isImmString()) {
+        uint16_t buf[Value::ImmStringMaxLength];
+        uint32_t len = strval.readImmString(buf);
+        return addString(cx, buf, len, result);
     }
 
-    // Store interned string.
-    tuple_->set(slot, Value::HeapString(result.get()));
-    return true;
+    WH_ASSERT(strval.isHeapString());
+    Root<HeapString *> heapStr(cx, strval.heapStringPtr());
+    return addString(cx, heapStr, result);
 }
 
 
@@ -239,6 +291,27 @@ StringTable::compareStrings(LinearString *a,
                               linStr->data(), linStr->length());
     }
     return CompareStrings(a->data(), a->length(), heapStr);
+}
+
+bool
+StringTable::insertString(RunContext *cx, Handle<LinearString *> str,
+                          uint32_t slot)
+{
+    WH_ASSERT(tuple_->get(slot)->isUndefined());
+
+    // Resize table if necessary.
+    if (entries_ >= tuple_->size() * MAX_FILL_RATIO) {
+        if (!enlarge(cx))
+            return false;
+
+        LinearString *exist;
+        slot = lookupSlot(cx, StringOrQuery(string), &result.get(), &exist);
+        WH_ASSERT(!exist);
+    }
+
+    // Store interned string.
+    tuple_->set(slot, Value::HeapString(result.get()));
+    return true;
 }
 
 bool
