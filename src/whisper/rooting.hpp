@@ -203,8 +203,9 @@ class TypedMutHandleBase
 
   public:
     inline T &get() const;
-    inline void set(const T &t) const;
-    inline operator T &() const;
+    inline void set(const T &t);
+    inline operator const T &() const;
+    inline operator T &();
 
     inline TypedMutHandleBase<T> &operator =(const T &val);
 };
@@ -216,7 +217,8 @@ class PointerMutHandleBase : public TypedMutHandleBase<T *>
     inline PointerMutHandleBase(T **ptr);
 
   public:
-    inline T *operator ->() const;
+    inline const T *operator ->() const;
+    inline T *operator ->();
     inline explicit operator bool() const;
 };
 
@@ -303,6 +305,7 @@ class Handle<Value> : public TypedHandleBase<Value>
   public:
     Handle(const Root<Value> &root);
     Handle(const Heap<Value> &heap);
+    Handle(const MutHandle<Value> &mut);
     static Handle<Value> FromTracedLocation(const Value &locn);
 
     const Value *operator ->();
@@ -320,6 +323,7 @@ class Handle<T *> : public PointerHandleBase<T>
   public:
     inline Handle(const Root<T *> &root);
     inline Handle(const Heap<T *> &root);
+    inline Handle(const MutHandle<T *> &mut);
 
     static inline Handle<T *> FromTracedLocation(T * const &locn);
 };

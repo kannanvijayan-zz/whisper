@@ -325,14 +325,21 @@ TypedMutHandleBase<T>::get() const
 
 template <typename T>
 inline void
-TypedMutHandleBase<T>::set(const T &t) const
+TypedMutHandleBase<T>::set(const T &t)
 {
     ref_ = t;
 }
 
 template <typename T>
 inline
-TypedMutHandleBase<T>::operator T &() const
+TypedMutHandleBase<T>::operator const T &() const
+{
+    return get();
+}
+
+template <typename T>
+inline
+TypedMutHandleBase<T>::operator T &()
 {
     return get();
 }
@@ -357,8 +364,15 @@ PointerMutHandleBase<T>::PointerMutHandleBase(T **ptr)
 {}
 
 template <typename T>
-inline T *
+inline const T *
 PointerMutHandleBase<T>::operator ->() const
+{
+    return this->ref_;
+}
+
+template <typename T>
+inline T *
+PointerMutHandleBase<T>::operator ->()
 {
     return this->ref_;
 }
@@ -454,6 +468,15 @@ Handle<T *>::Handle(const Root<T *> &root)
 template <typename T>
 inline
 Handle<T *>::Handle(const Heap<T *> &root)
+  : PointerHandleBase<T>(root)
+{
+    static_assert(std::is_base_of<VM::HeapThing, T>::value,
+                  "Type is not a heap thing.");
+}
+
+template <typename T>
+inline
+Handle<T *>::Handle(const MutHandle<T *> &root)
   : PointerHandleBase<T>(root)
 {
     static_assert(std::is_base_of<VM::HeapThing, T>::value,

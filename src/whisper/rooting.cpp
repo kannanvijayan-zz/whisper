@@ -104,18 +104,19 @@ Heap<Value>::operator ->()
 
 Handle<Value>::Handle(const Value &locn)
   : TypedHandleBase<Value>(locn)
-{
-}
+{}
 
 Handle<Value>::Handle(const Root<Value> &root)
   : TypedHandleBase<Value>(root.get())
-{
-}
+{}
 
 Handle<Value>::Handle(const Heap<Value> &heap)
   : TypedHandleBase<Value>(heap.get())
-{
-}
+{}
+
+Handle<Value>::Handle(const MutHandle<Value> &mut)
+  : TypedHandleBase<Value>(mut.get())
+{}
 
 /*static*/ Handle<Value>
 Handle<Value>::FromTracedLocation(const Value &locn)
@@ -131,7 +132,7 @@ Handle<Value>::operator ->()
 
 
 //
-// MutableHandle<Value>
+// MutHandle<Value>
 //
 
 MutHandle<Value>::MutHandle(Value *val)
