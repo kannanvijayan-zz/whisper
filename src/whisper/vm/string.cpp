@@ -1,8 +1,9 @@
 
 #include "value_inlines.hpp"
 #include "rooting_inlines.hpp"
-#include "vm/string.hpp"
+#include "string_table.hpp"
 #include "vm/heap_thing_inlines.hpp"
+#include "vm/string.hpp"
 
 #include <algorithm>
 
@@ -57,14 +58,6 @@ HeapString::toLinearString()
     return reinterpret_cast<LinearString *>(this);
 }
 
-bool
-HeapString::linearize(RunContext *cx, MutHandle<LinearString *> out)
-{
-    WH_ASSERT(isLinearString());
-    out = toLinearString();
-    return true;
-}
-
 uint32_t
 HeapString::length() const
 {
@@ -99,6 +92,16 @@ HeapString::fitsImmediate() const
     }
 
     return true;
+}
+
+uint32_t
+HeapString::extract(uint32_t buflen, uint16_t *buf)
+{
+    if (isLinearString())
+        return toLinearString()->extract(buflen, buf);
+
+    WH_UNREACHABLE("Only linearstrings should exist!");
+    return UINT32_MAX;
 }
 
 //
@@ -171,6 +174,117 @@ LinearString::getChar(uint32_t idx) const
 {
     WH_ASSERT(idx < length());
     return data()[idx];
+}
+
+uint32_t
+LinearString::extract(uint32_t buflen, uint16_t *buf)
+{
+    uint32_t len = length();
+    if (len > buflen)
+        len = buflen;
+
+    const uint16_t *d = data();
+    std::copy(d, d + len, buf);
+    return len;
+}
+
+//
+// Helper class to unpack strings.
+//
+
+StringUnpack::StringUnpack(const Value &val)
+{
+    WH_ASSERT(val.isString());
+
+    if (val.isImmIndexString()) {
+        length_ = val.readImmIndexString(immData_.idxStr.data);
+        flags_ = IS_LINEAR | IS_EIGHT_BIT;
+        charData_ = immData_.idxStr.data;
+        return;
+    }
+
+    if (val.isImmString8()) {
+        length_ = val.readImmIndexString(immData_.str8.data);
+        flags_ = IS_LINEAR | IS_EIGHT_BIT;
+        charData_ = immData_.str8.data;
+        return;
+    }
+
+    if (val.isImmString16()) {
+        length_ = val.readImmIndexString(immData_.str16.data);
+        flags_ = IS_LINEAR;
+        charData_ = immData_.str16.data;
+        return;
+    }
+
+    WH_ASSERT(val.isHeapString());
+
+    this->init(val.heapStringPtr());
+}
+
+StringUnpack::StringUnpack(HeapString *heapStr)
+{
+    init(heapStr);
+}
+
+void
+StringUnpack::init(HeapString *heapStr)
+{
+    if (heapStr->isLinearString()) {
+        flags_ = IS_LINEAR;
+        charData_ = heapStr->toLinearString()->data();
+        length_ = heapStr->toLinearString()->length();
+        return;
+    }
+
+    flags_ = 0;
+    heapStr_ = heapStr;
+    length_ = heapStr->length();
+}
+
+uint32_t
+StringUnpack::length() const
+{
+    return length_;
+}
+
+bool
+StringUnpack::hasEightBit() const
+{
+    return (flags_ & IS_LINEAR) && (flags_ & IS_EIGHT_BIT);
+}
+
+bool
+StringUnpack::hasSixteenBit() const
+{
+    return (flags_ & IS_LINEAR) && !(flags_ & IS_EIGHT_BIT);
+}
+
+bool
+StringUnpack::isNonLinear() const
+{
+    return !(flags_ & IS_LINEAR);
+}
+
+const uint8_t *
+StringUnpack::eightBitData() const
+{
+    WH_ASSERT(hasEightBit());
+    return reinterpret_cast<const uint8_t *>(charData_);
+}
+
+const uint16_t *
+StringUnpack::sixteenBitData() const
+{
+    WH_ASSERT(hasSixteenBit());
+    return reinterpret_cast<const uint16_t *>(charData_);
+}
+
+HeapString *
+StringUnpack::heapString() const
+{
+    WH_ASSERT(isNonLinear());
+    return heapStr_;
 }
 
 //
@@ -391,33 +505,11 @@ CompareStrings(const Value &strA, const Value &strB)
         uint16_t bufA[Value::ImmStringMaxLength];
         uint32_t lengthA = strA.readImmString(bufA);
 
-        if (strB.isImmString()) {
-            uint16_t bufB[Value::ImmStringMaxLength];
-            uint32_t lengthB = strB.readImmString(bufB);
-            return CompareStrings(bufA, lengthA, bufB, lengthB);
-        }
-
-        WH_ASSERT(strB.isHeapString());
-        HeapString *heapB = strB.heapStringPtr();
-
-        return CompareStringsImpl(bufA, lengthA,
-                                  StrWrap(heapB), heapB->length());
+        return CompareStrings(bufA, lengthA, strB);
     }
 
     WH_ASSERT(strA.isHeapString());
-    HeapString *heapA = strA.heapStringPtr();
-
-    if (strB.isImmString()) {
-        uint16_t bufB[Value::ImmStringMaxLength];
-        uint32_t lengthB = strB.readImmString(bufB);
-        return CompareStringsImpl(StrWrap(heapA), heapA->length(),
-                                  bufB, lengthB);
-    }
-
-    WH_ASSERT(strB.isHeapString());
-    HeapString *heapB = strB.heapStringPtr();
-
-    return CompareStrings(heapA, heapB);
+    return CompareStrings(strA.heapStringPtr(), strB);
 }
 
 int
@@ -556,6 +648,78 @@ IsInt32IdString(const Value &strval, int32_t *val)
 
     WH_ASSERT(strval.isHeapString());
     return IsInt32IdString(strval.heapStringPtr(), val);
+}
+
+
+bool
+NormalizeString(RunContext *cx, const uint8_t *str, uint32_t length,
+                MutHandle<Value> result)
+{
+    int32_t idVal;
+    if (IsInt32IdString(str, length, &idVal)) {
+        result = Value::ImmIndexString(idVal);
+        return true;
+    }
+
+    Root<LinearString *> linStr(cx);
+    if (!cx->stringTable().addString(cx, str, length, &linStr))
+        return false;
+
+    result = Value::HeapString(linStr);
+    return true;
+}
+
+bool
+NormalizeString(RunContext *cx, const uint16_t *str, uint32_t length,
+                MutHandle<Value> result)
+{
+    int32_t idVal;
+    if (IsInt32IdString(str, length, &idVal)) {
+        result = Value::ImmIndexString(idVal);
+        return true;
+    }
+
+    Root<LinearString *> linStr(cx);
+    if (!cx->stringTable().addString(cx, str, length, &linStr))
+        return false;
+
+    result = Value::HeapString(linStr);
+    return true;
+}
+
+bool
+NormalizeString(RunContext *cx, Handle<HeapString *> str,
+                MutHandle<Value> result)
+{
+    int32_t idVal;
+    if (IsInt32IdString(str, &idVal)) {
+        result = Value::ImmIndexString(idVal);
+        return true;
+    }
+
+    Root<LinearString *> linStr(cx);
+    if (!cx->stringTable().addString(cx, str, &linStr))
+        return false;
+
+    result = Value::HeapString(linStr);
+    return true;
+}
+
+bool
+NormalizeString(RunContext *cx, Handle<Value> strval, MutHandle<Value> result)
+{
+    int32_t idVal;
+    if (IsInt32IdString(strval, &idVal)) {
+        result = Value::ImmIndexString(idVal);
+        return true;
+    }
+
+    Root<LinearString *> linStr(cx);
+    if (!cx->stringTable().addString(cx, strval, &linStr))
+        return false;
+
+    result = Value::HeapString(linStr);
+    return true;
 }
 
 

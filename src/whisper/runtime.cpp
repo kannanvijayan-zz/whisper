@@ -1,5 +1,7 @@
 
 #include <string.h>
+#include <sys/time.h>
+#include <stdlib.h>
 
 #include "slab.hpp"
 #include "runtime.hpp"
@@ -117,96 +119,10 @@ Runtime::threadContext()
 
 
 //
-// ThreadContext
-//
-
-ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
-  : runtime_(runtime),
-    hatchery_(hatchery),
-    nursery_(nullptr),
-    tenured_(tenured),
-    tenuredList_(),
-    activeRunContext_(nullptr),
-    runContextList_(nullptr),
-    roots_(nullptr),
-    suppressGC_(false)
-{
-    WH_ASSERT(runtime != nullptr);
-    WH_ASSERT(hatchery != nullptr);
-    WH_ASSERT(tenured != nullptr);
-
-    tenuredList_.addSlab(tenured);
-}
-
-Runtime *
-ThreadContext::runtime() const
-{
-    return runtime_;
-}
-
-Slab *
-ThreadContext::hatchery() const
-{
-    return hatchery_;
-}
-
-Slab *
-ThreadContext::nursery() const
-{
-    return nursery_;
-}
-
-Slab *
-ThreadContext::tenured() const
-{
-    return tenured_;
-}
-
-const SlabList &
-ThreadContext::tenuredList() const
-{
-    return tenuredList_;
-}
-
-SlabList &
-ThreadContext::tenuredList()
-{
-    return tenuredList_;
-}
-
-RunContext *
-ThreadContext::activeRunContext() const
-{
-    return activeRunContext_;
-}
-
-RootBase *
-ThreadContext::roots() const
-{
-    return roots_;
-}
-
-bool
-ThreadContext::suppressGC() const
-{
-    return suppressGC_;
-}
-
-void
-ThreadContext::addRunContext(RunContext *runcx)
-{
-    WH_ASSERT(runcx->threadContext() == this);
-    WH_ASSERT(runcx->next_ == nullptr);
-    runcx->next_ = runContextList_;
-    runContextList_ = runcx;
-}
-
-
-//
 // AllocationContext
 //
 
-AllocationContext::AllocationContext(RunContext *cx, Slab *slab)
+AllocationContext::AllocationContext(ThreadContext *cx, Slab *slab)
   : cx_(cx), slab_(slab)
 {}
 
@@ -318,6 +234,170 @@ AllocationContext::createTuple(uint32_t size, VM::Tuple *&output)
 
 
 //
+// ThreadContext
+//
+
+/*static*/ unsigned int
+ThreadContext::NewRandSeed()
+{
+    struct timeval tv;
+    gettimeofday(&tv, nullptr);
+
+    unsigned int result = tv.tv_sec * tv.tv_usec;
+
+    // Handle low-resolution time (no multiples of 2, 5, or 10)
+    while (result & 1)
+        result >>= 1;
+    while (result % 5 == 0)
+        result /= 5;
+
+    return result;
+}
+
+ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
+  : runtime_(runtime),
+    hatchery_(hatchery),
+    nursery_(nullptr),
+    tenured_(tenured),
+    tenuredList_(),
+    activeRunContext_(nullptr),
+    runContextList_(nullptr),
+    roots_(nullptr),
+    suppressGC_(false),
+    randSeed_(NewRandSeed()),
+    stringTable_()
+{
+    WH_ASSERT(runtime != nullptr);
+    WH_ASSERT(hatchery != nullptr);
+    WH_ASSERT(tenured != nullptr);
+
+    tenuredList_.addSlab(tenured);
+    stringTable_.initialize(this);
+}
+
+Runtime *
+ThreadContext::runtime() const
+{
+    return runtime_;
+}
+
+Slab *
+ThreadContext::hatchery() const
+{
+    return hatchery_;
+}
+
+Slab *
+ThreadContext::nursery() const
+{
+    return nursery_;
+}
+
+Slab *
+ThreadContext::tenured() const
+{
+    return tenured_;
+}
+
+const SlabList &
+ThreadContext::tenuredList() const
+{
+    return tenuredList_;
+}
+
+SlabList &
+ThreadContext::tenuredList()
+{
+    return tenuredList_;
+}
+
+RunContext *
+ThreadContext::activeRunContext() const
+{
+    return activeRunContext_;
+}
+
+RootBase *
+ThreadContext::roots() const
+{
+    return roots_;
+}
+
+bool
+ThreadContext::suppressGC() const
+{
+    return suppressGC_;
+}
+
+void
+ThreadContext::addRunContext(RunContext *runcx)
+{
+    WH_ASSERT(runcx->threadContext() == this);
+    WH_ASSERT(runcx->next_ == nullptr);
+    runcx->next_ = runContextList_;
+    runContextList_ = runcx;
+}
+
+void
+ThreadContext::removeRunContext(RunContext *runcx)
+{
+    WH_ASSERT(runcx->threadContext() == this);
+    WH_ASSERT(runcx->next_ == nullptr);
+    bool found = false;
+    RunContext *prevCx = nullptr;
+    for (RunContext *cx = runContextList_; cx != nullptr; cx = cx->next_) {
+        if (cx == runcx) {
+            found = true;
+            if (prevCx) {
+                WH_ASSERT(prevCx->next_ == cx);
+                prevCx->next_ = cx->next_;
+                cx->next_ = nullptr;
+
+            } else {
+                runContextList_ = cx->next_;
+                cx->next_ = nullptr;
+            }
+
+            break;
+        }
+    }
+    WH_ASSERT(found);
+}
+
+
+AllocationContext
+ThreadContext::inHatchery()
+{
+    return AllocationContext(this, hatchery_);
+}
+
+
+AllocationContext
+ThreadContext::inTenured()
+{
+    return AllocationContext(this, tenured_);
+}
+
+int
+ThreadContext::randInt()
+{
+    return rand_r(&randSeed_);
+}
+
+StringTable &
+ThreadContext::stringTable()
+{
+    return stringTable_;
+}
+
+const StringTable &
+ThreadContext::stringTable() const
+{
+    return stringTable_;
+}
+
+
+//
 // RunContext
 //
 
@@ -381,13 +461,25 @@ RunContext::registerTopStackFrame(VM::StackFrame *topStackFrame)
 AllocationContext
 RunContext::inHatchery()
 {
-    return AllocationContext(this, hatchery_);
+    return AllocationContext(threadContext_, hatchery_);
 }
 
 AllocationContext
 RunContext::inTenured()
 {
-    return AllocationContext(this, threadContext_->tenured());
+    return AllocationContext(threadContext_, threadContext_->tenured());
+}
+
+StringTable &
+RunContext::stringTable()
+{
+    return threadContext_->stringTable();
+}
+
+const StringTable &
+RunContext::stringTable() const
+{
+    return threadContext_->stringTable();
 }
 
 

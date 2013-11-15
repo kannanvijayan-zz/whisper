@@ -507,7 +507,7 @@ MutHandle<T *>::MutHandle(T **ptr)
 template <typename T>
 inline
 MutHandle<T *>::MutHandle(Root<T *> *root)
-  : PointerMutHandleBase<T>(*root)
+  : PointerMutHandleBase<T>(&root->get())
 {
     static_assert(std::is_base_of<VM::HeapThing, T>::value,
                   "Type is not a heap thing.");

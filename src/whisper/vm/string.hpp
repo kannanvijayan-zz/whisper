@@ -18,7 +18,7 @@ namespace VM {
 // can be implicitly cast to, to provide a general interface to
 // all of them.
 //
-struct HeapString
+struct HeapString : public HeapThing
 {
   protected:
     HeapString();
@@ -38,8 +38,7 @@ struct HeapString
 
     uint32_t length() const;
     uint16_t getChar(uint32_t idx) const;
-
-    bool linearize(RunContext *cx, MutHandle<LinearString *> out);
+    uint32_t extract(uint32_t buflen, uint16_t *buf);
 
     bool fitsImmediate() const;
 };
@@ -60,8 +59,7 @@ struct HeapString
 //  Flags
 //      Interned - indicates if string is interned in the string table.
 //
-class LinearString : public HeapThing,
-                     public HeapString,
+class LinearString : public HeapString,
                      public TypedHeapThing<HeapType::LinearString>
 {
   friend class HeapString;
@@ -83,6 +81,56 @@ class LinearString : public HeapThing,
 
     uint32_t length() const;
     uint16_t getChar(uint32_t idx) const;
+    uint32_t extract(uint32_t buflen, uint16_t *buf);
+};
+
+
+//
+// Unpacking helper class for strings.
+//
+
+class StringUnpack
+{
+  private:
+    union {
+        struct {
+            uint8_t data[Value::ImmString8MaxLength];
+        } str8;
+        struct {
+            uint16_t data[Value::ImmString16MaxLength];
+        } str16;
+        struct {
+            uint8_t data[Value::ImmIndexStringMaxLength];
+        } idxStr;
+    } immData_;
+
+    static constexpr uint8_t IS_LINEAR = 0x01;
+    static constexpr uint8_t IS_EIGHT_BIT = 0x02;
+
+    uint8_t flags_;
+
+    union {
+        const void *charData_;
+        HeapString *heapStr_;
+    };
+    uint32_t length_;
+
+  private:
+    void init(HeapString *heapStr);
+
+  public:
+    StringUnpack(const Value &val);
+    StringUnpack(HeapString *heapStr);
+
+    uint32_t length() const;
+
+    bool hasEightBit() const;
+    bool hasSixteenBit() const;
+    bool isNonLinear() const;
+
+    const uint8_t *eightBitData() const;
+    const uint16_t *sixteenBitData() const;
+    HeapString *heapString() const;
 };
 
 
@@ -138,10 +186,27 @@ int CompareStrings(const uint16_t *strA, uint32_t lengthA,
 //
 // Check string for id.
 //
-bool IsInt32IdString(const uint8_t *str, uint32_t length, int32_t *val);
-bool IsInt32IdString(const uint16_t *str, uint32_t length, int32_t *val);
-bool IsInt32IdString(HeapString *str, int32_t *val);
-bool IsInt32IdString(const Value &strval, int32_t *val);
+bool IsInt32IdString(const uint8_t *str, uint32_t length,
+                     int32_t *val=nullptr);
+bool IsInt32IdString(const uint16_t *str, uint32_t length,
+                     int32_t *val=nullptr);
+bool IsInt32IdString(HeapString *str, int32_t *val=nullptr);
+bool IsInt32IdString(const Value &strval, int32_t *val=nullptr);
+
+
+//
+// Normalize a string.  Return either an immediate index string, or
+// an interned linear property name string.
+//
+bool NormalizeString(RunContext *cx, const uint8_t *str, uint32_t length,
+                     MutHandle<Value> result);
+bool NormalizeString(RunContext *cx, const uint16_t *str, uint32_t length,
+                     MutHandle<Value> result);
+bool NormalizeString(RunContext *cx, Handle<HeapString *> str,
+                     MutHandle<Value> result);
+bool NormalizeString(RunContext *cx, Handle<Value> strval,
+                     MutHandle<Value> result);
+
 
 } // namespace VM
 } // namespace Whisper

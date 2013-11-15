@@ -9,6 +9,7 @@
 #include "debug.hpp"
 #include "slab.hpp"
 #include "value.hpp"
+#include "string_table.hpp"
 
 namespace Whisper {
 
@@ -71,6 +72,45 @@ class Runtime
 
 
 //
+// AllocationContext
+//
+// An allocation context encapsulates the notion of a particular
+// memory space as well as set of allocation criteria.
+//
+
+class AllocationContext
+{
+  private:
+    ThreadContext *cx_;
+    Slab *slab_;
+
+  public:
+    AllocationContext(ThreadContext *cx, Slab *slab);
+
+    template <typename ObjT, typename... Args>
+    inline ObjT *create(Args... args);
+
+    template <typename ObjT, typename... Args>
+    inline ObjT *createSized(uint32_t size, Args... args);
+
+    bool createString(uint32_t length, const uint8_t *bytes, Value &output);
+    bool createString(uint32_t length, const uint16_t *bytes, Value &output);
+
+    bool createNumber(double d, Value &output);
+
+    bool createTuple(const VectorRoot<Value> &vals, VM::Tuple *&output);
+    bool createTuple(uint32_t size, VM::Tuple *&output);
+
+  private:
+    // Allocate an object.  This takes an explicit size because some
+    // objects are variable sized.  Return null if not enough space
+    // in hatchery.
+    template <typename ObjT>
+    inline uint8_t *allocate(uint32_t size);
+};
+
+
+//
 // ThreadContext
 //
 // Holds all relevant information for a thread to interact with a runtime.
@@ -94,6 +134,11 @@ class ThreadContext
     RootBase *roots_;
     bool suppressGC_;
 
+    unsigned int randSeed_;
+    StringTable stringTable_;
+
+    static unsigned int NewRandSeed();
+
   public:
     ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured);
 
@@ -108,45 +153,15 @@ class ThreadContext
     bool suppressGC() const;
 
     void addRunContext(RunContext *cx);
-};
+    void removeRunContext(RunContext *cx);
 
+    AllocationContext inHatchery();
+    AllocationContext inTenured();
 
-//
-// AllocationContext
-//
-// An allocation context encapsulates the notion of a particular
-// memory space as well as set of allocation criteria.
-//
+    int randInt();
 
-class AllocationContext
-{
-  private:
-    RunContext *cx_;
-    Slab *slab_;
-
-  public:
-    AllocationContext(RunContext *cx, Slab *slab);
-
-    template <typename ObjT, typename... Args>
-    inline ObjT *create(Args... args);
-
-    template <typename ObjT, typename... Args>
-    inline ObjT *createSized(uint32_t size, Args... args);
-
-    bool createString(uint32_t length, const uint8_t *bytes, Value &output);
-    bool createString(uint32_t length, const uint16_t *bytes, Value &output);
-
-    bool createNumber(double d, Value &output);
-
-    bool createTuple(const VectorRoot<Value> &vals, VM::Tuple *&output);
-    bool createTuple(uint32_t size, VM::Tuple *&output);
-
-  private:
-    // Allocate an object.  This takes an explicit size because some
-    // objects are variable sized.  Return null if not enough space
-    // in hatchery.
-    template <typename ObjT>
-    inline uint8_t *allocate(uint32_t size);
+    StringTable &stringTable();
+    const StringTable &stringTable() const;
 };
 
 
@@ -192,6 +207,9 @@ class RunContext
 
     AllocationContext inHatchery();
     AllocationContext inTenured();
+
+    StringTable &stringTable();
+    const StringTable &stringTable() const;
 };
 
 

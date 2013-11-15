@@ -13,11 +13,11 @@ whisper_SOURCES = \
     value.cpp \
     rooting.cpp \
     runtime.cpp \
+    string_table.cpp \
     vm/vm_helpers.cpp \
     vm/heap_thing.cpp \
     vm/double.cpp \
     vm/string.cpp \
-    vm/string_table.cpp \
     vm/bytecode.cpp \
     vm/script.cpp \
     vm/stack_frame.cpp \
