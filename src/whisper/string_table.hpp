@@ -81,6 +81,7 @@ class StringTable
 
     bool initialize(ThreadContext *cx);
 
+    VM::LinearString *lookupString(const Value &val);
     VM::LinearString *lookupString(VM::HeapString *str);
 
     VM::LinearString *lookupString(const uint8_t *str, uint32_t length);

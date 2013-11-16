@@ -97,6 +97,22 @@ StringTable::initialize(ThreadContext *cx)
 }
 
 VM::LinearString *
+StringTable::lookupString(const Value &strval)
+{
+    WH_ASSERT(strval.isString());
+    WH_ASSERT(!VM::IsInt32IdString(strval));
+
+    if (strval.isImmString()) {
+        uint16_t buf[Value::ImmStringMaxLength];
+        uint32_t len = strval.readImmString(buf);
+        return lookupString(buf, len);
+    }
+
+    WH_ASSERT(strval.isHeapString());
+    return lookupString(strval.heapStringPtr());
+}
+
+VM::LinearString *
 StringTable::lookupString(VM::HeapString *str)
 {
     if (str->isLinearString()) {
