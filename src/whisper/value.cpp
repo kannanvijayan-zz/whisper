@@ -146,6 +146,12 @@ Value::raw() const
     return tagged_;
 }
 
+bool
+Value::operator ==(const Value &val) const
+{
+    return tagged_ == val.tagged_;
+}
+
 
 /*static*/ Value
 Value::Undefined()

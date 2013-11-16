@@ -206,6 +206,8 @@ class Value
 
     uint64_t raw() const;
 
+    bool operator ==(const Value &val) const;
+
     //
     // Constructors.
     //

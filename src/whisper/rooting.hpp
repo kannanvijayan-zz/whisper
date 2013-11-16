@@ -11,6 +11,8 @@ namespace Whisper {
 class RunContext;
 class ThreadContext;
 
+template <typename T> class TypedRootBase;
+template <typename T> class TypedHeapBase;
 template <typename T> class TypedHandleBase;
 template <typename T> class TypedMutHandleBase;
 
@@ -85,6 +87,12 @@ class TypedRootBase : public RootBase
     inline operator const T &() const;
     inline operator T &();
 
+    inline bool operator == (const T &other) const;
+    inline bool operator == (const TypedRootBase<T> &other) const;
+    inline bool operator == (const TypedHeapBase<T> &other) const;
+    inline bool operator == (const TypedHandleBase<T> &other) const;
+    inline bool operator == (const TypedMutHandleBase<T> &other) const;
+
     inline TypedRootBase<T> &operator =(const T &other);
 };
 
@@ -129,6 +137,12 @@ class TypedHeapBase
     inline operator const T &() const;
     inline operator T &();
 
+    inline bool operator == (const T &other) const;
+    inline bool operator == (const TypedRootBase<T> &other) const;
+    inline bool operator == (const TypedHeapBase<T> &other) const;
+    inline bool operator == (const TypedHandleBase<T> &other) const;
+    inline bool operator == (const TypedMutHandleBase<T> &other) const;
+
     TypedHeapBase<T> &operator=(const TypedHeapBase<T> &ref) = delete;
 };
 
@@ -167,6 +181,12 @@ class TypedHandleBase
   public:
     inline const T &get() const;
     inline operator const T &() const;
+
+    inline bool operator == (const T &other) const;
+    inline bool operator == (const TypedRootBase<T> &other) const;
+    inline bool operator == (const TypedHeapBase<T> &other) const;
+    inline bool operator == (const TypedHandleBase<T> &other) const;
+    inline bool operator == (const TypedMutHandleBase<T> &other) const;
 };
 
 template <typename T>
@@ -206,6 +226,12 @@ class TypedMutHandleBase
     inline void set(const T &t);
     inline operator const T &() const;
     inline operator T &();
+
+    inline bool operator == (const T &other) const;
+    inline bool operator == (const TypedRootBase<T> &other) const;
+    inline bool operator == (const TypedHeapBase<T> &other) const;
+    inline bool operator == (const TypedHandleBase<T> &other) const;
+    inline bool operator == (const TypedMutHandleBase<T> &other) const;
 
     inline TypedMutHandleBase<T> &operator =(const T &val);
 };

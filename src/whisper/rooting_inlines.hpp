@@ -94,6 +94,41 @@ TypedRootBase<T>::operator T &()
 }
 
 template <typename T>
+inline bool
+TypedRootBase<T>::operator == (const T &other) const
+{
+    return thing_ == other;
+}
+
+template <typename T>
+inline bool
+TypedRootBase<T>::operator == (const TypedRootBase<T> &other) const
+{
+    return thing_ == other.thing_;
+}
+
+template <typename T>
+inline bool
+TypedRootBase<T>::operator == (const TypedHeapBase<T> &other) const
+{
+    return thing_ == other.get();
+}
+
+template <typename T>
+inline bool
+TypedRootBase<T>::operator == (const TypedHandleBase<T> &other) const
+{
+    return thing_ == other.get();
+}
+
+template <typename T>
+inline bool
+TypedRootBase<T>::operator == (const TypedMutHandleBase<T> &other) const
+{
+    return thing_ == other.get();
+}
+
+template <typename T>
 inline TypedRootBase<T> &
 TypedRootBase<T>::operator =(const T &other)
 {
@@ -206,6 +241,41 @@ TypedHeapBase<T>::operator T &()
     return get();
 }
 
+template <typename T>
+inline bool
+TypedHeapBase<T>::operator == (const T &other) const
+{
+    return val_ == other;
+}
+
+template <typename T>
+inline bool
+TypedHeapBase<T>::operator == (const TypedRootBase<T> &other) const
+{
+    return val_ == other.get();
+}
+
+template <typename T>
+inline bool
+TypedHeapBase<T>::operator == (const TypedHeapBase<T> &other) const
+{
+    return val_ == other.get();
+}
+
+template <typename T>
+inline bool
+TypedHeapBase<T>::operator == (const TypedHandleBase<T> &other) const
+{
+    return val_ == other.get();
+}
+
+template <typename T>
+inline bool
+TypedHeapBase<T>::operator == (const TypedMutHandleBase<T> &other) const
+{
+    return val_ == other.get();
+}
+
 
 //
 // PointerHeapBase<typename T>
@@ -266,6 +336,41 @@ inline
 TypedHandleBase<T>::operator const T &() const
 {
     return get();
+}
+
+template <typename T>
+inline bool
+TypedHandleBase<T>::operator == (const T &other) const
+{
+    return ref_ == other;
+}
+
+template <typename T>
+inline bool
+TypedHandleBase<T>::operator == (const TypedRootBase<T> &other) const
+{
+    return ref_ == other.get();
+}
+
+template <typename T>
+inline bool
+TypedHandleBase<T>::operator == (const TypedHeapBase<T> &other) const
+{
+    return ref_ == other.get();
+}
+
+template <typename T>
+inline bool
+TypedHandleBase<T>::operator == (const TypedHandleBase<T> &other) const
+{
+    return ref_ == other.get();
+}
+
+template <typename T>
+inline bool
+TypedHandleBase<T>::operator == (const TypedMutHandleBase<T> &other) const
+{
+    return ref_ == other.get();
 }
 
 //
@@ -350,6 +455,41 @@ TypedMutHandleBase<T>::operator =(const T &val)
 {
     set(val);
     return *this;
+}
+
+template <typename T>
+inline bool
+TypedMutHandleBase<T>::operator == (const T &other) const
+{
+    return ref_ == other;
+}
+
+template <typename T>
+inline bool
+TypedMutHandleBase<T>::operator == (const TypedRootBase<T> &other) const
+{
+    return ref_ == other.get();
+}
+
+template <typename T>
+inline bool
+TypedMutHandleBase<T>::operator == (const TypedHeapBase<T> &other) const
+{
+    return ref_ == other.get();
+}
+
+template <typename T>
+inline bool
+TypedMutHandleBase<T>::operator == (const TypedHandleBase<T> &other) const
+{
+    return ref_ == other.get();
+}
+
+template <typename T>
+inline bool
+TypedMutHandleBase<T>::operator == (const TypedMutHandleBase<T> &other) const
+{
+    return ref_ == other.get();
 }
 
 
