@@ -19,6 +19,7 @@ class RootBase;
 class Slab;
 class ThreadContext;
 class RunContext;
+class RunActivationHelper;
 
 namespace VM {
     class StackFrame;
@@ -123,6 +124,7 @@ class ThreadContext
   friend class Runtime;
   friend class RunContext;
   friend class RootBase;
+  friend class RunActivationHelper;
   private:
     Runtime *runtime_;
     Slab *hatchery_;
@@ -154,6 +156,9 @@ class ThreadContext
 
     void addRunContext(RunContext *cx);
     void removeRunContext(RunContext *cx);
+
+    void activate(RunContext *cx);
+    void deactivateCurrentRunContext();
 
     AllocationContext inHatchery();
     AllocationContext inTenured();
@@ -201,8 +206,6 @@ class RunContext
     Slab *hatchery() const;
     bool suppressGC() const;
 
-    void makeActive();
-
     void registerTopStackFrame(VM::StackFrame *topStackFrame);
 
     AllocationContext inHatchery();
@@ -210,6 +213,31 @@ class RunContext
 
     StringTable &stringTable();
     const StringTable &stringTable() const;
+};
+
+
+//
+// RunActivationHelper
+//
+// An RAII helper class that makes a run context active on construction,
+// and deactivates it on destruction.
+//
+// Asserts constraints during each phase.
+//
+
+class RunActivationHelper
+{
+  private:
+    ThreadContext *threadCx_;
+    RunContext *oldRunCx_;
+#if defined(ENABLE_DEBUG)
+    RootBase *oldRoot_;
+    RunContext *runCx_;
+#endif
+
+  public:
+    RunActivationHelper(RunContext &cx);
+    ~RunActivationHelper();
 };
 
 

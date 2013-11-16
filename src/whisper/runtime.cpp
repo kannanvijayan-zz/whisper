@@ -311,12 +311,6 @@ ThreadContext::tenuredList()
     return tenuredList_;
 }
 
-RunContext *
-ThreadContext::activeRunContext() const
-{
-    return activeRunContext_;
-}
-
 RootBase *
 ThreadContext::roots() const
 {
@@ -362,6 +356,34 @@ ThreadContext::removeRunContext(RunContext *runcx)
         }
     }
     WH_ASSERT(found);
+}
+
+void
+ThreadContext::activate(RunContext *cx)
+{
+    WH_ASSERT(cx);
+    WH_ASSERT_IF(activeRunContext_ == cx, hatchery_ == cx->hatchery_);
+    if (activeRunContext_ != cx) {
+        activeRunContext_ = cx;
+
+        // Sync hatchery and suppressGC state.
+        cx->hatchery_ = hatchery_;
+        cx->suppressGC_ = suppressGC_;
+    }
+}
+
+void
+ThreadContext::deactivateCurrentRunContext()
+{
+    WH_ASSERT(activeRunContext_);
+    activeRunContext_->hatchery_ = nullptr;
+    activeRunContext_ = nullptr;
+}
+
+RunContext *
+ThreadContext::activeRunContext() const
+{
+    return activeRunContext_;
 }
 
 
@@ -437,20 +459,6 @@ RunContext::suppressGC() const
 }
 
 void
-RunContext::makeActive()
-{
-    WH_ASSERT_IF(threadContext_->activeRunContext_ == this,
-                 threadContext_->hatchery_ == hatchery_);
-    if (threadContext_->activeRunContext_ != this) {
-        threadContext_->activeRunContext_ = this;
-
-        // Sync hatchery and suppressGC state.
-        hatchery_ = threadContext_->hatchery();
-        suppressGC_ = threadContext_->suppressGC();
-    }
-}
-
-void
 RunContext::registerTopStackFrame(VM::StackFrame *topStackFrame)
 {
     // No stack frame should have been registered yet.
@@ -480,6 +488,34 @@ const StringTable &
 RunContext::stringTable() const
 {
     return threadContext_->stringTable();
+}
+
+//
+// RunActivationHelper
+//
+
+RunActivationHelper::RunActivationHelper(RunContext &cx)
+  : threadCx_(cx.threadContext()),
+    oldRunCx_(cx.threadContext()->activeRunContext())
+#if defined(ENABLE_DEBUG)
+    ,
+    oldRoot_(threadCx_->roots()),
+    runCx_(&cx)
+#endif
+{
+    cx.threadContext()->activate(&cx);
+}
+
+RunActivationHelper::~RunActivationHelper()
+{
+#if defined(ENABLE_DEBUG)
+    WH_ASSERT(threadCx_->roots() == oldRoot_);
+    WH_ASSERT(threadCx_->activeRunContext() == runCx_);
+#endif
+    if (oldRunCx_)
+        threadCx_->activate(oldRunCx_);
+    else
+        threadCx_->deactivateCurrentRunContext();
 }
 
 

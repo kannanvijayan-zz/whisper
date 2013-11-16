@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
 
     // Create a run context for execution.
     RunContext runcx(thrcx);
-    runcx.makeActive();
+    RunActivationHelper _rah(runcx);
 
     RunContext *cx = &runcx;
 
