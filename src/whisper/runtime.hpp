@@ -138,6 +138,7 @@ class ThreadContext
 
     unsigned int randSeed_;
     StringTable stringTable_;
+    uint32_t spoiler_;
 
     static unsigned int NewRandSeed();
 
@@ -167,6 +168,8 @@ class ThreadContext
 
     StringTable &stringTable();
     const StringTable &stringTable() const;
+
+    uint32_t spoiler() const;
 };
 
 

@@ -72,7 +72,6 @@ class StringTable
     static constexpr float MAX_FILL_RATIO = 0.75;
 
     ThreadContext *cx_;
-    uint32_t spoiler_;
     uint32_t entries_;
     VM::Tuple *tuple_;
 
@@ -104,6 +103,8 @@ class StringTable
 
     bool insertString(Handle<VM::LinearString *> str, uint32_t slot);
     bool enlarge();
+
+    uint32_t spoiler() const;
 };
 
 

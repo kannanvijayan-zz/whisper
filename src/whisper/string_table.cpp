@@ -73,7 +73,6 @@ StringTable::StringOrQuery::toQuery() const
 
 StringTable::StringTable()
   : cx_(nullptr),
-    spoiler_(0),
     entries_(0),
     tuple_(nullptr)
 {}
@@ -84,10 +83,8 @@ StringTable::initialize(ThreadContext *cx)
 {
     WH_ASSERT(cx_ == nullptr);
     WH_ASSERT(tuple_ == nullptr);
-    WH_ASSERT(spoiler_ == 0);
 
     cx_ = cx;
-    spoiler_ = cx->randInt();
 
     // Allocate a new tuple with reasonable capacity in tenured space.
     if (!cx->inTenured().createTuple(INITIAL_TUPLE_SIZE, tuple_))
@@ -274,11 +271,11 @@ StringTable::hashString(const StringOrQuery &str)
     if (str.isQuery()) {
         const Query *query = str.toQuery();
         if (query->isEightBit) {
-            return VM::FNVHashString(spoiler_, query->eightBitData(),
+            return VM::FNVHashString(spoiler(), query->eightBitData(),
                                      query->length);
         }
 
-        return VM::FNVHashString(spoiler_, query->sixteenBitData(),
+        return VM::FNVHashString(spoiler(), query->sixteenBitData(),
                                  query->length);
     }
 
@@ -287,10 +284,10 @@ StringTable::hashString(const StringOrQuery &str)
 
     if (heapStr->isLinearString()) {
         const VM::LinearString *linStr = heapStr->toLinearString();
-        return VM::FNVHashString(spoiler_, linStr->data(), linStr->length());
+        return VM::FNVHashString(spoiler(), linStr->data(), linStr->length());
     }
 
-    return VM::FNVHashString(spoiler_, heapStr);
+    return VM::FNVHashString(spoiler(), heapStr);
 }
 
 int
@@ -370,6 +367,12 @@ StringTable::enlarge()
     }
 
     return true;
+}
+
+uint32_t
+StringTable::spoiler() const
+{
+    return cx_->spoiler();
 }
 
 

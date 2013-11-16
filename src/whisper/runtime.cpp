@@ -265,7 +265,8 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
     roots_(nullptr),
     suppressGC_(false),
     randSeed_(NewRandSeed()),
-    stringTable_()
+    stringTable_(),
+    spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16))
 {
     WH_ASSERT(runtime != nullptr);
     WH_ASSERT(hatchery != nullptr);
@@ -416,6 +417,12 @@ const StringTable &
 ThreadContext::stringTable() const
 {
     return stringTable_;
+}
+
+uint32_t
+ThreadContext::spoiler() const
+{
+    return spoiler_;
 }
 
 
