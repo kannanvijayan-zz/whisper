@@ -28,7 +28,7 @@ class Object : public HeapThing
 
 
 //
-// A HashObject is a simple native object which stores its property
+// A HashObject is a simple native object format which stores its property
 // mappings as a hash table.
 //
 class HashObject : public HeapThing
@@ -39,6 +39,7 @@ class HashObject : public HeapThing
     Heap<Tuple *> mappings_;
 
     static constexpr uint32_t INITIAL_ENTRIES = 4;
+    static constexpr float MAX_FILL_RATIO = 0.75;
 
   public:
     HashObject(Handle<Object *> prototype);
@@ -46,6 +47,30 @@ class HashObject : public HeapThing
 
     Handle<Object *> prototype() const;
     Handle<Tuple *> mappings() const;
+
+    uint32_t propertyCapacity() const;
+    uint32_t numProperties() const;
+
+    void setPrototype(Handle<Object *> newProto);
+    bool setOwnProperty(RunContext *cx,
+                        Handle<Value> keyString,
+                        Handle<Value> val);
+
+  private:
+    uint32_t lookupOwnProperty(RunContext *cx, Handle<Value> keyString,
+                               bool forAdd=false);
+
+    uint32_t hashValue(RunContext *cx, const Value &key) const;
+
+    static uint32_t KeySlotOffset(uint32_t entry);
+    static uint32_t ValueSlotOffset(uint32_t entry);
+
+    Handle<Value> getEntryKey(uint32_t entry) const;
+    Handle<Value> getEntryValue(uint32_t entry) const;
+    void setEntryKey(uint32_t entry, const Value &key);
+    void setEntryValue(uint32_t entry, const Value &val);
+
+    bool enlarge(RunContext *cx);
 };
 
 
