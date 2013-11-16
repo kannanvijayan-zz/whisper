@@ -71,6 +71,7 @@ class StringTable
     static constexpr uint32_t INITIAL_TUPLE_SIZE = 512;
     static constexpr float MAX_FILL_RATIO = 0.75;
 
+    ThreadContext *cx_;
     uint32_t spoiler_;
     uint32_t entries_;
     VM::Tuple *tuple_;
@@ -80,33 +81,28 @@ class StringTable
 
     bool initialize(ThreadContext *cx);
 
-    VM::LinearString *lookupString(RunContext *cx, VM::HeapString *str);
+    VM::LinearString *lookupString(VM::HeapString *str);
 
-    VM::LinearString *lookupString(RunContext *cx, const uint8_t *str,
-                                   uint32_t length);
+    VM::LinearString *lookupString(const uint8_t *str, uint32_t length);
+    VM::LinearString *lookupString(const uint16_t *str, uint32_t length);
 
-    VM::LinearString *lookupString(RunContext *cx, const uint16_t *str,
-                                   uint32_t length);
-
-    bool addString(RunContext *cx, const uint8_t *str, uint32_t length,
+    bool addString(const uint8_t *str, uint32_t length,
                    MutHandle<VM::LinearString *> result);
-    bool addString(RunContext *cx, const uint16_t *str, uint32_t length,
+    bool addString(const uint16_t *str, uint32_t length,
                    MutHandle<VM::LinearString *> result);
-    bool addString(RunContext *cx, Handle<VM::HeapString *> string,
+    bool addString(Handle<VM::HeapString *> string,
                    MutHandle<VM::LinearString *> result);
-    bool addString(RunContext *cx, Handle<Value> strval,
+    bool addString(Handle<Value> strval,
                    MutHandle<VM::LinearString *> result);
 
   private:
-    uint32_t lookupSlot(RunContext *cx, const StringOrQuery &str,
-                        VM::LinearString **result);
+    uint32_t lookupSlot(const StringOrQuery &str, VM::LinearString **result);
 
     uint32_t hashString(const StringOrQuery &str);
     int compareStrings(VM::LinearString *a, const StringOrQuery &b);
 
-    bool insertString(RunContext *cx, Handle<VM::LinearString *> str,
-                      uint32_t slot);
-    bool enlarge(RunContext *cx);
+    bool insertString(Handle<VM::LinearString *> str, uint32_t slot);
+    bool enlarge();
 };
 
 

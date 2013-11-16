@@ -662,7 +662,7 @@ NormalizeString(RunContext *cx, const uint8_t *str, uint32_t length,
     }
 
     Root<LinearString *> linStr(cx);
-    if (!cx->stringTable().addString(cx, str, length, &linStr))
+    if (!cx->stringTable().addString(str, length, &linStr))
         return false;
 
     result = Value::HeapString(linStr);
@@ -680,7 +680,7 @@ NormalizeString(RunContext *cx, const uint16_t *str, uint32_t length,
     }
 
     Root<LinearString *> linStr(cx);
-    if (!cx->stringTable().addString(cx, str, length, &linStr))
+    if (!cx->stringTable().addString(str, length, &linStr))
         return false;
 
     result = Value::HeapString(linStr);
@@ -698,7 +698,7 @@ NormalizeString(RunContext *cx, Handle<HeapString *> str,
     }
 
     Root<LinearString *> linStr(cx);
-    if (!cx->stringTable().addString(cx, str, &linStr))
+    if (!cx->stringTable().addString(str, &linStr))
         return false;
 
     result = Value::HeapString(linStr);
@@ -715,7 +715,7 @@ NormalizeString(RunContext *cx, Handle<Value> strval, MutHandle<Value> result)
     }
 
     Root<LinearString *> linStr(cx);
-    if (!cx->stringTable().addString(cx, strval, &linStr))
+    if (!cx->stringTable().addString(strval, &linStr))
         return false;
 
     result = Value::HeapString(linStr);

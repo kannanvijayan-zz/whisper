@@ -72,7 +72,8 @@ StringTable::StringOrQuery::toQuery() const
 }
 
 StringTable::StringTable()
-  : spoiler_(0),
+  : cx_(nullptr),
+    spoiler_(0),
     entries_(0),
     tuple_(nullptr)
 {}
@@ -81,9 +82,11 @@ StringTable::StringTable()
 bool
 StringTable::initialize(ThreadContext *cx)
 {
+    WH_ASSERT(cx_ == nullptr);
     WH_ASSERT(tuple_ == nullptr);
     WH_ASSERT(spoiler_ == 0);
 
+    cx_ = cx;
     spoiler_ = cx->randInt();
 
     // Allocate a new tuple with reasonable capacity in tenured space.
@@ -94,83 +97,83 @@ StringTable::initialize(ThreadContext *cx)
 }
 
 VM::LinearString *
-StringTable::lookupString(RunContext *cx, VM::HeapString *str)
+StringTable::lookupString(VM::HeapString *str)
 {
     if (str->isLinearString()) {
         VM::LinearString *linStr = str->toLinearString();
         if (linStr->isInterned())
             return linStr;
 
-        return lookupString(cx, linStr->data(), linStr->length());
+        return lookupString(linStr->data(), linStr->length());
     }
 
     VM::LinearString *result;
-    lookupSlot(cx, StringOrQuery(str), &result);
+    lookupSlot(StringOrQuery(str), &result);
     return result;
 }
 
 VM::LinearString *
-StringTable::lookupString(RunContext *cx, const uint8_t *str, uint32_t length)
+StringTable::lookupString(const uint8_t *str, uint32_t length)
 {
     Query q(str, length);
     VM::LinearString *result;
-    lookupSlot(cx, StringOrQuery(&q), &result);
+    lookupSlot(StringOrQuery(&q), &result);
     return result;
 }
 
 VM::LinearString *
-StringTable::lookupString(RunContext *cx, const uint16_t *str, uint32_t length)
+StringTable::lookupString(const uint16_t *str, uint32_t length)
 {
     Query q(str, length);
     VM::LinearString *result;
-    lookupSlot(cx, StringOrQuery(&q), &result);
+    lookupSlot(StringOrQuery(&q), &result);
     return result;
 }
 
 bool
-StringTable::addString(RunContext *cx, const uint8_t *str, uint32_t length,
+StringTable::addString(const uint8_t *str, uint32_t length,
                        MutHandle<VM::LinearString *> result)
 {
     WH_ASSERT(!VM::IsInt32IdString(str, length));
 
     // Check for existing interned string in table.
     Query q(str, length);
-    uint32_t slot = lookupSlot(cx, StringOrQuery(&q), &result.get());
+    uint32_t slot = lookupSlot(StringOrQuery(&q), &result.get());
     if (result)
         return true;
 
     // Allocate tenured LinearString copy (marked interned).
-    result = cx->inTenured().createSized<VM::LinearString>(
+    result = cx_->inTenured().createSized<VM::LinearString>(
                             length * 2, str, /*interned=*/true);
     if (!result)
         return false;
 
-    return insertString(cx, result, slot);
+    return insertString(result, slot);
 }
 
 bool
-StringTable::addString(RunContext *cx, const uint16_t *str, uint32_t length,
+StringTable::addString(const uint16_t *str, uint32_t length,
                        MutHandle<VM::LinearString *> result)
 {
     WH_ASSERT(!VM::IsInt32IdString(str, length));
 
     // Check for existing interned string in table.
     Query q(str, length);
-    uint32_t slot = lookupSlot(cx, StringOrQuery(&q), &result.get());
+    uint32_t slot = lookupSlot(StringOrQuery(&q), &result.get());
     if (result)
         return true;
 
     // Allocate tenured LinearString copy (marked interned).
-    result = cx->inTenured().createSized<VM::LinearString>(
+    result = cx_->inTenured().createSized<VM::LinearString>(
                             length * 2, str, /*interned=*/true);
     if (!result)
         return false;
 
-    return insertString(cx, result, slot);
+    return insertString(result, slot);
 }
 
 bool
-StringTable::addString(RunContext *cx, Handle<VM::HeapString *> string,
+StringTable::addString(Handle<VM::HeapString *> string,
                        MutHandle<VM::LinearString *> result)
 {
     WH_ASSERT(!VM::IsInt32IdString(string));
@@ -182,22 +185,22 @@ StringTable::addString(RunContext *cx, Handle<VM::HeapString *> string,
     }
 
     // Check for existing interned string in table.
-    uint32_t slot = lookupSlot(cx, StringOrQuery(string), &result.get());
+    uint32_t slot = lookupSlot(StringOrQuery(string), &result.get());
     if (result)
         return true;
 
     // Allocate tenured LinearString copy (marked interned).
     uint32_t size = string->length() * 2;
-    result = cx->inTenured().createSized<VM::LinearString>(
+    result = cx_->inTenured().createSized<VM::LinearString>(
                             size, string, /*interned=*/true);
     if (!result)
         return false;
 
-    return insertString(cx, result, slot);
+    return insertString(result, slot);
 }
 
 bool
-StringTable::addString(RunContext *cx, Handle<Value> strval,
+StringTable::addString(Handle<Value> strval,
                        MutHandle<VM::LinearString *> result)
 {
     WH_ASSERT(strval->isString());
@@ -206,18 +209,17 @@ StringTable::addString(RunContext *cx, Handle<Value> strval,
     if (strval->isImmString()) {
         uint16_t buf[Value::ImmStringMaxLength];
         uint32_t len = strval->readImmString(buf);
-        return addString(cx, buf, len, result);
+        return addString(buf, len, result);
     }
 
     WH_ASSERT(strval->isHeapString());
-    Root<VM::HeapString *> heapStr(cx, strval->heapStringPtr());
-    return addString(cx, heapStr, result);
+    Root<VM::HeapString *> heapStr(cx_, strval->heapStringPtr());
+    return addString(heapStr, result);
 }
 
 
 uint32_t
-StringTable::lookupSlot(RunContext *cx, const StringOrQuery &str,
-                        VM::LinearString **result)
+StringTable::lookupSlot(const StringOrQuery &str, VM::LinearString **result)
 {
     uint32_t hash = hashString(str);
     uint32_t slotCount = tuple_->size();
@@ -301,19 +303,18 @@ StringTable::compareStrings(VM::LinearString *a,
 }
 
 bool
-StringTable::insertString(RunContext *cx, Handle<VM::LinearString *> str,
-                          uint32_t slot)
+StringTable::insertString(Handle<VM::LinearString *> str, uint32_t slot)
 {
     WH_ASSERT(tuple_->get(slot)->isUndefined());
     WH_ASSERT(str->isInterned());
 
     // Resize table if necessary.
     if (entries_ >= tuple_->size() * MAX_FILL_RATIO) {
-        if (!enlarge(cx))
+        if (!enlarge())
             return false;
 
         VM::LinearString *exist;
-        slot = lookupSlot(cx, StringOrQuery(str), &exist);
+        slot = lookupSlot(StringOrQuery(str), &exist);
         WH_ASSERT(!exist);
     }
 
@@ -323,13 +324,13 @@ StringTable::insertString(RunContext *cx, Handle<VM::LinearString *> str,
 }
 
 bool
-StringTable::enlarge(RunContext *cx)
+StringTable::enlarge()
 {
-    Root<VM::Tuple *> oldTuple(cx, tuple_);
+    Root<VM::Tuple *> oldTuple(cx_, tuple_);
     uint32_t curSize = tuple_->size();
     
     // Allocate a new tuple with double capacity.
-    if (!cx->inTenured().createTuple(curSize * 2, tuple_))
+    if (!cx_->inTenured().createTuple(curSize * 2, tuple_))
         return false;
 
     // Add old strings to table.
@@ -346,7 +347,7 @@ StringTable::enlarge(RunContext *cx)
 
         // Check for existing interned string in table.
         VM::LinearString *dummy;
-        uint32_t slot = lookupSlot(cx, StringOrQuery(oldStr), &dummy);
+        uint32_t slot = lookupSlot(StringOrQuery(oldStr), &dummy);
         WH_ASSERT(dummy == nullptr);
 
         tuple_->set(slot, Value::HeapString(oldStr));
