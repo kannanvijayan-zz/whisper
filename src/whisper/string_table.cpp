@@ -268,14 +268,16 @@ StringTable::lookupSlot(const StringOrQuery &str, VM::LinearString **result)
 uint32_t
 StringTable::hashString(const StringOrQuery &str)
 {
+    uint32_t spoiler = cx_->spoiler();
+
     if (str.isQuery()) {
         const Query *query = str.toQuery();
         if (query->isEightBit) {
-            return VM::FNVHashString(spoiler(), query->eightBitData(),
+            return VM::FNVHashString(spoiler, query->eightBitData(),
                                      query->length);
         }
 
-        return VM::FNVHashString(spoiler(), query->sixteenBitData(),
+        return VM::FNVHashString(spoiler, query->sixteenBitData(),
                                  query->length);
     }
 
@@ -284,10 +286,10 @@ StringTable::hashString(const StringOrQuery &str)
 
     if (heapStr->isLinearString()) {
         const VM::LinearString *linStr = heapStr->toLinearString();
-        return VM::FNVHashString(spoiler(), linStr->data(), linStr->length());
+        return VM::FNVHashString(spoiler, linStr->data(), linStr->length());
     }
 
-    return VM::FNVHashString(spoiler(), heapStr);
+    return VM::FNVHashString(spoiler, heapStr);
 }
 
 int
@@ -333,6 +335,7 @@ StringTable::insertString(Handle<VM::LinearString *> str, uint32_t slot)
 
     // Store interned string.
     tuple_->set(slot, Value::HeapString(str));
+    entries_++;
     return true;
 }
 
@@ -367,12 +370,6 @@ StringTable::enlarge()
     }
 
     return true;
-}
-
-uint32_t
-StringTable::spoiler() const
-{
-    return cx_->spoiler();
 }
 
 

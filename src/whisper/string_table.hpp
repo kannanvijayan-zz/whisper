@@ -103,8 +103,6 @@ class StringTable
 
     bool insertString(Handle<VM::LinearString *> str, uint32_t slot);
     bool enlarge();
-
-    uint32_t spoiler() const;
 };
 
 
