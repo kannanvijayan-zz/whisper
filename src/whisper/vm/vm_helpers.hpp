@@ -6,6 +6,7 @@
 namespace Whisper {
 namespace VM {
 
+
 template <typename CharT>
 bool IsNormalizedPropertyId(const CharT *str, uint32_t length);
 

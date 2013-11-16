@@ -13,13 +13,12 @@ namespace Whisper {
 namespace VM {
 
 
-
 template <typename CharT>
 bool
 IsNormalizedPropertyId(const CharT *str, uint32_t length)
 {
     // Strings in bijection with int32s aren't normalized property ids.
-    if (IsInt32IdString(str, length, nullptr))
+    if (IsInt32IdString(str, length))
         return false;
 
     return true;
