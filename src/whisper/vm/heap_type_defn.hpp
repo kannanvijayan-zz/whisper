@@ -28,7 +28,7 @@
     _(PropertyTraps,                    false)                  \
     \
     _(HashObject,                       true)                   \
-    _(HashObjectValueProperty,          true)                   \
+    _(HashObject_ValueProp,             true)                   \
     _(HashObjectAccessorProperty,       true)                   \
     _(Global,                           true)                   \
     \

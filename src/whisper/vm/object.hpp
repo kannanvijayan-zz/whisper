@@ -34,6 +34,19 @@ class Object : public HeapThing
 class HashObject : public HeapThing,
                    public TypedHeapThing<HeapType::HashObject>
 {
+  public:
+    struct PropConfig {
+        bool configurable;
+        bool enumerable;
+        bool writable;
+
+        PropConfig();
+
+        PropConfig &setConfigurable(bool c);
+        PropConfig &setEnumerable(bool e);
+        PropConfig &setWritable(bool w);
+    };
+
   private:
     Heap<Object *> prototype_;
     Heap<Tuple *> mappings_;
@@ -79,9 +92,9 @@ class HashObject : public HeapThing,
 //
 // A HashObjectValueProperty defines a value property binding.
 //
-class HashObjectValueProperty
+class HashObject_ValueProp
   : public HeapThing,
-    public TypedHeapThing<HeapType::HashObjectValueProperty>
+    public TypedHeapThing<HeapType::HashObject_ValueProp>
 {
   private:
     static constexpr uint32_t ConfigurableFlag = 0x1;
@@ -91,17 +104,8 @@ class HashObjectValueProperty
     Heap<Value> value_;
 
   public:
-    struct Config {
-        bool configurable;
-        bool enumerable;
-        bool writable;
-
-        Config();
-        Config(bool c, bool e, bool w);
-    };
-
-  public:
-    HashObjectValueProperty(const Config &config, const Value &val);
+    HashObject_ValueProp(const HashObject::PropConfig &config,
+                         const Value &val);
 
     bool isConfigurable() const;
     bool isEnumerable() const;
@@ -113,52 +117,7 @@ class HashObjectValueProperty
     void setValue(const Value &val);
 
   private:
-    void initialize(const Config &conf);
-};
-
-
-//
-// A HashObjectValueProperty defines a value property binding.
-//
-class HashObjectAccessorProperty
-  : public HeapThing,
-    public TypedHeapThing<HeapType::HashObjectAccessorProperty>
-{
-  private:
-    static constexpr uint32_t ConfigurableFlag = 0x1;
-    static constexpr uint32_t EnumerableFlag = 0x2;
-
-    Heap<Value> getter_;
-    Heap<Value> setter_;
-
-  public:
-    struct Config {
-        bool configurable;
-        bool enumerable;
-
-        Config();
-        Config(bool c, bool e);
-    };
-
-  public:
-    HashObjectAccessorProperty(const Config &config,
-                               const Value &getter,
-                               const Value &setter);
-
-    bool isConfigurable() const;
-    bool isEnumerable() const;
-
-    const Heap<Value> &getter() const;
-    Heap<Value> &getter();
-
-    const Heap<Value> &setter() const;
-    Heap<Value> &setter();
-
-    void setGetter(const Value &val);
-    void setSetter(const Value &val);
-
-  private:
-    void initialize(const Config &conf);
+    void initialize(const HashObject::PropConfig &conf);
 };
 
 
