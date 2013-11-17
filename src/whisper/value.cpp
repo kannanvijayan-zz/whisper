@@ -269,6 +269,13 @@ Value::HeapString(VM::HeapString *str)
     return Value(PtrToWord(str) | ValueTagNumber(ValueTag::HeapString));
 }
 
+/*static*/ Value
+Value::Object(VM::HeapThing *thing)
+{
+    WH_ASSERT(thing != nullptr);
+    WH_ASSERT(IsPtrAligned(thing, 1u << TagBits));
+    return Value(PtrToWord(thing) | ValueTagNumber(ValueTag::Object));
+}
 
 
 #if defined(ENABLE_DEBUG)
@@ -505,11 +512,11 @@ Value::isString() const
 
 
 
-VM::Object *
+VM::HeapThing *
 Value::objectPtr() const
 {
     WH_ASSERT(isObject());
-    return reinterpret_cast<VM::Object *>(tagged_);
+    return reinterpret_cast<VM::HeapThing *>(tagged_);
 }
 
 VM::HeapString *

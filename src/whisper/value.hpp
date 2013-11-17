@@ -227,6 +227,8 @@ class Value
     static Value ImmIndexString(int32_t idx);
     static Value HeapString(VM::HeapString *str);
 
+    static Value Object(VM::HeapThing *thing);
+
 #if defined(ENABLE_DEBUG)
 
     bool isValid() const;
@@ -283,7 +285,7 @@ class Value
     // Value extraction.
     //
 
-    VM::Object *objectPtr() const;
+    VM::HeapThing *objectPtr() const;
     VM::HeapString *heapStringPtr() const;
     VM::HeapDouble *heapDoublePtr() const;
 
