@@ -81,6 +81,10 @@ Root<Value>::operator =(const Value &other)
 // Heap<Value>
 //
 
+Heap<Value>::Heap()
+  : TypedHeapBase<Value>(Value::Undefined())
+{}
+
 Heap<Value>::Heap(const Value &val)
   : TypedHeapBase<Value>(val)
 {}

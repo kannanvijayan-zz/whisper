@@ -300,6 +300,7 @@ template <>
 class Heap<Value> : public TypedHeapBase<Value>
 {
   public:
+    Heap();
     Heap(const Value &val);
 
     const Value *operator ->() const;
