@@ -31,12 +31,13 @@ class Object : public HeapThing
 // A HashObject is a simple native object format which stores its property
 // mappings as a hash table.
 //
-class HashObject : public HeapThing
+class HashObject : public HeapThing,
+                   public TypedHeapThing<HeapType::HashObject>
 {
   private:
     Heap<Object *> prototype_;
-    uint32_t entries_;
     Heap<Tuple *> mappings_;
+    uint32_t entries_;
 
     static constexpr uint32_t INITIAL_ENTRIES = 4;
     static constexpr float MAX_FILL_RATIO = 0.75;
@@ -52,9 +53,10 @@ class HashObject : public HeapThing
     uint32_t numProperties() const;
 
     void setPrototype(Handle<Object *> newProto);
-    bool setOwnProperty(RunContext *cx,
-                        Handle<Value> keyString,
-                        Handle<Value> val);
+
+    bool defineValueProperty(RunContext *cx,
+                             Handle<Value> key,
+                             Handle<Value> val);
 
   private:
     uint32_t lookupOwnProperty(RunContext *cx, Handle<Value> keyString,
@@ -71,6 +73,92 @@ class HashObject : public HeapThing
     void setEntryValue(uint32_t entry, const Value &val);
 
     bool enlarge(RunContext *cx);
+};
+
+
+//
+// A HashObjectValueProperty defines a value property binding.
+//
+class HashObjectValueProperty
+  : public HeapThing,
+    public TypedHeapThing<HeapType::HashObjectValueProperty>
+{
+  private:
+    static constexpr uint32_t ConfigurableFlag = 0x1;
+    static constexpr uint32_t EnumerableFlag = 0x2;
+    static constexpr uint32_t WritableFlag = 0x4;
+
+    Heap<Value> value_;
+
+  public:
+    struct Config {
+        bool configurable;
+        bool enumerable;
+        bool writable;
+
+        Config();
+        Config(bool c, bool e, bool w);
+    };
+
+  public:
+    HashObjectValueProperty(const Config &config, const Value &val);
+
+    bool isConfigurable() const;
+    bool isEnumerable() const;
+    bool isWritable() const;
+
+    const Heap<Value> &value() const;
+    Heap<Value> &value();
+
+    void setValue(const Value &val);
+
+  private:
+    void initialize(const Config &conf);
+};
+
+
+//
+// A HashObjectValueProperty defines a value property binding.
+//
+class HashObjectAccessorProperty
+  : public HeapThing,
+    public TypedHeapThing<HeapType::HashObjectAccessorProperty>
+{
+  private:
+    static constexpr uint32_t ConfigurableFlag = 0x1;
+    static constexpr uint32_t EnumerableFlag = 0x2;
+
+    Heap<Value> getter_;
+    Heap<Value> setter_;
+
+  public:
+    struct Config {
+        bool configurable;
+        bool enumerable;
+
+        Config();
+        Config(bool c, bool e);
+    };
+
+  public:
+    HashObjectAccessorProperty(const Config &config,
+                               const Value &getter,
+                               const Value &setter);
+
+    bool isConfigurable() const;
+    bool isEnumerable() const;
+
+    const Heap<Value> &getter() const;
+    Heap<Value> &getter();
+
+    const Heap<Value> &setter() const;
+    Heap<Value> &setter();
+
+    void setGetter(const Value &val);
+    void setSetter(const Value &val);
+
+  private:
+    void initialize(const Config &conf);
 };
 
 

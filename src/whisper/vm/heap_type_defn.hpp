@@ -27,7 +27,9 @@
     \
     _(PropertyTraps,                    false)                  \
     \
-    _(Object,                           true)                   \
+    _(HashObject,                       true)                   \
+    _(HashObjectValueProperty,          true)                   \
+    _(HashObjectAccessorProperty,       true)                   \
     _(Global,                           true)                   \
     \
     _(ConstantPool,                     true)                   \

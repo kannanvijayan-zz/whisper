@@ -3,6 +3,7 @@
 
 #include "value_inlines.hpp"
 #include "rooting_inlines.hpp"
+#include "runtime_inlines.hpp"
 #include "vm/heap_thing_inlines.hpp"
 #include "vm/string.hpp"
 #include "vm/object.hpp"
@@ -12,7 +13,7 @@ namespace VM {
 
 
 HashObject::HashObject(Handle<Object *> prototype)
-  : prototype_(prototype), entries_(0), mappings_(nullptr)
+  : prototype_(prototype),  mappings_(nullptr), entries_(0)
 {}
 
 bool
@@ -63,8 +64,8 @@ HashObject::setPrototype(Handle<Object *> newProto)
 }
 
 bool
-HashObject::setOwnProperty(RunContext *cx, Handle<Value> keyString,
-                           Handle<Value> val)
+HashObject::defineValueProperty(RunContext *cx, Handle<Value> keyString,
+                                Handle<Value> val)
 {
     uint32_t entry = lookupOwnProperty(cx, keyString, /*forAdd=*/true);
     WH_ASSERT(entry != UINT32_MAX);
@@ -72,7 +73,11 @@ HashObject::setOwnProperty(RunContext *cx, Handle<Value> keyString,
     Handle<Value> entryKey = getEntryKey(entry);
 
     if (entryKey->isString()) {
-        mappings_->set(ValueSlotOffset(entry), val);
+        Handle<Value> entryValue = getEntryValue(entry);
+        WH_ASSERT(entryValue->isHeapThing() &&
+                  entryValue->objectPtr()->isHashObjectValueProperty());
+
+        entryValue->objectPtr()->toHashObjectValueProperty()->setValue(val);
         return true;
     }
 
@@ -84,7 +89,7 @@ HashObject::setOwnProperty(RunContext *cx, Handle<Value> keyString,
     Root<Value> keyval(cx);
     int32_t id;
     if (IsInt32IdString(keyString, &id)) {
-        keyval = keyString;
+        keyval = Value::ImmIndexString(id);
     } else {
         Root<LinearString *> internedKey(cx);
         if (!cx->stringTable().addString(keyString, &internedKey))
@@ -105,8 +110,15 @@ HashObject::setOwnProperty(RunContext *cx, Handle<Value> keyString,
         WH_ASSERT(getEntryKey(entry)->isUndefined());
     }
 
+    // Make an property object for the value.
+    HashObjectValueProperty::Config conf;
+    Root<HashObjectValueProperty *> valProp(cx,
+        cx->inHatchery().create<HashObjectValueProperty>(conf, val));
+    if (!valProp)
+        return false;
+
     setEntryKey(entry, keyval);
-    setEntryValue(entry, val);
+    setEntryValue(entry, Value::Object(valProp));
     return true;
 }
 
@@ -244,6 +256,171 @@ HashObject::enlarge(RunContext *cx)
 
     return true;
 }
+
+
+//
+// HashObjectValueProperty
+//
+
+HashObjectValueProperty::Config::Config()
+  : configurable(false),
+    enumerable(false),
+    writable(false)
+{}
+
+HashObjectValueProperty::Config::Config(bool c, bool e, bool w)
+  : configurable(c),
+    enumerable(e),
+    writable(w)
+{}
+
+HashObjectValueProperty::HashObjectValueProperty(const Config &config,
+                                                 const Value &val)
+  : value_()
+{
+    initialize(config);
+    setValue(val);
+}
+
+bool
+HashObjectValueProperty::isConfigurable() const
+{
+    return flags() & ConfigurableFlag;
+}
+
+bool
+HashObjectValueProperty::isEnumerable() const
+{
+    return flags() & EnumerableFlag;
+}
+
+bool
+HashObjectValueProperty::isWritable() const
+{
+    return flags() & WritableFlag;
+}
+
+const Heap<Value> &
+HashObjectValueProperty::value() const
+{
+    return value_;
+}
+
+Heap<Value> &
+HashObjectValueProperty::value()
+{
+    return value_;
+}
+
+void
+HashObjectValueProperty::setValue(const Value &val)
+{
+    value_.set(val, this);
+}
+
+void
+HashObjectValueProperty::initialize(const Config &conf)
+{
+    uint32_t flags = 0;
+    if (conf.configurable)
+        flags |= ConfigurableFlag;
+
+    if (conf.writable)
+        flags |= WritableFlag;
+
+    if (conf.enumerable)
+        flags |= EnumerableFlag;
+
+    initFlags(flags);
+}
+
+
+//
+// HashObjectAccessorProperty
+//
+
+HashObjectAccessorProperty::Config::Config()
+  : configurable(false),
+    enumerable(false)
+{}
+
+HashObjectAccessorProperty::Config::Config(bool c, bool e)
+  : configurable(c),
+    enumerable(e)
+{}
+
+HashObjectAccessorProperty::HashObjectAccessorProperty(const Config &config,
+                                                       const Value &getter,
+                                                       const Value &setter)
+  : getter_(),
+    setter_()
+{
+    initialize(config);
+    setGetter(getter);
+    setSetter(setter);
+}
+
+bool
+HashObjectAccessorProperty::isConfigurable() const
+{
+    return flags() & ConfigurableFlag;
+}
+
+bool
+HashObjectAccessorProperty::isEnumerable() const
+{
+    return flags() & EnumerableFlag;
+}
+
+const Heap<Value> &
+HashObjectAccessorProperty::getter() const
+{
+    return getter_;
+}
+
+Heap<Value> &
+HashObjectAccessorProperty::getter()
+{
+    return getter_;
+}
+
+const Heap<Value> &
+HashObjectAccessorProperty::setter() const
+{
+    return setter_;
+}
+
+Heap<Value> &
+HashObjectAccessorProperty::setter()
+{
+    return setter_;
+}
+
+void
+HashObjectAccessorProperty::setGetter(const Value &getter)
+{
+    getter_.set(getter, this);
+}
+
+void
+HashObjectAccessorProperty::setSetter(const Value &setter)
+{
+    setter_.set(setter, this);
+}
+
+void
+HashObjectAccessorProperty::initialize(const Config &conf)
+{
+    uint32_t flags = 0;
+    if (conf.configurable)
+        flags |= ConfigurableFlag;
+
+    if (conf.enumerable)
+        flags |= EnumerableFlag;
+
+    initFlags(flags);
+}
+
 
 
 
