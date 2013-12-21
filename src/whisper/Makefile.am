@@ -9,26 +9,27 @@ whisper_SOURCES = \
     parser/syntax_tree.cpp \
     parser/syntax_annotations.cpp \
     parser/parser.cpp \
-    slab.cpp \
-    value.cpp \
-    rooting.cpp \
-    runtime.cpp \
-    string_table.cpp \
-    vm/vm_helpers.cpp \
-    vm/heap_thing.cpp \
-    vm/double.cpp \
-    vm/string.cpp \
-    vm/bytecode.cpp \
-    vm/script.cpp \
-    vm/stack_frame.cpp \
-    vm/tuple.cpp \
-    vm/object.cpp \
-    vm/arithmetic_ops.cpp \
-    interp/bytecode_ops.cpp \
-    interp/bytecode_generator.cpp \
-    interp/interpreter.cpp \
     whisper.cpp
 
+
+#    slab.cpp \
+#    value.cpp \
+#    rooting.cpp \
+#    runtime.cpp \
+#    string_table.cpp \
+#    vm/vm_helpers.cpp \
+#    vm/heap_thing.cpp \
+#    vm/double.cpp \
+#    vm/string.cpp \
+#    vm/bytecode.cpp \
+#    vm/script.cpp \
+#    vm/stack_frame.cpp \
+#    vm/tuple.cpp \
+#    vm/object.cpp \
+#    vm/arithmetic_ops.cpp \
+#    interp/bytecode_ops.cpp \
+#    interp/bytecode_generator.cpp \
+#    interp/interpreter.cpp \
 #    vm/reference.cpp \
 #    vm/property_descriptor.cpp \
 #    vm/shape_tree.cpp \

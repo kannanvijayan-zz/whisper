@@ -5,31 +5,6 @@
 #include "spew.hpp"
 #include "parser/code_source.hpp"
 #include "parser/tokenizer.hpp"
-#include "parser/syntax_tree.hpp"
-#include "parser/syntax_tree_inlines.hpp"
-#include "parser/parser.hpp"
-#include "value.hpp"
-#include "slab.hpp"
-#include "vm/heap_thing.hpp"
-#include "vm/heap_thing_inlines.hpp"
-#include "vm/double.hpp"
-#include "vm/string.hpp"
-#include "runtime.hpp"
-#include "runtime_inlines.hpp"
-#include "rooting.hpp"
-#include "rooting_inlines.hpp"
-#include "ref_scanner.hpp"
-
-#include "vm/reference.hpp"
-#include "vm/property_descriptor.hpp"
-
-#include "vm/tuple.hpp"
-#include "vm/shape_tree.hpp"
-#include "vm/bytecode.hpp"
-#include "vm/script.hpp"
-
-#include "interp/bytecode_generator.hpp"
-#include "interp/interpreter.hpp"
 
 using namespace Whisper;
 
@@ -47,7 +22,8 @@ int main(int argc, char **argv) {
     std::cout << "Whisper says hello." << std::endl;
 
     InitializeSpew();
-    Interp::InitializeOpcodeInfo();
+    // FIXME: re-enable
+    //  Interp::InitializeOpcodeInfo();
 
     // Open input file.
     if (argc <= 1) {
@@ -67,6 +43,8 @@ int main(int argc, char **argv) {
     InitializeKeywordTable();
     InitializeQuickTokenTable();
     Tokenizer tokenizer(wrappedAllocator, inputFile);
+
+/*
     Parser parser(tokenizer);
 
     ProgramNode *program = parser.parseProgram();
@@ -142,6 +120,8 @@ int main(int argc, char **argv) {
     std::cerr << "Running script" << std::endl;
     bool interpResult = Interp::InterpretScript(cx, script);
     std::cerr << "Script result: " << interpResult << std::endl;
+
+*/
 
     return 0;
 }

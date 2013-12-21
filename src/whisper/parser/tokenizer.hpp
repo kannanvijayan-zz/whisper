@@ -58,22 +58,26 @@ class Token
                (type <= WHISPER_LAST_KEYWORD_TOKEN);
     }
 
-    inline static bool IsStrictKeywordType(Type type) {
-        return (type >= WHISPER_FIRST_STRICT_KEYWORD_TOKEN) &&
-               (type <= WHISPER_LAST_STRICT_KEYWORD_TOKEN);
-    }
-
     static const char *TypeString(Type type);
 
     // The flags enum allows annotating a token with
     // particular flags.  Different flags may use the same
     // bits, but any two flags which may be used together
     // must use different bits.
-    constexpr static uint16_t Numeric_Double = 0x0001u;
+    enum Flags : uint16_t
+    {
+        NoFlags                 = 0x0000u,
+
+        // Integer flags.
+        Int_BinPrefix           = 0x0001u,
+        Int_OctPrefix           = 0x0002u,
+        Int_DecPrefix           = 0x0004u,
+        Int_HexPrefix           = 0x0008u
+    };
 
   protected:
     Type type_ = INVALID;
-    uint16_t flags_ = 0;
+    Flags flags_ = NoFlags;
     uint32_t offset_ = 0;
     uint32_t length_ = 0;
     uint32_t startLine_ = 0;
@@ -94,7 +98,7 @@ class Token
   public:
     Token() : debug_used_(true), debug_pushedBack_(false) {}
 
-    Token(Type type, uint16_t flags, uint32_t offset, uint32_t length,
+    Token(Type type, Flags flags, uint32_t offset, uint32_t length,
           uint32_t startLine, uint32_t startLineOffset,
           uint32_t endLine, uint32_t endLineOffset)
       : type_(type), flags_(flags), offset_(offset), length_(length),
@@ -106,7 +110,7 @@ class Token
     Token(Type type, uint32_t offset, uint32_t length,
           uint32_t startLine, uint32_t startLineOffset,
           uint32_t endLine, uint32_t endLineOffset)
-      : type_(type), flags_(0), offset_(offset), length_(length),
+      : type_(type), offset_(offset), length_(length),
         startLine_(startLine), startLineOffset_(startLineOffset),
         endLine_(endLine), endLineOffset_(endLineOffset),
         debug_used_(false), debug_pushedBack_(false)
@@ -123,10 +127,10 @@ class Token
         other.debug_used_ = true;
     }
 
-    enum PreserveDebugUsed {
-        Preserve
+    enum PreserveDebugUsed_ {
+        PreserveDebugUsed
     };
-    Token(const Token &other, PreserveDebugUsed preserve)
+    Token(const Token &other, PreserveDebugUsed_ preserve)
       : type_(other.type_), flags_(other.flags_),
         offset_(other.offset_), length_(other.length_),
         startLine_(other.startLine_), startLineOffset_(other.startLineOffset_),
@@ -157,10 +161,10 @@ class Token
         return type_;
     }
 
-    inline uint16_t flags() const {
+    inline Flags flags() const {
         return flags_;
     }
-    inline bool hasFlag(uint16_t flag) const {
+    inline bool hasFlag(Flags flag) const {
         return flags_ & flag;
     }
 
@@ -192,19 +196,8 @@ class Token
         return endLineOffset_;
     }
 
-    inline bool maybeKeyword() const {
-        return maybeKeyword_;
-    }
-    inline void setMaybeKeyword(bool b) {
-        maybeKeyword_ = b;
-    }
-
     inline const uint8_t *text(const CodeSource &src) const {
         return src.data() + offset_;
-    }
-
-    inline bool newlineOccursBefore(const Token &other) const {
-        return endLine_ < other.startLine_;
     }
 
     // Define type check methods
@@ -215,11 +208,9 @@ class Token
     WHISPER_DEFN_TOKENS(DEF_CHECKER_)
 #undef DEF_CHECKER_
 
-    inline bool isKeyword(bool strict) const {
-        return strict ? IsKeywordType(type_) : IsStrictKeywordType(type_);
+    inline bool isKeyword() const {
+        return IsKeywordType(type_);
     }
-
-    void maybeConvertKeyword(const CodeSource &src, bool strict);
 
     // explicitly mark this token as being used.
     // This is a no-op in production code.
@@ -294,7 +285,6 @@ class TokenizerMark {
     uint32_t position_;
     uint32_t line_;
     uint32_t lineOffset_;
-    bool strict_;
     bool pushedBackToken_;
     Token tok_;
 
@@ -302,15 +292,13 @@ class TokenizerMark {
     inline TokenizerMark(uint32_t position,
                          uint32_t line,
                          uint32_t lineOffset,
-                         bool strict,
                          bool pushedBackToken,
                          const Token &tok)
       : position_(position),
         line_(line),
         lineOffset_(lineOffset),
-        strict_(strict),
         pushedBackToken_(pushedBackToken),
-        tok_(tok, Token::Preserve)
+        tok_(tok, Token::PreserveDebugUsed)
     {}
 
     inline uint32_t position() const {
@@ -323,10 +311,6 @@ class TokenizerMark {
 
     inline uint32_t lineOffset() const {
         return lineOffset_;
-    }
-
-    inline bool strict() const {
-        return strict_;
     }
 
     inline bool pushedBackToken() const {
@@ -357,9 +341,6 @@ class Tokenizer
 
     // Error message.
     const char *error_ = nullptr;
-
-    // Flag indicating strict parsing mode.
-    bool strict_ = false;
 
     // Flag indicating pushed-back token.
     bool pushedBackToken_ = false;
@@ -402,21 +383,10 @@ class Tokenizer
         return error_;
     }
 
-    enum InputElementKind {
-        InputElement_Div,
-        InputElement_RegExp
-    };
-    const Token &readTokenImpl(InputElementKind iek, bool checkKeywords);
-    const Token &readToken(InputElementKind iek, bool checkKeywords);
+    const Token &readTokenImpl();
+    const Token &readToken();
     void rewindToToken(const Token &tok);
     void advancePastToken(const Token &tok);
-
-    inline bool isStrict() const {
-        return strict_;
-    }
-    inline void setStrict(bool strict) {
-        strict_ = strict;
-    }
 
   private:
     // Token parsing.
@@ -424,37 +394,23 @@ class Tokenizer
     const Token &readLineTerminatorSequence(unic_t ch);
     const Token &readMultiLineComment();
     const Token &readSingleLineComment();
-    const Token &readDivPunctuator(unic_t ch);
 
-    const Token &readRegularExpressionLiteral(unic_t ch);
-    inline void consumeRegularExpressionBackslashSequence();
-    void consumeRegularExpressionCharacterClass();
-
-    const Token &readIdentifierName();
     const Token &readIdentifier(unic_t firstChar);
+    const Token &readIdentifierName();
+
+    // Consume a unicode escape sequence.
     void consumeUnicodeEscapeSequence();
 
     const Token &readNumericLiteral(bool startsWithZero);
-    const Token &readNumericLiteralFraction();
-    const Token &readNumericLiteralExponent();
-
+    const Token &readBinIntegerLiteral();
+    const Token &readOctIntegerLiteral();
+    const Token &readDecIntegerLiteral();
     const Token &readHexIntegerLiteral();
 
-    const Token &readStringLiteral(unic_t quoteChar);
-    void consumeStringEscapeSequence();
-
     // Emit methods.
-    const Token &emitToken(Token::Type type, uint16_t flags);
-    const Token &emitToken(Token::Type type) {
-        return emitToken(type, 0);
-    }
-    inline const Token &emitIdentifierName() {
-        emitToken(Token::IdentifierName);
-        tok_.setMaybeKeyword(true);
-        return tok_;
-    }
-    inline const Token &emitIdentifier() {
-        return emitToken(Token::IdentifierName);
+    const Token &emitToken(Token::Type type, Token::Flags flags);
+    inline const Token &emitToken(Token::Type type) {
+        return emitToken(type, Token::NoFlags);
     }
     const Token &emitError(const char *msg);
 
@@ -471,8 +427,8 @@ class Tokenizer
     }
 
     // Character reading.
-    static constexpr unic_t End = INT32_MAX;
     static constexpr unic_t NonAscii = -1;
+    static constexpr unic_t End = -2;
 
     inline unic_t readAsciiChar() {
         if (stream_.atEnd())
@@ -516,16 +472,25 @@ class Tokenizer
     // Character un-reading.
     inline void unreadAsciiChar(unic_t ch) {
         WH_ASSERT(ch == NonAscii || ch == End || (ch >= 0 && ch <= 0x7f));
-        if (ch <= 0x7f)
+        if (ch >= NonAscii)
             stream_.rewindBy(1);
     }
     inline void unreadChar(unic_t ch) {
-        if (ch <= 0x7f)
+        if (ch >= -1 && ch <= 0x7f)
             stream_.rewindBy(1);
         else
             slowUnreadChar(ch);
     }
     void slowUnreadChar(unic_t ch);
+
+    // Re-read a NonAscii char into a full char, if needed.
+    inline unic_t maybeRereadNonAsciiToFull(unic_t ch) {
+        if (ch == NonAscii) {
+            stream_.rewindBy(1);
+            ch = readChar();
+        }
+        return ch;
+    }
 
     // Helpers.
     inline void finishLineTerminator(unic_t ch) {
@@ -571,7 +536,8 @@ class Tokenizer
     }
 
     inline static bool IsAscii(unic_t ch) {
-        return (ch <= 0x7f);
+        unsigned chu = static_cast<unsigned>(ch);
+        return (chu & 0x7f) == chu;
     }
     inline static bool IsAsciiLetter(unic_t ch) {
         return CharInRange<'a','z'>(ch) || CharInRange<'A','Z'>(ch);
@@ -594,7 +560,8 @@ class Tokenizer
 
     inline static bool IsNonKeywordSimpleIdentifierContinue(unic_t ch) {
         WH_ASSERT(!IsKeywordChar(ch));
-        return CharInRange<'A','Z'>(ch) || IsDigit(ch) || CharIn<'$','_'>(ch);
+        return CharInRange<'A','Z'>(ch) || IsDecDigit(ch) ||
+               CharIn<'$','_'>(ch);
     }
     inline static bool IsSimpleIdentifierContinue(unic_t ch) {
         return IsKeywordChar(ch) || IsNonKeywordSimpleIdentifierContinue(ch);
@@ -612,28 +579,18 @@ class Tokenizer
                CharInRange<'a', 'f'>(ch);
     }
 
-    inline static bool IsDigit(unic_t ch) {
+    inline static bool IsDecDigit(unic_t ch) {
         return CharInRange<'0', '9'>(ch);
     }
 
-    inline static bool IsBinaryDigit(unic_t ch) {
+    inline static bool IsOctDigit(unic_t ch) {
+        return CharInRange<'0', '7'>(ch);
+    }
+
+    inline static bool IsBinDigit(unic_t ch) {
         return CharIn<'0', '1'>(ch);
     }
 };
-
-
-bool TokenHasAsciiText(const CodeSource &source, const Token &tok,
-                       const char *str, uint32_t length);
-
-inline bool IsGetToken(const CodeSource &source, const Token &tok) {
-    WH_ASSERT(tok.isIdentifierName());
-    return TokenHasAsciiText(source, tok, "get", 3);
-}
-
-inline bool IsSetToken(const CodeSource &source, const Token &tok) {
-    WH_ASSERT(tok.isIdentifierName());
-    return TokenHasAsciiText(source, tok, "set", 3);
-}
 
 
 } // namespace Whisper
