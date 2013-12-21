@@ -44,6 +44,33 @@ int main(int argc, char **argv) {
     InitializeQuickTokenTable();
     Tokenizer tokenizer(wrappedAllocator, inputFile);
 
+    // Read and print tokens.
+    for (;;) {
+        Token tok = tokenizer.readToken();
+        char buf[20];
+        if (tok.isLineTerminatorSequence() || tok.isWhitespace() ||
+            tok.isEnd())
+        {
+            fprintf(stderr, "Token %s\n", tok.typeString());
+
+        }
+        else
+        {
+            int len = tok.length() < 19 ? tok.length()+1 : 20;
+            snprintf(buf, len, "%s", tok.text(inputFile));
+            if (tok.length() >= 19) {
+                buf[16] = '.';
+                buf[17] = '.';
+                buf[18] = '.';
+            }
+
+            fprintf(stderr, "Token %s: %s\n", tok.typeString(), buf);
+        }
+
+        if (tok.isEnd())
+            break;
+    }
+
 /*
     Parser parser(tokenizer);
 
