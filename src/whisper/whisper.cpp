@@ -5,6 +5,8 @@
 #include "spew.hpp"
 #include "parser/code_source.hpp"
 #include "parser/tokenizer.hpp"
+#include "parser/syntax_tree_inlines.hpp"
+#include "parser/parser.hpp"
 
 using namespace Whisper;
 
@@ -51,7 +53,7 @@ int main(int argc, char **argv) {
         if (tok.isLineTerminatorSequence() || tok.isWhitespace() ||
             tok.isEnd())
         {
-            fprintf(stderr, "Token %s\n", tok.typeString());
+            std::cerr << "Token " << tok.typeString() << std::endl;
 
         }
         else
@@ -64,26 +66,28 @@ int main(int argc, char **argv) {
                 buf[18] = '.';
             }
 
-            fprintf(stderr, "Token %s: %s\n", tok.typeString(), buf);
+            std::cerr << "Token " << tok.typeString() << ":" << buf
+                      << std::endl;
         }
 
         if (tok.isEnd())
             break;
     }
 
-/*
     Parser parser(tokenizer);
 
-    ProgramNode *program = parser.parseProgram();
-    if (!program) {
+    FileNode *fileNode = parser.parseFile();
+    if (!fileNode) {
         WH_ASSERT(parser.hasError());
         std::cerr << "Parse error: " << parser.error() << std::endl;
         return 1;
     }
 
     Printer pr;
-    PrintNode(tokenizer.source(), program, pr, 0);
+    PrintNode(tokenizer.source(), fileNode, pr, 0);
+    std::cerr << "HERE" << std::endl;
 
+    /*
     // Annotate the program.
     AST::SyntaxAnnotator annotator(wrappedAllocator, program, inputFile);
     if (!annotator.annotate()) {

@@ -157,6 +157,16 @@ class Token
         return *this;
     }
 
+#if defined(ENABLE_DEBUG)
+    inline bool isValid() const {
+        return (type_ > INVALID) && (type_ < LIMIT);
+    }
+#endif
+
+    inline bool isINVALID() const {
+        return type_ == INVALID;
+    }
+
     inline Type type() const {
         return type_;
     }
@@ -247,27 +257,30 @@ class TypedToken : public Token
 {
   private:
     template <Token::Type TP>
-    static bool CheckType(Token::Type tp) {
+    inline static bool CheckType(Token::Type tp) {
         return tp == TP;
     }
     template <Token::Type TP1, Token::Type TP2, Token::Type... TPS>
-    static bool CheckType(Token::Type tp) {
+    inline static bool CheckType(Token::Type tp) {
         return tp == TP1 || CheckType<TP2, TPS...>(tp);
     }
 
   public:
-    explicit TypedToken(const Token &token)
+    inline explicit TypedToken(const Token &token)
       : Token(token)
     {
-        WH_ASSERT(CheckType<TYPES...>(type_));
+        WH_ASSERT(CheckType<TYPES...>(type_) || token.isINVALID());
     }
 
-    TypedToken() : Token() {}
+    inline TypedToken() : Token() {}
 };
 
 #define DEF_TYPEDEF_(tok)   typedef TypedToken<Token::tok> tok##Token;
         WHISPER_DEFN_TOKENS(DEF_TYPEDEF_)
 #undef DEF_TYPEDEF_
+
+typedef TypedToken<Token::PublicKeyword, Token::PrivateKeyword>
+        VisibilityToken;
 
 //
 // Tokenizer

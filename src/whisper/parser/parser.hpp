@@ -30,145 +30,72 @@ class Parser
     // Error message.
     const char *error_ = nullptr;
 
-    // Strict mode.
-    bool strict_ = false;
-
-    // Marks the existence of a pushed-back implicit semicolon.
-    Token automaticSemicolon_;
-    bool hasAutomaticSemicolon_ = false;
-    bool justReadAutomaticSemicolon_ = false;
-
   public:
     Parser(Tokenizer &tokenizer);
-
     ~Parser();
 
-    ProgramNode *parseProgram();
+    FileNode *parseFile();
 
-    bool hasError() const;
-    const char *error() const;
-        
+    inline bool hasError() const {
+        return error_;
+    }
+
+    inline const char *error() const {
+        WH_ASSERT(hasError());
+        return error_;
+    }
 
   private:
-    SourceElementNode *tryParseSourceElement();
-    StatementNode *tryParseStatement(bool *isNamedFunction = nullptr);
-
-    VariableStatementNode *parseVariableStatement();
-    VariableDeclaration parseVariableDeclaration();
-
-    IfStatementNode *parseIfStatement();
-    IterationStatementNode *parseForStatement();
-    BlockNode *tryParseBlock();
-    IterationStatementNode *parseWhileStatement();
-    IterationStatementNode *parseDoWhileStatement();
-    ReturnStatementNode *parseReturnStatement(const Token &retToken);
-    BreakStatementNode *parseBreakStatement(const Token &breakToken);
-    ContinueStatementNode *parseContinueStatement(const Token &continueToken);
-    SwitchStatementNode *parseSwitchStatement();
-    TryStatementNode *parseTryStatement();
-    ThrowStatementNode *parseThrowStatement();
-    DebuggerStatementNode *parseDebuggerStatement();
-    WithStatementNode *parseWithStatement();
-
-    ExpressionNode *tryParseExpressionStatement(bool *sawLabel,
-                                                bool *isNamedFunction);
-    LabelledStatementNode *tryParseLabelledStatement(
-                            const IdentifierNameToken &label);
-
-    // Precedences, from low to high
-    enum Precedence
-    {
-        Prec_Comma = 0,
-        Prec_Assignment,    // =, +=, *=, ...
-        Prec_Conditional,   // ?:
-        Prec_LogicalOr,     // ||
-        Prec_LogicalAnd,    // &&
-        Prec_BitwiseOr,     // |
-        Prec_BitwiseXor,    // ^
-        Prec_BitwiseAnd,    // &
-        Prec_Equality,      // ==, ===, !=, !==
-        Prec_Relational,    // <, >, >=, <=, instanceof, in
-        Prec_Shift,         // <<, >>, >>>
-        Prec_Additive,      // +, -
-        Prec_Multiplicative,// *, /, %
-        Prec_Unary,         // delete, void, typeof, ++, --, +, -, ~, !
-        Prec_Postfix,       // ++, --
-        Prec_Call,
-        Prec_Member
-    };
-
-    ExpressionNode *tryParseExpression(bool forbidIn,
-                                       Precedence prec,
-                                       bool expectSemicolon=false);
-
-    ExpressionNode *tryParseExpression(bool forbidIn,
-                                       bool expectSemicolon=false);
-
-    ExpressionNode *tryParseExpression(Precedence prec,
-                                        bool expectSemicolon=false);
-    ExpressionNode *tryParseExpression();
-
-    ArrayLiteralNode *tryParseArrayLiteral();
-    ObjectLiteralNode *tryParseObjectLiteral();
-    FunctionExpressionNode *tryParseFunction();
-    void parseFunctionBody(SourceElementList &body);
-
-    void parseArguments(ExpressionList &list);
+    FileNode *tryParseFile();
+    ModuleDeclNode *tryParseModuleDecl();
+    ImportDeclNode *tryParseImportDecl();
+    FileDeclarationNode *tryParseFileDeclaration();
+    FuncDeclNode *tryParseFuncDecl(const VisibilityToken &visibility);
 
     // Push back token.
-
-    void pushBackAutomaticSemicolon();
-    void pushBackLastToken();
+    inline void pushBackLastToken() {
+        tokenizer_.pushBackLastToken();
+    }
 
     // Read next token.
-
-    const Token &nextToken(Tokenizer::InputElementKind kind,
-                           bool checkKeywords);
-
-    const Token &nextToken(bool checkKeywords);
     const Token &nextToken();
 
     // Check to see if upcoming token matches expected type,
     // but also return the token that was checked for.
 
     template <Token::Type TYPE>
-    inline static bool TestTokenType(Token::Type type);
+    inline static bool TestTokenType(Token::Type type) {
+        return (type == TYPE);
+    }
 
     template <Token::Type T1, Token::Type T2, Token::Type... TS>
-    inline static bool TestTokenType(Token::Type type);
-
-    template <Token::Type TYPE>
-    inline static bool ContainsKeywordType();
+    inline static bool TestTokenType(Token::Type type) {
+        return (type == T1) || TestTokenType<T2, TS...>(type);
+    }
 
     template <Token::Type T1, Token::Type T2, Token::Type... TS>
-    inline static bool ContainsKeywordType();
+    inline static bool ContainsKeywordType() {
+        return Token::IsKeywordType(T1) || ContainsKeywordType<T2, TS...>();
+    }
 
     template <Token::Type... TYPES>
-    inline const Token *checkGetNextToken(Tokenizer::InputElementKind kind,
-                                          bool checkKw);
-
-    template <Token::Type... TYPES>
-    inline const Token *checkGetNextToken(bool checkKw);
-
-    template <Token::Type... TYPES>
-    inline const Token *checkGetNextToken();
-
-    template <Token::Type... TYPES>
-    inline const Token *checkGetNextKeywordToken();
+    inline const Token *checkGetNextToken()
+    {
+        const Token &tok = nextToken();
+        if (TestTokenType<TYPES...>(tok.type()))
+            return &tok;
+        tokenizer_.pushBackLastToken();
+        return nullptr;
+    }
 
     // Check to see if upcoming token matches expected type.
-
     template <Token::Type... TYPES>
-    inline bool checkNextToken(Tokenizer::InputElementKind kind, bool checkKw);
-
-    template <Token::Type... TYPES>
-    inline bool checkNextToken(bool checkKw);
-
-    template <Token::Type... TYPES>
-    inline bool checkNextToken();
-
-    template <Token::Type... TYPES>
-    inline bool checkNextKeywordToken();
+    inline bool checkNextToken() {
+        const Token *tok = checkGetNextToken<TYPES...>();
+        if (tok)
+            tok->debug_markUsed();
+        return tok;
+    }
 
     // Emit a parser error.
 
@@ -182,11 +109,18 @@ class Parser
     };
     MorphError emitError(const char *msg);
 
+    // Allocation helpers.
+
     template <typename T>
-    inline STLBumpAllocator<T> allocatorFor() const;
+    inline STLBumpAllocator<T> allocatorFor() const {
+        return STLBumpAllocator<T>(tokenizer_.allocator());
+    }
 
     template <typename T, typename... ARGS>
-    inline T *make(ARGS... args);
+    inline T *make(ARGS... args) {
+        return new (allocatorFor<T>().allocate(1)) T(
+            std::forward<ARGS>(args)...);
+    }
 };
 
 
