@@ -2,6 +2,8 @@
 #include "spew.hpp"
 #include "parser/parser.hpp"
 
+#include <vector>
+
 //
 // The tokenizer parses a code source into a series of tokens.
 //
@@ -57,7 +59,7 @@ Parser::tryParseFile()
 
     // Next token must be end of input.
     if (!checkNextToken<Token::End>())
-        return emitError("Invalid function declaration.");
+        return emitError("Expected end of input.");
 
     return make<FileNode>(module, std::move(imports), std::move(decls));
 }
@@ -82,6 +84,7 @@ Parser::tryParseModuleDecl()
                                                   Token::Semicolon>();
             if (!cont)
                 return emitError("Malformed module declaration.");
+            cont->debug_markUsed();
 
             if (cont->isDot())
                 continue;
@@ -269,8 +272,167 @@ Parser::tryParseFileDeclaration()
 FuncDeclNode *
 Parser::tryParseFuncDecl(const VisibilityToken &visibility)
 {
-    // FIXME finish this.
-    return nullptr;
+    // Return type.
+    TypenameNode *returnType = parseType();
+    WH_ASSERT(returnType);
+
+    // Function name.
+    const Token *maybeName = checkGetNextToken<Token::Identifier>();
+    if (!maybeName)
+        return emitError("Expected function name.");
+    IdentifierToken name(*maybeName);
+
+    if (!checkNextToken<Token::OpenParen>())
+        return emitError("Expected '(' after function name.");
+
+    // Parse function parameters.
+    FuncDeclNode::ParamList params(allocatorFor<FuncDeclNode::Param>());
+    for (;;) {
+        // Parse parameter type.
+        TypenameNode *paramType = parseType();
+        WH_ASSERT(paramType);
+
+        // Parse parameter name.
+        const Token *maybeParamName = checkGetNextToken<Token::Identifier>();
+        if (!maybeParamName)
+            return emitError("Expected function parameter name.");
+        IdentifierToken paramName(*maybeParamName);
+
+        // Add parameter.
+        params.push_back(FuncDeclNode::Param(paramType, paramName));
+
+        // Check for continuation.
+        const Token *cont = checkGetNextToken<Token::Comma,
+                                              Token::CloseParen>();
+        if (!cont)
+            return emitError("Malformed function parameters.");
+        cont->debug_markUsed();
+
+        if (cont->isComma())
+            continue;
+
+        WH_ASSERT(cont->isCloseParen());
+        break;
+    }
+
+    // Parse function body.
+    if (!checkNextToken<Token::OpenBrace>())
+        return emitError("Expected '{' after function name.");
+
+    BlockElementList elems(allocatorFor<BlockElementNode *>());
+    for (;;) {
+        BlockElementNode *elem = tryParseBlockElement();
+        if (elem) {
+            elems.push_back(elem);
+            continue;
+        }
+
+        if (!checkNextToken<Token::CloseBrace>())
+            return emitError("Expeced close brace for block.");
+
+        break;
+    }
+
+    return make<FuncDeclNode>(visibility, returnType, name,
+                              std::move(params),
+                              make<BlockNode>(std::move(elems)));
+}
+
+TypenameNode *
+Parser::parseType()
+{
+    const Token &tok = nextToken();
+    if (tok.isIntKeyword())
+        return make<IntTypeNode>(IntKeywordToken(tok));
+
+    return emitError("Unrecognized type.");
+}
+
+BlockElementNode *
+Parser::tryParseBlockElement()
+{
+    const Token &tok = nextToken();
+
+    if (tok.isReturnKeyword()) {
+        tok.debug_markUsed();
+        return parseReturnStmt();
+    }
+
+    if (tok.isCloseBrace()) {
+        pushBackLastToken();
+        return nullptr;
+    }
+        
+    return emitError("Unrecognized block element.");
+}
+
+ReturnStmtNode *
+Parser::parseReturnStmt()
+{
+    // Try parsing return expression
+    const Token &tok = nextToken();
+    if (tok.isSemicolon())
+        return make<ReturnStmtNode>(nullptr);
+
+    pushBackLastToken();
+    ExpressionNode *expr = parseExpression(Prec_Lowest, Token::Semicolon);
+    WH_ASSERT(expr);
+
+    return make<ReturnStmtNode>(expr);
+}
+
+ExpressionNode *
+Parser::parseExpression(Precedence prec, Token::Type endType)
+{
+    WH_ASSERT(prec >= Prec_Lowest && prec < Prec_Highest);
+
+    TokenizerMark markExpr = tokenizer_.mark();
+
+    // Read first token.
+    // Allow RegExps and keywords.
+    const Token &tok = nextToken();
+    tok.debug_markUsed();
+
+    ExpressionNode *curExpr = nullptr;
+
+    // Parse initial "starter" expression.
+    if (tok.isIdentifier()) {
+        curExpr = make<IdentifierExprNode>(IdentifierToken(tok));
+
+    } else if (tok.isIntegerLiteral()) {
+        curExpr = make<IntegerLiteralExprNode>(IntegerLiteralToken(tok));
+
+    } else if (tok.isOpenParen()) {
+        // Parse sub-expression
+        auto subexpr = parseExpression(Prec_Lowest, Token::CloseParen);
+        if (!subexpr)
+            emitError("Could not parse expression within parenthesis.");
+        curExpr = make<ParenExprNode>(subexpr);
+
+    } else {
+        // No expression possible, return.
+        tokenizer_.gotoMark(markExpr);
+        return emitError("Could not parse expression.");
+    }
+
+    // Recursively forward-parse expressions.
+    for (;;) {
+        WH_ASSERT(prec >= Prec_Lowest && prec < Prec_Highest);
+
+        const Token &optok = nextToken();
+        optok.debug_markUsed();
+
+        // No matching continuation of expression.  Must be at end.
+        if (optok.type() != endType) {
+            pushBackLastToken();
+            return emitError("Invalid expression.");
+        }
+
+        break;
+    }
+
+    WH_ASSERT(curExpr);
+    return curExpr;
 }
 
 const Token &

@@ -105,6 +105,17 @@ PrintIntType(const CodeSource &src,
 
 template <typename Printer>
 void
+PrintParenExpr(const CodeSource &src,
+               const ParenExprNode *node,
+               Printer pr, int tabDepth)
+{
+    pr("(");
+    PrintNode(src, node->subexpr(), pr, tabDepth);
+    pr(")");
+}
+
+template <typename Printer>
+void
 PrintIdentifierExpr(const CodeSource &src,
                     const IdentifierExprNode *node,
                     Printer pr, int tabDepth)
@@ -119,7 +130,7 @@ PrintIntegerLiteralExpr(const CodeSource &src,
                         const IntegerLiteralExprNode *node,
                         Printer pr, int tabDepth)
 {
-    pr("NUM:");
+    pr("INT:");
     PrintToken(src, node->token(), pr);
 }
 
@@ -162,7 +173,7 @@ PrintReturnStmt(const CodeSource &src, const ReturnStmtNode *node,
         pr(" ");
         PrintNode(src, node->value(), pr, tabDepth);
     }
-    pr(";\n");
+    pr(";");
 }
 
 template <typename Printer>
@@ -199,7 +210,7 @@ PrintModuleDecl(const CodeSource &src, const ModuleDeclNode *node,
                 Printer pr, int tabDepth)
 {
     PrintTabDepth(tabDepth, pr);
-    pr(" ");
+    pr("module ");
     PrintModulePath(src, node->path(), pr);
 }
 
@@ -241,12 +252,15 @@ PrintFile(const CodeSource &src, const FileNode *node,
     if (node->hasModule()) {
         PrintTabDepth(tabDepth, pr);
         PrintNode(src, node->module(), pr, tabDepth);
-        pr(";\n");
+        pr(";\n\n");
     }
-    for (auto import : node->imports()) {
-        PrintTabDepth(tabDepth, pr);
-        PrintNode(src, import, pr, tabDepth);
-        pr(";\n");
+    if (!node->imports().empty()) {
+        for (auto import : node->imports()) {
+            PrintTabDepth(tabDepth, pr);
+            PrintNode(src, import, pr, tabDepth);
+            pr(";\n");
+        }
+        pr("\n");
     }
 
     for (auto elem : node->contents()) {

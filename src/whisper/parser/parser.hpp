@@ -50,7 +50,22 @@ class Parser
     ModuleDeclNode *tryParseModuleDecl();
     ImportDeclNode *tryParseImportDecl();
     FileDeclarationNode *tryParseFileDeclaration();
+
     FuncDeclNode *tryParseFuncDecl(const VisibilityToken &visibility);
+    TypenameNode *parseType();
+
+    BlockElementNode *tryParseBlockElement();
+    ReturnStmtNode *parseReturnStmt();
+
+    // Enum for expression precedence, from highest precedence to
+    // lowest.
+    enum Precedence {
+        Prec_Lowest         = 0,
+        Prec_Atom,
+        Prec_Highest
+    };
+
+    ExpressionNode *parseExpression(Precedence prec, Token::Type endType);
 
     // Push back token.
     inline void pushBackLastToken() {

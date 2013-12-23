@@ -18,6 +18,7 @@
     _(ExprStmt)                             \
     \
     /* Expressions. */                      \
+    _(ParenExpr)                            \
     _(IdentifierExpr)                       \
     _(IntegerLiteralExpr)                   \
     \

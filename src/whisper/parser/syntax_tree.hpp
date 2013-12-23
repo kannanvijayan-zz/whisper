@@ -61,6 +61,8 @@ typedef SingleTokenNode<LiteralExpressionNode, IntegerLiteralExpr,
                         IntegerLiteralToken>
         IntegerLiteralExprNode;
 
+class ParenExprNode;
+
 typedef SingleTokenNode<TypenameNode, IntType, IntKeywordToken>
         IntTypeNode;
 
@@ -217,6 +219,27 @@ class SingleTokenNode : public BASE
 //  Expressions  //
 //               //
 ///////////////////
+
+//
+// ParenExpr syntax element
+//
+class ParenExprNode : public ExpressionNode
+{
+  private:
+    ExpressionNode *subexpr_;
+
+  public:
+    ParenExprNode(ExpressionNode *subexpr)
+      : ExpressionNode(ParenExpr),
+        subexpr_(subexpr)
+    {
+        WH_ASSERT(subexpr);
+    }
+
+    const ExpressionNode *subexpr() const {
+        return subexpr_;
+    }
+};
 
 //
 // IdentifierExpr syntax element
