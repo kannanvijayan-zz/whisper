@@ -291,6 +291,129 @@ class SlabList
     }
 };
 
+//
+// SlabAllocType
+//
+// Objects that are allocated within slabs must each be described
+// with a specific SlabAllocType that allows the runtime to
+// dispatch various operations on it, such as tracing for garbage
+// collection.
+//
+#define WHISPER_DEFN_SLAB_ALLOC_TYPES(_) \
+    _(Module)           \
+    _(Type)
+
+enum class SlabAllocType : uint32_t
+{
+    INVALID = 0,
+#define ENUM_(name) name,
+    WHISPER_DEFN_SLAB_ALLOC_TYPES(ENUM_)
+#undef ENUM_
+    LIMIT
+};
+
+inline constexpr uint32_t SlabAllocTypeValue(SlabAllocType sat) {
+    return static_cast<uint32_t>(sat);
+}
+
+inline constexpr bool IsValidSlabAllocType(SlabAllocType sat) {
+    return (sat > SlabAllocType::INVALID) && (sat < SlabAllocType::LIMIT);
+}
+
+//
+// SlabAllocHeader
+//
+// A single word_t that describes the allocation.  Its format is cosmetically
+// different for 32-bit and 64-bit systems, in that the 64-bit word has
+// zeros for its high 32 bits.
+//
+// The low bit of a SlabAllocHeader is 0.  This is to enable the runtime
+// to distinguish a SlabAllocHeader from a SlabSizeExtHeader.
+//
+// Format:
+//             24        16         8         0
+//      CCCC-CCCC SSSS-SSSS TTTT-TTTT 0000-0000
+//
+class SlabAllocHeader
+{
+  public:
+    static constexpr unsigned CARDNUM_SHIFT = 24;
+    static constexpr uint32_t CARDNUM_MAX = 0xffu;
+
+    static constexpr unsigned ALLOCSIZE_SHIFT = 16;
+    static constexpr uint32_t ALLOCSIZE_MAX = 0xffu;
+
+    static constexpr unsigned ALLOCTYPE_SHIFT = 8;
+    static constexpr uint32_t ALLOCTYPE_MAX = 0xffu;
+
+    static_assert(SlabAllocTypeValue(SlabAllocType::LIMIT) <= ALLOCTYPE_MAX,
+                  "Too many types in SlabAllocType.");
+
+  private:
+    word_t bits_;
+
+  public:
+    inline SlabAllocHeader(uint32_t cardNum, uint32_t allocSize,
+                           SlabAllocType allocType)
+      : bits_((cardNum << CARDNUM_SHIFT) |
+              (allocSize << ALLOCSIZE_SHIFT) |
+              (SlabAllocTypeValue(allocType) << ALLOCTYPE_SHIFT))
+    {
+        WH_ASSERT(cardNum <= CARDNUM_MAX);
+        WH_ASSERT(allocSize <= ALLOCSIZE_MAX);
+        WH_ASSERT(IsValidSlabAllocType(allocType));
+    }
+
+    inline uint32_t cardNum() const {
+        return (bits_ >> CARDNUM_SHIFT) & CARDNUM_MAX;
+    }
+
+    inline uint32_t allocSize() const {
+        return (bits_ >> ALLOCSIZE_SHIFT) & ALLOCSIZE_MAX;
+    }
+
+    inline SlabAllocType allocType() const {
+        return static_cast<SlabAllocType>(
+                (bits_ >> ALLOCTYPE_SHIFT) & ALLOCTYPE_MAX);
+    }
+};
+
+
+//
+// SlabSizeExtHeader
+//
+// For allocations with a size greater than SlabAllocHeader::SIZE_MAX,
+// this header word follows the SlabAllocHeader word.
+//
+// The value is shifted up by 1 bit and the low bit set to 1, to enable
+// the runtime to distinguish between this size ext word and the alloc
+// header word.
+//
+// Format:
+//             24        16         8         0
+//      SSSS-SSSS SSSS-SSSS SSSS-SSSS SSSS-SSS1
+//
+class SlabSizeExtHeader
+{
+  public:
+    static constexpr unsigned ALLOCSIZE_SHIFT = 1;
+    static constexpr uint32_t ALLOCSIZE_MAX = 0x7fffffffu;
+
+  private:
+    word_t bits_;
+
+  public:
+    inline SlabSizeExtHeader(uint32_t allocSize)
+      : bits_((allocSize << ALLOCSIZE_SHIFT) & 0x1u)
+    {
+        WH_ASSERT(allocSize <= ALLOCSIZE_MAX);
+    }
+
+    inline uint32_t allocSize() const {
+        return (bits_ >> ALLOCSIZE_SHIFT) & ALLOCSIZE_MAX;
+    }
+};
+
 
 } // namespace Whisper
 

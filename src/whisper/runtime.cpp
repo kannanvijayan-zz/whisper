@@ -6,12 +6,6 @@
 #include "slab.hpp"
 #include "runtime.hpp"
 #include "runtime_inlines.hpp"
-#include "rooting_inlines.hpp"
-#include "vm/heap_thing_inlines.hpp"
-#include "vm/stack_frame.hpp"
-#include "vm/string.hpp"
-#include "vm/double.hpp"
-#include "vm/tuple.hpp"
 
 namespace Whisper {
 
@@ -40,19 +34,6 @@ Runtime::initialize()
 
     initialized_ = true;
     return true;
-}
-
-bool
-Runtime::hasError() const
-{
-    return error_ != nullptr;
-}
-
-const char *
-Runtime::error() const
-{
-    WH_ASSERT(hasError());
-    return error_;
 }
 
 const char *
@@ -111,10 +92,8 @@ ThreadContext *
 Runtime::threadContext()
 {
     WH_ASSERT(initialized_);
-
-    ThreadContext *ctx = maybeThreadContext();
-    WH_ASSERT(ctx);
-    return ctx;
+    WH_ASSERT(hasThreadContext());
+    return maybeThreadContext();
 }
 
 
@@ -125,112 +104,6 @@ Runtime::threadContext()
 AllocationContext::AllocationContext(ThreadContext *cx, Slab *slab)
   : cx_(cx), slab_(slab)
 {}
-
-
-bool
-AllocationContext::createString(uint32_t length, const uint8_t *bytes,
-                                Value &output)
-{
-    // Check for integer index.
-    int32_t idxVal = Value::ImmediateIndexValue(length, bytes);
-    if (idxVal >= 0) {
-        output = Value::ImmIndexString(idxVal);
-        return true;
-    }
-
-    // Check if fits in immediate.
-    if (length < Value::ImmString8MaxLength) {
-        output = Value::ImmString8(length, bytes);
-        return true;
-    }
-
-    VM::LinearString *str = createSized<VM::LinearString>(length, bytes);
-    if (!str)
-        return false;
-
-    output = Value::HeapString(str);
-    return true;
-}
-
-bool
-AllocationContext::createString(uint32_t length, const uint16_t *bytes,
-                                Value &output)
-{
-    // Check for integer index.
-    int32_t idxVal = Value::ImmediateIndexValue(length, bytes);
-    if (idxVal >= 0) {
-        output = Value::ImmIndexString(idxVal);
-        return true;
-    }
-
-    // Check if this is really an 8-bit immediate string in 16-bit clothes.
-    if (length <= Value::ImmString8MaxLength) {
-        bool isEightBit = true;
-        for (unsigned i = 0; i < length; i++) {
-            if (bytes[i] >= 0xFFu) {
-                isEightBit = false;
-                break;
-            }
-        }
-        if (isEightBit) {
-            uint8_t buf[Value::ImmString8MaxLength];
-            for (unsigned i = 0; i < length; i++)
-                buf[i] = bytes[i];
-            output = Value::ImmString8(length, buf);
-            return true;
-        }
-    }
-
-    // Check if fits in 16-bit immediate string.
-    if (length < Value::ImmString16MaxLength) {
-        output = Value::ImmString16(length, bytes);
-        return true;
-    }
-
-    VM::LinearString *str = createSized<VM::LinearString>(length, bytes);
-    if (!str)
-        return false;
-        
-    output = Value::HeapString(str);
-    return true;
-}
-
-bool
-AllocationContext::createNumber(double d, Value &value)
-{
-    if (Value::IsImmediateNumber(d)) {
-        value = Value::Number(d);
-        return true;
-    }
-
-    VM::HeapDouble *heapDouble = create<VM::HeapDouble>(d);
-    if (!heapDouble)
-        return false;
-
-    value = Value::HeapDouble(heapDouble);
-    return true;
-}
-
-
-bool
-AllocationContext::createTuple(const VectorRoot<Value> &vals,
-                               VM::Tuple *&output)
-{
-    output = createSized<VM::Tuple>(vals.size() * sizeof(Value), &vals.ref(0));
-    if (!output)
-        return false;
-    return true;
-}
-
-
-bool
-AllocationContext::createTuple(uint32_t size, VM::Tuple *&output)
-{
-    output = createSized<VM::Tuple>(size * sizeof(Value));
-    if (!output)
-        return false;
-    return true;
-}
 
 
 //
@@ -262,10 +135,8 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
     tenuredList_(),
     activeRunContext_(nullptr),
     runContextList_(nullptr),
-    roots_(nullptr),
     suppressGC_(false),
     randSeed_(NewRandSeed()),
-    stringTable_(),
     spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16))
 {
     WH_ASSERT(runtime != nullptr);
@@ -273,7 +144,6 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
     WH_ASSERT(tenured != nullptr);
 
     tenuredList_.addSlab(tenured);
-    stringTable_.initialize(this);
 }
 
 Runtime *
@@ -310,12 +180,6 @@ SlabList &
 ThreadContext::tenuredList()
 {
     return tenuredList_;
-}
-
-RootBase *
-ThreadContext::roots() const
-{
-    return roots_;
 }
 
 bool
@@ -407,18 +271,6 @@ ThreadContext::randInt()
     return rand_r(&randSeed_);
 }
 
-StringTable &
-ThreadContext::stringTable()
-{
-    return stringTable_;
-}
-
-const StringTable &
-ThreadContext::stringTable() const
-{
-    return stringTable_;
-}
-
 uint32_t
 ThreadContext::spoiler() const
 {
@@ -434,7 +286,6 @@ RunContext::RunContext(ThreadContext *threadContext)
   : threadContext_(threadContext),
     next_(nullptr),
     hatchery_(threadContext_->hatchery()),
-    topStackFrame_(nullptr),
     suppressGC_(threadContext_->suppressGC())
 {
     threadContext_->addRunContext(this);
@@ -465,14 +316,6 @@ RunContext::suppressGC() const
     return suppressGC_;
 }
 
-void
-RunContext::registerTopStackFrame(VM::StackFrame *topStackFrame)
-{
-    // No stack frame should have been registered yet.
-    WH_ASSERT(topStackFrame_ == nullptr);
-    topStackFrame_ = topStackFrame;
-}
-
 AllocationContext
 RunContext::inHatchery()
 {
@@ -485,18 +328,6 @@ RunContext::inTenured()
     return AllocationContext(threadContext_, threadContext_->tenured());
 }
 
-StringTable &
-RunContext::stringTable()
-{
-    return threadContext_->stringTable();
-}
-
-const StringTable &
-RunContext::stringTable() const
-{
-    return threadContext_->stringTable();
-}
-
 //
 // RunActivationHelper
 //
@@ -506,7 +337,6 @@ RunActivationHelper::RunActivationHelper(RunContext &cx)
     oldRunCx_(cx.threadContext()->activeRunContext())
 #if defined(ENABLE_DEBUG)
     ,
-    oldRoot_(threadCx_->roots()),
     runCx_(&cx)
 #endif
 {
@@ -516,7 +346,6 @@ RunActivationHelper::RunActivationHelper(RunContext &cx)
 RunActivationHelper::~RunActivationHelper()
 {
 #if defined(ENABLE_DEBUG)
-    WH_ASSERT(threadCx_->roots() == oldRoot_);
     WH_ASSERT(threadCx_->activeRunContext() == runCx_);
 #endif
     if (oldRunCx_)

@@ -4,7 +4,6 @@
 #include <vector>
 #include "common.hpp"
 #include "debug.hpp"
-#include "value.hpp"
 
 namespace Whisper {
 
@@ -17,10 +16,29 @@ template <typename T> class TypedHandleBase;
 template <typename T> class TypedMutHandleBase;
 
 //
-// RootKind is an enum describing the kind of thing being rooted.
+// RootType describes the thing being rooted.  It is a bitfield
+// stored within a 32-bit unsigned integer.  The low 8 bits
+// describe the underlying type of value being rooted, and the
+// higher bits detail the data structure that contains the
+// value.
 // 
-enum class RootKind : uint8_t
+class RootType
 {
+  public:
+    enum Kind : uint8_t
+    {
+    };
+
+    enum Container : uint8_t
+    {
+        SinglePointer,
+        Array
+    };
+
+  private:
+    uint32_t bits_;
+
+  public:
     INVALID = 0,
     Value,
     HeapThing,

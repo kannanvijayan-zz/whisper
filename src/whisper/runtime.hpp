@@ -8,24 +8,12 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "slab.hpp"
-#include "value.hpp"
-#include "string_table.hpp"
 
 namespace Whisper {
 
-template <typename T> class VectorRoot;
-template <typename T> class MutHandle;
-class RootBase;
-class Slab;
 class ThreadContext;
 class RunContext;
 class RunActivationHelper;
-
-namespace VM {
-    class StackFrame;
-    class HeapString;
-    class Tuple;
-}
 
 //
 // Runtime
@@ -51,7 +39,7 @@ class Runtime
     // initialized flag.
     bool initialized_ = false;
 
-    static constexpr size_t ErrorBufferSize = 64;
+    static constexpr size_t ErrorBufferSize = 256;
     char errorBuffer_[ErrorBufferSize];
     const char *error_ = nullptr;
 
@@ -61,8 +49,14 @@ class Runtime
 
     bool initialize();
 
-    bool hasError() const;
-    const char *error() const;
+    inline bool hasError() const {
+        return error_;
+    }
+
+    inline const char *error() const {
+        WH_ASSERT(hasError());
+        return error_;
+    }
 
     const char *registerThread();
 
@@ -94,20 +88,44 @@ class AllocationContext
     template <typename ObjT, typename... Args>
     inline ObjT *createSized(uint32_t size, Args... args);
 
-    bool createString(uint32_t length, const uint8_t *bytes, Value &output);
-    bool createString(uint32_t length, const uint16_t *bytes, Value &output);
-
-    bool createNumber(double d, Value &output);
-
-    bool createTuple(const VectorRoot<Value> &vals, VM::Tuple *&output);
-    bool createTuple(uint32_t size, VM::Tuple *&output);
-
   private:
-    // Allocate an object.  This takes an explicit size because some
-    // objects are variable sized.  Return null if not enough space
-    // in hatchery.
-    template <typename ObjT>
-    inline uint8_t *allocate(uint32_t size);
+    template <bool Traced>
+    inline uint8_t *allocate(uint32_t size, SlabAllocType typeTag);
+};
+
+
+//
+// AllocationTypeTrait
+//
+// For an AllocationContext to allocate an object using |create|, it needs
+// to be able to automatically determine the allocation type of the object
+// from its C++ type.
+//
+// Classes which expect to be usable with the |create| method should provide
+// a specialization for this struct that defines |TYPETAG| appropriately.
+//
+template <typename T>
+struct AllocationTypeTagTrait
+{
+    // static constexpr SlabAllocType TYPETAG;
+};
+
+
+//
+// AllocationTracedTrait
+//
+// For an AllocationContext to allocate an object, it needs to be able
+// to automatically determine whether the object is traceable or not, as
+// this determines whether the object will be allocated from the bottom
+// or top of the slab.
+//
+// Classes which expect to be usable with the |create| method should provide
+// a specialization for this struct that defines |TRACED| appropriately.
+//
+template <typename T>
+struct AllocationTracedTrait
+{
+    // static constexpr bool TRACED;
 };
 
 
@@ -133,11 +151,9 @@ class ThreadContext
     SlabList tenuredList_;
     RunContext *activeRunContext_;
     RunContext *runContextList_;
-    RootBase *roots_;
     bool suppressGC_;
 
     unsigned int randSeed_;
-    StringTable stringTable_;
     uint32_t spoiler_;
 
     static unsigned int NewRandSeed();
@@ -152,7 +168,6 @@ class ThreadContext
     const SlabList &tenuredList() const;
     SlabList &tenuredList();
     RunContext *activeRunContext() const;
-    RootBase *roots() const;
     bool suppressGC() const;
 
     void addRunContext(RunContext *cx);
@@ -165,9 +180,6 @@ class ThreadContext
     AllocationContext inTenured();
 
     int randInt();
-
-    StringTable &stringTable();
-    const StringTable &stringTable() const;
 
     uint32_t spoiler() const;
 };
@@ -198,7 +210,6 @@ class RunContext
     ThreadContext *threadContext_;
     RunContext *next_;
     Slab *hatchery_;
-    VM::StackFrame *topStackFrame_;
     bool suppressGC_;
 
   public:
@@ -209,13 +220,8 @@ class RunContext
     Slab *hatchery() const;
     bool suppressGC() const;
 
-    void registerTopStackFrame(VM::StackFrame *topStackFrame);
-
     AllocationContext inHatchery();
     AllocationContext inTenured();
-
-    StringTable &stringTable();
-    const StringTable &stringTable() const;
 };
 
 
@@ -234,7 +240,6 @@ class RunActivationHelper
     ThreadContext *threadCx_;
     RunContext *oldRunCx_;
 #if defined(ENABLE_DEBUG)
-    RootBase *oldRoot_;
     RunContext *runCx_;
 #endif
 
