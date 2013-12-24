@@ -135,6 +135,7 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
     tenuredList_(),
     activeRunContext_(nullptr),
     runContextList_(nullptr),
+    roots_(nullptr),
     suppressGC_(false),
     randSeed_(NewRandSeed()),
     spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16))
@@ -144,48 +145,6 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
     WH_ASSERT(tenured != nullptr);
 
     tenuredList_.addSlab(tenured);
-}
-
-Runtime *
-ThreadContext::runtime() const
-{
-    return runtime_;
-}
-
-Slab *
-ThreadContext::hatchery() const
-{
-    return hatchery_;
-}
-
-Slab *
-ThreadContext::nursery() const
-{
-    return nursery_;
-}
-
-Slab *
-ThreadContext::tenured() const
-{
-    return tenured_;
-}
-
-const SlabList &
-ThreadContext::tenuredList() const
-{
-    return tenuredList_;
-}
-
-SlabList &
-ThreadContext::tenuredList()
-{
-    return tenuredList_;
-}
-
-bool
-ThreadContext::suppressGC() const
-{
-    return suppressGC_;
 }
 
 void
@@ -243,12 +202,6 @@ ThreadContext::deactivateCurrentRunContext()
     WH_ASSERT(activeRunContext_);
     activeRunContext_->hatchery_ = nullptr;
     activeRunContext_ = nullptr;
-}
-
-RunContext *
-ThreadContext::activeRunContext() const
-{
-    return activeRunContext_;
 }
 
 

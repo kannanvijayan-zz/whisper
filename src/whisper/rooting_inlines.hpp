@@ -3,46 +3,31 @@
 
 #include "rooting.hpp"
 #include "runtime.hpp"
-#include "vm/heap_thing.hpp"
+#include "slab.hpp"
 #include <type_traits>
 
 namespace Whisper {
 
 //
-// TypedRootBase<typename T>
+// RootBase
 //
 
-template <typename T>
 inline
-TypedRootBase<T>::TypedRootBase(ThreadContext *threadContext, RootKind kind,
-                                const T &thing)
-  : RootBase(threadContext, kind),
-    thing_(thing)
-{
-    postInit();
-}
-
-template <typename T>
-inline
-TypedRootBase<T>::TypedRootBase(ThreadContext *threadContext, RootKind kind)
-  : RootBase(threadContext, kind),
-    thing_()
-{
-    postInit();
-}
-
-template <typename T>
-inline
-TypedRootBase<T>::TypedRootBase(RunContext *runContext, RootKind kind,
-                             const T &thing)
-  : TypedRootBase(runContext->threadContext(), kind, thing)
+RootBase::RootBase(ThreadContext *threadContext, RootKind kind)
+  : threadContext_(threadContext),
+    next_(threadContext->roots()),
+    kind_(kind)
 {}
 
-template <typename T>
-inline
-TypedRootBase<T>::TypedRootBase(RunContext *runContext, RootKind kind)
-  : TypedRootBase(runContext->threadContext(), kind)
-{}
+inline void
+RootBase::postInit()
+{
+    threadContext_->roots_ = this;
+}
+
+//
+// TypedRootBase<typename T>
+//
 
 template <typename T>
 inline const T &
@@ -75,6 +60,13 @@ TypedRootBase<T>::addr()
 template <typename T>
 void
 TypedRootBase<T>::set(const T &val)
+{
+    thing_ = val;
+}
+
+template <typename T>
+void
+TypedRootBase<T>::set(T &&val)
 {
     thing_ = val;
 }
@@ -136,6 +128,14 @@ TypedRootBase<T>::operator =(const T &other)
     return *this;
 }
 
+template <typename T>
+inline TypedRootBase<T> &
+TypedRootBase<T>::operator =(T &&other)
+{
+    thing_ = other;
+    return *this;
+}
+
 //
 // PointerRootBase<typename T>
 //
@@ -186,12 +186,6 @@ PointerRootBase<T>::operator bool() const
 //
 
 template <typename T>
-inline
-TypedHeapBase<T>::TypedHeapBase(const T &ref)
-  : val_(ref)
-{}
-
-template <typename T>
 inline const T &
 TypedHeapBase<T>::get() const
 {
@@ -217,14 +211,6 @@ inline T *
 TypedHeapBase<T>::addr()
 {
     return &val_;
-}
-
-template <typename T>
-inline void 
-TypedHeapBase<T>::set(const T &t, VM::HeapThing *holder)
-{
-    // TODO: mark write barriers if needed.
-    val_ = t;
 }
 
 template <typename T>
@@ -309,19 +295,22 @@ PointerHeapBase<T>::operator bool() const
 template <typename T>
 inline
 TypedHandleBase<T>::TypedHandleBase(TypedRootBase<T> &rootBase)
-  : ref_(rootBase.get())
+  : HandleBase(),
+    ref_(rootBase.get())
 {}
 
 template <typename T>
 inline
 TypedHandleBase<T>::TypedHandleBase(TypedHeapBase<T> &heapBase)
-  : ref_(heapBase.get())
+  : HandleBase(),
+    ref_(heapBase.get())
 {}
 
 template <typename T>
 inline
 TypedHandleBase<T>::TypedHandleBase(const T &ref)
-  : ref_(ref)
+  : HandleBase(),
+    ref_(ref)
 {}
 
 template <typename T>
@@ -416,7 +405,8 @@ PointerHandleBase<T>::operator bool() const
 template <typename T>
 inline
 TypedMutHandleBase<T>::TypedMutHandleBase(T *ptr)
-  : ref_(*ptr)
+  : MutHandleBase(),
+    ref_(*ptr)
 {
     WH_ASSERT(ptr != nullptr);
 }
@@ -531,38 +521,26 @@ PointerMutHandleBase<T>::operator bool() const
 template <typename T>
 inline
 Root<T *>::Root(RunContext *cx)
-  : PointerRootBase<T>(cx, RootKind::HeapThing)
-{
-    static_assert(std::is_base_of<VM::HeapThing, T>::value,
-                  "Type is not a heap thing.");
-}
+  : PointerRootBase<T>(cx, RootKind::SlabAlloc)
+{}
 
 template <typename T>
 inline
 Root<T *>::Root(ThreadContext *cx)
-  : PointerRootBase<T>(cx, RootKind::HeapThing)
-{
-    static_assert(std::is_base_of<VM::HeapThing, T>::value,
-                  "Type is not a heap thing.");
-}
+  : PointerRootBase<T>(cx, RootKind::SlabAlloc)
+{}
 
 template <typename T>
 inline
 Root<T *>::Root(RunContext *cx, T *ptr)
-  : PointerRootBase<T>(cx, RootKind::HeapThing, ptr)
-{
-    static_assert(std::is_base_of<VM::HeapThing, T>::value,
-                  "Type is not a heap thing.");
-}
+  : PointerRootBase<T>(cx, RootKind::SlabAlloc, ptr)
+{}
 
 template <typename T>
 inline
 Root<T *>::Root(ThreadContext *cx, T *ptr)
-  : PointerRootBase<T>(cx, RootKind::HeapThing, ptr)
-{
-    static_assert(std::is_base_of<VM::HeapThing, T>::value,
-                  "Type is not a heap thing.");
-}
+  : PointerRootBase<T>(cx, RootKind::SlabAlloc, ptr)
+{}
 
 template <typename T>
 inline Root<T *> &
@@ -591,37 +569,25 @@ template <typename T>
 inline
 Handle<T *>::Handle(T * const &locn)
   : PointerHandleBase<T>(locn)
-{
-    static_assert(std::is_base_of<VM::HeapThing, T>::value,
-                  "Type is not a heap thing.");
-}
+{}
 
 template <typename T>
 inline
 Handle<T *>::Handle(const Root<T *> &root)
   : PointerHandleBase<T>(root)
-{
-    static_assert(std::is_base_of<VM::HeapThing, T>::value,
-                  "Type is not a heap thing.");
-}
+{}
 
 template <typename T>
 inline
 Handle<T *>::Handle(const Heap<T *> &root)
   : PointerHandleBase<T>(root)
-{
-    static_assert(std::is_base_of<VM::HeapThing, T>::value,
-                  "Type is not a heap thing.");
-}
+{}
 
 template <typename T>
 inline
 Handle<T *>::Handle(const MutHandle<T *> &root)
   : PointerHandleBase<T>(root)
-{
-    static_assert(std::is_base_of<VM::HeapThing, T>::value,
-                  "Type is not a heap thing.");
-}
+{}
 
 template <typename T>
 /*static*/ inline Handle<T *>
@@ -639,19 +605,13 @@ template <typename T>
 inline
 MutHandle<T *>::MutHandle(T **ptr)
   : PointerMutHandleBase<T>(ptr)
-{
-    static_assert(std::is_base_of<VM::HeapThing, T>::value,
-                  "Type is not a heap thing.");
-}
+{}
 
 template <typename T>
 inline
 MutHandle<T *>::MutHandle(Root<T *> *root)
   : PointerMutHandleBase<T>(&root->get())
-{
-    static_assert(std::is_base_of<VM::HeapThing, T>::value,
-                  "Type is not a heap thing.");
-}
+{}
 
 template <typename T>
 inline
@@ -692,6 +652,9 @@ MutHandle<T *>::operator =(T *other)
     this->TypedMutHandleBase<T *>::operator =(other);
     return *this;
 }
+
+
+/*
 
 //
 // VectorRootBase<T>
@@ -787,6 +750,8 @@ inline
 VectorRoot<T *>::VectorRoot(ThreadContext *cx)
   : VectorRootBase<T *>(cx, RootKind::HeapThingVector)
 {}
+
+*/
 
 
 } // namespace Whisper

@@ -4,72 +4,55 @@
 #include <vector>
 #include "common.hpp"
 #include "debug.hpp"
+#include "runtime.hpp"
 
 namespace Whisper {
 
-class RunContext;
-class ThreadContext;
+//
+// HeapBase
+//
+// Base class of all traced values kept on the heap.
+//
+class HeapBase
+{
+  protected:
+    inline HeapBase() {}
+    inline HeapBase(const HeapBase &other) {}
+};
+
+//
+// HandleBase
+//
+// Base class of all handles to rooted things.
+//
+class HandleBase
+{
+  protected:
+    inline HandleBase() {}
+    inline HandleBase(const HandleBase &other) {}
+};
+
+//
+// MutHandleBase
+//
+// Base class of all mutable handles to rooted things.
+//
+class MutHandleBase
+{
+  protected:
+    inline MutHandleBase() {}
+    inline MutHandleBase(const MutHandleBase &other) {}
+};
+
+//
+// Pre-declaration for various typed rooting helpers.
+//
 
 template <typename T> class TypedRootBase;
 template <typename T> class TypedHeapBase;
 template <typename T> class TypedHandleBase;
 template <typename T> class TypedMutHandleBase;
 
-//
-// RootType describes the thing being rooted.  It is a bitfield
-// stored within a 32-bit unsigned integer.  The low 8 bits
-// describe the underlying type of value being rooted, and the
-// higher bits detail the data structure that contains the
-// value.
-// 
-class RootType
-{
-  public:
-    enum Kind : uint8_t
-    {
-    };
-
-    enum Container : uint8_t
-    {
-        SinglePointer,
-        Array
-    };
-
-  private:
-    uint32_t bits_;
-
-  public:
-    INVALID = 0,
-    Value,
-    HeapThing,
-    ValueVector,
-    HeapThingVector,
-    LIMIT
-};
-
-//
-// RootBase
-//
-// Base class for stack-rooted references to things.
-//
-class RootBase
-{
-  protected:
-    ThreadContext *threadContext_;
-    RootBase *next_;
-    RootKind kind_;
-
-    RootBase(ThreadContext *threadContext, RootKind kind);
-
-    void postInit();
-
-  public:
-    ThreadContext *threadContext() const;
-
-    RootBase *next() const;
-
-    RootKind kind() const;
-};
 
 //
 // TypedRootBase<...>
@@ -83,15 +66,21 @@ class TypedRootBase : public RootBase
   protected:
     T thing_;
 
+    template <typename... Args>
     inline TypedRootBase(ThreadContext *threadContext, RootKind kind,
-                         const T &thing);
+                         Args... args)
+      : RootBase(threadContext, kind),
+        thing_(std::forward<Args>(args)...)
+    {
+        postInit();
+    }
 
-    inline TypedRootBase(ThreadContext *threadContext, RootKind kind);
-
+    template <typename... Args>
     inline TypedRootBase(RunContext *runContext, RootKind kind,
-                         const T &thing);
-
-    inline TypedRootBase(RunContext *runContext, RootKind kind);
+                         Args... args)
+      : TypedRootBase<T>(runContext->threadContext(), kind,
+                         std::forward<Args>(args)...)
+    {}
 
   public:
     inline const T &get() const;
@@ -101,6 +90,7 @@ class TypedRootBase : public RootBase
     inline T *addr();
 
     inline void set(const T &val);
+    inline void set(T &&val);
 
     inline operator const T &() const;
     inline operator T &();
@@ -112,6 +102,7 @@ class TypedRootBase : public RootBase
     inline bool operator == (const TypedMutHandleBase<T> &other) const;
 
     inline TypedRootBase<T> &operator =(const T &other);
+    inline TypedRootBase<T> &operator =(T &&other);
 };
 
 template <typename T>
@@ -135,23 +126,38 @@ class Root
     Root(Root<T> &&other) = delete;
 };
 
+
 //
-// Class that manages a heap value or pointer.
+// Typed helper class for HeapBase
 //
+
 template <typename T>
-class TypedHeapBase
+class TypedHeapBase : public HeapBase
 {
   protected:
     T val_;
 
-    inline TypedHeapBase(const T &ref);
+    template <typename... Args>
+    inline TypedHeapBase(Args... args)
+      : HeapBase(),
+        val_(std::forward<Args>(args)...)
+    {}
 
   public:
     inline const T &get() const;
     inline T &get();
     inline const T *addr() const;
     inline T *addr();
-    inline void set(const T &t, VM::HeapThing *holder);
+
+    template <typename Holder>
+    inline void set(const T &t, Holder *holder)
+    {
+        // TODO: mark write barriers if needed.
+        // SlabThing *slabThing = SlabThingTraits<Holder>::SLAB_THING(holder);
+        // markSlabThing(slabThing);
+        val_ = t;
+    }
+
     inline operator const T &() const;
     inline operator T &();
 
@@ -184,10 +190,11 @@ class Heap
 
 
 //
-// Lightweight handle classes that uses an underlying Root.
+// Lightweight handle class that uses an underlying rooted thing,
+// either rooted or on the heap.
 //
 template <typename T>
-class TypedHandleBase
+class TypedHandleBase : public HandleBase
 {
   protected:
     const T &ref_;
@@ -232,7 +239,7 @@ class Handle
 // Lightweight mutable handle classes that uses an underlying Root.
 //
 template <typename T>
-class TypedMutHandleBase
+class TypedMutHandleBase : public MutHandleBase
 {
   protected:
     T &ref_;
@@ -275,31 +282,14 @@ class MutHandle
 
 
 //
-// Rooted Value
-//
-
-template <>
-class Root<Value> : public TypedRootBase<Value>
-{
-  public:
-    Root(RunContext *cx);
-    Root(ThreadContext *cx);
-    Root(RunContext *cx, const Value &val);
-    Root(ThreadContext *cx, const Value &val);
-
-    const Value *operator ->() const;
-    Value *operator ->();
-
-    Root<Value> &operator =(const Value &other);
-};
-
-//
-// Rooted Pointer
+// Rooted pointer to a slab allocation.
 //
 
 template <typename T>
 class Root<T *> : public PointerRootBase<T>
 {
+    static_assert(SlabThingTraits<T>::SPECIALIZED,
+                  "Type has no specialization for SlabThingTraits.");
   public:
     inline Root(RunContext *cx);
     inline Root(ThreadContext *cx);
@@ -311,50 +301,18 @@ class Root<T *> : public PointerRootBase<T>
 
 
 //
-// Heap Value
-//
-
-template <>
-class Heap<Value> : public TypedHeapBase<Value>
-{
-  public:
-    Heap();
-    Heap(const Value &val);
-
-    const Value *operator ->() const;
-    Value *operator ->();
-};
-
-//
 // Heap Pointer
 //
 
 template <typename T>
 class Heap<T *> : public PointerHeapBase<T>
 {
+    static_assert(SlabThingTraits<T>::SPECIALIZED,
+                  "Type has no specialization for SlabThingTraits.");
   public:
     inline Heap(T *ptr);
 };
 
-
-//
-// Handle Value
-//
-
-template <>
-class Handle<Value> : public TypedHandleBase<Value>
-{
-  private:
-    Handle(const Value &root);
-
-  public:
-    Handle(const Root<Value> &root);
-    Handle(const Heap<Value> &heap);
-    Handle(const MutHandle<Value> &mut);
-    static Handle<Value> FromTracedLocation(const Value &locn);
-
-    const Value *operator ->();
-};
 
 //
 // Handle Pointer
@@ -363,6 +321,8 @@ class Handle<Value> : public TypedHandleBase<Value>
 template <typename T>
 class Handle<T *> : public PointerHandleBase<T>
 {
+    static_assert(SlabThingTraits<T>::SPECIALIZED,
+                  "Type has no specialization for SlabThingTraits.");
     inline Handle(T * const &locn);
 
   public:
@@ -375,34 +335,14 @@ class Handle<T *> : public PointerHandleBase<T>
 
 
 //
-// MutHandle Value
-//
-
-template <>
-class MutHandle<Value> : public TypedMutHandleBase<Value>
-{
-  private:
-    MutHandle(Value *val);
-
-  public:
-    MutHandle(Root<Value> *root);
-    MutHandle(Heap<Value> *heap);
-    static MutHandle<Value> FromTracedLocation(Value *locn);
-
-    const Value *operator ->() const;
-    Value *operator ->();
-
-    MutHandle<Value> &operator =(const Value &other);
-};
-
-
-//
 // MutHandle Pointer
 //
 
 template <typename T>
 class MutHandle<T *> : public PointerMutHandleBase<T>
 {
+    static_assert(SlabThingTraits<T>::SPECIALIZED,
+                  "Type has no specialization for SlabThingTraits.");
   private:
     inline MutHandle(T **ptr);
 
@@ -416,6 +356,8 @@ class MutHandle<T *> : public PointerMutHandleBase<T>
     inline MutHandle<T *> &operator =(T *other);
 };
 
+
+/*
 
 //
 // VectorRootBase<...>
@@ -446,19 +388,12 @@ class VectorRootBase : public RootBase
     inline void append(const T &val);
 };
 
+
 template <typename T>
 class VectorRoot
 {
     VectorRoot(const VectorRoot<T> &other) = delete;
     VectorRoot(VectorRoot<T> &&other) = delete;
-};
-
-template <>
-class VectorRoot<Value> : public VectorRootBase<Value>
-{
-  public:
-    VectorRoot(RunContext *cx);
-    VectorRoot(ThreadContext *cx);
 };
 
 template <typename T>
@@ -468,6 +403,8 @@ class VectorRoot<T *> : public VectorRootBase<T *>
     VectorRoot(RunContext *cx);
     VectorRoot(ThreadContext *cx);
 };
+
+*/
 
 
 } // namespace Whisper

@@ -320,6 +320,7 @@ inline constexpr bool IsValidSlabAllocType(SlabAllocType sat) {
     return (sat > SlabAllocType::INVALID) && (sat < SlabAllocType::LIMIT);
 }
 
+
 //
 // SlabAllocHeader
 //
@@ -412,6 +413,84 @@ class SlabSizeExtHeader
     inline uint32_t allocSize() const {
         return (bits_ >> ALLOCSIZE_SHIFT) & ALLOCSIZE_MAX;
     }
+};
+
+//
+// SlabThing
+//
+// SlabThing represents a pointer to a thing on the slab.  Objects which
+// are slab allocated do not need to inherit from SlabThing.  Instead,
+// they must provide a specialization for SlabThingTraits that allows
+// the extraction of a slab thing pointer from them.
+//
+class SlabThing
+{
+  private:
+    SlabThing() = delete;
+
+    inline word_t *back_() {
+        return reinterpret_cast<word_t *>(
+                    reinterpret_cast<uint8_t *>(this) - sizeof(word_t));
+    }
+    inline const word_t *back_() const {
+        return reinterpret_cast<const word_t *>(
+                    reinterpret_cast<const uint8_t *>(this) - sizeof(word_t));
+    }
+
+    inline word_t *back2_() {
+        return reinterpret_cast<word_t *>(
+                    reinterpret_cast<uint8_t *>(this) - sizeof(word_t));
+    }
+    inline const word_t *back2_() const {
+        return reinterpret_cast<const word_t *>(
+                    reinterpret_cast<const uint8_t *>(this) - sizeof(word_t));
+    }
+
+  public:
+    inline bool isLarge() const {
+        // Check the low bit of the preceding word.
+        // If it's large, it'll be a sizeExt word with the low bit
+        // set to 1.
+        return *back_() & 0x1u;
+    }
+
+    inline const SlabAllocHeader &allocHeader() const {
+        return *reinterpret_cast<const SlabAllocHeader *>(
+                    isLarge() ? back2_() : back_());
+    }
+
+    inline SlabAllocHeader &allocHeader() {
+        return *reinterpret_cast<SlabAllocHeader *>(
+                    isLarge() ? back2_() : back_());
+    }
+
+    inline const SlabSizeExtHeader &sizeExtHeader() const {
+        WH_ASSERT(isLarge());
+        return *reinterpret_cast<const SlabSizeExtHeader *>(back_());
+    }
+
+    inline SlabSizeExtHeader &sizeExtHeader() {
+        WH_ASSERT(isLarge());
+        return *reinterpret_cast<SlabSizeExtHeader *>(back_());
+    }
+};
+
+
+//
+// All objects which are allocated on the slab must provide a
+// specialization for SlabThingTraits that enables the extraction
+// of a SlabThing pointer from a pointer to the object.
+//
+template <typename T>
+struct SlabThingTraits
+{
+    SlabThingTraits() = delete;
+    SlabThingTraits(const SlabThingTraits &) = delete;
+    
+    static constexpr bool SPECIALIZED = false;
+    // static constexpr bool SPECIALIZED = true;
+    // static SlabThing *SLAB_THING(T *ptr);
+    // static const SlabThing *SLAB_THING(const T *ptr);
 };
 
 

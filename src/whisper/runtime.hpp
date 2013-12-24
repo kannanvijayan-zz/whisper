@@ -11,6 +11,7 @@
 
 namespace Whisper {
 
+class RootBase;
 class ThreadContext;
 class RunContext;
 class RunActivationHelper;
@@ -151,6 +152,7 @@ class ThreadContext
     SlabList tenuredList_;
     RunContext *activeRunContext_;
     RunContext *runContextList_;
+    RootBase *roots_;
     bool suppressGC_;
 
     unsigned int randSeed_;
@@ -161,14 +163,41 @@ class ThreadContext
   public:
     ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured);
 
-    Runtime *runtime() const;
-    Slab *hatchery() const;
-    Slab *nursery() const;
-    Slab *tenured() const;
-    const SlabList &tenuredList() const;
-    SlabList &tenuredList();
-    RunContext *activeRunContext() const;
-    bool suppressGC() const;
+    inline Runtime *runtime() const {
+        return runtime_;
+    }
+
+    inline Slab *hatchery() const {
+        return hatchery_;
+    }
+
+    inline Slab *nursery() const {
+        return nursery_;
+    }
+
+    inline Slab *tenured() const {
+        return tenured_;
+    }
+
+    inline const SlabList &tenuredList() const {
+        return tenuredList_;
+    }
+
+    inline SlabList &tenuredList() {
+        return tenuredList_;
+    }
+
+    inline RunContext *activeRunContext() const {
+        return activeRunContext_;
+    }
+
+    inline RootBase *roots() const {
+        return roots_;
+    }
+
+    inline bool suppressGC() const {
+        return suppressGC_;
+    }
 
     void addRunContext(RunContext *cx);
     void removeRunContext(RunContext *cx);
@@ -222,6 +251,95 @@ class RunContext
 
     AllocationContext inHatchery();
     AllocationContext inTenured();
+};
+
+
+//
+// RootKind describes the thing being rooted.  It is a bitfield
+// stored within a 32-bit unsigned integer.  The low 8 bits
+// describe the underlying type of value being rooted, and the
+// higher bits detail the data structure that contains the
+// value.
+// 
+class RootKind
+{
+  public:
+    enum Kind : uint32_t
+    {
+        // SlabAlloc is for values which are pointers to slab-allocated
+        // things (for which we can obtain a SlabAllocType).
+        SlabAlloc
+    };
+
+    static constexpr uint32_t KindValue(Kind kind) {
+        return static_cast<uint32_t>(kind);
+    }
+
+    enum Container : uint32_t
+    {
+        SinglePointer
+    };
+
+    static constexpr uint32_t ContainerValue(Container container) {
+        return static_cast<uint32_t>(container);
+    }
+
+    constexpr static unsigned KIND_SHIFT = 0;
+    constexpr static uint32_t KIND_MAX = 0xffu;
+
+    constexpr static unsigned CONTAINER_SHIFT = 8;
+    constexpr static uint32_t CONTAINER_MAX = 0xffu;
+
+  private:
+    uint32_t bits_;
+
+  public:
+    inline RootKind(Kind kind, Container container)
+      : bits_((KindValue(kind) << KIND_SHIFT) |
+              (ContainerValue(container) << CONTAINER_SHIFT))
+    {
+        WH_ASSERT(KindValue(kind) <= KIND_MAX);
+        WH_ASSERT(ContainerValue(container) <= CONTAINER_MAX);
+    }
+
+    inline Kind kind() const {
+        return static_cast<Kind>((bits_ >> KIND_SHIFT) & KIND_MAX);
+    }
+
+    inline Container container() const {
+        return static_cast<Container>(
+                    (bits_ >> CONTAINER_SHIFT) & CONTAINER_MAX);
+    }
+};
+
+//
+// RootBase
+//
+// Base class for stack-rooted references to things.
+//
+class RootBase
+{
+  protected:
+    ThreadContext *threadContext_;
+    RootBase *next_;
+    RootKind kind_;
+
+    inline RootBase(ThreadContext *threadContext, RootKind kind);
+
+    inline void postInit();
+
+  public:
+    inline ThreadContext *threadContext() const {
+        return threadContext_;
+    }
+
+    inline RootBase *next() const {
+        return next_;
+    }
+
+    inline const RootKind &kind() const {
+        return kind_;
+    }
 };
 
 
