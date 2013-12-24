@@ -111,6 +111,12 @@ struct AllocationTypeTagTrait
     // static constexpr SlabAllocType TYPETAG;
 };
 
+template <typename T, SlabAllocType TYPE>
+struct AllocationTypeTagTraitHelper
+{
+    static constexpr SlabAllocType TYPETAG = TYPE;
+};
+
 
 //
 // AllocationTracedTrait
@@ -127,6 +133,12 @@ template <typename T>
 struct AllocationTracedTrait
 {
     // static constexpr bool TRACED;
+};
+
+template <typename T, bool TR>
+struct AllocationTracedTraitHelper
+{
+    static constexpr bool TRACED = TR;
 };
 
 

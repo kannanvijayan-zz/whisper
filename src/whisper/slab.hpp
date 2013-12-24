@@ -300,6 +300,8 @@ class SlabList
 // collection.
 //
 #define WHISPER_DEFN_SLAB_ALLOC_TYPES(_) \
+    _(Array)            \
+    _(Vector)           \
     _(Module)           \
     _(Type)
 
@@ -415,6 +417,44 @@ class SlabSizeExtHeader
     }
 };
 
+class SlabThing;
+
+//
+// All objects which are allocated on the slab must provide a
+// specialization for SlabThingTraits that enables the extraction
+// of a SlabThing pointer from a pointer to the object.
+//
+template <typename T>
+struct SlabThingTraits
+{
+    SlabThingTraits() = delete;
+    SlabThingTraits(const SlabThingTraits &) = delete;
+    
+    static constexpr bool SPECIALIZED = false;
+    // static constexpr bool SPECIALIZED = true;
+    // static SlabThing *SLAB_THING(T *ptr);
+    // static const SlabThing *SLAB_THING(const T *ptr);
+};
+
+// Helper base class for declaring SlabThingTraits specializations.
+// Usage:
+//   template <>
+//   struct SlabThingTraits<T> : public SlabThingTraitsHelper<T> {}
+template <typename T>
+struct SlabThingTraitsHelper
+{
+    SlabThingTraitsHelper() = delete;
+    SlabThingTraitsHelper(const SlabThingTraitsHelper &) = delete;
+
+    static constexpr bool SPECIALIZED = true;
+    static SlabThing *SLAB_THING(T *ptr) {
+        return reinterpret_cast<SlabThing *>(ptr);
+    }
+    static const SlabThing *SLAB_THING(const T *ptr) {
+        return reinterpret_cast<const SlabThing *>(ptr);
+    }
+};
+
 //
 // SlabThing
 //
@@ -447,6 +487,19 @@ class SlabThing
     }
 
   public:
+    template <typename T>
+    static inline SlabThing *From(T *ptr) {
+        static_assert(SlabThingTraits<T>::SPECIALIZED,
+                      "Type is not specialized for slab-thing.");
+        return SlabThingTraits<T>::SLAB_THING(ptr);
+    }
+    template <typename T>
+    static inline const SlabThing *From(const T *ptr) {
+        static_assert(SlabThingTraits<T>::SPECIALIZED,
+                      "Type is not specialized for slab-thing.");
+        return SlabThingTraits<T>::SLAB_THING(ptr);
+    }
+
     inline bool isLarge() const {
         // Check the low bit of the preceding word.
         // If it's large, it'll be a sizeExt word with the low bit
@@ -473,24 +526,11 @@ class SlabThing
         WH_ASSERT(isLarge());
         return *reinterpret_cast<SlabSizeExtHeader *>(back_());
     }
-};
 
-
-//
-// All objects which are allocated on the slab must provide a
-// specialization for SlabThingTraits that enables the extraction
-// of a SlabThing pointer from a pointer to the object.
-//
-template <typename T>
-struct SlabThingTraits
-{
-    SlabThingTraits() = delete;
-    SlabThingTraits(const SlabThingTraits &) = delete;
-    
-    static constexpr bool SPECIALIZED = false;
-    // static constexpr bool SPECIALIZED = true;
-    // static SlabThing *SLAB_THING(T *ptr);
-    // static const SlabThing *SLAB_THING(const T *ptr);
+    inline uint32_t allocSize() const {
+        return isLarge() ? sizeExtHeader().allocSize()
+                         : allocHeader().allocSize();
+    }
 };
 
 
