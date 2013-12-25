@@ -4,7 +4,7 @@
 #include "allocators.hpp"
 #include "spew.hpp"
 #include "runtime.hpp"
-#include "gc/stack.hpp"
+#include "gc/local.hpp"
 #include "gc/heap.hpp"
 #include "gc/handle.hpp"
 #include "parser/code_source.hpp"

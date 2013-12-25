@@ -8,7 +8,7 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "slab.hpp"
-#include "gc/stack.hpp"
+#include "gc/local.hpp"
 
 namespace Whisper {
 
@@ -154,7 +154,7 @@ class ThreadContext
 {
   friend class Runtime;
   friend class RunContext;
-  friend class GC::StackHolderBase;
+  friend class GC::LocalHolderBase;
   friend class RunActivationHelper;
   private:
     Runtime *runtime_;
@@ -164,7 +164,7 @@ class ThreadContext
     SlabList tenuredList_;
     RunContext *activeRunContext_;
     RunContext *runContextList_;
-    GC::StackHolderBase *roots_;
+    GC::LocalHolderBase *localHolders_;
     bool suppressGC_;
 
     unsigned int randSeed_;
@@ -203,8 +203,8 @@ class ThreadContext
         return activeRunContext_;
     }
 
-    inline GC::StackHolderBase *roots() const {
-        return roots_;
+    inline GC::LocalHolderBase *localHolders() const {
+        return localHolders_;
     }
 
     inline bool suppressGC() const {

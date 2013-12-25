@@ -1,5 +1,5 @@
-#ifndef WHISPER__GC__STACK_HPP
-#define WHISPER__GC__STACK_HPP
+#ifndef WHISPER__GC__LOCAL_HPP
+#define WHISPER__GC__LOCAL_HPP
 
 #include "common.hpp"
 #include "debug.hpp"
@@ -10,27 +10,27 @@ namespace GC {
 class ThreadContext;
 
 //
-// StackKind
+// LocalKind
 //
 // An enum describing the kind of thing being rooted on the stack.
 // Every stack-rootable type must provide a specialization of
-// |StackTraits| that allows extraction of a StackKind from it.
+// |LocalTraits| that allows extraction of a LocalKind from it.
 //
 
-enum class StackKind : uint32_t
+enum class LocalKind : uint32_t
 {
     // A pointer to a slab thing.
     SlabThingPointer
 };
 
 //
-// StackTraits<T>()
+// LocalTraits<T>()
 //
-// Specializations of StackTrait must be provided by every stack-rooted
+// Specializations of LocalTrait must be provided by every stack-rooted
 // type.  The specialization must contain the following definitions:
 //
-//  static constexpr StackKind KIND;
-//      The StackKind for the type being stack-rooted.
+//  static constexpr LocalKind KIND;
+//      The LocalKind for the type being stack-rooted.
 //
 //  template <typename Scanner> void SCAN(Scanner &scanner, T &ref);
 //      Method to scan the stack-rooted thing for references.
@@ -45,95 +45,95 @@ enum class StackKind : uint32_t
 //      Method to update a previously-scanned pointer address with
 //      a relocated pointer.
 //
-template <typename T> struct StackTraits;
+template <typename T> struct LocalTraits;
 
 //
-// StackTypeTrait<T>()
+// LocalTypeTrait<T>()
 //
-// Specializations of StackTypeTrait must be provided for every StackKind.
+// Specializations of LocalTypeTrait must be provided for every LocalKind.
 // The specialization must define a type TYPE, which is the unchecked
 // type for the kind.
 //
-template <StackKind KIND> struct StackTypeTrait;
+template <LocalKind KIND> struct LocalTypeTrait;
 
 //
-// StackHolderBase
+// LocalHolderBase
 //
 // Untyped base class for stack-root holders.
 //
 
-class StackHolderBase
+class LocalHolderBase
 {
   protected:
     ThreadContext *threadContext_;
-    StackHolderBase *next_;
-    StackKind kind_;
+    LocalHolderBase *next_;
+    LocalKind kind_;
 
-    inline StackHolderBase(ThreadContext *threadContext, StackKind kind);
+    inline LocalHolderBase(ThreadContext *threadContext, LocalKind kind);
 
   public:
     inline ThreadContext *threadContext() const {
         return threadContext_;
     }
 
-    inline StackHolderBase *next() const {
+    inline LocalHolderBase *next() const {
         return next_;
     }
 
-    inline const StackKind &kind() const {
+    inline const LocalKind &kind() const {
         return kind_;
     }
 };
 
 
 //
-// StackHolderUnchecked
+// LocalHolderUnchecked
 //
 // Unchecked typed holder class that refers to a stack-rooted
 // thing.
 //
 
 template <typename T>
-class StackHolderUnchecked : public StackHolderBase
+class LocalHolderUnchecked : public LocalHolderBase
 {
   protected:
     T val_;
 
     template <typename... Args>
-    inline StackHolderUnchecked(ThreadContext *threadContext, StackKind kind,
+    inline LocalHolderUnchecked(ThreadContext *threadContext, LocalKind kind,
                                 Args... args)
-      : StackHolderBase(threadContext, kind),
+      : LocalHolderBase(threadContext, kind),
         val_(std::forward<Args>(args)...)
     {}
 };
 
 //
-// StackHolder
+// LocalHolder
 //
 // Checked holder class that refers to a stack-rooted
 // thing.
 //
 
 template <typename T>
-using UncheckedStackType = typename StackTypeTrait<StackTraits<T>::KIND>::TYPE;
+using UncheckedLocalType = typename LocalTypeTrait<LocalTraits<T>::KIND>::TYPE;
 
 template <typename T>
-class StackHolder : public StackHolderUnchecked<UncheckedStackType<T>>
+class LocalHolder : public LocalHolderUnchecked<UncheckedLocalType<T>>
 {
-    typedef UncheckedStackType<T> UNCHECKED_T;
-    typedef StackHolderUnchecked<UNCHECKED_T> BASE;
+    typedef UncheckedLocalType<T> UNCHECKED_T;
+    typedef LocalHolderUnchecked<UNCHECKED_T> BASE;
 
-    static_assert(sizeof(T) == sizeof(UncheckedStackType<T>),
+    static_assert(sizeof(T) == sizeof(UncheckedLocalType<T>),
                   "Size mismatch between stack-rooted type and its "
                   "unchecked surrogate.");
-    static_assert(alignof(T) == alignof(UncheckedStackType<T>),
+    static_assert(alignof(T) == alignof(UncheckedLocalType<T>),
                   "Alignment mismatch between stack-rooted type and its "
                   "unchecked surrogate.");
 
   public:
     template <typename... Args>
-    inline StackHolder(ThreadContext *threadContext, Args... args)
-      : BASE(threadContext, StackTraits<T>::KIND,
+    inline LocalHolder(ThreadContext *threadContext, Args... args)
+      : BASE(threadContext, LocalTraits<T>::KIND,
              std::forward<Args>(args)...)
     {}
 
@@ -180,4 +180,4 @@ class StackHolder : public StackHolderUnchecked<UncheckedStackType<T>>
 } // namespace GC
 } // namespace Whisper
 
-#endif // WHISPER__GC__STACK_HPP
+#endif // WHISPER__GC__LOCAL_HPP
