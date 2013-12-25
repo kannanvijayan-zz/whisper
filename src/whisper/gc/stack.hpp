@@ -12,32 +12,32 @@ class ThreadContext;
 //
 // StackKind
 //
-// An enum describing the kind of thing being rooted.  Every rootable
-// type must provide a specialization of |StackTraits| that allows
-// extraction of a StackKind from it.
+// An enum describing the kind of thing being rooted on the stack.
+// Every stack-rootable type must provide a specialization of
+// |StackTraits| that allows extraction of a StackKind from it.
 //
 
 enum class StackKind : uint32_t
 {
-    // A rooted pointer to a slab thing.
+    // A pointer to a slab thing.
     SlabThingPointer
 };
 
 //
 // StackTraits<T>()
 //
-// Specializations of StackKindTrait must be provided by every rooted
+// Specializations of StackTrait must be provided by every stack-rooted
 // type.  The specialization must contain the following definitions:
 //
 //  static constexpr StackKind KIND;
-//      The StackKind for the type being rooted.
+//      The StackKind for the type being stack-rooted.
 //
-//  template <typename Scanner> void SCAN(Scanner &scanner);
-//      Method to scan the rooted thing for references.
-//      For each heap reference contained within the rooted thing,
-//      the method |scanner(ptr, addr, discrim)| should be called
-//      once, where |ptr| is pointer (of type SlabThing*), |addr|
-//      is the address of the pointer (of type void*), and |discrim|
+//  template <typename Scanner> void SCAN(Scanner &scanner, T &ref);
+//      Method to scan the stack-rooted thing for references.
+//      For each heap reference contained within the stack-rooted thing,
+//      referenced by |ref|, the method |scanner(ptr, addr, discrim)|
+//      should be called once, where |ptr| is pointer (of type SlabThing*),
+//      |addr| is the address of the pointer (of type void*), and |discrim|
 //      is a T-specific uint32_t value that helps distinguish the
 //      format of the reference being held.
 //
@@ -59,7 +59,7 @@ template <StackKind KIND> struct StackTypeTrait;
 //
 // StackHolderBase
 //
-// Untyped base class for root holders.
+// Untyped base class for stack-root holders.
 //
 
 class StackHolderBase
@@ -89,7 +89,7 @@ class StackHolderBase
 //
 // StackHolderUnchecked
 //
-// Unchecked typed holder class that refers to a stack-allocated rooted
+// Unchecked typed holder class that refers to a stack-rooted
 // thing.
 //
 
@@ -97,20 +97,20 @@ template <typename T>
 class StackHolderUnchecked : public StackHolderBase
 {
   protected:
-    T thing_;
+    T val_;
 
     template <typename... Args>
     inline StackHolderUnchecked(ThreadContext *threadContext, StackKind kind,
                                 Args... args)
       : StackHolderBase(threadContext, kind),
-        thing_(std::forward<Args>(args)...)
+        val_(std::forward<Args>(args)...)
     {}
 };
 
 //
 // StackHolder
 //
-// Checked holder class that refers to a stack-allocated rooted
+// Checked holder class that refers to a stack-rooted
 // thing.
 //
 
@@ -124,30 +124,31 @@ class StackHolder : public StackHolderUnchecked<UncheckedStackType<T>>
     typedef StackHolderUnchecked<UNCHECKED_T> BASE;
 
     static_assert(sizeof(T) == sizeof(UncheckedStackType<T>),
-                  "Size mismatch between rooted type and its unchecked "
-                  "surrogate.");
+                  "Size mismatch between stack-rooted type and its "
+                  "unchecked surrogate.");
     static_assert(alignof(T) == alignof(UncheckedStackType<T>),
-                  "Alignment mismatch between rooted type and its unchecked "
-                  "surrogate.");
+                  "Alignment mismatch between stack-rooted type and its "
+                  "unchecked surrogate.");
 
   public:
     template <typename... Args>
     inline StackHolder(ThreadContext *threadContext, Args... args)
-      : BASE(threadContext, StackTraits<T>::KIND, args...)
+      : BASE(threadContext, StackTraits<T>::KIND,
+             std::forward<Args>(args)...)
     {}
 
     inline const T &get() const {
-        return reinterpret_cast<const T &>(this->thing_);
+        return reinterpret_cast<const T &>(this->val_);
+    }
+    inline T &get() {
+        return reinterpret_cast<T &>(this->val_);
     }
 
-    inline T &get() {
-        return reinterpret_cast<T &>(this->thing_);
-    }
     inline void set(const T &ref) {
-        this->thing_ = ref;
+        this->val_ = ref;
     }
     inline void set(T &&ref) {
-        this->thing_ = ref;
+        this->val_ = ref;
     }
 
     inline operator const T &() const {
@@ -173,15 +174,6 @@ class StackHolder : public StackHolderUnchecked<UncheckedStackType<T>>
         return this->get();
     }
 };
-
-//
-// Stack<T>
-//
-// Actual root wrapper for a given type.  Specializations for this
-// type can inherit from StackHolder to automatically obtain convenience
-// methods.
-//
-template <typename T> class Stack;
 
 
 
