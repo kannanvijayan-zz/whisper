@@ -15,25 +15,24 @@ namespace VM {
     template <typename T> class Array;
 };
 
+// Specialize Array for SlabThingTraits
 template <typename T>
 struct SlabThingTraits<VM::Array<T>>
   : public SlabThingTraitsHelper<VM::Array<T>>
 {};
 
-template <typename T>
-struct AllocationTypeTagTrait<VM::Array<T>>
-  : public AllocationTypeTagTraitHelper<VM::Array<T>, SlabAllocType::Array>
-{};
-
+// Specialize Array for AllocationTraits
 // Arrays are traced by default, but array specializations for primitive types
 // are not traced.
 template <typename T>
-struct AllocationTracedTrait<VM::Array<T>>
+struct AllocationTraits<VM::Array<T>>
 {
+    static constexpr SlabAllocType ALLOC_TYPE = SlabAllocType::Array;
     static constexpr bool TRACED = true;
 };
 #define UNTRACED_SPEC_(T) \
-    template <> struct AllocationTracedTrait<VM::Array<T>> {  \
+    template <> struct AllocationTraits<VM::Array<T>> {  \
+        static constexpr SlabAllocType ALLOC_TYPE = SlabAllocType::Array; \
         static constexpr bool TRACED = false; \
     }
 UNTRACED_SPEC_(bool);
@@ -90,8 +89,15 @@ class Array
     }
 
     inline void set(uint32_t idx, const T &val) {
-        if (AllocationTracedTrait<T>::TRACED) {
+        // If the array is not traced, setting is simple.
+        if (!AllocationTraits<Array<T>>::TRACED) {
+            vals_[idx] = val;
+            return;
         }
+
+        // Otherwise, cast the value to a Heap reference, and call
+        // set() on it.
+        reinterpret_cast<Heap<T> &>(vals_[idx]).set(val, this);
     }
 };
 

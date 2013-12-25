@@ -19,16 +19,14 @@ struct SlabThingTraits<VM::Module>
   : public SlabThingTraitsHelper<VM::Module>
 {};
 
+// Specialize Module for AllocationTraits
 template <>
-struct AllocationTypeTagTrait<VM::Module>
-  : public AllocationTypeTagTraitHelper<VM::Module, SlabAllocType::Module>
-{};
-
-template <>
-struct AllocationTracedTrait<VM::Module>
+struct AllocationTraits<VM::Module>
 {
+    static constexpr SlabAllocType ALLOC_TYPE = SlabAllocType::Module;
     static constexpr bool TRACED = true;
 };
+
 
 namespace VM {
 

@@ -99,48 +99,19 @@ class AllocationContext
 // AllocationTypeTrait
 //
 // For an AllocationContext to allocate an object using |create|, it needs
-// to be able to automatically determine the allocation type of the object
-// from its C++ type.
+// to be able to automatically determine information about the object from
+// its C++ type.
 //
 // Classes which expect to be usable with the |create| method should provide
-// a specialization for this struct that defines |TYPETAG| appropriately.
+// a specialization for this struct that defines the following parameters:
 //
-template <typename T>
-struct AllocationTypeTagTrait
-{
-    // static constexpr SlabAllocType TYPETAG;
-};
-
-template <typename T, SlabAllocType TYPE>
-struct AllocationTypeTagTraitHelper
-{
-    static constexpr SlabAllocType TYPETAG = TYPE;
-};
-
-
+//  static constexpr SlabAllocType ALLOC_TYPE;
+//      The SlabAllocType for the C++ type.
 //
-// AllocationTracedTrait
+//  static constexpr bool TRACED;
+//      Whether the allocated object needs to be traced by GC or not.
 //
-// For an AllocationContext to allocate an object, it needs to be able
-// to automatically determine whether the object is traceable or not, as
-// this determines whether the object will be allocated from the bottom
-// or top of the slab.
-//
-// Classes which expect to be usable with the |create| method should provide
-// a specialization for this struct that defines |TRACED| appropriately.
-//
-template <typename T>
-struct AllocationTracedTrait
-{
-    // static constexpr bool TRACED;
-};
-
-template <typename T, bool TR>
-struct AllocationTracedTraitHelper
-{
-    static constexpr bool TRACED = TR;
-};
-
+template <typename T> struct AllocationTraits;
 
 //
 // ThreadContext

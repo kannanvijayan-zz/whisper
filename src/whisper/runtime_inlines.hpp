@@ -27,9 +27,9 @@ AllocationContext::createSized(uint32_t size, Args... args)
     WH_ASSERT(size >= sizeof(ObjT));
 
     // Allocate the space for the object.
-    constexpr bool TRACED = AllocationTracedTrait<ObjT>::TRACED;
-    constexpr SlabAllocType TYPETAG = AllocationTypeTagTrait<ObjT>::TYPETAG;
-    uint8_t *mem = allocate<TRACED>(size, TYPETAG);
+    constexpr bool TRACED = AllocationTraits<ObjT>::TRACED;
+    constexpr SlabAllocType ALLOC_TYPE = AllocationTraits<ObjT>::ALLOC_TYPE;
+    uint8_t *mem = allocate<TRACED>(size, ALLOC_TYPE);
     if (!mem)
         return nullptr;
 

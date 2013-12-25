@@ -16,21 +16,17 @@ namespace VM {
     template <typename T> class Vector;
 };
 
+// Specialize Vector for SlabThingTraits
 template <typename T>
 struct SlabThingTraits<VM::Vector<T>>
   : public SlabThingTraitsHelper<VM::Vector<T>>
 {};
 
+// Specialize Vector for AllocationTraits
 template <typename T>
-struct AllocationTypeTagTrait<VM::Vector<T>>
-  : public AllocationTypeTagTraitHelper<VM::Vector<T>, SlabAllocType::Vector>
-{};
-
-// Vectors are traced by default, but array specializations for primitive types
-// are not traced.
-template <typename T>
-struct AllocationTracedTrait<VM::Vector<T>>
+struct AllocationTraits<VM::Vector<T>>
 {
+    static constexpr bool ALLOC_TYPE = SlabAllocType::Array;
     static constexpr bool TRACED = true;
 };
 
