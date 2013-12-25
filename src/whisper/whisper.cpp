@@ -3,6 +3,7 @@
 #include "common.hpp"
 #include "allocators.hpp"
 #include "spew.hpp"
+#include "runtime.hpp"
 #include "parser/code_source.hpp"
 #include "parser/tokenizer.hpp"
 #include "parser/syntax_tree_inlines.hpp"
@@ -10,7 +11,6 @@
 #include "vm/array.hpp"
 #include "vm/type.hpp"
 #include "vm/module.hpp"
-#include "gc/roots.hpp"
 
 using namespace Whisper;
 

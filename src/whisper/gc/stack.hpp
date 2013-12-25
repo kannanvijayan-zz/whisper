@@ -1,5 +1,5 @@
-#ifndef WHISPER__GC__ROOTS_HPP
-#define WHISPER__GC__ROOTS_HPP
+#ifndef WHISPER__GC__STACK_HPP
+#define WHISPER__GC__STACK_HPP
 
 #include "common.hpp"
 #include "debug.hpp"
@@ -10,27 +10,27 @@ namespace GC {
 class ThreadContext;
 
 //
-// RootKind
+// StackKind
 //
 // An enum describing the kind of thing being rooted.  Every rootable
-// type must provide a specialization of |RootTraits| that allows
-// extraction of a RootKind from it.
+// type must provide a specialization of |StackTraits| that allows
+// extraction of a StackKind from it.
 //
 
-enum class RootKind : uint32_t
+enum class StackKind : uint32_t
 {
     // A rooted pointer to a slab thing.
     SlabThingPointer
 };
 
 //
-// RootTraits<T>()
+// StackTraits<T>()
 //
-// Specializations of RootKindTrait must be provided by every rooted
+// Specializations of StackKindTrait must be provided by every rooted
 // type.  The specialization must contain the following definitions:
 //
-//  static constexpr RootKind KIND;
-//      The RootKind for the type being rooted.
+//  static constexpr StackKind KIND;
+//      The StackKind for the type being rooted.
 //
 //  template <typename Scanner> void SCAN(Scanner &scanner);
 //      Method to scan the rooted thing for references.
@@ -45,95 +45,95 @@ enum class RootKind : uint32_t
 //      Method to update a previously-scanned pointer address with
 //      a relocated pointer.
 //
-template <typename T> struct RootTraits;
+template <typename T> struct StackTraits;
 
 //
-// RootTypeTrait<T>()
+// StackTypeTrait<T>()
 //
-// Specializations of RootTypeTrait must be provided for every RootKind.
+// Specializations of StackTypeTrait must be provided for every StackKind.
 // The specialization must define a type TYPE, which is the unchecked
 // type for the kind.
 //
-template <RootKind KIND> struct RootTypeTrait;
+template <StackKind KIND> struct StackTypeTrait;
 
 //
-// RootHolderBase
+// StackHolderBase
 //
 // Untyped base class for root holders.
 //
 
-class RootHolderBase
+class StackHolderBase
 {
   protected:
     ThreadContext *threadContext_;
-    RootHolderBase *next_;
-    RootKind kind_;
+    StackHolderBase *next_;
+    StackKind kind_;
 
-    inline RootHolderBase(ThreadContext *threadContext, RootKind kind);
+    inline StackHolderBase(ThreadContext *threadContext, StackKind kind);
 
   public:
     inline ThreadContext *threadContext() const {
         return threadContext_;
     }
 
-    inline RootHolderBase *next() const {
+    inline StackHolderBase *next() const {
         return next_;
     }
 
-    inline const RootKind &kind() const {
+    inline const StackKind &kind() const {
         return kind_;
     }
 };
 
 
 //
-// RootHolderUnchecked
+// StackHolderUnchecked
 //
 // Unchecked typed holder class that refers to a stack-allocated rooted
 // thing.
 //
 
 template <typename T>
-class RootHolderUnchecked : public RootHolderBase
+class StackHolderUnchecked : public StackHolderBase
 {
   protected:
     T thing_;
 
     template <typename... Args>
-    inline RootHolderUnchecked(ThreadContext *threadContext, RootKind kind,
-                               Args... args)
-      : RootHolderBase(threadContext, kind),
+    inline StackHolderUnchecked(ThreadContext *threadContext, StackKind kind,
+                                Args... args)
+      : StackHolderBase(threadContext, kind),
         thing_(std::forward<Args>(args)...)
     {}
 };
 
 //
-// RootHolder
+// StackHolder
 //
 // Checked holder class that refers to a stack-allocated rooted
 // thing.
 //
 
 template <typename T>
-using UncheckedRootType = typename RootTypeTrait<RootTraits<T>::KIND>::TYPE;
+using UncheckedStackType = typename StackTypeTrait<StackTraits<T>::KIND>::TYPE;
 
 template <typename T>
-class RootHolder : public RootHolderUnchecked<UncheckedRootType<T>>
+class StackHolder : public StackHolderUnchecked<UncheckedStackType<T>>
 {
-    typedef UncheckedRootType<T> UNCHECKED_T;
-    typedef RootHolderUnchecked<UNCHECKED_T> BASE;
+    typedef UncheckedStackType<T> UNCHECKED_T;
+    typedef StackHolderUnchecked<UNCHECKED_T> BASE;
 
-    static_assert(sizeof(T) == sizeof(UncheckedRootType<T>),
+    static_assert(sizeof(T) == sizeof(UncheckedStackType<T>),
                   "Size mismatch between rooted type and its unchecked "
                   "surrogate.");
-    static_assert(alignof(T) == alignof(UncheckedRootType<T>),
+    static_assert(alignof(T) == alignof(UncheckedStackType<T>),
                   "Alignment mismatch between rooted type and its unchecked "
                   "surrogate.");
 
   public:
     template <typename... Args>
-    inline RootHolder(ThreadContext *threadContext, Args... args)
-      : BASE(threadContext, RootTraits<T>::KIND, args...)
+    inline StackHolder(ThreadContext *threadContext, Args... args)
+      : BASE(threadContext, StackTraits<T>::KIND, args...)
     {}
 
     inline const T &get() const {
@@ -175,17 +175,17 @@ class RootHolder : public RootHolderUnchecked<UncheckedRootType<T>>
 };
 
 //
-// Root<T>
+// Stack<T>
 //
 // Actual root wrapper for a given type.  Specializations for this
-// type can inherit from RootHolder to automatically obtain convenience
+// type can inherit from StackHolder to automatically obtain convenience
 // methods.
 //
-template <typename T> class Root;
+template <typename T> class Stack;
 
 
 
 } // namespace GC
 } // namespace Whisper
 
-#endif // WHISPER__GC__ROOTS_HPP
+#endif // WHISPER__GC__STACK_HPP
