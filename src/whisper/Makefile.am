@@ -6,7 +6,6 @@ whisper_SOURCES = \
     memalloc.cpp \
     slab.cpp \
     runtime.cpp \
-    rooting.cpp \
     parser/code_source.cpp \
     parser/tokenizer.cpp \
     parser/syntax_tree.cpp \

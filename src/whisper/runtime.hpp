@@ -8,10 +8,10 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "slab.hpp"
+#include "gc/roots.hpp"
 
 namespace Whisper {
 
-class RootBase;
 class ThreadContext;
 class RunContext;
 class RunActivationHelper;
@@ -154,7 +154,7 @@ class ThreadContext
 {
   friend class Runtime;
   friend class RunContext;
-  friend class RootBase;
+  friend class GC::RootHolderBase;
   friend class RunActivationHelper;
   private:
     Runtime *runtime_;
@@ -164,7 +164,7 @@ class ThreadContext
     SlabList tenuredList_;
     RunContext *activeRunContext_;
     RunContext *runContextList_;
-    RootBase *roots_;
+    GC::RootHolderBase *roots_;
     bool suppressGC_;
 
     unsigned int randSeed_;
@@ -203,7 +203,7 @@ class ThreadContext
         return activeRunContext_;
     }
 
-    inline RootBase *roots() const {
+    inline GC::RootHolderBase *roots() const {
         return roots_;
     }
 
@@ -321,36 +321,6 @@ class RootKind
     inline Container container() const {
         return static_cast<Container>(
                     (bits_ >> CONTAINER_SHIFT) & CONTAINER_MAX);
-    }
-};
-
-//
-// RootBase
-//
-// Base class for stack-rooted references to things.
-//
-class RootBase
-{
-  protected:
-    ThreadContext *threadContext_;
-    RootBase *next_;
-    RootKind kind_;
-
-    inline RootBase(ThreadContext *threadContext, RootKind kind);
-
-    inline void postInit();
-
-  public:
-    inline ThreadContext *threadContext() const {
-        return threadContext_;
-    }
-
-    inline RootBase *next() const {
-        return next_;
-    }
-
-    inline const RootKind &kind() const {
-        return kind_;
     }
 };
 
