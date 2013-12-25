@@ -10,6 +10,7 @@
 #include "vm/array.hpp"
 #include "vm/type.hpp"
 #include "vm/module.hpp"
+#include "gc/roots.hpp"
 
 using namespace Whisper;
 
