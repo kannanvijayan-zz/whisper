@@ -69,11 +69,22 @@ class HeapHolder
 
     inline void set(const T &ref, SlabThing *container) {
         this->val_ = ref;
-        // Set write barrier for container here.
+        // TODO: Set write barrier for container here.
     }
     inline void set(T &&ref, SlabThing *container) {
         this->val_ = ref;
-        // Set write barrier for container here.
+        // TODO: Set write barrier for container here.
+    }
+
+    template <typename... Args>
+    inline void init(SlabThing *container, Args... args) {
+        new (&this->val_) T(std::forward<Args>(args)...);
+        // TODO: Set write barrier for container here.
+    }
+
+    inline void destroy(SlabThing *container) {
+        // TODO: Maybe mark things referenced by val_
+        val_.~T();
     }
 
     inline operator const T &() const {

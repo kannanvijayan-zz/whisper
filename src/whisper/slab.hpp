@@ -302,6 +302,7 @@ class SlabList
 #define WHISPER_DEFN_SLAB_ALLOC_TYPES(_) \
     _(Array)            \
     _(Vector)           \
+    _(VectorContents)   \
     _(Module)           \
     _(Type)
 

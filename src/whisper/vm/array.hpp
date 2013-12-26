@@ -67,28 +67,44 @@ class Array
     }
 
     inline Array(const T *vals) {
-        uint32_t sz = size();
-        for (uint32_t i = 0; i < sz; i++)
+        uint32_t len = length();
+        for (uint32_t i = 0; i < len; i++)
             new (&vals_[i]) T(vals[i]);
     }
 
     template <typename... Args>
     inline Array(Args... args) {
-        uint32_t sz = size();
-        for (uint32_t i = 0; i < sz; i++)
+        uint32_t len = length();
+        for (uint32_t i = 0; i < len; i++)
             new (&vals_[i]) T(std::forward<Args>(args)...);
     }
 
-    inline uint32_t size() const {
+    static Array<T> *Create(AllocationContext &cx, uint32_t length,
+                            const T *vals)
+    {
+        return cx.createSized<Array<T>>(CalculateSize(length), vals);
+    }
+
+    template <typename... Args>
+    static Array<T> *Create(AllocationContext &cx, uint32_t length,
+                            Args... args)
+    {
+        return cx.createSized<Array<T>>(CalculateSize(length),
+                                        std::forward<Args>(args)...);
+    }
+
+    inline uint32_t length() const {
         return SlabThing::From(this)->allocSize() / sizeof(T);
     }
 
     inline const T &operator[](uint32_t idx) const {
-        WH_ASSERT(idx < size());
+        WH_ASSERT(idx < length());
         return vals_[idx];
     }
 
     inline void set(uint32_t idx, const T &val) {
+        WH_ASSERT(idx < length());
+
         // If the array is not traced, setting is simple.
         if (!AllocationTraits<Array<T>>::TRACED) {
             vals_[idx] = val;
