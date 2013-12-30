@@ -20,26 +20,34 @@ namespace VM {
 // Specialize SlabThingTraits
 template <typename T>
 struct SlabThingTraits<VM::Vector<T>>
-  : public SlabThingTraitsHelper<VM::Vector<T>>
-{};
+{
+    SlabThingTraits() = delete;
+    SlabThingTraits(const SlabThingTraits &other) = delete;
+
+    static constexpr bool SPECIALIZED = true;
+};
 
 template <typename T>
 struct SlabThingTraits<VM::VectorContents<T>>
-  : public SlabThingTraitsHelper<VM::VectorContents<T>>
-{};
+{
+    SlabThingTraits() = delete;
+    SlabThingTraits(const SlabThingTraits &other) = delete;
+
+    static constexpr bool SPECIALIZED = true;
+};
 
 // Specialize for AllocationTraits
 template <typename T>
 struct AllocationTraits<VM::Vector<T>>
 {
-    static constexpr bool ALLOC_TYPE = SlabAllocType::Vector;
+    static constexpr SlabAllocType ALLOC_TYPE = SlabAllocType::Vector;
     static constexpr bool TRACED = true;
 };
 
 template <typename T>
 struct AllocationTraits<VM::VectorContents<T>>
 {
-    static constexpr bool ALLOC_TYPE = SlabAllocType::VectorContents;
+    static constexpr SlabAllocType ALLOC_TYPE = SlabAllocType::VectorContents;
     static constexpr bool TRACED = true;
 };
 #define UNTRACED_SPEC_(T) \
@@ -61,7 +69,7 @@ UNTRACED_SPEC_(float);
 UNTRACED_SPEC_(double);
 #undef UNTRACED_SPEC_
 
-
+ 
 namespace VM {
     
 //
@@ -116,7 +124,7 @@ class VectorContents
     template <typename... Args>
     inline void init(uint32_t idx, Args... args) {
         // If the array is not traced, setting is simple.
-        if (!AllocationTraits<Array<T>>::TRACED) {
+        if (!AllocationTraits<VectorContents<T>>::TRACED) {
             new (&vals_[idx]) T(std::forward<Args>(args)...);
             return;
         }
@@ -129,7 +137,7 @@ class VectorContents
 
     inline void destroy(uint32_t idx) {
         // If the array is not traced, setting is simple.
-        if (!AllocationTraits<Array<T>>::TRACED) {
+        if (!AllocationTraits<VectorContents<T>>::TRACED) {
             vals_.~T();
             return;
         }
@@ -149,7 +157,7 @@ class Vector
 {
   private:
     uint32_t length_;
-    Heap<VectorContents *> contents_;
+    Heap<VectorContents<T> *> contents_;
 
   public:
     inline Vector()
@@ -161,9 +169,9 @@ class Vector
         if (capacity() >= length)
             return true;
 
-        VectorContents<T> *contents = nullptr;
-        WH_ASSERT(used_ == 0);
-        contents = VectorContents<T>::Create(cx, length);
+        WH_ASSERT(length_ == 0);
+
+        VectorContents<T> *contents = VectorContents<T>::Create(cx, length);
         if (!contents)
             return false;
 
@@ -181,7 +189,7 @@ class Vector
         return contents_->length();
     }
 
-    inline const T &operator[](uint32_t idx) const {
+    inline const T &get(uint32_t idx) const {
         WH_ASSERT(idx < length());
         return contents_->get(idx);
     }

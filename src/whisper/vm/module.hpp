@@ -6,6 +6,7 @@
 #include "debug.hpp"
 #include "slab.hpp"
 #include "runtime.hpp"
+#include "vm/vector.hpp"
 
 namespace Whisper {
 
@@ -16,8 +17,12 @@ namespace VM {
 // Specialize Module for SlabThingTraits
 template <>
 struct SlabThingTraits<VM::Module>
-  : public SlabThingTraitsHelper<VM::Module>
-{};
+{
+    SlabThingTraits() = delete;
+    SlabThingTraits(const SlabThingTraits &other) = delete;
+
+    static constexpr bool SPECIALIZED = true;
+};
 
 // Specialize Module for AllocationTraits
 template <>

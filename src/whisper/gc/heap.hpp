@@ -23,7 +23,7 @@ namespace GC {
 //      Marker boolean indicating that HeapTraits has been specialized
 //      for this type.
 //
-//  template <typename Marker> void MARK(Marker &marker);
+//  template <typename Marker> void MARK(Marker &marker, const T &t);
 //      Method to scan the heap-marked thing for references.
 //      For each heap reference contained within the heap-marked thing,
 //      the method |scanner(ptr, addr, discrim)| should be called
@@ -35,6 +35,10 @@ namespace GC {
 //  void UPDATE(void *addr, uint32_t discrim, SlabThing *newPtr);
 //      Method to update a previously-scanned pointer address with
 //      a relocated pointer.
+//
+// Note that if a heap-wrapped type embeds any other heap-types,
+// it should define MARK to recursively call MARK on the embedded
+// values, using the same marker.
 //
 template <typename T> struct HeapTraits;
 
@@ -96,6 +100,13 @@ class HeapHolder
     }
 
     T &operator =(const HeapHolder<T> &other) = delete;
+
+    template <typename MARKER, typename CONTAINER>
+    inline void MARK(MARKER &marker, const CONTAINER *container,
+                     uint32_t discrim=0)
+    {
+        marker(&val_, ToSlabThing(container), discrim);
+    }
 };
 
 

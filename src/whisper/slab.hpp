@@ -300,10 +300,12 @@ class SlabList
 // collection.
 //
 #define WHISPER_DEFN_SLAB_ALLOC_TYPES(_) \
-    _(Array)            \
-    _(Vector)           \
-    _(VectorContents)   \
-    _(Module)           \
+    _(Array)                \
+    _(Vector)               \
+    _(VectorContents)       \
+    _(HashTable)            \
+    _(HashTableContents)    \
+    _(Module)               \
     _(Type)
 
 enum class SlabAllocType : uint32_t
@@ -433,27 +435,6 @@ struct SlabThingTraits
     
     static constexpr bool SPECIALIZED = false;
     // static constexpr bool SPECIALIZED = true;
-    // static SlabThing *SLAB_THING(T *ptr);
-    // static const SlabThing *SLAB_THING(const T *ptr);
-};
-
-// Helper base class for declaring SlabThingTraits specializations.
-// Usage:
-//   template <>
-//   struct SlabThingTraits<T> : public SlabThingTraitsHelper<T> {}
-template <typename T>
-struct SlabThingTraitsHelper
-{
-    SlabThingTraitsHelper() = delete;
-    SlabThingTraitsHelper(const SlabThingTraitsHelper &) = delete;
-
-    static constexpr bool SPECIALIZED = true;
-    static SlabThing *SLAB_THING(T *ptr) {
-        return reinterpret_cast<SlabThing *>(ptr);
-    }
-    static const SlabThing *SLAB_THING(const T *ptr) {
-        return reinterpret_cast<const SlabThing *>(ptr);
-    }
 };
 
 //
@@ -492,13 +473,13 @@ class SlabThing
     static inline SlabThing *From(T *ptr) {
         static_assert(SlabThingTraits<T>::SPECIALIZED,
                       "Type is not specialized for slab-thing.");
-        return SlabThingTraits<T>::SLAB_THING(ptr);
+        return reinterpret_cast<SlabThing *>(ptr);
     }
     template <typename T>
     static inline const SlabThing *From(const T *ptr) {
         static_assert(SlabThingTraits<T>::SPECIALIZED,
                       "Type is not specialized for slab-thing.");
-        return SlabThingTraits<T>::SLAB_THING(ptr);
+        return reinterpret_cast<const SlabThing *>(ptr);
     }
 
     inline bool isLarge() const {
@@ -532,6 +513,24 @@ class SlabThing
         return isLarge() ? sizeExtHeader().allocSize()
                          : allocHeader().allocSize();
     }
+#define CHK_(name) \
+    inline bool is##name() const { \
+        return allocHeader().allocType() == SlabAllocType::name; \
+    }
+    WHISPER_DEFN_SLAB_ALLOC_TYPES(CHK_)
+#undef CHK_
+};
+
+//
+// Specialize SlabThingTratis for SlabThing itself.
+//
+template <>
+struct SlabThingTraits<SlabThing>
+{
+    SlabThingTraits() = delete;
+    SlabThingTraits(const SlabThingTraits &) = delete;
+    
+    static constexpr bool SPECIALIZED = true;
 };
 
 

@@ -79,14 +79,72 @@ class MutHandleHolder
         *valAddr_ = other;
     }
 
+    inline void set(T &&other) {
+        *valAddr_ = other;
+    }
+
     inline const T *operator &() const {
         return valAddr_;
     }
-    inline T *operator &() {
-        return valAddr_;
+
+    // Assignments are ok.
+    T &operator =(const HeapHolder<T> &other) = delete;
+};
+
+//
+// MutHeapHandles are mutable handles to things on heap.  To allow
+// update, these have to keep a pointer to the containing object.
+//
+template <typename T>
+class MutHeapHandleHolder
+{
+  private:
+    SlabThing *container_;
+    T *valAddr_;
+
+  public:
+    inline MutHeapHandleHolder(SlabThing *container, const HeapHolder<T> &val)
+      : container_(container),
+        valAddr_(&val)
+    {
+        WH_ASSERT(container);
     }
 
-    T &operator =(const HeapHolder<T> &other) = delete;
+    inline const T &get() const {
+        return *valAddr_;
+    }
+    inline T &get() {
+        return *valAddr_;
+    }
+
+    inline operator const T &() const {
+        return this->get();
+    }
+    inline operator T &() {
+        return this->get();
+    }
+
+    inline void set(const T &other) {
+        *valAddr_ = other;
+    }
+
+    inline const T *operator &() const {
+        return valAddr_;
+    }
+    // Cannot convert to simple mutable pointer.
+    // Mutations must occur through overloaded
+    // operator.
+    T *operator &() = delete;
+
+    inline T &operator =(const T &other) {
+        *valAddr_ = other;
+        // TODO: Kick post-write barriers on container_ here.
+    }
+
+    inline T &operator =(T &&other) {
+        *valAddr_ = other;
+        // TODO: Kick post-write barriers on container_ here.
+    }
 };
 
 

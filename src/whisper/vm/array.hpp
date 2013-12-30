@@ -18,8 +18,12 @@ namespace VM {
 // Specialize Array for SlabThingTraits
 template <typename T>
 struct SlabThingTraits<VM::Array<T>>
-  : public SlabThingTraitsHelper<VM::Array<T>>
-{};
+{
+    SlabThingTraits() = delete;
+    SlabThingTraits(const SlabThingTraits &other) = delete;
+
+    static constexpr bool SPECIALIZED = true;
+};
 
 // Specialize Array for AllocationTraits
 // Arrays are traced by default, but array specializations for primitive types
@@ -97,7 +101,7 @@ class Array
         return SlabThing::From(this)->allocSize() / sizeof(T);
     }
 
-    inline const T &operator[](uint32_t idx) const {
+    inline const T &get(uint32_t idx) const {
         WH_ASSERT(idx < length());
         return vals_[idx];
     }
