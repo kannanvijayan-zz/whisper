@@ -15,6 +15,31 @@ namespace Whisper {
 namespace VM {
     template <typename T> class Vector;
     template <typename T> class VectorContents;
+
+    // VectorTraits for a particular type T provides information about
+    // T.
+    template <typename T>
+    struct VectorTraits {
+        VectorTraits() = delete;
+        static constexpr bool TRACED = true;
+    };
+#define UNTRACED_SPEC_(T) \
+    template <> struct VectorTraits<T> {  \
+        VectorTraits() = delete; \
+        static constexpr bool TRACED = false; \
+    }
+    UNTRACED_SPEC_(bool);
+    UNTRACED_SPEC_(int8_t);
+    UNTRACED_SPEC_(uint8_t);
+    UNTRACED_SPEC_(int16_t);
+    UNTRACED_SPEC_(uint16_t);
+    UNTRACED_SPEC_(int32_t);
+    UNTRACED_SPEC_(uint32_t);
+    UNTRACED_SPEC_(int64_t);
+    UNTRACED_SPEC_(uint64_t);
+    UNTRACED_SPEC_(float);
+    UNTRACED_SPEC_(double);
+#undef UNTRACED_SPEC_
 };
 
 // Specialize SlabThingTraits
@@ -48,26 +73,8 @@ template <typename T>
 struct AllocationTraits<VM::VectorContents<T>>
 {
     static constexpr SlabAllocType ALLOC_TYPE = SlabAllocType::VectorContents;
-    static constexpr bool TRACED = true;
+    static constexpr bool TRACED = VM::VectorTraits<T>::TRACED;
 };
-#define UNTRACED_SPEC_(T) \
-    template <> struct AllocationTraits<VM::VectorContents<T>> {  \
-        static constexpr SlabAllocType ALLOC_TYPE = \
-            SlabAllocType::VectorContents; \
-        static constexpr bool TRACED = false; \
-    }
-UNTRACED_SPEC_(bool);
-UNTRACED_SPEC_(int8_t);
-UNTRACED_SPEC_(uint8_t);
-UNTRACED_SPEC_(int16_t);
-UNTRACED_SPEC_(uint16_t);
-UNTRACED_SPEC_(int32_t);
-UNTRACED_SPEC_(uint32_t);
-UNTRACED_SPEC_(int64_t);
-UNTRACED_SPEC_(uint64_t);
-UNTRACED_SPEC_(float);
-UNTRACED_SPEC_(double);
-#undef UNTRACED_SPEC_
 
  
 namespace VM {
@@ -97,54 +104,49 @@ class VectorContents
         return SlabThing::From(this)->allocSize() / sizeof(T);
     }
 
-    inline const T &get(uint32_t idx) const {
+    inline const T &getRaw(uint32_t idx) const {
         WH_ASSERT(idx < length());
         return vals_[idx];
     }
 
-    inline T &get(uint32_t idx) {
+    inline T &getRaw(uint32_t idx) {
         WH_ASSERT(idx < length());
         return vals_[idx];
+    }
+
+    inline const Heap<T> &get(uint32_t idx) const {
+        return reinterpret_cast<const Heap<T> &>(getRaw(idx));
+    }
+
+    inline Heap<T> &get(uint32_t idx) {
+        return reinterpret_cast<Heap<T> &>(getRaw(idx));
     }
 
     inline void set(uint32_t idx, const T &val) {
         WH_ASSERT(idx < length());
 
         // If the array is not traced, setting is simple.
-        if (!AllocationTraits<VectorContents<T>>::TRACED) {
-            vals_[idx] = val;
-            return;
-        }
-
-        // Otherwise, cast the value to a Heap reference, and call
-        // set() on it.
-        reinterpret_cast<Heap<T> &>(vals_[idx]).set(val, this);
+        if (AllocationTraits<VectorContents<T>>::TRACED)
+            get(idx).set(val, this);
+        else
+            getRaw(idx) = val;
     }
 
     template <typename... Args>
     inline void init(uint32_t idx, Args... args) {
         // If the array is not traced, setting is simple.
-        if (!AllocationTraits<VectorContents<T>>::TRACED) {
-            new (&vals_[idx]) T(std::forward<Args>(args)...);
-            return;
-        }
-
-        // Otherwise, cast the value to a Heap reference, and call
-        // set() on it.
-        reinterpret_cast<Heap<T> &>(vals_[idx]).init(this,
-                                        std::forward<Args>(args)...);
+        if (AllocationTraits<VectorContents<T>>::TRACED)
+            get(idx).init(this, args...);
+        else
+            new (&getRaw(idx)) T(args...);
     }
 
     inline void destroy(uint32_t idx) {
         // If the array is not traced, setting is simple.
-        if (!AllocationTraits<VectorContents<T>>::TRACED) {
-            vals_.~T();
-            return;
-        }
-
-        // Otherwise, cast the value to a Heap reference, and call
-        // destroy() on it.
-        reinterpret_cast<Heap<T> &>(vals_[idx]).destroy(this);
+        if (AllocationTraits<VectorContents<T>>::TRACED)
+            get(idx).destroy(this);
+        else
+            getRaw(idx).~T();
     }
 };
 
@@ -191,7 +193,7 @@ class Vector
 
     inline const T &get(uint32_t idx) const {
         WH_ASSERT(idx < length());
-        return contents_->get(idx);
+        return contents_->getRaw(idx);
     }
 
     inline void set(uint32_t idx, const T &val) {

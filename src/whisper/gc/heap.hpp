@@ -71,24 +71,35 @@ class HeapHolder
         return reinterpret_cast<T &>(this->val_);
     }
 
-    inline void set(const T &ref, SlabThing *container) {
-        this->val_ = ref;
+    inline void notifySetPre() {
+        // TODO: Do any pre-barriers here.
+    }
+    inline void notifySetPost(SlabThing *container) {
         // TODO: Set write barrier for container here.
     }
-    inline void set(T &&ref, SlabThing *container) {
+
+    inline void set(const T &ref, SlabThing *container) {
+        notifySetPre();
         this->val_ = ref;
-        // TODO: Set write barrier for container here.
+        notifySetPost(container);
+    }
+    inline void set(T &&ref, SlabThing *container) {
+        notifySetPre();
+        this->val_ = ref;
+        notifySetPost(container);
     }
 
     template <typename... Args>
     inline void init(SlabThing *container, Args... args) {
+        // Pre-notification not required as value is not initialized.
         new (&this->val_) T(std::forward<Args>(args)...);
-        // TODO: Set write barrier for container here.
+        notifySetPost();
     }
 
     inline void destroy(SlabThing *container) {
-        // TODO: Maybe mark things referenced by val_
+        notifySetPre();
         val_.~T();
+        // Post-notification not required as value is desetroyed.
     }
 
     inline operator const T &() const {
