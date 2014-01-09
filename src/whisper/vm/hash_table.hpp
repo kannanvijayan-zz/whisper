@@ -58,6 +58,10 @@ namespace Whisper {
 namespace VM {
     template <typename T, typename POLICY> class HashTable;
     template <typename T, typename POLICY> class HashTableContents;
+    template <typename K, typename V> class HashPair;
+    template <typename K, typename V, typename POLICY>
+        class HashMapPolicyAdapter;
+    template <typename K, typename V, typename KP, typename VP> class HashMap;
 };
 
 // Specialize SlabThingTraits
@@ -459,9 +463,10 @@ class HashMapPair
 };
 
 //
-// HashMapPolicyAdapter adataps a hash map policy into a hashtable policy.
-// The POLICY for hashing key/value pairs KEY and VALUE is a class + instance
-// satisfying the following:
+// HashMapPolicyPair adapts a key and value policy into a hashtable policy
+// suitable for a map.
+//
+// A KEY POLICY needs the following features:
 //
 //  // Given instance lookup of type |LOOKUP|, return the hash value
 //  // for the instance.  Usually, LOOKUP is the "key type" of
@@ -477,14 +482,8 @@ class HashMapPair
 //  template <typename LOOKUP>
 //  bool equal(const KEY &key, const LOOKUP &lookup);
 //
-//  // If true, then added entries may introduce new pointers into
-//  // the heap.
-//  static constexpr bool KEY_TRACED;
-//
-//  // If true, then entry updates may introduce new pointers into
-//  // the heap.  If UPDATES_TRACED is true, then TRACED must aslo
-//  // be true.
-//  static constexpr bool VALUE_TRACED;
+//  // If true, then keys are traced.
+//  static constexpr bool TRACED;
 //
 //  // Return a hash element that represents an unused key, and
 //  // one that represents a deleted key.  These must not conflict
@@ -492,45 +491,63 @@ class HashMapPair
 //  KEY unusedKey();
 //  KEY deletedKey();
 //
+// A VALUE POLICY needs the following features:
+//
+//  // If true, then keys are traced.
+//  static constexpr bool TRACED;
+//
 //  // Return a default-constructed hash value.
 //  VALUE emptyValue();
 //
+//  // Update a value.
+//  template <typename UPDATE>
+//  void update(VALUE &val, const UPDATE &update);
+//
 
-template <typename KEY, typename VALUE, typename POLICY>
-class HashMapPolicyAdapter
+// Define implementations for Key and Value.
+template <typename T> class HashMapStdKeyPolicy {};
+template <typename T> class HashMapStdValuePolicy {};
+
+template <typename KEY, typename VALUE,
+          typename KEYPOLICY = HashMapStdKeyPolicy<KEY>,
+          typename VALUEPOLICY = HashMapStdValuePolicy<VALUE>>
+class HashMapPolicyPair
 {
-    // Implements Hashtable POLICY for HashMapPair<KEY, VALUE>
+  private:
+    KEYPOLICY keyPolicy_;
+    VALUEPOLICY valuePolicy_;
     typedef HashMapPair<KEY, VALUE> Pair_;
 
-  private:
-    POLICY policy_;
-
   public:
-    inline HashMapPolicyAdapter(const POLICY &policy) : policy_(policy) {}
+    inline HashMapPolicyPair(const KEYPOLICY &keyPolicy,
+                             const VALUEPOLICY &valuePolicy)
+      : keyPolicy_(keyPolicy),
+        valuePolicy_(valuePolicy)
+    {}
 
     template <typename LOOKUP>
     inline const uint32_t hash(const LOOKUP &lookup) {
-        return policy_.hash(lookup);
+        return keyPolicy_.hash(lookup);
     }
 
     template <typename LOOKUP>
     inline bool equal(const Pair_ &item, const LOOKUP &lookup) {
-        return policy_.equal(item.key(), lookup);
+        return keyPolicy_.equal(item.key(), lookup);
     }
 
-    static constexpr bool TRACED = POLICY::KEY_TRACED || POLICY::VALUE_TRACED;
-    static constexpr bool UPDATE_TRACED = POLICY::VALUE_TRACED;
+    static constexpr bool TRACED = KEYPOLICY::TRACED || VALUEPOLICY::TRACED;
+    static constexpr bool UPDATE_TRACED = VALUEPOLICY::TRACED;
 
     inline Pair_ unusedElement() {
-        return Pair_(policy_.unusedKey(), policy_.emptyValue());
+        return Pair_(keyPolicy_.unusedKey(), valuePolicy_.emptyValue());
     }
     inline Pair_ deletedElement() {
-        return Pair_(policy_.deletedKey(), policy_.emptyValue());
+        return Pair_(keyPolicy_.deletedKey(), valuePolicy_.emptyValue());
     }
 
     template <typename UPDATE>
     inline void update(Pair_ &item, const UPDATE &update) {
-        item.value() = update;
+        valuePolicy_.update(item.value(), update);
     }
 };
 
@@ -538,12 +555,15 @@ class HashMapPolicyAdapter
 //
 // HashMap specialization of hash table.
 //
-template <typename KEY, typename VALUE, typename POLICY>
+template <typename KEY, typename VALUE,
+          typename KEYPOLICY = HashMapStdKeyPolicy<KEY>,
+          typename VALUEPOLICY = HashMapStdValuePolicy<VALUE>>
 class HashMap : public HashTable<HashMapPair<KEY, VALUE>,
-                                 HashMapPolicyAdapter<KEY, VALUE, POLICY>>
+                                 HashMapPolicyPair<KEY, VALUE,
+                                                   KEYPOLICY, VALUEPOLICY>>
 {
     typedef HashMapPair<KEY, VALUE> Pair_;
-    typedef HashMapPolicyAdapter<KEY, VALUE, POLICY> Policy_;
+    typedef HashMapPolicyPair<KEY, VALUE, KEYPOLICY, VALUEPOLICY> Policy_;
     typedef HashTable<Pair_, Policy_> Base_;
     typedef typename Base_::Cursor Cursor_;
 
@@ -552,7 +572,7 @@ class HashMap : public HashTable<HashMapPair<KEY, VALUE>,
       : Base_()
     {}
 
-    inline HashMap(const POLICY &policy)
+    inline HashMap(const Policy_ &policy)
       : Base_(Policy_(policy))
     {}
 
