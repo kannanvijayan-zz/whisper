@@ -306,6 +306,7 @@ class SlabList
     _(HashTable)            \
     _(HashTableContents)    \
     _(Module)               \
+    _(FlatString)           \
     _(Type)
 
 enum class SlabAllocType : uint32_t
@@ -390,6 +391,12 @@ class SlabAllocHeader
 
     inline uint8_t flags() const {
         return (bits_ >> FLAGS_SHIFT) & FLAGS_MAX;
+    }
+
+    inline void setFlags(uint8_t flags) {
+        WH_ASSERT(flags <= FLAGS_MAX);
+        bits_ &= ~(static_cast<uint32_t>(FLAGS_MAX) << FLAGS_SHIFT);
+        bits_ |= static_cast<uint32_t>(flags) << FLAGS_SHIFT;
     }
 };
 
@@ -521,6 +528,10 @@ class SlabThing
     inline uint32_t allocSize() const {
         return isLarge() ? sizeExtHeader().allocSize()
                          : allocHeader().allocSize();
+    }
+
+    inline const void *objectEnd() const {
+        return reinterpret_cast<const uint8_t *>(this) + allocSize();
     }
 
     inline uint8_t flags() const {

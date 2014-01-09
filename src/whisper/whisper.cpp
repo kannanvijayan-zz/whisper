@@ -4,6 +4,7 @@
 #include "allocators.hpp"
 #include "spew.hpp"
 #include "runtime.hpp"
+#include "runtime_inlines.hpp"
 #include "gc.hpp"
 #include "parser/code_source.hpp"
 #include "parser/tokenizer.hpp"
@@ -12,6 +13,8 @@
 #include "vm/array.hpp"
 #include "vm/hash_table.hpp"
 #include "vm/type.hpp"
+#include "vm/string.hpp"
+#include "vm/string_inlines.hpp"
 #include "vm/module.hpp"
 
 using namespace Whisper;

@@ -24,14 +24,14 @@ template <typename ObjT, typename... Args>
 inline ObjT *
 AllocationContext::createFlagged(uint8_t flags, Args... args)
 {
-    return createSizedFlagged(sizeof(ObjT), flags, args...);
+    return createSizedFlagged<ObjT, Args...>(sizeof(ObjT), flags, args...);
 }
 
 template <typename ObjT, typename... Args>
 inline ObjT *
 AllocationContext::createSized(uint32_t size, Args... args)
 {
-    return createSizedFlagged(size, 0, args...);
+    return createSizedFlagged<ObjT, Args...>(size, 0, args...);
 }
 
 template <typename ObjT, typename... Args>
