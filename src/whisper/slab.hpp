@@ -338,7 +338,7 @@ inline constexpr bool IsValidSlabAllocType(SlabAllocType sat) {
 //
 // Format:
 //             24        16         8         0
-//      CCCC-CCCC SSSS-SSSS TTTT-TTTT 0000-0000
+//      CCCC-CCCC SSSS-SSSS TTTT-TTTT FFFF-0000
 //
 class SlabAllocHeader
 {
@@ -352,6 +352,9 @@ class SlabAllocHeader
     static constexpr unsigned ALLOCTYPE_SHIFT = 8;
     static constexpr uint32_t ALLOCTYPE_MAX = 0xffu;
 
+    static constexpr unsigned FLAGS_SHIFT = 4;
+    static constexpr uint32_t FLAGS_MAX = 0xfu;
+
     static_assert(SlabAllocTypeValue(SlabAllocType::LIMIT) <= ALLOCTYPE_MAX,
                   "Too many types in SlabAllocType.");
 
@@ -360,14 +363,16 @@ class SlabAllocHeader
 
   public:
     inline SlabAllocHeader(uint32_t cardNum, uint32_t allocSize,
-                           SlabAllocType allocType)
+                           SlabAllocType allocType, uint32_t flags=0)
       : bits_((cardNum << CARDNUM_SHIFT) |
               (allocSize << ALLOCSIZE_SHIFT) |
-              (SlabAllocTypeValue(allocType) << ALLOCTYPE_SHIFT))
+              (SlabAllocTypeValue(allocType) << ALLOCTYPE_SHIFT) |
+              (flags << FLAGS_SHIFT))
     {
         WH_ASSERT(cardNum <= CARDNUM_MAX);
         WH_ASSERT(allocSize <= ALLOCSIZE_MAX);
         WH_ASSERT(IsValidSlabAllocType(allocType));
+        WH_ASSERT(flags <= FLAGS_MAX);
     }
 
     inline uint32_t cardNum() const {
@@ -381,6 +386,10 @@ class SlabAllocHeader
     inline SlabAllocType allocType() const {
         return static_cast<SlabAllocType>(
                 (bits_ >> ALLOCTYPE_SHIFT) & ALLOCTYPE_MAX);
+    }
+
+    inline uint8_t flags() const {
+        return (bits_ >> FLAGS_SHIFT) & FLAGS_MAX;
     }
 };
 
@@ -512,6 +521,10 @@ class SlabThing
     inline uint32_t allocSize() const {
         return isLarge() ? sizeExtHeader().allocSize()
                          : allocHeader().allocSize();
+    }
+
+    inline uint8_t flags() const {
+        return allocHeader().flags();
     }
 #define CHK_(name) \
     inline bool is##name() const { \

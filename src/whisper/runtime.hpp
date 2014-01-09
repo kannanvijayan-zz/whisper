@@ -87,11 +87,23 @@ class AllocationContext
     inline ObjT *create(Args... args);
 
     template <typename ObjT, typename... Args>
+    inline ObjT *createFlagged(uint8_t flags, Args... args);
+
+    template <typename ObjT, typename... Args>
     inline ObjT *createSized(uint32_t size, Args... args);
+
+    template <typename ObjT, typename... Args>
+    inline ObjT *createSizedFlagged(uint32_t size, uint8_t flags, Args... args);
 
   private:
     template <bool Traced>
-    inline uint8_t *allocate(uint32_t size, SlabAllocType typeTag);
+    inline uint8_t *allocate(uint32_t size, SlabAllocType typeTag,
+                             uint8_t flags);
+
+    template <bool Traced>
+    inline uint8_t *allocate(uint32_t size, SlabAllocType typeTag) {
+        return allocate<Traced>(size, typeTag, 0);
+    }
 };
 
 
