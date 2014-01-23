@@ -6,8 +6,11 @@
 #include "debug.hpp"
 #include "slab.hpp"
 #include "runtime.hpp"
+#include "vm/hash_table.hpp"
 
 #include <new>
+#include <utility>
+#include <cstring>
 
 namespace Whisper {
 
@@ -39,6 +42,8 @@ struct SlabThingTraits<VM::FlatString>
 };
 
 // Specialize FlatString for AllocationTraits.
+// String doesn't get AllocationTraits specialization because it's
+// never instantiated directly.
 template <>
 struct AllocationTraits<VM::FlatString>
 {
@@ -75,98 +80,39 @@ class String
 //
 class FlatString : public String
 {
-  public:
-    static constexpr uint8_t FLAG_16BIT = 0x01;
-
   private:
-    uint16_t data_[0];
-
-    inline uint16_t *data16() {
-        return &(data_[0]);
-    }
-    inline const uint16_t *data16() const {
-        return &(data_[0]);
-    }
-    inline uint16_t &data16(uint32_t index) {
-        return data16()[index];
-    }
-
-    inline uint8_t *data8() {
-        return reinterpret_cast<uint8_t *>(&(data_[0]));
-    }
-    inline const uint8_t *data8() const {
-        return reinterpret_cast<const uint8_t *>(&(data_[0]));
-    }
-    inline uint8_t &data8(uint32_t index) {
-        return data8()[index];
-    }
+    uint8_t data_[0];
 
   public:
-    static uint32_t CalculateSize8(uint32_t length) {
+    static uint32_t CalculateSize(uint32_t length) {
         return sizeof(FlatString) + length;
-    }
-    static uint32_t CalculateSize16(uint32_t length) {
-        return sizeof(FlatString) + (length * 2);
     }
 
     inline FlatString(const uint8_t *data) : String() {
-        WH_ASSERT(is8Bit());
         uint32_t len = length();
         for (uint32_t i = 0; i < len; i++)
-            data8(i) = data[i];
-    }
-
-    inline FlatString(const uint16_t *data) : String() {
-        WH_ASSERT(is16Bit());
-        uint32_t len = length();
-        for (uint32_t i = 0; i < len; i++)
-            data16(i) = data[i];
+            data_[i] = data[i];
     }
 
     static FlatString *Create(AllocationContext &cx,
                               const uint8_t *data, uint32_t length)
     {
-        return cx.createSized<FlatString>(CalculateSize8(length), data);
-    }
-
-    static FlatString *Create(AllocationContext &cx,
-                              const uint16_t *data, uint32_t length)
-    {
-        return cx.createSizedFlagged<FlatString>(CalculateSize16(length),
-                                                 FLAG_16BIT, data);
+        return cx.createSized<FlatString>(CalculateSize(length), data);
     }
 
     inline uint32_t length() const {
         uint32_t size = SlabThing::From(this)->allocSize();
-        if (is16Bit()) {
-            WH_ASSERT((size & 1) == 0);
-            size /= 2;
-        }
-        return size;
+        return size - sizeof(FlatString);
     }
 
-    inline bool is16Bit() const {
-        return SlabThing::From(this)->flags() & FLAG_16BIT;
-    }
-    inline bool is8Bit() const {
-        return !is16Bit();
-    }
-
-    inline const uint8_t *data8Bit() const {
-        WH_ASSERT(is8Bit());
-        return data8();
-    }
-
-    inline const uint16_t *data16Bit() const {
-        WH_ASSERT(is16Bit());
-        return data16();
+    inline const uint8_t *data() const {
+        return &(data_[0]);
     }
 
     inline uint32_t charAt(uint32_t idx) const {
         WH_ASSERT(idx < length());
-        if (is16Bit())
-            return data16Bit()[idx];
-        return data8Bit()[idx];
+        // TODO: treat string as utf-8.
+        return data_[idx];
     }
 };
 
