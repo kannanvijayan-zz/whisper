@@ -12,8 +12,6 @@ template <typename U> struct FNVHashParams {};
 
 template <> struct FNVHashParams<uint32_t> {
     typedef uint32_t HashT;
-    static constexpr HashT PRIME = (HashT(1u) << 24) + (HashT(1u) << 8) + 0x93;
-    static constexpr HashT OFFSET = 2166136261ul;
 };
 template <> struct FNVHashParams<uint64_t> {
     typedef uint64_t HashT;
@@ -22,28 +20,29 @@ template <> struct FNVHashParams<uint64_t> {
 };
 
 
-template <typename T>
 class FNVHash
 {
-  public:
-    typedef T HashT;
-
   private:
-    HashT hash_;
+    uint32_t hash_;
+
+    static constexpr uint32_t PRIME = (static_cast<uint32_t>(1u) << 24) |
+                                      (static_cast<uint32_t>(1u) << 8)  |
+                                      0x93;
+    static constexpr uint32_t OFFSET = 2166136261UL;
 
   public:
-    inline FNVHash() : hash_(FNVHashParams<T>::FNV_OFFSET) {}
+    inline FNVHash() : hash_(OFFSET) {}
 
     inline void update(uint8_t octet) {
         hash_ ^= octet;
-        hash_ *= FNVHashParams<T>::FNV_PRIME;
+        hash_ *= PRIME;
     }
 
-    inline HashT digest() const {
+    inline uint32_t digest() const {
         return hash_;
     }
 
-    inline HashT finish(uint8_t octet) {
+    inline uint32_t finish(uint8_t octet) {
         update(octet);
         return digest();
     }
