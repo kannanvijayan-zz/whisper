@@ -71,8 +71,7 @@ class String
         return reinterpret_cast<const FlatString *>(this);
     }
 
-    inline uint32_t length() const;
-    inline uint32_t charAt(uint32_t idx) const;
+    inline uint32_t bytes() const;
 };
 
 //
@@ -84,35 +83,29 @@ class FlatString : public String
     uint8_t data_[0];
 
   public:
-    static uint32_t CalculateSize(uint32_t length) {
-        return sizeof(FlatString) + length;
+    static uint32_t CalculateSize(uint32_t bytes) {
+        return sizeof(FlatString) + bytes;
     }
 
     inline FlatString(const uint8_t *data) : String() {
-        uint32_t len = length();
+        uint32_t len = bytes();
         for (uint32_t i = 0; i < len; i++)
             data_[i] = data[i];
     }
 
     static FlatString *Create(AllocationContext &cx,
-                              const uint8_t *data, uint32_t length)
+                              const uint8_t *data, uint32_t bytes)
     {
-        return cx.createSized<FlatString>(CalculateSize(length), data);
+        return cx.createSized<FlatString>(CalculateSize(bytes), data);
     }
 
-    inline uint32_t length() const {
+    inline uint32_t bytes() const {
         uint32_t size = SlabThing::From(this)->allocSize();
         return size - sizeof(FlatString);
     }
 
     inline const uint8_t *data() const {
         return &(data_[0]);
-    }
-
-    inline uint32_t charAt(uint32_t idx) const {
-        WH_ASSERT(idx < length());
-        // TODO: treat string as utf-8.
-        return data_[idx];
     }
 };
 

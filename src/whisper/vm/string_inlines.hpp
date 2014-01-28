@@ -9,14 +9,15 @@ namespace VM {
 
 
 inline uint32_t
-String::length() const
+String::bytes() const
 {
     if (isFlatString())
-        return toFlatString()->length();
+        return toFlatString()->bytes();
     WH_UNREACHABLE("Invalid string kind.");
     return UINT32_MAX;
 }
 
+/*
 inline uint32_t
 String::charAt(uint32_t idx) const
 {
@@ -25,6 +26,7 @@ String::charAt(uint32_t idx) const
         return toFlatString()->charAt(idx);
     WH_UNREACHABLE("Invalid string kind.");
 }
+*/
 
 
 } // namespace VM
