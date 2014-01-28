@@ -2,6 +2,7 @@
 #include <iostream>
 #include "common.hpp"
 #include "allocators.hpp"
+#include "fnv_hash.hpp"
 #include "spew.hpp"
 #include "runtime.hpp"
 #include "runtime_inlines.hpp"
