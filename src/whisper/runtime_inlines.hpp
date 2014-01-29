@@ -88,13 +88,13 @@ AllocationContext::allocate(uint32_t size, SlabAllocType typeTag, uint8_t flags)
     // Initialize the header and maybe size ext word.
     if (large) {
         uint32_t hdrSize = SlabAllocHeader::ALLOCSIZE_MAX;
-        new (mem) SlabAllocHeader(cardNo, hdrSize, typeTag, flags);
-        new (mem + sizeof(word_t)) SlabSizeExtHeader(size);
-        return mem + sizeof(word_t) + sizeof(word_t);
+        new (mem) SlabSizeExtHeader(size);
+        new (mem + WordBytes) SlabAllocHeader(cardNo, hdrSize, typeTag, flags);
+        return mem + (2 * WordBytes);
     }
 
     new (mem) SlabAllocHeader(cardNo, size, typeTag);
-    return mem + sizeof(word_t);
+    return mem + WordBytes;
 }
 
 

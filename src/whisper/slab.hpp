@@ -383,6 +383,9 @@ class SlabAllocHeader
     inline uint32_t allocSize() const {
         return (bits_ >> ALLOCSIZE_SHIFT) & ALLOCSIZE_MAX;
     }
+    inline bool isLarge() const {
+        return allocSize() == ALLOCSIZE_MAX;
+    }
 
     inline SlabAllocType allocType() const {
         return static_cast<SlabAllocType>(
@@ -498,31 +501,26 @@ class SlabThing
         return reinterpret_cast<const SlabThing *>(ptr);
     }
 
-    inline bool isLarge() const {
-        // Check the low bit of the preceding word.
-        // If it's large, it'll be a sizeExt word with the low bit
-        // set to 1.
-        return *back_() & 0x1u;
-    }
-
     inline const SlabAllocHeader &allocHeader() const {
-        return *reinterpret_cast<const SlabAllocHeader *>(
-                    isLarge() ? back2_() : back_());
+        return *reinterpret_cast<const SlabAllocHeader *>(back_());
     }
 
     inline SlabAllocHeader &allocHeader() {
-        return *reinterpret_cast<SlabAllocHeader *>(
-                    isLarge() ? back2_() : back_());
+        return *reinterpret_cast<SlabAllocHeader *>(back_());
+    }
+
+    inline bool isLarge() const {
+        return allocHeader().isLarge();
     }
 
     inline const SlabSizeExtHeader &sizeExtHeader() const {
         WH_ASSERT(isLarge());
-        return *reinterpret_cast<const SlabSizeExtHeader *>(back_());
+        return *reinterpret_cast<const SlabSizeExtHeader *>(back2_());
     }
 
     inline SlabSizeExtHeader &sizeExtHeader() {
         WH_ASSERT(isLarge());
-        return *reinterpret_cast<SlabSizeExtHeader *>(back_());
+        return *reinterpret_cast<SlabSizeExtHeader *>(back2_());
     }
 
     inline uint32_t allocSize() const {
