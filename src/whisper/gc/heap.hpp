@@ -10,39 +10,6 @@ namespace Whisper {
 class SlabThing;
 
 
-namespace GC {
-
-
-//
-// HeapTraits<T>()
-//
-// Specializations of HeapTrait must be provided by every heap-marked
-// type.  The specialization must contain the following definitions:
-//
-//  static constexpr bool SPECIALIZED = true;
-//      Marker boolean indicating that HeapTraits has been specialized
-//      for this type.
-//
-//  template <typename Marker> void MARK(Marker &marker, const T &t);
-//      Method to scan the heap-marked thing for references.
-//      For each heap reference contained within the heap-marked thing,
-//      the method |scanner(ptr, addr, discrim)| should be called
-//      once, where |ptr| is pointer (of type SlabThing*), |addr|
-//      is the address of the pointer (of type void*), and |discrim|
-//      is a T-specific uint32_t value that helps distinguish the
-//      format of the reference being held.
-//
-//  void UPDATE(void *addr, uint32_t discrim, SlabThing *newPtr);
-//      Method to update a previously-scanned pointer address with
-//      a relocated pointer.
-//
-// Note that if a heap-wrapped type embeds any other heap-types,
-// it should define MARK to recursively call MARK on the embedded
-// values, using the same marker.
-//
-template <typename T> struct HeapTraits;
-
-
 //
 // HeapHolder
 //
@@ -52,8 +19,8 @@ template <typename T> struct HeapTraits;
 template <typename T>
 class HeapHolder
 {
-    static_assert(HeapTraits<T>::SPECIALIZED,
-                  "Heap traits has not been specialized for type.");
+    static_assert(AllocTraits<T>::SPECIALIZED,
+                  "AllocTraits has not been specialized for type.");
 
   private:
     T val_;
@@ -121,8 +88,6 @@ class HeapHolder
 };
 
 
-
-} // namespace GC
 } // namespace Whisper
 
 #endif // WHISPER__GC__HEAP_HPP

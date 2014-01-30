@@ -7,7 +7,6 @@
 #include "gc/heap.hpp"
 
 namespace Whisper {
-namespace GC {
 
 
 //
@@ -149,7 +148,6 @@ class MutHeapHandleHolder
 
 
 
-} // namespace GC
 } // namespace Whisper
 
 #endif // WHISPER__GC__HANDLE_HPP

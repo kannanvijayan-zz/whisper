@@ -10,10 +10,11 @@ namespace GC {
 
 
 inline
-LocalHolderBase::LocalHolderBase(ThreadContext *threadContext, LocalKind kind)
+LocalHolderBase::LocalHolderBase(ThreadContext *threadContext,
+                                 AllocFormat format)
   : threadContext_(threadContext),
     next_(threadContext_->localHolders()),
-    kind_(kind)
+    format_(format)
 {}
 
 
