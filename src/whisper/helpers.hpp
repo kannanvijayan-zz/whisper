@@ -426,6 +426,14 @@ class Bitfield : public BaseBitfield<WORD, FIELD, BITS, SHIFT>
 
     inline Bitfield(WORD &word) : BaseType(word) {}
 
+    inline void initValue(FIELD val) {
+        WH_ASSERT(BaseType::ValueFits(val));
+        WORD fieldVal = static_cast<FIELD>(val) & BaseType::LowMask;
+        // initValue can assume that field bits are already zero,
+        // so bits do not need to be zeroed before or-mask is applied.
+        this->word_ |= fieldVal << BaseType::Shift;
+    }
+
     inline void setValue(FIELD val) {
         WH_ASSERT(BaseType::ValueFits(val));
 
