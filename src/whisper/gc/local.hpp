@@ -3,7 +3,7 @@
 
 #include "common.hpp"
 #include "debug.hpp"
-#include "gc/traits.hpp"
+#include "gc/core.hpp"
 
 namespace Whisper {
 

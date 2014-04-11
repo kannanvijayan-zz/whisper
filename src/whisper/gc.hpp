@@ -5,6 +5,7 @@
 #include "gc/heap.hpp"
 #include "gc/local.hpp"
 #include "gc/handle.hpp"
+#include "gc/field.hpp"
 
 
 namespace Whisper {
