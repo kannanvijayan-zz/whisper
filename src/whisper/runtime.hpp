@@ -89,41 +89,15 @@ class AllocationContext
     template <typename ObjT, typename... Args>
     inline ObjT *createFlagged(uint8_t flags, Args... args);
 
-    template <typename ObjT, typename... Args>
-    inline ObjT *createSized(uint32_t size, Args... args);
-
-    template <typename ObjT, typename... Args>
-    inline ObjT *createSizedFlagged(uint32_t size, uint8_t flags, Args... args);
-
   private:
     template <bool Traced>
-    inline uint8_t *allocate(uint32_t size, SlabAllocType typeTag,
-                             uint8_t flags);
+    inline uint8_t *allocate(uint32_t size, AllocFormat fmt, uint8_t flags);
 
     template <bool Traced>
-    inline uint8_t *allocate(uint32_t size, SlabAllocType typeTag) {
-        return allocate<Traced>(size, typeTag, 0);
+    inline uint8_t *allocate(uint32_t size, AllocFormat fmt) {
+        return allocate<Traced>(size, fmt, 0);
     }
 };
-
-
-//
-// AllocationTypeTrait
-//
-// For an AllocationContext to allocate an object using |create|, it needs
-// to be able to automatically determine information about the object from
-// its C++ type.
-//
-// Classes which expect to be usable with the |create| method should provide
-// a specialization for this struct that defines the following parameters:
-//
-//  static constexpr SlabAllocType ALLOC_TYPE;
-//      The SlabAllocType for the C++ type.
-//
-//  static constexpr bool TRACED;
-//      Whether the allocated object needs to be traced by GC or not.
-//
-template <typename T> struct AllocationTraits;
 
 //
 // ThreadContext

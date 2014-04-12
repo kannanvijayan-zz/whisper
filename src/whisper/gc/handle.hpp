@@ -10,8 +10,8 @@ namespace Whisper {
 
 
 //
-// Handles are const pointers to stack-rooted or heap-marked things which
-// are already managed.
+// Handles are const pointers to values rooted on the stack with
+// Local.
 //
 
 template <typename T>
@@ -24,6 +24,7 @@ class HandleHolder
     inline HandleHolder(const LocalHolder<T> &stackVal)
       : valAddr_(&stackVal)
     {}
+
     inline HandleHolder(const HeapHolder<T> &heapVal)
       : valAddr_(&heapVal)
     {}

@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "helpers.hpp"
 #include "debug.hpp"
+#include "gc/core.hpp"
 
 namespace Whisper {
 
@@ -37,8 +38,8 @@ namespace Whisper {
 //      +-----------------------+
 //
 // Slabs come in two basic forms: standard slab, which are of a fixed
-// size and allocate multiple "small" objects, and singleton slabs,
-// which are of variable sized, and hold a single "large" object.
+// size and allocate multiple small objects, and singleton slabs,
+// which vary in size, and hold a single large object.
 //
 // Singleton slabs are not necessarily larger than standard slabs.
 // They are simply used for objects which are larger than a certain
@@ -56,35 +57,42 @@ namespace Whisper {
 // is allocated in them, and thus the start of the object allocated on it
 // will be in the first card.
 //
-// NOTE: The first 8 bytes of the allocation area are a pointer to the
-// slab structure.
+// Additionally, The first ptr-sized word of the allocation area stores a
+// pointer back to the slab structure.  If the allocated object stores the
+// cardNo it starts on, then a pointer to the object can be mapped back to
+// the Slab as follows:
+//
+//      Slab *PointerToSlab(SlabThing *ptr):
+//          // Get cardNo
+//          unsigned cardNo = ptr->cardNo
+//
+//          // Get card-aligned pointer
+//          Card *card = AlignPtrDown((Card *) ptr, CARD_SIZE)
+//
+//          // Go to card 0
+//          char *card0 = ((char *) card) - (cardNo * CARD_SIZE)
+//
+//          // Read slab pointer.
+//          return *((Slab **) card0)
+//
+// This is a relatively efficient operation, in machine code it is:
+//      1 memory read (cardNo)
+//      1 bit-and (ptr & ~(CARD_SIZE - 1))
+//      1 shift (cardNo * CARD_SIZE)
+//      1 subtract (card - (cardNo * CARD_SIZE))
+//      1 memory read (*card0)
+//
+//  Working out to two memory reads and three fast int ops.
 //
 
 class Slab
 {
   friend class SlabList;
   public:
-    static constexpr uint32_t AllocAlign = sizeof(void *);
+    static constexpr uint32_t AllocAlign = sizeof(uint64_t);
     static constexpr uint32_t CardSizeLog2 = 10;
     static constexpr uint32_t CardSize = 1 << CardSizeLog2;
     static constexpr uint32_t AlienRefSpaceSize = 512;
-
-    enum Generation : uint8_t
-    {
-        // Hatchery is where new objects are created.  It contains
-        // only standard sized slabs and has a fixed maximum size.
-        Hatchery,
-
-        // Nursery is where recently created slabs are stored until
-        // a subsequent cull.  The nursery never "grows".  Whenever
-        // the hatchery becomes full, the nursery (if it contains
-        // slabs) is garbage-collected and cleared, and then the hatchery
-        // pages moved directly into it.
-        Nursery,
-
-        // Tenured generation is the oldest generation of objects.
-        Tenured
-    };
 
     static uint32_t PageSize();
 
@@ -102,8 +110,8 @@ class Slab
     static uint32_t NumHeaderCardsForDataCards(uint32_t dataCards);
 
     // Allocate/destroy slabs.
-    static Slab *AllocateStandard(Generation gen);
-    static Slab *AllocateSingleton(uint32_t objectSize, Generation gen);
+    static Slab *AllocateStandard(GCGen gen);
+    static Slab *AllocateSingleton(uint32_t objectSize, GCGen gen);
     static void Destroy(Slab *slab);
 
   private:
@@ -131,11 +139,11 @@ class Slab
     uint32_t dataCards_;
 
     // Slab generation.
-    Generation gen_;
+    GCGen gen_;
 
     Slab(void *region, uint32_t regionSize,
          uint32_t headerCards, uint32_t dataCards,
-         Generation gen);
+         GCGen gen);
 
     ~Slab() {}
 
@@ -165,7 +173,7 @@ class Slab
         return dataCards_;
     }
 
-    Generation gen() const {
+    GCGen gen() const {
         return gen_;
     }
 
@@ -213,7 +221,7 @@ class Slab
 //
 // SlabList
 //
-// A list implementation that uses the next/forward pointers in slabs.
+// A list implementation that uses the embedded next/forward pointers in slabs.
 //
 class SlabList
 {
@@ -291,160 +299,13 @@ class SlabList
     }
 };
 
-//
-// SlabAllocType
-//
-// Objects that are allocated within slabs must each be described
-// with a specific SlabAllocType that allows the runtime to
-// dispatch various operations on it, such as tracing for garbage
-// collection.
-//
-#define WHISPER_DEFN_SLAB_ALLOC_TYPES(_) \
-    _(Array)                \
-    _(Vector)               \
-    _(VectorContents)       \
-    _(HashTable)            \
-    _(HashTableContents)    \
-    _(Module)               \
-    _(FlatString)           \
-    _(Type)
-
-enum class SlabAllocType : uint32_t
-{
-    INVALID = 0,
-#define ENUM_(name) name,
-    WHISPER_DEFN_SLAB_ALLOC_TYPES(ENUM_)
-#undef ENUM_
-    LIMIT
-};
-
-inline constexpr uint32_t SlabAllocTypeValue(SlabAllocType sat) {
-    return static_cast<uint32_t>(sat);
-}
-
-inline constexpr bool IsValidSlabAllocType(SlabAllocType sat) {
-    return (sat > SlabAllocType::INVALID) && (sat < SlabAllocType::LIMIT);
-}
-
-
-//
-// SlabAllocHeader
-//
-// A single word_t that describes the allocation.  Its format is cosmetically
-// different for 32-bit and 64-bit systems, in that the 64-bit word has
-// zeros for its high 32 bits.
-//
-// The low bit of a SlabAllocHeader is 0.  This is to enable the runtime
-// to distinguish a SlabAllocHeader from a SlabSizeExtHeader.
-//
-// Format:
-//             24        16         8         0
-//      CCCC-CCCC SSSS-SSSS TTTT-TTTT FFFF-0000
-//
-class SlabAllocHeader
-{
-  public:
-    static constexpr unsigned CARDNUM_SHIFT = 24;
-    static constexpr uint32_t CARDNUM_MAX = 0xffu;
-
-    static constexpr unsigned ALLOCSIZE_SHIFT = 16;
-    static constexpr uint32_t ALLOCSIZE_MAX = 0xffu;
-
-    static constexpr unsigned ALLOCTYPE_SHIFT = 8;
-    static constexpr uint32_t ALLOCTYPE_MAX = 0xffu;
-
-    static constexpr unsigned FLAGS_SHIFT = 4;
-    static constexpr uint32_t FLAGS_MAX = 0xfu;
-
-    static_assert(SlabAllocTypeValue(SlabAllocType::LIMIT) <= ALLOCTYPE_MAX,
-                  "Too many types in SlabAllocType.");
-
-  private:
-    word_t bits_;
-
-  public:
-    inline SlabAllocHeader(uint32_t cardNum, uint32_t allocSize,
-                           SlabAllocType allocType, uint32_t flags=0)
-      : bits_((cardNum << CARDNUM_SHIFT) |
-              (allocSize << ALLOCSIZE_SHIFT) |
-              (SlabAllocTypeValue(allocType) << ALLOCTYPE_SHIFT) |
-              (flags << FLAGS_SHIFT))
-    {
-        WH_ASSERT(cardNum <= CARDNUM_MAX);
-        WH_ASSERT(allocSize <= ALLOCSIZE_MAX);
-        WH_ASSERT(IsValidSlabAllocType(allocType));
-        WH_ASSERT(flags <= FLAGS_MAX);
-    }
-
-    inline uint32_t cardNum() const {
-        return (bits_ >> CARDNUM_SHIFT) & CARDNUM_MAX;
-    }
-
-    inline uint32_t allocSize() const {
-        return (bits_ >> ALLOCSIZE_SHIFT) & ALLOCSIZE_MAX;
-    }
-    inline bool isLarge() const {
-        return allocSize() == ALLOCSIZE_MAX;
-    }
-
-    inline SlabAllocType allocType() const {
-        return static_cast<SlabAllocType>(
-                (bits_ >> ALLOCTYPE_SHIFT) & ALLOCTYPE_MAX);
-    }
-
-    inline uint8_t flags() const {
-        return (bits_ >> FLAGS_SHIFT) & FLAGS_MAX;
-    }
-
-    inline void setFlags(uint8_t flags) {
-        WH_ASSERT(flags <= FLAGS_MAX);
-        bits_ &= ~(static_cast<uint32_t>(FLAGS_MAX) << FLAGS_SHIFT);
-        bits_ |= static_cast<uint32_t>(flags) << FLAGS_SHIFT;
-    }
-};
-
-
-//
-// SlabSizeExtHeader
-//
-// For allocations with a size greater than SlabAllocHeader::SIZE_MAX,
-// this header word follows the SlabAllocHeader word.
-//
-// The value is shifted up by 1 bit and the low bit set to 1, to enable
-// the runtime to distinguish between this size ext word and the alloc
-// header word.
-//
-// Format:
-//             24        16         8         0
-//      SSSS-SSSS SSSS-SSSS SSSS-SSSS SSSS-SSS1
-//
-class SlabSizeExtHeader
-{
-  public:
-    static constexpr unsigned ALLOCSIZE_SHIFT = 1;
-    static constexpr uint32_t ALLOCSIZE_MAX = 0x7fffffffu;
-
-  private:
-    word_t bits_;
-
-  public:
-    inline SlabSizeExtHeader(uint32_t allocSize)
-      : bits_((allocSize << ALLOCSIZE_SHIFT) & 0x1u)
-    {
-        WH_ASSERT(allocSize <= ALLOCSIZE_MAX);
-    }
-
-    inline uint32_t allocSize() const {
-        return (bits_ >> ALLOCSIZE_SHIFT) & ALLOCSIZE_MAX;
-    }
-};
-
 class SlabThing;
 
 //
 // All objects which are allocated on the slab must provide a
-// specialization for SlabThingTraits that enables the extraction
-// of a SlabThing pointer from a pointer to the object.
+// specialization for SlabThingTraits.  Registering a type with
+// this traits object confirms that it is ok to convert a pointer
+// to the type to a pointer to the object.
 //
 template <typename T>
 struct SlabThingTraits
@@ -454,6 +315,18 @@ struct SlabThingTraits
     
     static constexpr bool SPECIALIZED = false;
     // static constexpr bool SPECIALIZED = true;
+
+    // Specify whether this type of SlabThing needs to be traced
+    // for pointers.
+    //
+    // static constexpr bool TRACED;
+
+    // Method to calculate the size of a SlabThing object being
+    // allocated.  It can be called with any combination of arguments
+    // and argument types that are used on the constructor.
+    //
+    // template <typename... ARGS>
+    // static uint32_t SIZE_OF(ARGS... args);
 };
 
 //
@@ -469,24 +342,6 @@ class SlabThing
   private:
     SlabThing() = delete;
 
-    inline word_t *back_() {
-        return reinterpret_cast<word_t *>(
-                    reinterpret_cast<uint8_t *>(this) - sizeof(word_t));
-    }
-    inline const word_t *back_() const {
-        return reinterpret_cast<const word_t *>(
-                    reinterpret_cast<const uint8_t *>(this) - sizeof(word_t));
-    }
-
-    inline word_t *back2_() {
-        return reinterpret_cast<word_t *>(
-                    reinterpret_cast<uint8_t *>(this) - sizeof(word_t));
-    }
-    inline const word_t *back2_() const {
-        return reinterpret_cast<const word_t *>(
-                    reinterpret_cast<const uint8_t *>(this) - sizeof(word_t));
-    }
-
   public:
     template <typename T>
     static inline SlabThing *From(T *ptr) {
@@ -501,50 +356,40 @@ class SlabThing
         return reinterpret_cast<const SlabThing *>(ptr);
     }
 
-    inline const SlabAllocHeader &allocHeader() const {
-        return *reinterpret_cast<const SlabAllocHeader *>(back_());
+    inline AllocHeader &allocHeader() {
+        return reinterpret_cast<AllocHeader *>(this)[-1];
+    }
+    inline const AllocHeader &allocHeader() const {
+        return reinterpret_cast<const AllocHeader *>(this)[-1];
     }
 
-    inline SlabAllocHeader &allocHeader() {
-        return *reinterpret_cast<SlabAllocHeader *>(back_());
-    }
-
-    inline bool isLarge() const {
-        return allocHeader().isLarge();
-    }
-
-    inline const SlabSizeExtHeader &sizeExtHeader() const {
-        WH_ASSERT(isLarge());
-        return *reinterpret_cast<const SlabSizeExtHeader *>(back2_());
-    }
-
-    inline SlabSizeExtHeader &sizeExtHeader() {
-        WH_ASSERT(isLarge());
-        return *reinterpret_cast<SlabSizeExtHeader *>(back2_());
-    }
-
-    inline uint32_t allocSize() const {
-        return isLarge() ? sizeExtHeader().allocSize()
-                         : allocHeader().allocSize();
+    inline uint32_t objectSize() const {
+        return allocHeader().size();
     }
 
     inline const void *objectEnd() const {
-        return reinterpret_cast<const uint8_t *>(this) + allocSize();
+        return reinterpret_cast<const uint8_t *>(this) + objectSize();
     }
 
-    inline uint8_t flags() const {
-        return allocHeader().flags();
+    inline uint8_t userData() const {
+        return allocHeader().userData();
     }
+
+    inline GCGen gcGen() const {
+        return allocHeader().gcGen();
+    }
+
+    // define is
 #define CHK_(name) \
     inline bool is##name() const { \
-        return allocHeader().allocType() == SlabAllocType::name; \
+        return allocHeader().format() == AllocFormat::name; \
     }
-    WHISPER_DEFN_SLAB_ALLOC_TYPES(CHK_)
+    WHISPER_DEFN_GC_ALLOC_FORMATS(CHK_)
 #undef CHK_
 };
 
 //
-// Specialize SlabThingTratis for SlabThing itself.
+// Specialize SlabThingTraits for SlabThing itself.
 //
 template <>
 struct SlabThingTraits<SlabThing>

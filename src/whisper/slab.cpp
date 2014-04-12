@@ -140,7 +140,7 @@ Slab::NumHeaderCardsForDataCards(uint32_t dataCards)
 }
 
 /*static*/ Slab *
-Slab::AllocateStandard(Generation gen)
+Slab::AllocateStandard(GCGen gen)
 {
     size_t size = AlignIntUp<size_t>(StandardSlabCards() * CardSize,
                                      PageSize());
@@ -158,7 +158,7 @@ Slab::AllocateStandard(Generation gen)
 }
 
 /*static*/ Slab *
-Slab::AllocateSingleton(uint32_t objectSize, Generation gen)
+Slab::AllocateSingleton(uint32_t objectSize, GCGen gen)
 {
     uint32_t dataCards = NumDataCardsForObjectSize(objectSize);
     uint32_t headerCards = NumHeaderCardsForDataCards(dataCards);
@@ -189,7 +189,7 @@ Slab::Destroy(Slab *slab)
 
 Slab::Slab(void *region, uint32_t regionSize,
            uint32_t headerCards, uint32_t dataCards,
-           Generation gen)
+           GCGen gen)
   : region_(region), regionSize_(regionSize),
     headerCards_(headerCards), dataCards_(dataCards),
     gen_(gen)

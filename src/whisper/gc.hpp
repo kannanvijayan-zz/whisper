@@ -2,7 +2,6 @@
 #define WHISPER__GC_HPP
 
 #include "slab.hpp"
-#include "gc/heap.hpp"
 #include "gc/local.hpp"
 #include "gc/handle.hpp"
 #include "gc/field.hpp"

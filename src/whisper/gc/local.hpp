@@ -12,7 +12,10 @@ class ThreadContext;
 //
 // LocalHolderBase
 //
-// Untyped base class for stack-root holders.
+// Untyped base class for stack-root holders.  This class provides the
+// basic plumbing for all stack-rooted structures: a constructor that
+// registers the instance with a ThreadContext, and a destructor that
+// de-registers it.
 //
 
 class LocalHolderBase
@@ -42,7 +45,7 @@ class LocalHolderBase
 // LocalHolder
 //
 // Checked holder class that refers to a stack-rooted
-// thing.
+// structure.
 //
 
 template <typename T>

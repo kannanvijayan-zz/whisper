@@ -16,36 +16,22 @@ template <typename ObjT, typename... Args>
 inline ObjT *
 AllocationContext::create(Args... args)
 {
-    return createSizedFlagged<ObjT, Args...>(sizeof(ObjT), 0,
-                                             std::forward<Args>(args)...);
+    return createFlagged<ObjT, Args...>(0, std::forward<Args>(args)...);
 }
 
 template <typename ObjT, typename... Args>
 inline ObjT *
 AllocationContext::createFlagged(uint8_t flags, Args... args)
 {
-    return createSizedFlagged<ObjT, Args...>(sizeof(ObjT), flags, args...);
-}
+    WH_ASSERT(flags <= AllocHeader::UserDataMax);
 
-template <typename ObjT, typename... Args>
-inline ObjT *
-AllocationContext::createSized(uint32_t size, Args... args)
-{
-    return createSizedFlagged<ObjT, Args...>(size, 0, args...);
-}
-
-template <typename ObjT, typename... Args>
-inline ObjT *
-AllocationContext::createSizedFlagged(uint32_t size, uint8_t flags,
-                                      Args... args)
-{
+    uint32_t size = SlabThingTraits<ObjT>::template SIZE_OF<Args...>(args...);
     WH_ASSERT(size >= sizeof(ObjT));
-    WH_ASSERT(flags <= SlabAllocHeader::FLAGS_MAX);
 
     // Allocate the space for the object.
-    constexpr bool TRACED = AllocationTraits<ObjT>::TRACED;
-    constexpr SlabAllocType ALLOC_TYPE = AllocationTraits<ObjT>::ALLOC_TYPE;
-    uint8_t *mem = allocate<TRACED>(size, ALLOC_TYPE, flags);
+    constexpr bool TRACED = SlabThingTraits<ObjT>::TRACED;
+    constexpr AllocFormat ALLOC_FMT = AllocTraits<ObjT>::FORMAT;
+    uint8_t *mem = allocate<TRACED>(size, ALLOC_FMT, flags);
     if (!mem)
         return nullptr;
 
@@ -57,18 +43,12 @@ AllocationContext::createSizedFlagged(uint32_t size, uint8_t flags,
 
 template <bool Traced>
 inline uint8_t *
-AllocationContext::allocate(uint32_t size, SlabAllocType typeTag, uint8_t flags)
+AllocationContext::allocate(uint32_t size, AllocFormat fmt, uint8_t flags)
 {
-    WH_ASSERT(flags <= SlabAllocHeader::FLAGS_MAX);
+    WH_ASSERT(flags <= AllocHeader::UserDataMax);
 
-    bool large = size >= SlabAllocHeader::ALLOCSIZE_MAX;
-
-    // Add HeaderSize to size.
-    uint32_t allocSize = size + sizeof(word_t);
-    if (large)
-        allocSize += sizeof(word_t);
-
-    allocSize = AlignIntUp<uint32_t>(allocSize, Slab::AllocAlign);
+    uint32_t allocSize = AlignIntUp<uint32_t>(size, Slab::AllocAlign)
+                         + sizeof(AllocFormat);
 
     // Allocate the space.
     uint8_t *mem = Traced ? slab_->allocateHead(allocSize)
@@ -85,16 +65,9 @@ AllocationContext::allocate(uint32_t size, SlabAllocType typeTag, uint8_t flags)
     // Figure out the card number.
     uint32_t cardNo = slab_->calculateCardNumber(mem);
 
-    // Initialize the header and maybe size ext word.
-    if (large) {
-        uint32_t hdrSize = SlabAllocHeader::ALLOCSIZE_MAX;
-        new (mem) SlabSizeExtHeader(size);
-        new (mem + WordBytes) SlabAllocHeader(cardNo, hdrSize, typeTag, flags);
-        return mem + (2 * WordBytes);
-    }
-
-    new (mem) SlabAllocHeader(cardNo, size, typeTag);
-    return mem + WordBytes;
+    // Initialize the header.
+    AllocHeader *hdr = new (mem) AllocHeader(fmt, slab_->gen(), cardNo, size);
+    return reinterpret_cast<uint8_t *>(hdr->payload());
 }
 
 

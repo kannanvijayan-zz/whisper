@@ -48,17 +48,33 @@ struct SlabThingTraits<VM::Array<T>>
     SlabThingTraits(const SlabThingTraits &other) = delete;
 
     static constexpr bool SPECIALIZED = true;
+    static constexpr bool TRACED = VM::ArrayTraits<T>::TRACED;
+
+    template <typename... Args>
+    static uint32_t SIZE_OF(uint32_t size, Args... args) {
+        return sizeof(VM::Array<T>) + (size * sizeof(T));
+    }
 };
 
-// Specialize Array for AllocationTraits, using ArrayTraits
-// Arrays are traced by default, but array specializations for primitive types
-// are not traced.
-template <typename T>
-struct AllocationTraits<VM::Array<T>>
-{
-    static constexpr SlabAllocType ALLOC_TYPE = SlabAllocType::Array;
-    static constexpr bool TRACED = VM::ArrayTraits<T>::TRACED;
-};
+// Provide pre-specializations of AllocFormatTraits for common arrays.
+#define ALLOCFMT_DEF_(type, formatName) \
+    template <> \
+    struct AllocFormatTraits<AllocFormat::formatName> { \
+        typedef VM::Array<type> TYPE; \
+    }
+    ALLOCFMT_DEF_(bool, BoolArray);
+    ALLOCFMT_DEF_(int8_t, Int8Array);
+    ALLOCFMT_DEF_(uint8_t, Uint8Array);
+    ALLOCFMT_DEF_(int16_t, Int16Array);
+    ALLOCFMT_DEF_(uint16_t, Uint16Array);
+    ALLOCFMT_DEF_(int32_t, Int32Array);
+    ALLOCFMT_DEF_(uint32_t, Uint32Array);
+    ALLOCFMT_DEF_(int64_t, Int64Array);
+    ALLOCFMT_DEF_(uint64_t, Uint64Array);
+    ALLOCFMT_DEF_(float, FloatArray);
+    ALLOCFMT_DEF_(double, DoubleArray);
+    ALLOCFMT_DEF_(SlabThing *, PointerArray);
+#undef ALLOCFMT_DEF_
 
 
 namespace VM {
@@ -91,20 +107,6 @@ class Array
             new (&vals_[i]) T(std::forward<Args>(args)...);
     }
 
-    static Array<T> *Create(AllocationContext &cx, uint32_t length,
-                            const T *vals)
-    {
-        return cx.createSized<Array<T>>(CalculateSize(length), vals);
-    }
-
-    template <typename... Args>
-    static Array<T> *Create(AllocationContext &cx, uint32_t length,
-                            Args... args)
-    {
-        return cx.createSized<Array<T>>(CalculateSize(length),
-                                        std::forward<Args>(args)...);
-    }
-
     inline uint32_t length() const {
         return SlabThing::From(this)->allocSize() / sizeof(T);
     }
@@ -129,7 +131,7 @@ class Array
         WH_ASSERT(idx < length());
 
         // If the array is not traced, setting is simple.
-        if (AllocationTraits<Array<T>>::TRACED)
+        if (SlabThingTraits<Array<T>>::TRACED)
             get(idx).set(val, this);
         else
             getRaw(idx) = val;
