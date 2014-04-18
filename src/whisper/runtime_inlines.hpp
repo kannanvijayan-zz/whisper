@@ -29,9 +29,9 @@ AllocationContext::createFlagged(uint8_t flags, Args... args)
     WH_ASSERT(size >= sizeof(ObjT));
 
     // Allocate the space for the object.
-    constexpr bool TRACED = SlabThingTraits<ObjT>::TRACED;
-    constexpr AllocFormat ALLOC_FMT = AllocTraits<ObjT>::FORMAT;
-    uint8_t *mem = allocate<TRACED>(size, ALLOC_FMT, flags);
+    constexpr AllocFormat FMT = AllocTraits<ObjT>::FORMAT;
+    constexpr bool TRACED = AllocFormatTraits<FMT>::TRACED;
+    uint8_t *mem = allocate<TRACED>(size, FMT, flags);
     if (!mem)
         return nullptr;
 

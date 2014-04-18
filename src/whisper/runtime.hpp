@@ -111,7 +111,7 @@ class ThreadContext
 {
   friend class Runtime;
   friend class RunContext;
-  friend class LocalHolderBase;
+  friend class LocalBase;
   friend class RunActivationHelper;
   private:
     Runtime *runtime_;
@@ -121,7 +121,7 @@ class ThreadContext
     SlabList tenuredList_;
     RunContext *activeRunContext_;
     RunContext *runContextList_;
-    LocalHolderBase *localHolders_;
+    LocalBase *locals_;
     bool suppressGC_;
 
     unsigned int randSeed_;
@@ -160,8 +160,8 @@ class ThreadContext
         return activeRunContext_;
     }
 
-    inline LocalHolderBase *localHolders() const {
-        return localHolders_;
+    inline LocalBase *locals() const {
+        return locals_;
     }
 
     inline bool suppressGC() const {

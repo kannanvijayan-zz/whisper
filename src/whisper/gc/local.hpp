@@ -10,7 +10,7 @@ namespace Whisper {
 class ThreadContext;
 
 //
-// LocalHolderBase
+// LocalBase
 //
 // Untyped base class for stack-root holders.  This class provides the
 // basic plumbing for all stack-rooted structures: a constructor that
@@ -18,46 +18,72 @@ class ThreadContext;
 // de-registers it.
 //
 
-class LocalHolderBase
+class LocalBase
 {
   protected:
     ThreadContext *threadContext_;
-    LocalHolderBase *next_;
-    AllocFormat format_;
+    LocalBase *next_;
+    AllocHeader header_;
 
-    inline LocalHolderBase(ThreadContext *threadContext, AllocFormat format);
+    inline LocalBase(ThreadContext *threadContext, AllocFormat format);
+    inline ~LocalBase();
 
   public:
     inline ThreadContext *threadContext() const {
         return threadContext_;
     }
 
-    inline LocalHolderBase *next() const {
+    inline LocalBase *next() const {
         return next_;
     }
 
     inline AllocFormat format() const {
-        return format_;
+        return header_.format();
+    }
+
+    template <typename Scanner>
+    void SCAN(Scanner &scanner, void *start, void *end) const;
+
+    template <typename Updater>
+    void UPDATE(Updater &updater, void *start, void *end);
+
+  private:
+    void *dataAfter() {
+        class X : public LocalBase {
+          public:
+            word_t w;
+        };
+        return &(reinterpret_cast<X *>(this)->w);
+    }
+    const void *dataAfter() const {
+        class X : public LocalBase {
+          public:
+            word_t w;
+        };
+        return &(reinterpret_cast<const X *>(this)->w);
     }
 };
 
 //
-// LocalHolder
+// Local
 //
 // Checked holder class that refers to a stack-rooted
 // structure.
 //
 
 template <typename T>
-class LocalHolder : public LocalHolderBase
+class Local : public LocalBase
 {
+    static_assert(AllocTraits<T>::SPECIALIZED,
+                  "AllocTraits<T> not specialized.");
+
   private:
     T val_;
 
   public:
     template <typename... Args>
-    inline LocalHolder(ThreadContext *threadContext, Args... args)
-      : LocalHolderBase(threadContext, AllocTraits<T>::FORMAT),
+    inline Local(ThreadContext *threadContext, Args... args)
+      : LocalBase(threadContext, AllocTraits<T>::FORMAT),
         val_(std::forward<Args>(args)...)
     {}
 
@@ -89,13 +115,13 @@ class LocalHolder : public LocalHolderBase
         return &(get());
     }
 
-    inline LocalHolder<T> &operator =(const T &ref) {
+    inline const T &operator =(const T &ref) {
         set(ref);
-        return *this;
+        return ref;
     }
-    inline LocalHolder<T> &operator =(T &&ref) {
+    inline const T &operator =(T &&ref) {
         this->set(ref);
-        return *this;
+        return ref;
     }
 };
 

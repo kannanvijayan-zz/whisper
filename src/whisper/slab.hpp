@@ -299,105 +299,26 @@ class SlabList
     }
 };
 
-class SlabThing;
-
 //
-// All objects which are allocated on the slab must provide a
-// specialization for SlabThingTraits.  Registering a type with
-// this traits object confirms that it is ok to convert a pointer
-// to the type to a pointer to the object.
+// All types which are allocated on a slab must provide a specialization
+// for AllocTraits.
+//
+// They may additionally specialize SlabThingTraits to allow allocators
+// to calculate the allocated size using the constructor arguments.  By
+// default this size is simply |sizeof(T)|.
 //
 template <typename T>
 struct SlabThingTraits
 {
     SlabThingTraits() = delete;
-    SlabThingTraits(const SlabThingTraits &) = delete;
-    
-    static constexpr bool SPECIALIZED = false;
-    // static constexpr bool SPECIALIZED = true;
-
-    // Specify whether this type of SlabThing needs to be traced
-    // for pointers.
-    //
-    // static constexpr bool TRACED;
 
     // Method to calculate the size of a SlabThing object being
     // allocated.  It can be called with any combination of arguments
     // and argument types that are used on the constructor.
-    //
-    // template <typename... ARGS>
-    // static uint32_t SIZE_OF(ARGS... args);
-};
-
-//
-// SlabThing
-//
-// SlabThing represents a pointer to a thing on the slab.  Objects which
-// are slab allocated do not need to inherit from SlabThing.  Instead,
-// they must provide a specialization for SlabThingTraits that allows
-// the extraction of a slab thing pointer from them.
-//
-class SlabThing
-{
-  private:
-    SlabThing() = delete;
-
-  public:
-    template <typename T>
-    static inline SlabThing *From(T *ptr) {
-        static_assert(SlabThingTraits<T>::SPECIALIZED,
-                      "Type is not specialized for slab-thing.");
-        return reinterpret_cast<SlabThing *>(ptr);
+    template <typename... ARGS>
+    static uint32_t SIZE_OF(ARGS... args) {
+        return sizeof(T);
     }
-    template <typename T>
-    static inline const SlabThing *From(const T *ptr) {
-        static_assert(SlabThingTraits<T>::SPECIALIZED,
-                      "Type is not specialized for slab-thing.");
-        return reinterpret_cast<const SlabThing *>(ptr);
-    }
-
-    inline AllocHeader &allocHeader() {
-        return reinterpret_cast<AllocHeader *>(this)[-1];
-    }
-    inline const AllocHeader &allocHeader() const {
-        return reinterpret_cast<const AllocHeader *>(this)[-1];
-    }
-
-    inline uint32_t objectSize() const {
-        return allocHeader().size();
-    }
-
-    inline const void *objectEnd() const {
-        return reinterpret_cast<const uint8_t *>(this) + objectSize();
-    }
-
-    inline uint8_t userData() const {
-        return allocHeader().userData();
-    }
-
-    inline GCGen gcGen() const {
-        return allocHeader().gcGen();
-    }
-
-    // define is
-#define CHK_(name) \
-    inline bool is##name() const { \
-        return allocHeader().format() == AllocFormat::name; \
-    }
-    WHISPER_DEFN_GC_ALLOC_FORMATS(CHK_)
-#undef CHK_
-};
-
-//
-// Specialize SlabThingTraits for SlabThing itself.
-//
-template <>
-struct SlabThingTraits<SlabThing>
-{
-    SlabThingTraits() = delete;
-    SlabThingTraits(const SlabThingTraits &) = delete;
-    
-    static constexpr bool SPECIALIZED = true;
 };
 
 

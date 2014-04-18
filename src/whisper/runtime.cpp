@@ -135,7 +135,7 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
     tenuredList_(),
     activeRunContext_(nullptr),
     runContextList_(nullptr),
-    localHolders_(nullptr),
+    locals_(nullptr),
     suppressGC_(false),
     randSeed_(NewRandSeed()),
     spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16))

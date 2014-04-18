@@ -13,31 +13,7 @@ namespace Whisper {
 
 namespace VM {
     template <typename T> class Array;
-
-    // ArrayTraits for a particular type T provides information about
-    // T.
-    template <typename T>
-    struct ArrayTraits {
-        ArrayTraits() = delete;
-        static constexpr bool TRACED = true;
-    };
-#define UNTRACED_SPEC_(T) \
-    template <> struct ArrayTraits<T> {  \
-        ArrayTraits() = delete; \
-        static constexpr bool TRACED = false; \
-    }
-    UNTRACED_SPEC_(bool);
-    UNTRACED_SPEC_(int8_t);
-    UNTRACED_SPEC_(uint8_t);
-    UNTRACED_SPEC_(int16_t);
-    UNTRACED_SPEC_(uint16_t);
-    UNTRACED_SPEC_(int32_t);
-    UNTRACED_SPEC_(uint32_t);
-    UNTRACED_SPEC_(int64_t);
-    UNTRACED_SPEC_(uint64_t);
-    UNTRACED_SPEC_(float);
-    UNTRACED_SPEC_(double);
-#undef UNTRACED_SPEC_
+    template <bool ONSTACK, typename T, uint32_t N> class SizedArray;
 };
 
 // Specialize Array for SlabThingTraits
@@ -45,36 +21,74 @@ template <typename T>
 struct SlabThingTraits<VM::Array<T>>
 {
     SlabThingTraits() = delete;
-    SlabThingTraits(const SlabThingTraits &other) = delete;
 
     static constexpr bool SPECIALIZED = true;
-    static constexpr bool TRACED = VM::ArrayTraits<T>::TRACED;
 
+    // Support any constructor calls with an initial uint32_t argument,
+    // which is assumed to be the number of elements in the array.
     template <typename... Args>
     static uint32_t SIZE_OF(uint32_t size, Args... args) {
         return sizeof(VM::Array<T>) + (size * sizeof(T));
     }
 };
 
-// Provide pre-specializations of AllocFormatTraits for common arrays.
-#define ALLOCFMT_DEF_(type, formatName) \
-    template <> \
-    struct AllocFormatTraits<AllocFormat::formatName> { \
-        typedef VM::Array<type> TYPE; \
+// Specialize SizedArray for SlabThingTraits
+template <bool ONSTACK, typename T, uint32_t N>
+struct SlabThingTraits<VM::SizedArray<ONSTACK, T, N>>
+{
+    SlabThingTraits() = delete;
+
+    static constexpr bool SPECIALIZED = true;
+
+    // Support any constructor calls with an initial uint32_t argument,
+    // which is assumed to be the number of elements in the array.
+    template <typename... Args>
+    static uint32_t SIZE_OF(Args... args) {
+        return sizeof(VM::SizedArray<ONSTACK, T, N>);
     }
-    ALLOCFMT_DEF_(bool, BoolArray);
-    ALLOCFMT_DEF_(int8_t, Int8Array);
-    ALLOCFMT_DEF_(uint8_t, Uint8Array);
-    ALLOCFMT_DEF_(int16_t, Int16Array);
-    ALLOCFMT_DEF_(uint16_t, Uint16Array);
-    ALLOCFMT_DEF_(int32_t, Int32Array);
-    ALLOCFMT_DEF_(uint32_t, Uint32Array);
-    ALLOCFMT_DEF_(int64_t, Int64Array);
-    ALLOCFMT_DEF_(uint64_t, Uint64Array);
-    ALLOCFMT_DEF_(float, FloatArray);
-    ALLOCFMT_DEF_(double, DoubleArray);
-    ALLOCFMT_DEF_(SlabThing *, PointerArray);
-#undef ALLOCFMT_DEF_
+};
+
+// Specialize AllocTraits for all primitive-type stack and heap arrays to have
+// UntracedThing format.
+
+// Provide pre-specializations of AllocFormatTraits for common arrays.
+#define PRIM_ARRAY_ALLOC_TRAITS_DEF_(type) \
+    template <> \
+    struct AllocTraits<VM::Array<type>> { \
+        AllocTraits() = delete; \
+        static constexpr bool SPECIALIZED = true; \
+        static constexpr AllocFormat FORMAT = AllocFormat::UntracedThing; \
+        typedef VM::Array<type> T_; \
+        typedef VM::Array<type> DEREF_TYPE; \
+        static DEREF_TYPE *DEREF(T_ &t) { return &t; } \
+        static const DEREF_TYPE *DEREF(const T_ &t) { \
+            return &t; \
+        } \
+    }; \
+    template <bool ONSTACK, uint32_t N> \
+    struct AllocTraits<VM::SizedArray<ONSTACK, type, N>> { \
+        AllocTraits() = delete; \
+        static constexpr bool SPECIALIZED = true; \
+        static constexpr AllocFormat FORMAT = AllocFormat::UntracedThing; \
+        typedef VM::SizedArray<ONSTACK, type, N> T_; \
+        typedef VM::SizedArray<ONSTACK, type, N> DEREF_TYPE; \
+        static DEREF_TYPE *DEREF(T_ &t) { return &t; } \
+        static const DEREF_TYPE *DEREF(const T_ &t) { \
+            return &t; \
+        } \
+    };
+    PRIM_ARRAY_ALLOC_TRAITS_DEF_(bool);
+    PRIM_ARRAY_ALLOC_TRAITS_DEF_(int8_t);
+    PRIM_ARRAY_ALLOC_TRAITS_DEF_(uint8_t);
+    PRIM_ARRAY_ALLOC_TRAITS_DEF_(int16_t);
+    PRIM_ARRAY_ALLOC_TRAITS_DEF_(uint16_t);
+    PRIM_ARRAY_ALLOC_TRAITS_DEF_(int32_t);
+    PRIM_ARRAY_ALLOC_TRAITS_DEF_(uint32_t);
+    PRIM_ARRAY_ALLOC_TRAITS_DEF_(int64_t);
+    PRIM_ARRAY_ALLOC_TRAITS_DEF_(uint64_t);
+    PRIM_ARRAY_ALLOC_TRAITS_DEF_(float);
+    PRIM_ARRAY_ALLOC_TRAITS_DEF_(double);
+#undef PRIM_ARRAY_ALLOC_TRAITS_DEF_
 
 
 namespace VM {
@@ -90,25 +104,20 @@ class Array
     T vals_[0];
 
   public:
-    static uint32_t CalculateSize(uint32_t length) {
-        return sizeof(Array<T>) + (length * sizeof(T));
-    }
-
-    inline Array(const T *vals) {
-        uint32_t len = length();
+    inline Array(size_t len, const T *vals) {
         for (uint32_t i = 0; i < len; i++)
             new (&vals_[i]) T(vals[i]);
     }
 
     template <typename... Args>
-    inline Array(Args... args) {
-        uint32_t len = length();
+    inline Array(size_t len, Args... args) {
         for (uint32_t i = 0; i < len; i++)
             new (&vals_[i]) T(std::forward<Args>(args)...);
     }
 
     inline uint32_t length() const {
-        return SlabThing::From(this)->allocSize() / sizeof(T);
+        WH_ASSERT(AllocThing::From(this)->size() % sizeof(T) == 0);
+        return AllocThing::From(this)->size() / sizeof(T);
     }
 
     inline const T &getRaw(uint32_t idx) const {
@@ -120,11 +129,8 @@ class Array
         return vals_[idx];
     }
 
-    inline const Heap<T> &get(uint32_t idx) const {
-        return reinterpret_cast<const Heap<T> &>(getRaw(idx));
-    }
-    inline Heap<T> &get(uint32_t idx) {
-        return reinterpret_cast<Heap<T> &>(getRaw(idx));
+    inline T get(uint32_t idx) const {
+        return vals_[idx];
     }
 
     inline void set(uint32_t idx, const T &val) {
@@ -137,6 +143,73 @@ class Array
             getRaw(idx) = val;
     }
 };
+
+
+//
+// A slab-allocated fixed-length array with static size.
+//
+template <bool ONSTACK, typename T, uint32_t N>
+class SizedArray
+{
+  private:
+    T vals_[0];
+
+    static constexpr FieldType FT = ONSTACK ? FieldType::Stack
+                                            : FieldType::Heap;
+    typedef typename ChooseField<FT, T>::TYPE FieldT;
+
+  public:
+    inline SizedArray(const T *vals) {
+        for (uint32_t i = 0; i < N; i++)
+            new (&vals_[i]) T(vals[i]);
+    }
+
+    template <typename... Args>
+    inline SizedArray(Args... args) {
+        for (uint32_t i = 0; i < N; i++)
+            new (&vals_[i]) T(std::forward<Args>(args)...);
+    }
+
+    inline uint32_t length() const {
+        return N;
+    }
+
+    inline const T &getRaw(uint32_t idx) const {
+        WH_ASSERT(idx < length());
+        return vals_[idx];
+    }
+    inline T &getRaw(uint32_t idx) {
+        WH_ASSERT(idx < length());
+        return vals_[idx];
+    }
+
+    inline T get(uint32_t idx) const {
+        return vals_[idx];
+    }
+
+    template <uint32_t IDX>
+    inline T get() const {
+        static_assert(IDX < N, "Invalid index.");
+        return vals_[IDX];
+    }
+
+    inline void set(uint32_t idx, const T &val) {
+        WH_ASSERT(idx < length());
+        reinterpret_cast<FieldT *>(&vals_[idx])->set(val, this);
+    }
+
+    template <uint32_t IDX>
+    inline void set(uint32_t idx, const T &val) {
+        static_assert(IDX < N, "Invalid index.");
+        reinterpret_cast<FieldT *>(&vals_[IDX])->set(val, this);
+    }
+};
+
+template <typename T, uint32_t N>
+using SizedStackArray = SizedArray<true, T, N>;
+
+template <typename T, uint32_t N>
+using SizedHeapArray = SizedArray<false, T, N>;
 
 
 } // namespace VM

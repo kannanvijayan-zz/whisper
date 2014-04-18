@@ -4,60 +4,26 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "gc/local.hpp"
-#include "gc/heap.hpp"
 
 namespace Whisper {
 
 
 //
-// Handles are const pointers to values rooted on the stack with
-// Local.
+// MutHandles are lightweight mutable pointers to structures which have
+// stack lifetime.
 //
 
 template <typename T>
-class HandleHolder
+class MutHandle
 {
+    static_assert(AllocTraits<T>::SPECIALIZED,
+                  "AllocTraits<T> not specialized.");
+
   private:
-    const T *valAddr_;
+    volatile T *valAddr_;
 
   public:
-    inline HandleHolder(const LocalHolder<T> &stackVal)
-      : valAddr_(&stackVal)
-    {}
-
-    inline HandleHolder(const HeapHolder<T> &heapVal)
-      : valAddr_(&heapVal)
-    {}
-
-    inline const T &get() const {
-        return *valAddr_;
-    }
-
-    inline operator const T &() const {
-        return this->get();
-    }
-
-    inline const T *operator &() const {
-        return valAddr_;
-    }
-
-    T &operator =(const HeapHolder<T> &other) = delete;
-};
-
-
-//
-// MutHandles are mutable pointers to stack-rooted or heap-marked things which
-// are already managed.
-//
-
-template <typename T>
-class MutHandleHolder
-{
-  private:
-    T *valAddr_;
-
-  public:
-    inline MutHandleHolder(const LocalHolder<T> &stackVal)
+    inline MutHandle(const Local<T> &stackVal)
       : valAddr_(&stackVal)
     {}
 
@@ -87,66 +53,51 @@ class MutHandleHolder
         return valAddr_;
     }
 
-    // Assignments are ok.
-    T &operator =(const HeapHolder<T> &other) = delete;
+    const T &operator =(const T &other) {
+        WH_ASSERT(valAddr_ != nullptr);
+        *valAddr_ = other;
+        return other;
+    }
 };
 
+
 //
-// MutHeapHandles are mutable handles to things on heap.  To allow
-// update, these have to keep a pointer to the containing object.
+// Handles are const pointers to values rooted on the stack with
+// Local.
 //
+
 template <typename T>
-class MutHeapHandleHolder
+class Handle
 {
+    static_assert(AllocTraits<T>::SPECIALIZED,
+                  "AllocTraits<T> not specialized.");
+
   private:
-    SlabThing *container_;
-    T *valAddr_;
+    volatile const T *valAddr_;
 
   public:
-    inline MutHeapHandleHolder(SlabThing *container, const HeapHolder<T> &val)
-      : container_(container),
-        valAddr_(&val)
-    {
-        WH_ASSERT(container);
-    }
+    inline Handle(const Local<T> &stackVal)
+      : valAddr_(&stackVal)
+    {}
+
+    inline Handle(const MutHandle<T> &mutHandle)
+      : valAddr_(&mutHandle)
+    {}
 
     inline const T &get() const {
-        return *valAddr_;
-    }
-    inline T &get() {
         return *valAddr_;
     }
 
     inline operator const T &() const {
         return this->get();
     }
-    inline operator T &() {
-        return this->get();
-    }
-
-    inline void set(const T &other) {
-        *valAddr_ = other;
-    }
 
     inline const T *operator &() const {
         return valAddr_;
     }
-    // Cannot convert to simple mutable pointer.
-    // Mutations must occur through overloaded
-    // operator.
-    T *operator &() = delete;
 
-    inline T &operator =(const T &other) {
-        *valAddr_ = other;
-        // TODO: Kick post-write barriers on container_ here.
-    }
-
-    inline T &operator =(T &&other) {
-        *valAddr_ = other;
-        // TODO: Kick post-write barriers on container_ here.
-    }
+    const Handle<T> &operator =(const Handle<T> &other) = delete;
 };
-
 
 
 } // namespace Whisper
