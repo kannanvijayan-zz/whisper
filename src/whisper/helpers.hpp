@@ -329,36 +329,36 @@ constexpr unsigned IntBits(bool includeSign=true) {
 }
 
 // Helper class for manipulating bitfields.
-template <typename WORD, typename FIELD, unsigned BITS, unsigned SHIFT>
+template <typename WordT_, typename FieldT_, unsigned Bits_, unsigned Shift_>
 class BaseBitfield
 {
-    // Ensure that WORD is an unsigned integer.
-    static_assert(std::numeric_limits<WORD>::is_specialized,
+    // Ensure that WordT_ is an unsigned integer.
+    static_assert(std::numeric_limits<WordT_>::is_specialized,
                   "Word type is not a number.");
-    static_assert(std::numeric_limits<WORD>::is_integer,
+    static_assert(std::numeric_limits<WordT_>::is_integer,
                   "Word type is not an integer.");
-    static_assert(!std::numeric_limits<WORD>::is_signed,
+    static_assert(!std::numeric_limits<WordT_>::is_signed,
                   "Word type is not unsigned.");
 
-    // Ensure that FIELD is an integer.
-    static_assert(std::numeric_limits<FIELD>::is_specialized,
+    // Ensure that FieldT_ is an integer.
+    static_assert(std::numeric_limits<FieldT_>::is_specialized,
                   "Field type is not a number.");
-    static_assert(std::numeric_limits<FIELD>::is_integer,
+    static_assert(std::numeric_limits<FieldT_>::is_integer,
                   "Field type is not an integer.");
 
-    // Ensure that FIELD can hold BITS bits.
-    static_assert(IntBits<FIELD>() >= BITS,
+    // Ensure that FieldT_ can hold Bits_ bits.
+    static_assert(IntBits<FieldT_>() >= Bits_,
                   "Field is not big enough to hold bits.");
 
-    // Ensure that WORD can hold BITS bits at SHIFT position.
-    static_assert(IntBits<WORD>() >= SHIFT + BITS,
+    // Ensure that WordT_ can hold Bits_ bits at Shift_ position.
+    static_assert(IntBits<WordT_>() >= Shift_ + Bits_,
                   "Word is not big enough to hold field.");
 
   public:
     typedef WORD WordT;
-    typedef FIELD FieldT;
-    static constexpr unsigned Bits = BITS;
-    static constexpr unsigned Shift = SHIFT;
+    typedef FieldT_ FieldT;
+    static constexpr unsigned Bits = Bits_;
+    static constexpr unsigned Shift = Shift_;
 
     static constexpr bool SignedField = std::numeric_limits<FieldT>::is_signed;
 
@@ -407,42 +407,42 @@ class BaseBitfield
     }
 };
 
-template <typename WORD, typename FIELD, unsigned BITS, unsigned SHIFT>
-class ConstBitfield : public BaseBitfield<const WORD, FIELD, BITS, SHIFT>
+template <typename WordT, typename FieldT, unsigned Bits, unsigned Shift>
+class ConstBitfield : public BaseBitfield<const WordT, FieldT, Bits, Shift>
 {
-    typedef BaseBitfield<const WORD, FIELD, BITS, SHIFT> BaseType;
+    typedef BaseBitfield<const WordT, FieldT, Bits, Shift> BaseType;
 
   public:
-    inline ConstBitfield(const WORD &word) : BaseType(word) {}
+    inline ConstBitfield(const WordT &word) : BaseType(word) {}
 };
 
-template <typename WORD, typename FIELD, unsigned BITS, unsigned SHIFT>
-class Bitfield : public BaseBitfield<WORD, FIELD, BITS, SHIFT>
+template <typename WordT, typename FieldT, unsigned Bits, unsigned Shift>
+class Bitfield : public BaseBitfield<WordT, FieldT, Bits, Shift>
 {
-    typedef BaseBitfield<WORD, FIELD, BITS, SHIFT> BaseType;
+    typedef BaseBitfield<WordT, FieldT, Bits, Shift> BaseType;
 
   public:
-    typedef ConstBitfield<const WORD, FIELD, BITS, SHIFT> Const;
+    typedef ConstBitfield<const WordT, FieldT, Bits, Shift> Const;
 
-    inline Bitfield(WORD &word) : BaseType(word) {}
+    inline Bitfield(WordT &word) : BaseType(word) {}
 
-    inline void initValue(FIELD val) {
+    inline void initValue(FieldT val) {
         WH_ASSERT(BaseType::ValueFits(val));
-        WORD fieldVal = static_cast<FIELD>(val) & BaseType::LowMask;
+        WordT fieldVal = static_cast<FieldT>(val) & BaseType::LowMask;
         // initValue can assume that field bits are already zero,
         // so bits do not need to be zeroed before or-mask is applied.
         this->word_ |= fieldVal << BaseType::Shift;
     }
 
-    inline void setValue(FIELD val) {
+    inline void setValue(FieldT val) {
         WH_ASSERT(BaseType::ValueFits(val));
 
-        WORD fieldVal = static_cast<FIELD>(val) & BaseType::LowMask;
+        WordT fieldVal = static_cast<FieldT>(val) & BaseType::LowMask;
         this->word_ &= ~BaseType::HighMask;
         this->word_ |= fieldVal << BaseType::Shift;
     }
 
-    inline FIELD operator =(FIELD val) {
+    inline FieldT operator =(FieldT val) {
         setValue(val);
         return val;
     }
