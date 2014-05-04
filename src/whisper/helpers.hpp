@@ -355,7 +355,7 @@ class BaseBitfield
                   "Word is not big enough to hold field.");
 
   public:
-    typedef WORD WordT;
+    typedef WordT_ WordT;
     typedef FieldT_ FieldT;
     static constexpr unsigned Bits = Bits_;
     static constexpr unsigned Shift = Shift_;

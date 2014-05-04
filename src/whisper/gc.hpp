@@ -2,11 +2,11 @@
 #define WHISPER__GC_HPP
 
 #include "slab.hpp"
-#include "gc/core.hpp"
-#include "gc/local.hpp"
-#include "gc/handle.hpp"
-#include "gc/field.hpp"
-#include "gc/local_inlines.hpp"
+#include "gcx/core.hpp"
+#include "gcx/local.hpp"
+#include "gcx/handle.hpp"
+#include "gcx/field.hpp"
+#include "gcx/local_inlines.hpp"
 
 
 namespace Whisper {

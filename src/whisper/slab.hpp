@@ -4,7 +4,7 @@
 #include "common.hpp"
 #include "helpers.hpp"
 #include "debug.hpp"
-#include "gc/core.hpp"
+#include "gcx/core.hpp"
 
 namespace Whisper {
 
@@ -110,8 +110,8 @@ class Slab
     static uint32_t NumHeaderCardsForDataCards(uint32_t dataCards);
 
     // Allocate/destroy slabs.
-    static Slab *AllocateStandard(GCGen gen);
-    static Slab *AllocateSingleton(uint32_t objectSize, GCGen gen);
+    static Slab *AllocateStandard(GC::Gen gen);
+    static Slab *AllocateSingleton(uint32_t objectSize, GC::Gen gen);
     static void Destroy(Slab *slab);
 
   private:
@@ -139,11 +139,11 @@ class Slab
     uint32_t dataCards_;
 
     // Slab generation.
-    GCGen gen_;
+    GC::Gen gen_;
 
     Slab(void *region, uint32_t regionSize,
          uint32_t headerCards, uint32_t dataCards,
-         GCGen gen);
+         GC::Gen gen);
 
     ~Slab() {}
 
@@ -173,7 +173,7 @@ class Slab
         return dataCards_;
     }
 
-    GCGen gen() const {
+    GC::Gen gen() const {
         return gen_;
     }
 
