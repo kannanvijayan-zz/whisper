@@ -111,11 +111,13 @@ class HeapTraits<VM::Array<T>>
     // have either a field specialization.
     static_assert(FieldTraits<T>::Specialized,
                   "Underlying type does not have a field specialization.");
+    static_assert(VM::ArrayTraits<T>::Specialized,
+                  "Underlying type does not have an array specialization.");
 
     HeapTraits() = delete;
 
     static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = HeapTraits<T>::IsLeaf;
+    static constexpr bool IsLeaf = TraceTraits<T>::IsLeaf;
     static constexpr GC::AllocFormat Format =
         VM::ArrayTraits<T>::ArrayFormat;
 };
