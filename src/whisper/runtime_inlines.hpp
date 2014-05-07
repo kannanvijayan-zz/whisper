@@ -16,6 +16,8 @@ template <typename ObjT, typename... Args>
 inline ObjT *
 AllocationContext::create(Args... args)
 {
+    static_assert(GC::HeapTraits<ObjT>::Specialized,
+                  "GC::HeapTraits not specialized for ObjT.");
     return createFlagged<ObjT, Args...>(0, std::forward<Args>(args)...);
 }
 
@@ -23,14 +25,16 @@ template <typename ObjT, typename... Args>
 inline ObjT *
 AllocationContext::createFlagged(uint8_t flags, Args... args)
 {
-    WH_ASSERT(flags <= AllocHeader::UserDataMax);
+    static_assert(GC::HeapTraits<ObjT>::Specialized,
+                  "GC::HeapTraits not specialized for ObjT.");
+    WH_ASSERT(flags <= GC::AllocHeader::UserDataMax);
 
-    uint32_t size = SlabThingTraits<ObjT>::template SIZE_OF<Args...>(args...);
+    uint32_t size = GC::HeapTraits<ObjT>::template SizeOf<Args...>(args...);
     WH_ASSERT(size >= sizeof(ObjT));
 
     // Allocate the space for the object.
-    constexpr AllocFormat FMT = AllocTraits<ObjT>::FORMAT;
-    constexpr bool TRACED = AllocFormatTraits<FMT>::TRACED;
+    constexpr GC::AllocFormat FMT = GC::HeapTraits<ObjT>::Format;
+    constexpr bool TRACED = ! GC::HeapTraits<ObjT>::IsLeaf;
     uint8_t *mem = allocate<TRACED>(size, FMT, flags);
     if (!mem)
         return nullptr;
@@ -43,12 +47,12 @@ AllocationContext::createFlagged(uint8_t flags, Args... args)
 
 template <bool Traced>
 inline uint8_t *
-AllocationContext::allocate(uint32_t size, AllocFormat fmt, uint8_t flags)
+AllocationContext::allocate(uint32_t size, GC::AllocFormat fmt, uint8_t flags)
 {
-    WH_ASSERT(flags <= AllocHeader::UserDataMax);
+    WH_ASSERT(flags <= GC::AllocHeader::UserDataMax);
 
     uint32_t allocSize = AlignIntUp<uint32_t>(size, Slab::AllocAlign)
-                         + sizeof(AllocFormat);
+                         + sizeof(GC::AllocFormat);
 
     // Allocate the space.
     uint8_t *mem = Traced ? slab_->allocateHead(allocSize)
@@ -66,7 +70,8 @@ AllocationContext::allocate(uint32_t size, AllocFormat fmt, uint8_t flags)
     uint32_t cardNo = slab_->calculateCardNumber(mem);
 
     // Initialize the header.
-    AllocHeader *hdr = new (mem) AllocHeader(fmt, slab_->gen(), cardNo, size);
+    GC::AllocHeader *hdr = new (mem) GC::AllocHeader(fmt, slab_->gen(),
+                                                     cardNo, size);
     return reinterpret_cast<uint8_t *>(hdr->payload());
 }
 

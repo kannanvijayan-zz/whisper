@@ -16,8 +16,9 @@ namespace Whisper {
 template <typename T>
 class MutHandle
 {
-    static_assert(StackTraits<T>::Specialized,
-                  "StackTraits<T> not specialized.");
+    static_assert(GC::StackTraits<T>::Specialized,
+                  "GC::StackTraits<T> not specialized.");
+    typedef typename GC::DerefTraits<T>::Type DerefType;
 
   private:
     volatile T * const valAddr_;
@@ -31,9 +32,10 @@ class MutHandle
       : valAddr_(stackVal.address())
     {}
 
-    inline static FromTrackedPointer(T *valAddr)
-      : valAddr_(valAddr)
-    {}
+    inline static MutHandle FromTrackedPointer(T *valAddr)
+    {
+        return MutHandle(valAddr);
+    }
 
     inline const T &get() const {
         return *valAddr_;
@@ -64,8 +66,8 @@ class MutHandle
         return address();
     }
 
-    inline DerefTraits<T>::Type *operator ->() const {
-        return DerefTraits<T>::Deref(*valAddr_);
+    inline DerefType *operator ->() const {
+        return GC::DerefTraits<T>::Deref(*valAddr_);
     }
 
     const T &operator =(const T &other) {
@@ -84,8 +86,10 @@ class MutHandle
 template <typename T>
 class Handle
 {
-    static_assert(StackTraits<T>::Specialized,
-                  "StackTraits<T> not specialized.");
+    static_assert(GC::StackTraits<T>::Specialized,
+                  "GC::StackTraits<T> not specialized.");
+
+    typedef typename GC::DerefTraits<T>::Type DerefType;
 
   private:
     volatile const T * const valAddr_;
@@ -103,9 +107,10 @@ class Handle
       : valAddr_(mutHandle.address())
     {}
 
-    inline static FromTrackedPointer(const T *valAddr)
-      : valAddr_(valAddr)
-    {}
+    inline static Handle FromTrackedPointer(const T *valAddr)
+    {
+        return Handle(valAddr);
+    }
 
     inline const T &get() const {
         return *valAddr_;
@@ -123,8 +128,8 @@ class Handle
         return address();
     }
 
-    inline const DerefTraits<T>::Type *operator ->() const {
-        return DerefTraits<T>::Deref(*valAddr_);
+    inline const DerefType *operator ->() const {
+        return GC::DerefTraits<T>::Deref(*valAddr_);
     }
 
     const Handle<T> &operator =(const Handle<T> &other) = delete;

@@ -15,7 +15,7 @@ inline
 LocalBase::LocalBase(ThreadContext *threadContext, AllocFormat format)
   : threadContext_(threadContext),
     next_(threadContext_->locals()),
-    header_(format, GCGen::OnStack, 0, 0)
+    header_(format, GC::Gen::OnStack, 0, 0)
 {
     threadContext_->locals_ = this;
 }
@@ -29,14 +29,14 @@ LocalBase::~LocalBase()
 
 template <typename Scanner>
 void
-LocalBase::SCAN(Scanner &scanner, void *start, void *end) const
+LocalBase::Scan(Scanner &scanner, void *start, void *end) const
 {
     GcScanAllocFormat(format(), dataAfter(), scanner, start, end);
 }
 
 template <typename Updater>
 void
-LocalBase::UPDATE(Updater &updater, void *start, void *end)
+LocalBase::Update(Updater &updater, void *start, void *end)
 {
     GcUpdateAllocFormat(format(), dataAfter(), updater, start, end);
 }

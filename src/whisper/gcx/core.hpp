@@ -325,7 +325,7 @@ inline constexpr bool IsValidAllocFormat(AllocFormat fmt) {
 }
 
 // GC Generation
-enum class GCGen : uint8_t {
+enum class Gen : uint8_t {
     None        = 0x00,
 
     // Stack and local allocations.
@@ -384,8 +384,8 @@ class alignas(8) AllocHeader
     typedef Bitfield<uint32_t, uint8_t, 3, 19> GcBitfield;
     typedef Bitfield<uint32_t, uint16_t, 10, 22> FormatBitfield;
 
-    static_assert(static_cast<uint8_t>(GCGen::LIMIT) <= GcBitfield::MaxValue,
-                  "GCGen must fit within 3 bits.");
+    static_assert(static_cast<uint8_t>(Gen::LIMIT) <= GcBitfield::MaxValue,
+                  "Gen must fit within 3 bits.");
 
     inline CardBitfield cardBitfield() {
         return CardBitfield(header_);
@@ -417,7 +417,7 @@ class alignas(8) AllocHeader
     static constexpr uint8_t UserDataMax = UserBitfield::MaxValue;
 
   public:
-    AllocHeader(AllocFormat fmt, GCGen gen, uint16_t card, uint32_t size)
+    AllocHeader(AllocFormat fmt, Gen gen, uint16_t card, uint32_t size)
       : header_(0),
         size_(size)
     {
@@ -436,26 +436,26 @@ class alignas(8) AllocHeader
         return size_;
     }
 
-    inline GCGen gcGen() const {
-        return static_cast<GCGen>(gcBitfield().value());
+    inline Gen gen() const {
+        return static_cast<Gen>(gcBitfield().value());
     }
     inline bool isOnStack() const {
-        return gcGen() == GCGen::OnStack;
+        return gen() == Gen::OnStack;
     }
     inline bool isLocalHeap() const {
-        return gcGen() == GCGen::LocalHeap;
+        return gen() == Gen::LocalHeap;
     }
     inline bool isHatchery() const {
-        return gcGen() == GCGen::Hatchery;
+        return gen() == Gen::Hatchery;
     }
     inline bool isNursery() const {
-        return gcGen() == GCGen::Nursery;
+        return gen() == Gen::Nursery;
     }
     inline bool isMature() const {
-        return gcGen() == GCGen::Mature;
+        return gen() == Gen::Mature;
     }
     inline bool isTenured() const {
-        return gcGen() == GCGen::Tenured;
+        return gen() == Gen::Tenured;
     }
 
     inline uint8_t userData() const {
@@ -504,6 +504,13 @@ struct StackTraits
 //      // Must be set by all StackTraits specializations.
 //      static constexpr bool Specialized = true;
 //
+//      // Indicate if the type needs to be traced or not.
+//      // If a type is a leaf type, its values can never contain
+//      // pointers.
+//      // This will determine if the object is allocated in
+//      // the head or tail region of the slab.
+//      static constexpr bool IsLeaf;
+//
 //      // The AllocFormat for the type.
 //      static constexpr AllocFormat Format;
 //
@@ -511,6 +518,8 @@ struct StackTraits
 //      // constructor arguments.
 //      template <typename... Args>
 //      static uint32_t CalculateSize();
+//      
+//      
 //
 //  Since heap-allocations can have dynamic size, the HeapTraits
 //  specialization enables dynamically sized types.
@@ -737,8 +746,8 @@ class AllocThing
         return header().userData();
     }
 
-    inline GCGen gcGen() const {
-        return header().gcGen();
+    inline Gen gen() const {
+        return header().gen();
     }
 
     // define is

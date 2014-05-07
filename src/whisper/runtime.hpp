@@ -91,10 +91,10 @@ class AllocationContext
 
   private:
     template <bool Traced>
-    inline uint8_t *allocate(uint32_t size, AllocFormat fmt, uint8_t flags);
+    inline uint8_t *allocate(uint32_t size, GC::AllocFormat fmt, uint8_t flags);
 
     template <bool Traced>
-    inline uint8_t *allocate(uint32_t size, AllocFormat fmt) {
+    inline uint8_t *allocate(uint32_t size, GC::AllocFormat fmt) {
         return allocate<Traced>(size, fmt, 0);
     }
 };
@@ -111,7 +111,7 @@ class ThreadContext
 {
   friend class Runtime;
   friend class RunContext;
-  friend class LocalBase;
+  friend class GC::LocalBase;
   friend class RunActivationHelper;
   private:
     Runtime *runtime_;
@@ -121,7 +121,7 @@ class ThreadContext
     SlabList tenuredList_;
     RunContext *activeRunContext_;
     RunContext *runContextList_;
-    LocalBase *locals_;
+    GC::LocalBase *locals_;
     bool suppressGC_;
 
     unsigned int randSeed_;
@@ -160,7 +160,7 @@ class ThreadContext
         return activeRunContext_;
     }
 
-    inline LocalBase *locals() const {
+    inline GC::LocalBase *locals() const {
         return locals_;
     }
 

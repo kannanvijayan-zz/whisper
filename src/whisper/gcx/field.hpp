@@ -23,6 +23,7 @@ class BaseField
 {
     static_assert(TraceTraits<T>::Specialized,
                   "TraceTraits has not been specialized for type.");
+    typedef typename GC::DerefTraits<T>::Type DerefType;
 
   protected:
     T val_;
@@ -49,6 +50,10 @@ class BaseField
 
     inline const T *operator &() const {
         return address();
+    }
+
+    inline const DerefType *operator ->() const {
+        return GC::DerefTraits<T>::Deref(val_);
     }
 
     T &operator =(const BaseField<T> &other) = delete;
@@ -116,10 +121,6 @@ class HeapField : public GC::BaseField<T>
         notifySetPre(container);
         this->val_.~T();
         // Post-notification not required as value is destroyed.
-    }
-
-    inline const DerefTraits<T>::Type *operator ->() const {
-        return DerefTraits<T>::Deref(val_);
     }
 
     T &operator =(const HeapField<T> &other) = delete;

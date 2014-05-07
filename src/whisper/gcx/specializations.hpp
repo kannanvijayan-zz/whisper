@@ -24,8 +24,7 @@ struct AllocFormatTraits<AllocFormat::UntracedThing>
 {
     AllocFormatTraits() = delete;
 
-    typedef uint32_t TYPE;
-    static constexpr bool TRACED = false;
+    typedef uint32_t Type;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -37,54 +36,54 @@ struct AllocFormatTraits<AllocFormat::UntracedThing>
 
 // Primitive-type specializations for trace traits.
 #define PRIM_TRACE_TRAITS_DEF_(type) \
-    template <typename T> \
-    struct UntracedStackTraits<T> \
+    template <> \
+    struct StackTraits<type> \
     { \
-        UntracedStackTraits() = delete; \
+        StackTraits() = delete; \
         static constexpr bool Specialized = true; \
         static constexpr AllocFormat Format = AllocFormat::UntracedThing; \
     }; \
-    template <typename T> \
-    struct UntracedHeapTraits<T> \
+    template <> \
+    struct HeapTraits<type> \
     { \
-        UntracedHeapTraits() = delete; \
+        HeapTraits() = delete; \
         static constexpr bool Specialized = true; \
+        static constexpr bool IsLeaf = true; \
         static constexpr AllocFormat Format = AllocFormat::UntracedThing; \
         \
         template <typename... Args> \
         static uint32_t CalculateSize(Args... args) { \
-            return sizeof(T); \
+            return sizeof(type); \
         } \
     }; \
-    template <typename T> \
-    struct UntracedFieldTraits<T> \
+    template <> \
+    struct FieldTraits<type> \
     { \
-        UntracedFieldTraits() = delete; \
+        FieldTraits() = delete; \
         static constexpr bool Specialized = true; \
     }; \
-    template <typename T> \
-    struct UntracedTraceTraits<T> \
+    template <> \
+    struct TraceTraits<type> \
     { \
-        UntracedTraceTraits() = delete; \
+        typedef type T_; \
+        \
+        TraceTraits() = delete; \
         static constexpr bool Specialized = true; \
         \
         template <typename Scanner> \
-        static void SCAN(Scanner &, const T &, void *, void *) {} \
+        static void Scan(Scanner &, const T_ &, void *, void *) {} \
         \
         template <typename Updater> \
-        static void UPDATE(Updater &, T &, void *, void *) {} \
+        static void Update(Updater &, T_ &, void *, void *) {} \
     }
-    
 
     PRIM_TRACE_TRAITS_DEF_(bool);
 
-    PRIM_TRACE_TRAITS_DEF_(uint8_t);
     PRIM_TRACE_TRAITS_DEF_(uint8_t);
     PRIM_TRACE_TRAITS_DEF_(uint16_t);
     PRIM_TRACE_TRAITS_DEF_(uint32_t);
     PRIM_TRACE_TRAITS_DEF_(uint64_t);
 
-    PRIM_TRACE_TRAITS_DEF_(int8_t);
     PRIM_TRACE_TRAITS_DEF_(int8_t);
     PRIM_TRACE_TRAITS_DEF_(int16_t);
     PRIM_TRACE_TRAITS_DEF_(int32_t);
@@ -115,7 +114,7 @@ struct StackTraits<P *>
     StackTraits() = delete;
 
     static constexpr bool Specialized = true;
-    static constexpr AllocFormat Format = AllocFormat::HeapPointer;
+    static constexpr AllocFormat Format = AllocFormat::AllocThingPointer;
 };
 
 template <typename P>
@@ -127,7 +126,8 @@ struct HeapTraits<P *>
     HeapTraits() = delete;
 
     static constexpr bool Specialized = true;
-    static constexpr AllocFormat Format = AllocFormat::HeapPointer;
+    static constexpr bool IsLeaf = false;
+    static constexpr AllocFormat Format = AllocFormat::AllocThingPointer;
 
     template <typename... Args>
     static uint32_t CalculateSize(Args... args) {
@@ -148,13 +148,13 @@ struct FieldTraits<P *>
 
 
 //
-// Specialize AllocFormatTraits for HeapPointer.
+// Specialize AllocFormatTraits for AllocThingPointer.
 //
-// This just maps HeapPointer to the type |AllocThing *| for
+// This just maps AllocThingPointer to the type |AllocThing *| for
 // tracing.
 //
 template <>
-struct AllocFormatTraits<AllocFormat::HeapPointer>
+struct AllocFormatTraits<AllocFormat::AllocThingPointer>
 {
     AllocFormatTraits() = delete;
 
@@ -165,7 +165,7 @@ struct AllocFormatTraits<AllocFormat::HeapPointer>
 //
 // Specialize AllocThing * for TraceTraits
 //
-template <typename P>
+template <>
 struct TraceTraits<AllocThing *>
 {
     typedef AllocThing * T_;
@@ -228,7 +228,7 @@ struct TraceTraits<P *>
             return;
         AllocThing *tx = updater(&t, reinterpret_cast<AllocThing *>(t));
         if (tx != t)
-            t = reinterpret_cast<P *>(this);
+            t = reinterpret_cast<P *>(tx);
     }
 };
 
@@ -240,10 +240,10 @@ struct TraceTraits<P *>
 ///////////////////////////////////////////////////////////////////////////////
 
 
-template <typename SCANNER>
+template <typename Scanner>
 void
 GcScanAllocFormat(AllocFormat fmt, const void *ptr,
-                  SCANNER &scanner, void *start, void *end)
+                  Scanner &scanner, void *start, void *end)
 {
     WH_ASSERT(ptr != nullptr);
     switch (fmt) {
@@ -264,10 +264,10 @@ GcScanAllocFormat(AllocFormat fmt, const void *ptr,
     }
 }
 
-template <typename UPDATER>
+template <typename Updater>
 void
 GcUpdateAllocFormat(AllocFormat fmt, const void *ptr,
-                    UPDATER &updater, void *start, void *end)
+                    Updater &updater, void *start, void *end)
 {
     WH_ASSERT(ptr != nullptr);
     switch (fmt) {

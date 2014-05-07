@@ -299,28 +299,6 @@ class SlabList
     }
 };
 
-//
-// All types which are allocated on a slab must provide a specialization
-// for AllocTraits.
-//
-// They may additionally specialize SlabThingTraits to allow allocators
-// to calculate the allocated size using the constructor arguments.  By
-// default this size is simply |sizeof(T)|.
-//
-template <typename T>
-struct SlabThingTraits
-{
-    SlabThingTraits() = delete;
-
-    // Method to calculate the size of a SlabThing object being
-    // allocated.  It can be called with any combination of arguments
-    // and argument types that are used on the constructor.
-    template <typename... ARGS>
-    static uint32_t SIZE_OF(ARGS... args) {
-        return sizeof(T);
-    }
-};
-
 
 } // namespace Whisper
 

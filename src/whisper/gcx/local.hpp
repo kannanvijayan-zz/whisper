@@ -71,8 +71,10 @@ class LocalBase
 template <typename T>
 class Local : public GC::LocalBase
 {
-    static_assert(AllocTraits<T>::Specialized,
-                  "AllocTraits<T> not specialized.");
+    static_assert(GC::StackTraits<T>::Specialized,
+                  "GC::StackTraits<T> not specialized.");
+
+    typedef typename GC::DerefTraits<T>::DerefType DerefType;
 
   private:
     T val_;
@@ -80,7 +82,7 @@ class Local : public GC::LocalBase
   public:
     template <typename... Args>
     inline Local(ThreadContext *threadContext, Args... args)
-      : GC::LocalBase(threadContext, AllocTraits<T>::FORMAT),
+      : GC::LocalBase(threadContext, GC::StackTraits<T>::FORMAT),
         val_(std::forward<Args>(args)...)
     {}
 
@@ -112,10 +114,10 @@ class Local : public GC::LocalBase
         return get();
     }
 
-    inline const DerefTraits<T>::DerefType *operator &() const {
+    inline const T *operator &() const {
         return address();
     }
-    inline DerefTraits<T>::DerefType *operator &() {
+    inline T *operator &() {
         return address();
     }
 
@@ -128,17 +130,16 @@ class Local : public GC::LocalBase
         return ref;
     }
 
-    inline const DerefTraits<T>::Type *operator ->() const {
-        return DerefTraits<T>::Deref(val_);
+    inline const DerefType *operator ->() const {
+        return GC::DerefTraits<T>::Deref(val_);
     }
-    inline DerefTraits<T>::Type *operator ->() {
-        return DerefTraits<T>::Deref(val_);
+    inline DerefType *operator ->() {
+        return GC::DerefTraits<T>::Deref(val_);
     }
 };
 
 
 
-} // namespace GC
 } // namespace Whisper
 
 #endif // WHISPER__GC__LOCAL_HPP
