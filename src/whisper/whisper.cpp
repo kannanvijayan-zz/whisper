@@ -138,10 +138,16 @@ int main(int argc, char **argv) {
     RunContext *cx = &runcx;
 
     Local<VM::Array<uint32_t> *> arr(cx,
-        cx->inHatchery().create<VM::Array<uint32_t>>(20, 5));
+        cx->inHatchery().create<VM::Array<uint32_t>>(5, 5));
 
     Local<VM::Array<uint32_t> *> arr2(cx,
-        cx->inHatchery().create<VM::Array<uint32_t>>(30, 9));
+        cx->inHatchery().create<VM::Array<uint32_t>>(16, 9));
+
+    Local<VM::Array<uint16_t> *> arr3(cx,
+        cx->inHatchery().create<VM::Array<uint16_t>>(16, 9));
+
+    Local<VM::Array<uint8_t> *> arr4(cx,
+        cx->inHatchery().create<VM::Array<uint8_t>>(16, 9));
 
     // Generate bytecode.
     /*
