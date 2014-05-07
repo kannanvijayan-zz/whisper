@@ -29,7 +29,7 @@ AllocationContext::createFlagged(uint8_t flags, Args... args)
                   "GC::HeapTraits not specialized for ObjT.");
     WH_ASSERT(flags <= GC::AllocHeader::UserDataMax);
 
-    uint32_t size = GC::HeapTraits<ObjT>::template SizeOf<Args...>(args...);
+    uint32_t size = GC::HeapTraits<ObjT>::template SizeOf(args...);
     WH_ASSERT(size >= sizeof(ObjT));
 
     // Allocate the space for the object.
@@ -53,7 +53,7 @@ AllocationContext::allocate(uint32_t size, GC::AllocFormat fmt, uint8_t flags)
     WH_ASSERT(flags <= GC::AllocHeader::UserDataMax);
 
     uint32_t allocSize = AlignIntUp<uint32_t>(size, Slab::AllocAlign)
-                         + sizeof(GC::AllocFormat);
+                         + sizeof(GC::AllocHeader);
 
     // Allocate the space.
     uint8_t *mem = Traced ? slab_->allocateHead(allocSize)

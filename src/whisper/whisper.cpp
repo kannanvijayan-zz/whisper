@@ -113,6 +113,7 @@ int main(int argc, char **argv) {
                   << std::endl;
         return 1;
     }
+    */
 
     // Initialize a runtime.
     Runtime runtime;
@@ -136,7 +137,14 @@ int main(int argc, char **argv) {
 
     RunContext *cx = &runcx;
 
+    Local<VM::Array<uint32_t> *> arr(cx,
+        cx->inHatchery().create<VM::Array<uint32_t>>(20, 5));
+
+    Local<VM::Array<uint32_t> *> arr2(cx,
+        cx->inHatchery().create<VM::Array<uint32_t>>(30, 9));
+
     // Generate bytecode.
+    /*
     Interp::BytecodeGenerator bcgen(cx, wrappedAllocator, program, annotator,
                                     false);
     Root<VM::Bytecode *> bc(cx, bcgen.generateBytecode());

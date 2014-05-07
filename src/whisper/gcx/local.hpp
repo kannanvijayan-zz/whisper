@@ -8,6 +8,7 @@
 namespace Whisper {
 
 class ThreadContext;
+class RunContext;
 
 //
 // GC::LocalBase
@@ -28,6 +29,7 @@ class LocalBase
     AllocHeader header_;
 
     inline LocalBase(ThreadContext *threadContext, AllocFormat format);
+    inline LocalBase(RunContext *runContext, AllocFormat format);
     inline ~LocalBase();
 
   public:
@@ -74,7 +76,7 @@ class Local : public GC::LocalBase
     static_assert(GC::StackTraits<T>::Specialized,
                   "GC::StackTraits<T> not specialized.");
 
-    typedef typename GC::DerefTraits<T>::DerefType DerefType;
+    typedef typename GC::DerefTraits<T>::Type DerefType;
 
   private:
     T val_;
@@ -82,7 +84,13 @@ class Local : public GC::LocalBase
   public:
     template <typename... Args>
     inline Local(ThreadContext *threadContext, Args... args)
-      : GC::LocalBase(threadContext, GC::StackTraits<T>::FORMAT),
+      : GC::LocalBase(threadContext, GC::StackTraits<T>::Format),
+        val_(std::forward<Args>(args)...)
+    {}
+
+    template <typename... Args>
+    inline Local(RunContext *runContext, Args... args)
+      : GC::LocalBase(runContext, GC::StackTraits<T>::Format),
         val_(std::forward<Args>(args)...)
     {}
 

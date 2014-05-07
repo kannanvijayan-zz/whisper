@@ -62,7 +62,7 @@ namespace Whisper {
 // cardNo it starts on, then a pointer to the object can be mapped back to
 // the Slab as follows:
 //
-//      Slab *PointerToSlab(SlabThing *ptr):
+//      Slab *PointerToSlab(AllocThing *ptr):
 //          // Get cardNo
 //          unsigned cardNo = ptr->cardNo
 //

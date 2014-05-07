@@ -4,6 +4,7 @@
 
 #include "common.hpp"
 #include "debug.hpp"
+#include "spew.hpp"
 #include "slab.hpp"
 #include "runtime.hpp"
 #include "gc.hpp"
@@ -27,15 +28,19 @@ class Array
     HeapField<T> vals_[0];
 
   public:
-    inline Array(size_t len, const T *vals) {
+    inline Array(uint32_t len, const T *vals) {
         for (uint32_t i = 0; i < len; i++)
             new (&vals_[i]) T(vals[i]);
     }
 
-    template <typename... Args>
-    inline Array(size_t len, Args... args) {
-        for (uint32_t i = 0; i < len; i++)
-            new (&vals_[i]) T(std::forward<Args>(args)...);
+    inline Array(uint32_t len, const T &val) {
+        for (uint32_t i = 0; i < len; i++) {
+            SpewMemoryWarn("Array construct %p %d/%d = %d",
+                           this, i, len, int(val));
+            vals_[i].init(this, val);
+            // new (&vals_[i]) T(val);
+        }
+        SpewMemoryWarn("Array length %d", (int)length());
     }
 
     inline uint32_t length() const;
@@ -52,9 +57,12 @@ class Array
 // Template to annotate types which are used as parameters to
 // Array<>.
 template <typename T>
-class ArrayTraits
+struct ArrayTraits
 {
     ArrayTraits() = delete;
+
+    // Set to true for all specializations.
+    static const bool Specialized = false;
 
     // Give an AllocFormat for an array of type T.
     //
@@ -64,8 +72,9 @@ class ArrayTraits
 // Specialize arrays for primitive types.
 #define DEF_ARRAY_TRAITS_(type, fmtName) \
     template <> \
-    class ArrayTraits<type> { \
+    struct ArrayTraits<type> { \
         ArrayTraits() = delete; \
+        static const bool Specialized = true; \
         static const GC::AllocFormat ArrayFormat = GC::AllocFormat::fmtName; \
     };
 
@@ -84,10 +93,11 @@ DEF_ARRAY_TRAITS_(double, UntracedThing);
 
 // Specialize arrays for pointer types.
 template <typename P>
-class ArrayTraits<P *> {
+struct ArrayTraits<P *> {
     static_assert(GC::HeapTraits<P>::Specialized,
                   "Underlying type of pointer is not a heap thing.");
     ArrayTraits() = delete;
+    static const bool Specialized = true;
     static const GC::AllocFormat ArrayFormat =
         GC::AllocFormat::AllocThingPointer;
 };
@@ -105,7 +115,7 @@ namespace GC {
 
 
 template <typename T>
-class HeapTraits<VM::Array<T>>
+struct HeapTraits<VM::Array<T>>
 {
     // The generic specialization of Array<T> demands that T itself
     // have either a field specialization.
@@ -120,6 +130,13 @@ class HeapTraits<VM::Array<T>>
     static constexpr bool IsLeaf = TraceTraits<T>::IsLeaf;
     static constexpr GC::AllocFormat Format =
         VM::ArrayTraits<T>::ArrayFormat;
+
+    // All constructor signatures for Array take the length as the
+    // first argument.
+    template <typename... Args>
+    static uint32_t SizeOf(uint32_t len, Args... rest) {
+        return len * sizeof(T);
+    }
 };
 
 

@@ -8,15 +8,14 @@
 namespace Whisper {
 
 
-class SlabThing;
-
-
 //
 // GC::BaseField
 //
 // Base helper class for HeapField and StackField.
 //
 namespace GC {
+
+class AllocThing;
 
 template <typename T>
 class BaseField
@@ -90,35 +89,39 @@ class HeapField : public GC::BaseField<T>
       : GC::BaseField<T>(std::forward<Args>(args)...)
     {}
 
-    inline void notifySetPre(SlabThing *container) {
+    inline void notifySetPre(GC::AllocThing *container) {
         // TODO: Use TraceTraits to scan val_, and register any
         // existing pointers.
     }
-    inline void notifySetPost(SlabThing *container) {
+    inline void notifySetPost(GC::AllocThing *container) {
         // TODO: Use TraceTraits to scan val_, and register any
         // new pointers.
     }
 
-    inline void set(const T &ref, SlabThing *container) {
-        notifySetPre(container);
+    template <typename AllocThingT>
+    inline void set(const T &ref, AllocThingT *container) {
+        notifySetPre(GC::AllocThing::From(container));
         this->val_ = ref;
-        notifySetPost(container);
-    }
-    inline void set(T &&ref, SlabThing *container) {
-        notifySetPre(container);
-        this->val_ = ref;
-        notifySetPost(container);
+        notifySetPost(GC::AllocThing::From(container));
     }
 
-    template <typename SlabThingT, typename... Args>
-    inline void init(SlabThingT *container, Args... args) {
+    template <typename AllocThingT>
+    inline void set(T &&ref, AllocThingT *container) {
+        notifySetPre(GC::AllocThing::From(container));
+        this->val_ = ref;
+        notifySetPost(GC::AllocThing::From(container));
+    }
+
+    template <typename AllocThingT, typename... Args>
+    inline void init(AllocThingT *container, Args... args) {
         // Pre-notification not required as value is not initialized.
         new (&this->val_) T(std::forward<Args>(args)...);
-        notifySetPost(container);
+        notifySetPost(GC::AllocThing::From(container));
     }
 
-    inline void destroy(SlabThing *container) {
-        notifySetPre(container);
+    template <typename AllocThingT>
+    inline void destroy(AllocThingT *container) {
+        notifySetPre(GC::AllocThing::From(container));
         this->val_.~T();
         // Post-notification not required as value is destroyed.
     }
@@ -142,19 +145,27 @@ class StackField : public GC::BaseField<T>
       : GC::BaseField<T>(std::forward<Args>(args)...)
     {}
 
-    inline void set(const T &ref, SlabThing *container) {
-        this->val_ = ref;
-    }
-    inline void set(T &&ref, SlabThing *container) {
+    template <typename AllocThingT>
+    inline void set(const T &ref, AllocThingT *container) {
+        GC::AllocThing::From(container);
         this->val_ = ref;
     }
 
-    template <typename SlabThingT, typename... Args>
-    inline void init(SlabThingT *container, Args... args) {
+    template <typename AllocThingT>
+    inline void set(T &&ref, AllocThingT *container) {
+        GC::AllocThing::From(container);
+        this->val_ = ref;
+    }
+
+    template <typename AllocThingT, typename... Args>
+    inline void init(AllocThingT *container, Args... args) {
+        GC::AllocThing::From(container);
         new (&this->val_) T(std::forward<Args>(args)...);
     }
 
-    inline void destroy(SlabThing *container) {
+    template <typename AllocThingT>
+    inline void destroy(AllocThingT *container) {
+        GC::AllocThing::From(container);
         this->val_.~T();
     }
 

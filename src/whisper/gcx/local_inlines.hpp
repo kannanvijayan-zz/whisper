@@ -20,6 +20,11 @@ LocalBase::LocalBase(ThreadContext *threadContext, AllocFormat format)
     threadContext_->locals_ = this;
 }
 
+inline
+LocalBase::LocalBase(RunContext *runContext, AllocFormat format)
+  : LocalBase(runContext->threadContext(), format)
+{}
+
 inline 
 LocalBase::~LocalBase()
 {
