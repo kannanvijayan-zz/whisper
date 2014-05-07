@@ -48,7 +48,6 @@ struct AllocFormatTraits<AllocFormat::UntracedThing>
     { \
         HeapTraits() = delete; \
         static constexpr bool Specialized = true; \
-        static constexpr bool IsLeaf = true; \
         static constexpr AllocFormat Format = AllocFormat::UntracedThing; \
         \
         template <typename... Args> \
@@ -69,6 +68,7 @@ struct AllocFormatTraits<AllocFormat::UntracedThing>
         \
         TraceTraits() = delete; \
         static constexpr bool Specialized = true; \
+        static constexpr bool IsLeaf = true; \
         \
         template <typename Scanner> \
         static void Scan(Scanner &, const T_ &, void *, void *) {} \
@@ -126,7 +126,6 @@ struct HeapTraits<P *>
     HeapTraits() = delete;
 
     static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = false;
     static constexpr AllocFormat Format = AllocFormat::AllocThingPointer;
 
     template <typename... Args>
@@ -173,6 +172,7 @@ struct TraceTraits<AllocThing *>
     TraceTraits() = delete;
 
     static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
     static void Scan(Scanner &scanner, const T_ &t, void *start, void *end) {
@@ -210,6 +210,7 @@ struct TraceTraits<P *>
     TraceTraits() = delete;
 
     static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
     static void Scan(Scanner &scanner, const T_ &t, void *start, void *end) {

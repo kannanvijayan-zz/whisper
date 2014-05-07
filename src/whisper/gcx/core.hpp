@@ -504,13 +504,6 @@ struct StackTraits
 //      // Must be set by all StackTraits specializations.
 //      static constexpr bool Specialized = true;
 //
-//      // Indicate if the type needs to be traced or not.
-//      // If a type is a leaf type, its values can never contain
-//      // pointers.
-//      // This will determine if the object is allocated in
-//      // the head or tail region of the slab.
-//      static constexpr bool IsLeaf;
-//
 //      // The AllocFormat for the type.
 //      static constexpr AllocFormat Format;
 //
@@ -592,6 +585,13 @@ struct AllocFormatTraits
 //      Marker boolean indicating that TraceTraits has been specialized
 //      for this type.
 //
+//      // Indicate if the type needs to be traced or not.
+//      // If a type is a leaf type, its values can never contain
+//      // pointers.
+//      // This will determine if the object is allocated in
+//      // the head or tail region of the slab.
+//      static constexpr bool IsLeaf;
+//
 //  template <typename Scanner>
 //  void Scan(Scanner &scanner, const T &t, void *start, void *end);
 //      Scan the a thing of type T for references.
@@ -643,6 +643,13 @@ struct TraceTraits
     TraceTraits() = delete;
 
     static constexpr bool Specialized = false;
+
+    // Indicate if the type needs to be traced or not.
+    // If a type is a leaf type, its values can never contain
+    // pointers.
+    // This will determine if the object is allocated in
+    // the head or tail region of the slab.
+    // static constexpr bool IsLeaf = false;
 
     // template <typename Scanner>
     // static void Scan(Scanner &scanner, const T &t, void *start, void *end);

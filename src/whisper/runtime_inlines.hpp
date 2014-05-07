@@ -34,7 +34,8 @@ AllocationContext::createFlagged(uint8_t flags, Args... args)
 
     // Allocate the space for the object.
     constexpr GC::AllocFormat FMT = GC::HeapTraits<ObjT>::Format;
-    constexpr bool TRACED = ! GC::HeapTraits<ObjT>::IsLeaf;
+    typedef typename GC::AllocFormatTraits<FMT>::Type TRACE_TYPE;
+    constexpr bool TRACED = ! GC::TraceTraits<TRACE_TYPE>::IsLeaf;
     uint8_t *mem = allocate<TRACED>(size, FMT, flags);
     if (!mem)
         return nullptr;

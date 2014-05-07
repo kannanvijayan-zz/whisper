@@ -49,6 +49,50 @@ class Array
 };
 
 
+// Template to annotate types which are used as parameters to
+// Array<>.
+template <typename T>
+class ArrayTraits
+{
+    ArrayTraits() = delete;
+
+    // Give an AllocFormat for an array of type T.
+    //
+    // static const GC::AllocFormat ArrayFormat;
+};
+
+// Specialize arrays for primitive types.
+#define DEF_ARRAY_TRAITS_(type, fmtName) \
+    template <> \
+    class ArrayTraits<type> { \
+        ArrayTraits() = delete; \
+        static const GC::AllocFormat ArrayFormat = GC::AllocFormat::fmtName; \
+    };
+
+DEF_ARRAY_TRAITS_(uint8_t, UntracedThing);
+DEF_ARRAY_TRAITS_(uint16_t, UntracedThing);
+DEF_ARRAY_TRAITS_(uint32_t, UntracedThing);
+DEF_ARRAY_TRAITS_(uint64_t, UntracedThing);
+DEF_ARRAY_TRAITS_(int8_t, UntracedThing);
+DEF_ARRAY_TRAITS_(int16_t, UntracedThing);
+DEF_ARRAY_TRAITS_(int32_t, UntracedThing);
+DEF_ARRAY_TRAITS_(int64_t, UntracedThing);
+DEF_ARRAY_TRAITS_(float, UntracedThing);
+DEF_ARRAY_TRAITS_(double, UntracedThing);
+
+#undef DEF_ARRAY_TRAITS_
+
+// Specialize arrays for pointer types.
+template <typename P>
+class ArrayTraits<P *> {
+    static_assert(GC::HeapTraits<P>::Specialized,
+                  "Underlying type of pointer is not a heap thing.");
+    ArrayTraits() = delete;
+    static const GC::AllocFormat ArrayFormat =
+        GC::AllocFormat::AllocThingPointer;
+};
+
+
 } // namespace VM
 } // namespace Whisper
 
@@ -61,17 +105,19 @@ namespace GC {
 
 
 template <typename T>
-class HeapTraits<Array<T>>
+class HeapTraits<VM::Array<T>>
 {
     // The generic specialization of Array<T> demands that T itself
-    // have either a stack of heap specialization.
-    static_assert(Stack
+    // have either a field specialization.
+    static_assert(FieldTraits<T>::Specialized,
+                  "Underlying type does not have a field specialization.");
 
     HeapTraits() = delete;
 
     static constexpr bool Specialized = true;
     static constexpr bool IsLeaf = HeapTraits<T>::IsLeaf;
-    static constexpr bool AllocFormat =
+    static constexpr GC::AllocFormat Format =
+        VM::ArrayTraits<T>::ArrayFormat;
 };
 
 
