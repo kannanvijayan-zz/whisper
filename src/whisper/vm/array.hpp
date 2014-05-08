@@ -7,6 +7,7 @@
 #include "spew.hpp"
 #include "slab.hpp"
 #include "runtime.hpp"
+#include "gc.hpp"
 
 #include <new>
 
@@ -163,7 +164,9 @@ struct TraceTraits<VM::Array<GC::AllocThing *>>
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, T_ &t, void *start, void *end) {
+    static void Update(Updater &updater, T_ &t,
+                       const void *start, const void *end)
+    {
         // TODO: implement me.
     }
 };

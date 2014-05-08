@@ -178,9 +178,9 @@ struct TraceTraits<AllocThing *>
     static void Scan(Scanner &scanner, const T_ &t,
                      const void *start, const void *end)
     {
-        if (std::less<const void *>(&t, start))
+        if (std::less<const void *>()(&t, start))
             return;
-        if (std::greater_equal<const void *>(&t, end))
+        if (std::greater_equal<const void *>()(&t, end))
             return;
         scanner(&t, t);
     }
@@ -189,9 +189,9 @@ struct TraceTraits<AllocThing *>
     static void Update(Updater &updater, T_ &t,
                        const void *start, const void *end)
     {
-        if (std::less<const void *>(&t, start))
+        if (std::less<const void *>()(&t, start))
             return;
-        if (std::greater_equal<const void *>(&t, end))
+        if (std::greater_equal<const void *>()(&t, end))
             return;
         AllocThing *tx = updater(&t, t);
         if (tx != t)
