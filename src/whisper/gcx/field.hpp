@@ -58,13 +58,13 @@ class BaseField
     T &operator =(const BaseField<T> &other) = delete;
 
     template <typename Scanner>
-    inline void SCAN(Scanner &scanner, void *start, void *end) const
+    inline void scan(Scanner &scanner, const void *start, const void *end) const
     {
         TraceTraits<T>::Scan(scanner, val_, start, end);
     }
 
     template <typename Updater>
-    inline void UPDATE(Updater &updater, void *start, void *end) const
+    inline void update(Updater &updater, const void *start, const void *end)
     {
         TraceTraits<T>::Update(updater, val_, start, end);
     }

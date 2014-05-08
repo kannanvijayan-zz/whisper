@@ -102,6 +102,37 @@ struct AllocFormatTraits<AllocFormat::UntracedThing>
 ////
 ///////////////////////////////////////////////////////////////////////////////
 
+// Specialize AllocThing pointers specially, since AllocThing does not
+// have a HeapTraits specialization (and it shouldn't).
+template <>
+struct StackTraits<AllocThing *>
+{
+    StackTraits() = delete;
+    static constexpr bool Specialized = true;
+    static constexpr AllocFormat Format = AllocFormat::AllocThingPointer;
+};
+
+template <>
+struct HeapTraits<AllocThing *>
+{
+    HeapTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr AllocFormat Format = AllocFormat::AllocThingPointer;
+
+    template <typename... Args>
+    static uint32_t CalculateSize(Args... args) {
+        return sizeof(AllocThing *);
+    }
+};
+
+template <>
+struct FieldTraits<AllocThing *>
+{
+    FieldTraits() = delete;
+    static constexpr bool Specialized = true;
+};
+
 // By default pointers are expected to point to structures for which
 // HeapTraits is defined.
 

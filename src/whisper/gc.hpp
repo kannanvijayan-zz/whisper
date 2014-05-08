@@ -7,6 +7,7 @@
 #include "gcx/handle.hpp"
 #include "gcx/field.hpp"
 #include "gcx/local_inlines.hpp"
+#include "gcx/specializations.hpp"
 
 
 namespace Whisper {

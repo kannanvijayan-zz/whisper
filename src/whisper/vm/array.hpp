@@ -20,6 +20,8 @@ namespace VM {
 template <typename T>
 class Array
 {
+    friend class GC::TraceTraits<Array<T>>;
+
     // T must be a field type to be usable.
     static_assert(GC::FieldTraits<T>::Specialized,
                   "Underlying type is not field-specialized.");
@@ -28,12 +30,12 @@ class Array
     HeapField<T> vals_[0];
 
   public:
-    inline Array(uint32_t len, const T *vals) {
+    Array(uint32_t len, const T *vals) {
         for (uint32_t i = 0; i < len; i++)
             new (&vals_[i]) T(vals[i]);
     }
 
-    inline Array(uint32_t len, const T &val) {
+    Array(uint32_t len, const T &val) {
         for (uint32_t i = 0; i < len; i++) {
             SpewMemoryWarn("Array construct %p %d/%d = %d",
                            this, i, len, int(val));
@@ -43,14 +45,29 @@ class Array
         SpewMemoryWarn("Array length %d", (int)length());
     }
 
-    inline uint32_t length() const;
+    uint32_t length() const {
+        WH_ASSERT(GC::AllocThing::From(this)->size() % sizeof(T) == 0);
+        return GC::AllocThing::From(this)->size() / sizeof(T);
+    }
 
-    inline const T &getRaw(uint32_t idx) const;
-    inline T &getRaw(uint32_t idx);
+    const T &getRaw(uint32_t idx) const {
+        WH_ASSERT(idx < length());
+        return vals_[idx];
+    }
 
-    inline T get(uint32_t idx) const;
+    T &getRaw(uint32_t idx) {
+        WH_ASSERT(idx < length());
+        return vals_[idx];
+    }
 
-    inline void set(uint32_t idx, const T &val);
+    T get(uint32_t idx) const {
+        return vals_[idx];
+    }
+
+    void set(uint32_t idx, const T &val) {
+        WH_ASSERT(idx < length());
+        vals_[idx].set(val, GC::AllocThing::From(this));
+    }
 };
 
 
@@ -88,6 +105,8 @@ DEF_ARRAY_TRAITS_(int32_t, UntracedThing);
 DEF_ARRAY_TRAITS_(int64_t, UntracedThing);
 DEF_ARRAY_TRAITS_(float, UntracedThing);
 DEF_ARRAY_TRAITS_(double, UntracedThing);
+
+DEF_ARRAY_TRAITS_(GC::AllocThing *, AllocThingPointerArray);
 
 #undef DEF_ARRAY_TRAITS_
 
@@ -154,20 +173,24 @@ struct TraceTraits<VM::Array<GC::AllocThing *>>
 
     static constexpr bool IsLeaf = false;
 
-    typedef VM::Array<GC::AllocThing *> T_;
+    typedef VM::Array<GC::AllocThing *> Array_;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const T_ &t,
+    static void Scan(Scanner &scanner, const Array_ &array,
                      const void *start, const void *end)
     {
-        // TODO: implement me.
+        // Scan each pointer in the array.
+        for (uint32_t i = 0; i < array.length(); i++)
+            array.vals_[i].scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, T_ &t,
+    static void Update(Updater &updater, Array_ &array,
                        const void *start, const void *end)
     {
-        // TODO: implement me.
+        // Update each pointer in the array.
+        for (uint32_t i = 0; i < array.length(); i++)
+            array.vals_[i].update(updater, start, end);
     }
 };
 
