@@ -1,0 +1,5 @@
+
+Configure command
+-----------------
+
+(cd BUILD; CXX='g++-4.8 -std=c++11' CXXFLAGS='-Wall -Werror -gdwarf-2 -g -O0' ../configure --enable-debug)
