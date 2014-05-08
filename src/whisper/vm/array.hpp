@@ -7,7 +7,6 @@
 #include "spew.hpp"
 #include "slab.hpp"
 #include "runtime.hpp"
-#include "gc.hpp"
 
 #include <new>
 
@@ -99,7 +98,7 @@ struct ArrayTraits<P *> {
     ArrayTraits() = delete;
     static const bool Specialized = true;
     static const GC::AllocFormat ArrayFormat =
-        GC::AllocFormat::AllocThingPointer;
+        GC::AllocFormat::AllocThingPointerArray;
 };
 
 
@@ -127,7 +126,6 @@ struct HeapTraits<VM::Array<T>>
     HeapTraits() = delete;
 
     static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = TraceTraits<T>::IsLeaf;
     static constexpr GC::AllocFormat Format =
         VM::ArrayTraits<T>::ArrayFormat;
 
@@ -136,6 +134,37 @@ struct HeapTraits<VM::Array<T>>
     template <typename... Args>
     static uint32_t SizeOf(uint32_t len, Args... rest) {
         return len * sizeof(T);
+    }
+};
+
+template <>
+struct AllocFormatTraits<AllocFormat::AllocThingPointerArray>
+{
+    AllocFormatTraits() = delete;
+    typedef VM::Array<AllocThing *> Type;
+};
+
+template <>
+struct TraceTraits<VM::Array<GC::AllocThing *>>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+
+    static constexpr bool IsLeaf = false;
+
+    typedef VM::Array<GC::AllocThing *> T_;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const T_ &t,
+                     const void *start, const void *end)
+    {
+        // TODO: implement me.
+    }
+
+    template <typename Updater>
+    static void Update(Updater &updater, T_ &t, void *start, void *end) {
+        // TODO: implement me.
     }
 };
 

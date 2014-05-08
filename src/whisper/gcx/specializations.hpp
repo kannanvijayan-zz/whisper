@@ -71,10 +71,10 @@ struct AllocFormatTraits<AllocFormat::UntracedThing>
         static constexpr bool IsLeaf = true; \
         \
         template <typename Scanner> \
-        static void Scan(Scanner &, const T_ &, void *, void *) {} \
+        static void Scan(Scanner &, const T_ &, const void *, const void *) {} \
         \
         template <typename Updater> \
-        static void Update(Updater &, T_ &, void *, void *) {} \
+        static void Update(Updater &, T_ &, const void *, const void *) {} \
     }
 
     PRIM_TRACE_TRAITS_DEF_(bool);
@@ -175,7 +175,9 @@ struct TraceTraits<AllocThing *>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const T_ &t, void *start, void *end) {
+    static void Scan(Scanner &scanner, const T_ &t,
+                     const void *start, const void *end)
+    {
         if (std::less<const void *>(&t, start))
             return;
         if (std::greater_equal<const void *>(&t, end))
@@ -184,10 +186,12 @@ struct TraceTraits<AllocThing *>
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, T_ &t, void *start, void *end) {
-        if (std::less<void *>(&t, start))
+    static void Update(Updater &updater, T_ &t,
+                       const void *start, const void *end)
+    {
+        if (std::less<const void *>(&t, start))
             return;
-        if (std::greater_equal<void *>(&t, end))
+        if (std::greater_equal<const void *>(&t, end))
             return;
         AllocThing *tx = updater(&t, t);
         if (tx != t)
@@ -213,7 +217,9 @@ struct TraceTraits<P *>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const T_ &t, void *start, void *end) {
+    static void Scan(Scanner &scanner, const T_ &t,
+                     const void *start, const void *end)
+    {
         if (std::less<const void *>(&t, start))
             return;
         if (std::greater_equal<const void *>(&t, end))
@@ -222,72 +228,18 @@ struct TraceTraits<P *>
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, T_ &t, void *start, void *end) {
-        if (std::less<void *>(&t, start))
+    static void Update(Updater &updater, T_ &t,
+                       const void *start, const void *end)
+    {
+        if (std::less<const void *>(&t, start))
             return;
-        if (std::greater_equal<void *>(&t, end))
+        if (std::greater_equal<const void *>(&t, end))
             return;
         AllocThing *tx = updater(&t, reinterpret_cast<AllocThing *>(t));
         if (tx != t)
             t = reinterpret_cast<P *>(tx);
     }
 };
-
-
-///////////////////////////////////////////////////////////////////////////////
-////
-//// Helper to scan a pointer given an AllocFormat describing its contents.
-////
-///////////////////////////////////////////////////////////////////////////////
-
-
-template <typename Scanner>
-void
-GcScanAllocFormat(AllocFormat fmt, const void *ptr,
-                  Scanner &scanner, void *start, void *end)
-{
-    WH_ASSERT(ptr != nullptr);
-    switch (fmt) {
-#define SWITCH_(fmtName) \
-    case AllocFormat::fmtName: {\
-        constexpr AllocFormat FMT = AllocFormat::fmtName; \
-        typedef AllocFormatTraits<AllocFormat::fmtName>::Type TRACE_TYPE; \
-        const TRACE_TYPE &tref = \
-            *reinterpret_cast<const TRACE_TYPE *>(ptr); \
-        TraceTraits<TRACE_TYPE>::Scan(scanner, tref, start, end); \
-        break; \
-    }
-      WHISPER_DEFN_GC_ALLOC_FORMATS(SWITCH_)
-#undef SWITCH_
-      default:
-        WH_ASSERT(!!!"BAD AllocFormat");
-        break;
-    }
-}
-
-template <typename Updater>
-void
-GcUpdateAllocFormat(AllocFormat fmt, const void *ptr,
-                    Updater &updater, void *start, void *end)
-{
-    WH_ASSERT(ptr != nullptr);
-    switch (fmt) {
-#define SWITCH_(fmtName) \
-    case AllocFormat::fmtName: {\
-        constexpr AllocFormat FMT = AllocFormat::fmtName; \
-        typedef AllocFormatTraits<FMT>::Type TRACE_TYPE; \
-        TRACE_TYPE &tref = \
-            *reinterpret_cast<const TRACE_TYPE *>(ptr); \
-        TraceTraits<TRACE_TYPE>::Update(updater, tref, start, end); \
-        break; \
-    }
-      WHISPER_DEFN_GC_ALLOC_FORMATS(SWITCH_)
-#undef SWITCH_
-      default:
-        WH_ASSERT(!!!"BAD AllocFormat");
-        break;
-    }
-}
 
 
 

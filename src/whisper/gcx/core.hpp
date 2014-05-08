@@ -304,8 +304,9 @@ namespace GC {
 
 
 #define WHISPER_DEFN_GC_ALLOC_FORMATS(_) \
-    _(UntracedThing)        \
-    _(AllocThingPointer)
+    _(UntracedThing)            \
+    _(AllocThingPointer)        \
+    _(AllocThingPointerArray)
 
 enum class AllocFormat : uint16_t
 {
@@ -549,8 +550,8 @@ struct FieldTraits
 };
 
 
-//
-// AllocFormatTraits<F>
+// AllocFormatTraits
+// -----------------
 //
 // A template specialization that, for every AllocFormat enum value,
 // defines the static type that handles it.
@@ -573,8 +574,8 @@ struct AllocFormatTraits
 };
 
 
-//
-// TraceTraits<T>()
+// TraceTraits
+// -----------
 //
 // Specializations of TraceTraits must be provided by types before any
 // gc-aware containers can be used to host them.
@@ -652,10 +653,12 @@ struct TraceTraits
     // static constexpr bool IsLeaf = false;
 
     // template <typename Scanner>
-    // static void Scan(Scanner &scanner, const T &t, void *start, void *end);
+    // static void Scan(Scanner &scanner, const T &t,
+    //                  const void *start, const void *end);
 
     // template <typename Updater>
-    // static void Update(Updater &scanner, const T &t, void *start, void *end);
+    // static void Update(Updater &updater, T &t,
+    //                    const void *start, const void *end);
 };
 
 // DerefTraits<T>
@@ -766,6 +769,105 @@ class AllocThing
 #undef CHK_
 };
 
+///////////////////////////////////////////////////////////////////////////////
+
+//
+// AllocThing
+//
+
+//
+// ScannerBox, ScannerBoxFor<T>, UpdaterBox, and UpdaterBoxFor<T>
+// serve to abstract the scanning and update protocol so the actual logic
+// can be pushed into a cpp file instead of in a header.
+//
+
+class ScannerBox
+{
+  protected:
+    ScannerBox() {}
+
+  public:
+    virtual void scanImpl(const void *addr, AllocThing *ptr) = 0;
+
+    inline void operator () (const void *addr, AllocThing *ptr) {
+        scanImpl(addr, ptr);
+    }
+};
+
+template <typename Scanner>
+class ScannerBoxFor : public ScannerBox
+{
+  private:
+    Scanner &scanner_;
+
+  public:
+    ScannerBoxFor(Scanner &scanner)
+      : ScannerBox(),
+        scanner_(scanner)
+    {}
+
+    virtual void scanImpl(const void *addr, AllocThing *ptr) {
+        scanner_(addr, ptr);
+    }
+};
+
+class UpdaterBox
+{
+  protected:
+    UpdaterBox() {}
+
+  public:
+    virtual AllocThing *updateImpl(void *addr, AllocThing *ptr) = 0;
+
+    inline AllocThing *operator () (void *addr, AllocThing *ptr) {
+        return updateImpl(addr, ptr);
+    }
+};
+
+template <typename Updater>
+class UpdaterBoxFor : public UpdaterBox
+{
+  private:
+    Updater &updater_;
+
+  public:
+    UpdaterBoxFor(Updater &updater)
+      : UpdaterBox(),
+        updater_(updater)
+    {}
+
+    virtual AllocThing *updateImpl(void *addr, AllocThing *ptr) {
+        return updater_(addr, ptr);
+    }
+};
+
+
+void
+ScanAllocThingImpl(ScannerBox &scanner, const AllocThing *thing,
+               const void *start, const void *end);
+
+void
+UpdateAllocThingImpl(UpdaterBox &updater, AllocThing *thing,
+                 const void *start, const void *end);
+
+
+template <typename Scanner>
+void
+ScanAllocThing(Scanner &scanner, const AllocThing *thing,
+               const void *start, const void *end)
+{
+    ScannerBoxFor<Scanner> scannerBox(scanner);
+    ScanAllocThingImpl(scannerBox, thing, start, end);
+}
+
+template <typename Updater>
+void
+UpdateAllocThing(Updater &updater, AllocThing *thing,
+                 const void *start, const void *end)
+{
+    UpdaterBoxFor<Updater> updaterBox(updater);
+    UpdateAllocThingImpl(updaterBox, thing, start, end);
+}
 
 
 } // namespace GC
