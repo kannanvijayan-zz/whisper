@@ -176,6 +176,41 @@ struct FieldTraits<P *>
     static constexpr bool Specialized = true;
 };
 
+template <typename P>
+struct DerefTraits<P *>
+{
+    static_assert(HeapTraits<P>::Specialized,
+                  "HeapTraits not specialized for underlying type.");
+
+    DerefTraits() = delete;
+
+    typedef P *T_;
+    typedef P  Type;
+
+    static inline const Type *Deref(const T_ &ptr) {
+        return ptr;
+    }
+    static inline Type *Deref(T_ &ptr) {
+        return ptr;
+    }
+};
+
+template <>
+struct DerefTraits<AllocThing *>
+{
+    DerefTraits() = delete;
+
+    typedef AllocThing *T_;
+    typedef AllocThing  Type;
+
+    static inline const Type *Deref(const T_ &ptr) {
+        return ptr;
+    }
+    static inline Type *Deref(T_ &ptr) {
+        return ptr;
+    }
+};
+
 
 //
 // Specialize AllocFormatTraits for AllocThingPointer.

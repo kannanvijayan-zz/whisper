@@ -141,13 +141,18 @@ int main(int argc, char **argv) {
         cx->inHatchery().create<VM::Array<uint32_t>>(5, 5));
 
     Local<VM::Array<uint32_t> *> arr2(cx,
-        cx->inHatchery().create<VM::Array<uint32_t>>(16, 9));
+        cx->inHatchery().create<VM::Array<uint32_t>>(17, 9));
 
     Local<VM::Array<uint16_t> *> arr3(cx,
-        cx->inHatchery().create<VM::Array<uint16_t>>(16, 9));
+        cx->inHatchery().create<VM::Array<uint16_t>>(17, 9));
 
     Local<VM::Array<uint8_t> *> arr4(cx,
-        cx->inHatchery().create<VM::Array<uint8_t>>(16, 9));
+        cx->inHatchery().create<VM::Array<uint8_t>>(17, 9));
+
+    std::cerr << "arr.length = " << arr->length() << std::endl;
+    std::cerr << "arr2.length = " << arr2->length() << std::endl;
+    std::cerr << "arr3.length = " << arr3->length() << std::endl;
+    std::cerr << "arr4.length = " << arr4->length() << std::endl;
 
     // Generate bytecode.
     /*
