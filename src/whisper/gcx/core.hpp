@@ -733,6 +733,12 @@ class AllocThing
                       "Neither StackTraits<T> nor HeapTraits<T> specialized.");
         return reinterpret_cast<const AllocThing *>(ptr);
     }
+    static inline const AllocThing *From(const AllocThing *ptr) {
+        return ptr;
+    }
+    static inline AllocThing *From(AllocThing *ptr) {
+        return ptr;
+    }
 
     inline AllocHeader &header() {
         return reinterpret_cast<AllocHeader *>(this)[-1];

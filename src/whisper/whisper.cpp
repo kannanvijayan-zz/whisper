@@ -12,7 +12,6 @@
 #include "parser/syntax_tree_inlines.hpp"
 #include "parser/parser.hpp"
 #include "vm/array.hpp"
-#include "vm/array_inlines.hpp"
 /*
 #include "vm/hash_table.hpp"
 #include "vm/type.hpp"
@@ -150,9 +149,28 @@ int main(int argc, char **argv) {
         cx->inHatchery().create<VM::Array<uint8_t>>(17, 9));
 
     std::cerr << "arr.length = " << arr->length() << std::endl;
+    for (uint32_t i = 0; i < arr->length(); i++) {
+        arr->set(i, arr->get(i) + i);
+        std::cerr << "arr[" << i << "] = " << arr->get(i) << std::endl;
+    }
+
     std::cerr << "arr2.length = " << arr2->length() << std::endl;
+    for (uint32_t i = 0; i < arr2->length(); i++) {
+        arr2->set(i, arr2->get(i) + i);
+        std::cerr << "arr2[" << i << "] = " << arr2->get(i) << std::endl;
+    }
+
     std::cerr << "arr3.length = " << arr3->length() << std::endl;
+    for (uint32_t i = 0; i < arr3->length(); i++) {
+        arr3->set(i, arr3->get(i) * arr2->get(i));
+        std::cerr << "arr3[" << i << "] = " << arr3->get(i) << std::endl;
+    }
+
     std::cerr << "arr4.length = " << arr4->length() << std::endl;
+    for (uint32_t i = 0; i < arr4->length(); i++) {
+        arr4->set(i, arr4->get(i) + arr3->get(i));
+        std::cerr << "arr4[" << i << "] = " << (int)arr4->get(i) << std::endl;
+    }
 
     // Generate bytecode.
     /*
