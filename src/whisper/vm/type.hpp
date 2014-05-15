@@ -1,7 +1,6 @@
 #ifndef WHISPER__VM__TYPE_HPP
 #define WHISPER__VM__TYPE_HPP
 
-
 #include "common.hpp"
 #include "debug.hpp"
 
@@ -13,20 +12,20 @@ namespace VM {
 // Primitive type codes define the numeric code of
 // a given primitive type.
 //
-enum class PrimitiveCode : uint32_t
+enum class PrimitiveTypeCode : uint32_t
 {
     INVALID     = 0,
     Int         = 1
 };
 
 inline const char *
-PrimitiveCodeString(PrimitiveCode code)
+PrimitiveTypeCodeString(PrimitiveTypeCode code)
 {
     switch(code) {
-      case PrimitiveCode::INVALID:
+      case PrimitiveTypeCode::INVALID:
         return "INVALID";
 
-      case PrimitiveCode::Int:
+      case PrimitiveTypeCode::Int:
         return "int";
     }
 
@@ -34,13 +33,13 @@ PrimitiveCodeString(PrimitiveCode code)
 }
 
 inline bool
-IsValidPrimitiveCode(PrimitiveCode code)
+IsValidPrimitiveTypeCode(PrimitiveTypeCode code)
 {
     switch(code) {
-      case PrimitiveCode::INVALID:
+      case PrimitiveTypeCode::INVALID:
         return false;
 
-      case PrimitiveCode::Int:
+      case PrimitiveTypeCode::Int:
         return true;
     }
 
@@ -49,8 +48,8 @@ IsValidPrimitiveCode(PrimitiveCode code)
 
 
 //
-// Models the type of a value.  Primitive types are represented
-// directly.
+// Describes the type of a value.  Primitive types are represented
+// as tagged enum values from PrimitiveTypeCode
 //
 class ValueType
 {
@@ -61,25 +60,32 @@ class ValueType
     constexpr static uintptr_t PRIMITIVE_TAG = 0x1u;
 
   public:
-    inline ValueType(PrimitiveCode code)
+    inline ValueType(PrimitiveTypeCode code)
       : data_((ToUInt32(code) << PRIMITIVE_SHIFT) | PRIMITIVE_TAG)
     {
-        WH_ASSERT(IsValidPrimitiveCode(code));
+        WH_ASSERT(IsValidPrimitiveTypeCode(code));
     }
 
     inline bool isPrimitive() const {
         return data_ & PRIMITIVE_TAG;
     }
 
-    inline PrimitiveCode primitiveCode() const {
+    inline bool isInt() const {
+        return isPrimitive() && primitiveTypeCode() == PrimitiveTypeCode::Int;
+    }
+
+    inline PrimitiveTypeCode primitiveTypeCode() const {
         WH_ASSERT(isPrimitive());
-        return static_cast<PrimitiveCode>(data_ >> PRIMITIVE_SHIFT);
+        return static_cast<PrimitiveTypeCode>(data_ >> PRIMITIVE_SHIFT);
     }
 };
 
 
 } //namespace VM
 } // namespace Whisper
+
+
+#include "vm/type_specializations.hpp"
 
 
 #endif // WHISPER__VM__TYPE_HPP

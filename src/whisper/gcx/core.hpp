@@ -307,7 +307,8 @@ namespace GC {
 #define WHISPER_DEFN_GC_ALLOC_FORMATS(_) \
     _(UntracedThing)            \
     _(AllocThingPointer)        \
-    _(AllocThingPointerArray)
+    _(AllocThingPointerArray)   \
+    _(ValueType)
 
 enum class AllocFormat : uint16_t
 {
