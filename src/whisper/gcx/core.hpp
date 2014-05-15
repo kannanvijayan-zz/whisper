@@ -308,7 +308,8 @@ namespace GC {
     _(UntracedThing)            \
     _(AllocThingPointer)        \
     _(AllocThingPointerArray)   \
-    _(ValueType)
+    _(ValueType)                \
+    _(ValueTypeArray)
 
 enum class AllocFormat : uint16_t
 {

@@ -28,6 +28,10 @@ struct ArrayTraits
     // Give an AllocFormat for an array of type T.
     //
     // static const GC::AllocFormat ArrayFormat;
+
+    // Give a map-back type T' to map the array format back to
+    // VM::Array<T'>
+    // typedef T T';
 };
 
 // Specialize arrays for primitive types.
@@ -60,7 +64,7 @@ struct ArrayTraits<P *> {
     static_assert(GC::HeapTraits<P>::Specialized,
                   "Underlying type of pointer is not a heap thing.");
     ArrayTraits() = delete;
-    static const bool Specialized = true;
+    static constexpr bool Specialized = true;
     static const GC::AllocFormat ArrayFormat =
         GC::AllocFormat::AllocThingPointerArray;
 };
@@ -68,6 +72,37 @@ struct ArrayTraits<P *> {
 
 } // namespace VM
 } // namespace Whisper
+
+
+// A handy macro for defining VM::ArrayTraits<T> and
+// GC::AllocFormatTraits<FMT> for a given array type.
+//
+// The Macro simply makes VM::ArrayTraits<type> specify |format|
+// as the AllocFormat of the array, and points
+// GC::AllocFormatTarits<format> to VM::Array<type> as the
+// traced type.
+#define WH_VM__DEF_SIMPLE_ARRAY_TRAITS(type, format) \
+  namespace Whisper { \
+   namespace VM { \
+    template <> struct ArrayTraits<type> { \
+        static_assert(GC::FieldTraits<type>::Specialized, \
+                      "Underlying type is not field-specialized."); \
+        ArrayTraits() = delete; \
+        static constexpr bool Specialized = true; \
+        static const GC::AllocFormat ArrayFormat = GC::AllocFormat::format; \
+    }; \
+   } \
+   \
+   namespace GC { \
+    template <> struct AllocFormatTraits<GC::AllocFormat::format> { \
+        static_assert(TraceTraits<type>::Specialized, \
+                      "Underlying type is not trace-specialized."); \
+        AllocFormatTraits() = delete; \
+        static constexpr bool Specialized = true; \
+        typedef VM::Array<type> Type; \
+    }; \
+   } \
+  }
 
 
 //
@@ -80,13 +115,6 @@ namespace GC {
 template <typename T>
 struct HeapTraits<VM::Array<T>>
 {
-    // The generic specialization of Array<T> demands that T itself
-    // have either a field specialization.
-    static_assert(FieldTraits<T>::Specialized,
-                  "Underlying type does not have a field specialization.");
-    static_assert(VM::ArrayTraits<T>::Specialized,
-                  "Underlying type does not have an array specialization.");
-
     HeapTraits() = delete;
 
     static constexpr bool Specialized = true;
@@ -108,16 +136,16 @@ struct AllocFormatTraits<AllocFormat::AllocThingPointerArray>
     typedef VM::Array<AllocThing *> Type;
 };
 
-template <>
-struct TraceTraits<VM::Array<GC::AllocThing *>>
+template <typename T>
+struct TraceTraits<VM::Array<T>>
 {
     TraceTraits() = delete;
 
     static constexpr bool Specialized = true;
 
-    static constexpr bool IsLeaf = false;
+    static constexpr bool IsLeaf = TraceTraits<T>::IsLeaf;
 
-    typedef VM::Array<GC::AllocThing *> Array_;
+    typedef VM::Array<T> Array_;
 
     template <typename Scanner>
     static void Scan(Scanner &scanner, const Array_ &array,

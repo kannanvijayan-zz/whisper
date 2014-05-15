@@ -14,6 +14,8 @@
 namespace Whisper {
 namespace VM {
 
+template <typename T> class ArrayTraits;
+
 //
 // A slab-allocated fixed-length array
 //
@@ -25,6 +27,8 @@ class Array
     // T must be a field type to be usable.
     static_assert(GC::FieldTraits<T>::Specialized,
                   "Underlying type is not field-specialized.");
+    static_assert(ArrayTraits<T>::Specialized,
+                  "Underlying type does not have an array specialization.");
 
   private:
     HeapField<T> vals_[0];
@@ -37,12 +41,9 @@ class Array
 
     Array(uint32_t len, const T &val) {
         for (uint32_t i = 0; i < len; i++) {
-            SpewMemoryWarn("Array construct %p %d/%d = %d",
-                           this, i, len, int(val));
             vals_[i].init(this, val);
             // new (&vals_[i]) T(val);
         }
-        SpewMemoryWarn("Array length %d", (int)length());
     }
 
     inline uint32_t length() const;

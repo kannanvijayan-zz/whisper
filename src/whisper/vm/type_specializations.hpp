@@ -5,11 +5,13 @@
 #include "debug.hpp"
 #include "spew.hpp"
 #include "gc.hpp"
+#include "vm/type.hpp"
 
 #include <new>
 
+
 //
-// GC-Specializations for Array
+// GC-Specializations for ValueType
 //
 namespace Whisper {
 namespace GC {
@@ -90,6 +92,8 @@ struct TraceTraits<VM::ValueType>
 
 } // namespace GC
 } // namespace Whisper
+
+WH_VM__DEF_SIMPLE_ARRAY_TRAITS(VM::ValueType, ValueTypeArray);
 
 
 #endif // WHISPER__VM__TYPE_SPECIALIZATIONS_HPP

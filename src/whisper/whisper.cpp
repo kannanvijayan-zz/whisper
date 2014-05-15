@@ -142,12 +142,6 @@ int main(int argc, char **argv) {
     Local<VM::Array<uint32_t> *> arr2(cx,
         cx->inHatchery().create<VM::Array<uint32_t>>(17, 9));
 
-    Local<VM::Array<uint16_t> *> arr3(cx,
-        cx->inHatchery().create<VM::Array<uint16_t>>(17, 9));
-
-    Local<VM::Array<uint8_t> *> arr4(cx,
-        cx->inHatchery().create<VM::Array<uint8_t>>(17, 9));
-
     std::cerr << "arr.length = " << arr->length() << std::endl;
     for (uint32_t i = 0; i < arr->length(); i++) {
         arr->set(i, arr->get(i) + i);
@@ -160,16 +154,13 @@ int main(int argc, char **argv) {
         std::cerr << "arr2[" << i << "] = " << arr2->get(i) << std::endl;
     }
 
-    std::cerr << "arr3.length = " << arr3->length() << std::endl;
-    for (uint32_t i = 0; i < arr3->length(); i++) {
-        arr3->set(i, arr3->get(i) * arr2->get(i));
-        std::cerr << "arr3[" << i << "] = " << arr3->get(i) << std::endl;
-    }
-
-    std::cerr << "arr4.length = " << arr4->length() << std::endl;
-    for (uint32_t i = 0; i < arr4->length(); i++) {
-        arr4->set(i, arr4->get(i) + arr3->get(i));
-        std::cerr << "arr4[" << i << "] = " << (int)arr4->get(i) << std::endl;
+    Local<VM::Array<VM::ValueType> *> arr_type(cx,
+        cx->inHatchery().create<VM::Array<VM::ValueType>>(
+                                    17, VM::PrimitiveTypeCode::Int));
+    for (uint32_t i = 0; i < arr_type->length(); i++) {
+        std::cerr << "arr_type[" << i << "] = "
+            << VM::PrimitiveTypeCodeString(arr_type->get(i).primitiveTypeCode())
+            << std::endl;
     }
 
     // Generate bytecode.
