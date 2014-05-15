@@ -1,14 +1,10 @@
 #ifndef WHISPER__VM__ARRAY_SPECIALIZATIONS_HPP
 #define WHISPER__VM__ARRAY_SPECIALIZATIONS_HPP
 
-
 #include "common.hpp"
 #include "debug.hpp"
 #include "spew.hpp"
 #include "gc.hpp"
-
-#include "slab.hpp"
-#include "runtime.hpp"
 
 #include <new>
 
