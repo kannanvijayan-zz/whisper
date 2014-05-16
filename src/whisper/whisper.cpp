@@ -13,6 +13,7 @@
 #include "parser/parser.hpp"
 #include "vm/array.hpp"
 #include "vm/value_type.hpp"
+#include "vm/string.hpp"
 /*
 #include "vm/hash_table.hpp"
 #include "vm/string.hpp"

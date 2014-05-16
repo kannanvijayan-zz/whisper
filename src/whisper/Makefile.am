@@ -11,6 +11,7 @@ whisper_SOURCES = \
     parser/syntax_tree.cpp \
     parser/parser.cpp \
     gcx/core.cpp \
+    vm/string.cpp \
     whisper.cpp
 
 #    parser/syntax_annotations.cpp \
