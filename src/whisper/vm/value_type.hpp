@@ -81,7 +81,7 @@ class ValueType
 };
 
 
-} //namespace VM
+} // namespace VM
 } // namespace Whisper
 
 
