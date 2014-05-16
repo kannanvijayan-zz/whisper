@@ -164,6 +164,24 @@ int main(int argc, char **argv) {
             << std::endl;
     }
 
+    Local<VM::Array<VM::String *> *> arr_str(cx,
+        cx->inHatchery().create<VM::Array<VM::String *>>(20,
+            static_cast<VM::String *>(nullptr)));
+    for (uint32_t i = 0; i < arr_str->length(); i++) {
+        char buf[100];
+        snprintf(buf, 100, "Bing%d%d%d", i, i*i, i*i*i);
+        Local<VM::String *> str(cx,
+            cx->inHatchery().create<VM::String>(buf));
+        arr_str->set(i, str);
+    }
+    for (uint32_t i = 0; i < arr_str->length(); i++) {
+        Local<VM::String *> str(cx,
+            cx->inHatchery().create<VM::String>("foobix"));
+        std::cerr << "String @" << (void*)str << " - " << i << " length "
+                  << arr_str->get(i)->length() << ":"
+                  << (char *) arr_str->get(i)->bytes() << std::endl;
+    }
+
     // Generate bytecode.
     /*
     Interp::BytecodeGenerator bcgen(cx, wrappedAllocator, program, annotator,

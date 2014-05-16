@@ -69,7 +69,6 @@ StringReadUTF8Codepoint(const uint8_t *utf8Bytes, Handler &handler)
 String::String(uint32_t byteLength, const uint8_t *data)
   : length_(0)
 {
-    // Copy in the data.
     std::copy(data, data + byteLength, data_);
 
     // Count length of string.
@@ -77,10 +76,21 @@ String::String(uint32_t byteLength, const uint8_t *data)
         length_++;
 }
 
+String::String(uint32_t byteLength, const char *data)
+  : length_(byteLength)
+{
+    std::copy(data, data + byteLength, data_);
+}
+
+String::String(const char *data)
+  : length_(strlen(data))
+{
+    std::copy(data, data + length_, data_);
+}
+
 String::String(const String &other)
   : length_(other.length_)
 {
-    // Copy in the data.
     std::copy(other.data_, other.data_ + other.byteLength(), data_);
 }
 

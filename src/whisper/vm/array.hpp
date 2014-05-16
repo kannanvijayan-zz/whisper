@@ -40,9 +40,8 @@ class Array
     }
 
     Array(uint32_t len, const T &val) {
-        for (uint32_t i = 0; i < len; i++) {
+        for (uint32_t i = 0; i < len; i++)
             vals_[i].init(this, val);
-        }
     }
 
     Array(const Array<T> &other) {

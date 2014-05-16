@@ -65,6 +65,8 @@ class String
 
   public:
     String(uint32_t byteLength, const uint8_t *data);
+    String(uint32_t byteLength, const char *data);
+    String(const char *data);
     String(const String &other);
 
     uint32_t length() const {
@@ -72,6 +74,10 @@ class String
     }
 
     inline uint32_t byteLength() const;
+
+    const uint8_t *bytes() const {
+        return data_;
+    }
 
     Cursor begin() const {
         return Cursor(0);

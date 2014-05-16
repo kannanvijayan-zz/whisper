@@ -5,6 +5,7 @@
 #include "debug.hpp"
 #include "spew.hpp"
 #include "gc.hpp"
+#include <cstring>
 
 #include <new>
 
@@ -28,6 +29,10 @@ struct HeapTraits<VM::String>
     template <typename... Args>
     static uint32_t SizeOf(uint32_t len, Args... rest) {
         return sizeof(VM::String) + len;
+    }
+
+    static uint32_t SizeOf(const char *str) {
+        return sizeof(VM::String) + strlen(str);
     }
 
     static uint32_t SizeOf(const VM::String &other) {
