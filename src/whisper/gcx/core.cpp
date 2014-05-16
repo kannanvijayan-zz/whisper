@@ -5,7 +5,7 @@
 #include "gcx/core.hpp"
 #include "gcx/specializations.hpp"
 #include "vm/array.hpp"
-#include "vm/type.hpp"
+#include "vm/value_type.hpp"
 
 namespace Whisper {
 namespace GC {

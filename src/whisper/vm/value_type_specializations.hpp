@@ -5,7 +5,7 @@
 #include "debug.hpp"
 #include "spew.hpp"
 #include "gc.hpp"
-#include "vm/type.hpp"
+#include "vm/value_type.hpp"
 
 #include <new>
 
@@ -93,6 +93,10 @@ struct TraceTraits<VM::ValueType>
 } // namespace GC
 } // namespace Whisper
 
+//
+// Define Array<ValueType> to point AllocFormat::ValueTypeArray,
+// to point back to Array<ValueType> for tracing.
+//
 WH_VM__DEF_SIMPLE_ARRAY_TRAITS(VM::ValueType, ValueTypeArray);
 
 

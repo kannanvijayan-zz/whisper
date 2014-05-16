@@ -85,7 +85,7 @@ class ValueType
 } // namespace Whisper
 
 
-#include "vm/type_specializations.hpp"
+#include "vm/value_type_specializations.hpp"
 
 
 #endif // WHISPER__VM__TYPE_HPP
