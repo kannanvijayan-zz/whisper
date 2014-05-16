@@ -36,14 +36,18 @@ class Array
   public:
     Array(uint32_t len, const T *vals) {
         for (uint32_t i = 0; i < len; i++)
-            new (&vals_[i]) T(vals[i]);
+            vals_[i].init(this, vals[i]);
     }
 
     Array(uint32_t len, const T &val) {
         for (uint32_t i = 0; i < len; i++) {
             vals_[i].init(this, val);
-            // new (&vals_[i]) T(val);
         }
+    }
+
+    Array(const Array<T> &other) {
+        for (uint32_t i = 0; i < other.length(); i++)
+            vals_[i].init(this, other.vals_[i]);
     }
 
     inline uint32_t length() const;

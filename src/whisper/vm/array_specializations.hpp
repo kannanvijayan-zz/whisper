@@ -127,6 +127,10 @@ struct HeapTraits<VM::Array<T>>
     static uint32_t SizeOf(uint32_t len, Args... rest) {
         return len * sizeof(T);
     }
+
+    static uint32_t SizeOf(const VM::Array<T> &other) {
+        return other.length() * sizeof(T);
+    }
 };
 
 template <>
