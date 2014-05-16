@@ -1,5 +1,5 @@
-#ifndef WHISPER__VM__TYPE_HPP
-#define WHISPER__VM__TYPE_HPP
+#ifndef WHISPER__VM__VALUE_TYPE_HPP
+#define WHISPER__VM__VALUE_TYPE_HPP
 
 #include "common.hpp"
 #include "debug.hpp"
@@ -88,4 +88,4 @@ class ValueType
 #include "vm/value_type_specializations.hpp"
 
 
-#endif // WHISPER__VM__TYPE_HPP
+#endif // WHISPER__VM__VALUE_TYPE_HPP
