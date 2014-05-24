@@ -183,6 +183,14 @@ class Maybe
         new (ptr()) T(t);
     }
 
+    template <typename U>
+    Maybe(const Maybe<U> &u)
+      : hasValue_(u.hasValue())
+    {
+        if (u.hasValue())
+            new (ptr()) T(u.value());
+    }
+
     template <typename... ARGS>
     Maybe(ARGS... args)
       : hasValue_(true)
@@ -222,6 +230,10 @@ class Maybe
     }
     T &operator *() {
         return value();
+    }
+
+    T getWithFallback(T fallback) const {
+        return hasValue() ? value() : fallback;
     }
 
     const T &operator =(const T &val) {
