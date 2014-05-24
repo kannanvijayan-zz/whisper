@@ -4,6 +4,7 @@
 #include "allocators.hpp"
 #include "fnv_hash.hpp"
 #include "spew.hpp"
+#include "packbuf.hpp"
 #include "runtime.hpp"
 #include "runtime_inlines.hpp"
 #include "gc.hpp"
@@ -181,6 +182,10 @@ int main(int argc, char **argv) {
                   << arr_str->get(i)->length() << ":"
                   << (char *) arr_str->get(i)->bytes() << std::endl;
     }
+
+    const char *buf = "foo";
+    CheckedPackbufReader checkedReader((uint8_t *)buf, (uint8_t *)buf + 3);
+    CheckedPackbufReader::Cursor curs(checkedReader);
 
     // Generate bytecode.
     /*
