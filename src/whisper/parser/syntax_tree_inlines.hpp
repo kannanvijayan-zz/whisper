@@ -193,12 +193,16 @@ PrintFuncDecl(const CodeSource &src, const FuncDeclNode *node,
     for (auto param : node->params()) {
         if (!first)
             pr(",");
-        PrintNode(src, param.type(), pr, 0);
-        pr(" ");
         PrintToken(src, param.name(), pr);
+        pr(" : ");
+        PrintNode(src, param.type(), pr, 0);
         first = false;
     }
-    pr(") {\n");
+    pr(") : ");
+    PrintNode(src, node->returnType(), pr, 0);
+    pr("\n");
+    PrintTabDepth(tabDepth, pr);
+    pr("{\n");
     PrintBlockElementList(src, node->body()->elements(), pr, tabDepth+1);
     PrintTabDepth(tabDepth, pr);
     pr("}");

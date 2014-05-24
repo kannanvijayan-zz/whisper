@@ -15,6 +15,7 @@
     /* General punctuation. */              \
     _(Semicolon)           /* ; */          \
     _(Comma)               /* , */          \
+    _(Colon)               /* : */          \
     \
     /* Qualified accessors. */              \
     _(ColonColon)          /* :: */         \

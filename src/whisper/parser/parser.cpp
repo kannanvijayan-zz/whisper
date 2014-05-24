@@ -67,6 +67,10 @@ Parser::tryParseFile()
 ModuleDeclNode *
 Parser::tryParseModuleDecl()
 {
+    //
+    // module a.b.c;
+    //
+
     // Check for module keyword
     if (!checkNextToken<Token::ModuleKeyword>())
         return nullptr;
@@ -76,7 +80,6 @@ Parser::tryParseModuleDecl()
     for (;;) {
         const Token &tok = nextToken();
 
-        // Expect an identifier.
         if (tok.isIdentifier()) {
             path.push_back(IdentifierToken(tok));
 
@@ -109,6 +112,14 @@ Parser::tryParseModuleDecl()
 ImportDeclNode *
 Parser::tryParseImportDecl()
 {
+    //
+    // import a.b.c;
+    // import a.b.c as foo;
+    //
+    // import a.b.c (x as m, y as y, z as qqq);
+    // import a.b.c (x as m, y, z as qqq); # equivalent
+    //
+
     // Check for import keyword
     if (!checkNextToken<Token::ImportKeyword>())
         return nullptr;
@@ -194,6 +205,7 @@ Parser::tryParseImportDecl()
             IdentifierToken member = IdentifierToken(*maybeMember);
 
             const Token *cont = checkGetNextToken<Token::AsKeyword,
+                                                  Token::Comma,
                                                   Token::CloseParen>();
             if (!cont)
                 return emitError("Malformed member clause in import.");
@@ -202,6 +214,11 @@ Parser::tryParseImportDecl()
             if (cont->isCloseParen()) {
                 members.push_back(ImportDeclNode::Member(member));
                 break;
+            }
+
+            if (cont->isComma()) {
+                members.push_back(ImportDeclNode::Member(member));
+                continue;
             }
 
             WH_ASSERT(cont->isAsKeyword());
@@ -238,6 +255,12 @@ Parser::tryParseImportDecl()
 FileDeclarationNode *
 Parser::tryParseFileDeclaration()
 {
+    //
+    // func ...;
+    // public func ...;
+    // private func ...;
+    //
+
     VisibilityToken visibility;
 
     const Token *tok;
@@ -272,9 +295,9 @@ Parser::tryParseFileDeclaration()
 FuncDeclNode *
 Parser::tryParseFuncDecl(const VisibilityToken &visibility)
 {
-    // Return type.
-    TypenameNode *returnType = parseType();
-    WH_ASSERT(returnType);
+    //
+    // func F(p1 : T1, p2 : T2, ...) : RT { ... }
+    //
 
     // Function name.
     const Token *maybeName = checkGetNextToken<Token::Identifier>();
@@ -282,21 +305,26 @@ Parser::tryParseFuncDecl(const VisibilityToken &visibility)
         return emitError("Expected function name.");
     IdentifierToken name(*maybeName);
 
+    // Parameter list.
     if (!checkNextToken<Token::OpenParen>())
         return emitError("Expected '(' after function name.");
 
     // Parse function parameters.
     FuncDeclNode::ParamList params(allocatorFor<FuncDeclNode::Param>());
     for (;;) {
-        // Parse parameter type.
-        TypenameNode *paramType = parseType();
-        WH_ASSERT(paramType);
-
         // Parse parameter name.
         const Token *maybeParamName = checkGetNextToken<Token::Identifier>();
         if (!maybeParamName)
             return emitError("Expected function parameter name.");
         IdentifierToken paramName(*maybeParamName);
+
+        // Parse separating colon.
+        if (!checkNextToken<Token::Colon>())
+            return emitError("Expected ':' after function parameter.");
+
+        // Parse parameter type.
+        TypenameNode *paramType = parseType();
+        WH_ASSERT(paramType);
 
         // Add parameter.
         params.push_back(FuncDeclNode::Param(paramType, paramName));
@@ -314,6 +342,14 @@ Parser::tryParseFuncDecl(const VisibilityToken &visibility)
         WH_ASSERT(cont->isCloseParen());
         break;
     }
+
+    // Parse colon after function params, before return type.
+    if (!checkNextToken<Token::Colon>())
+        return emitError("Expected ':' after function parameter list.");
+
+    // Return type.
+    TypenameNode *returnType = parseType();
+    WH_ASSERT(returnType);
 
     // Parse function body.
     if (!checkNextToken<Token::OpenBrace>())

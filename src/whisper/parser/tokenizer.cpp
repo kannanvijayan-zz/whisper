@@ -313,7 +313,8 @@ Tokenizer::readTokenImpl()
         if (ch2 == ':')
             return emitToken(Token::ColonColon);
 
-        return emitError("Unrecognized character after ':'");
+        unreadChar(ch2);
+        return emitToken(Token::Colon);
     }
 
     // Line terminators are probably more common the the following
