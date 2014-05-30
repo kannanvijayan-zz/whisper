@@ -39,6 +39,7 @@ class BumpAllocatorError {
 
 class BumpAllocator
 {
+  friend class SavedBumpSpace;
   private:
     struct Chain {
         void *addr;
@@ -129,6 +130,37 @@ class BumpAllocator
     void releaseChunks() {
         while (chainEnd_)
             popChunk();
+    }
+};
+
+// SavedBumpSpace
+//
+// BumpAllocators are usually allocated on stack.  If they are used to
+// allocate long-lasting structures, we'd like to preserve the memory
+// chain beyond the lifetime of the allocaor itself.
+//
+// SavedBumpSpace steals the memory allocated by a BumpAllocator,
+// and allows for alter destruction of it.
+// 
+class SavedBumpSpace
+{
+  private:
+    BumpAllocator::Chain *memChain_;
+
+  public:
+    SavedBumpSpace(BumpAllocator &&allocator)
+      : memChain_(allocator.chainEnd_)
+    {
+        allocator.chainEnd_ = nullptr;
+    }
+
+    ~SavedBumpSpace()
+    {
+        while (memChain_) {
+            BumpAllocator::Chain *prev = memChain_->prev;
+            ReleaseMemory(memChain_->addr);
+            memChain_ = prev;
+        }
     }
 };
 
