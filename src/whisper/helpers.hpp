@@ -183,6 +183,12 @@ class Maybe
         new (ptr()) T(t);
     }
 
+    Maybe(T &&t)
+      : hasValue_(true)
+    {
+        new (ptr()) T(t);
+    }
+
     template <typename U>
     Maybe(const Maybe<U> &u)
       : hasValue_(u.hasValue())
@@ -196,6 +202,11 @@ class Maybe
       : hasValue_(true)
     {
         new (ptr()) T(args...);
+    }
+
+    ~Maybe() {
+        if (hasValue_)
+            ptr()->~T();
     }
 
     bool hasValue() const {
@@ -212,10 +223,12 @@ class Maybe
     }
 
     operator const T *() const {
-        return hasValue_ ? &value() : nullptr;
+        WH_ASSERT(hasValue());
+        return &value();
     }
     operator T *() {
-        return hasValue_ ? &value() : nullptr;
+        WH_ASSERT(hasValue());
+        return &value();
     }
 
     const T *operator ->() const {
@@ -241,6 +254,26 @@ class Maybe
             *ptr() = val;
         } else {
             new (ptr()) T(val);
+            hasValue_ = true;
+        }
+        return val;
+    }
+
+    template <typename U>
+    const Maybe<U> &operator =(const Maybe<U> &val) {
+        if (hasValue()) {
+            // If we have a value, either assign new value,
+            // or destroy existing value.
+            if (val.hasValue()) {
+                *ptr() = val;
+            } else {
+                ptr()->~T();
+                hasValue_ = false;
+            }
+        } else if (val.hasValue()) {
+            // If we have no value, then construct a new value.
+            // if the other one has one.
+            new (ptr()) T(val.value());
             hasValue_ = true;
         }
         return val;
