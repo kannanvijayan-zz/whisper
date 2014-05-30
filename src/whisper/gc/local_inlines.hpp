@@ -4,8 +4,8 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "runtime.hpp"
-#include "gcx/local.hpp"
-#include "gcx/specializations.hpp"
+#include "gc/local.hpp"
+#include "gc/specializations.hpp"
 
 namespace Whisper {
 namespace GC {

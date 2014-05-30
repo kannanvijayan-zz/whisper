@@ -3,7 +3,7 @@
 
 #include "common.hpp"
 #include "debug.hpp"
-#include "gcx/core.hpp"
+#include "gc/core.hpp"
 
 #include <functional>
 

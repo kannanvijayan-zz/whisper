@@ -10,7 +10,7 @@ whisper_SOURCES = \
     parser/tokenizer.cpp \
     parser/syntax_tree.cpp \
     parser/parser.cpp \
-    gcx/core.cpp \
+    gc/core.cpp \
     vm/string.cpp \
     whisper.cpp
 

@@ -2,8 +2,8 @@
 
 #include "common.hpp"
 #include "debug.hpp"
-#include "gcx/core.hpp"
-#include "gcx/specializations.hpp"
+#include "gc/core.hpp"
+#include "gc/specializations.hpp"
 #include "vm/array.hpp"
 #include "vm/value_type.hpp"
 

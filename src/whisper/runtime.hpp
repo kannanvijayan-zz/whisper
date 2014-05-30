@@ -8,7 +8,7 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "slab.hpp"
-#include "gcx/local.hpp"
+#include "gc/local.hpp"
 
 namespace Whisper {
 
