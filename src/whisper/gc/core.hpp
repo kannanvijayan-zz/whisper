@@ -309,7 +309,10 @@ namespace GC {
     _(AllocThingPointer)        \
     _(AllocThingPointerArray)   \
     _(ValueType)                \
-    _(ValueTypeArray)
+    _(ValueTypeArray)           \
+    _(SourceFile)               \
+    _(Module)                   \
+    _(ModuleBindingsArray)
 
 enum class AllocFormat : uint16_t
 {
@@ -359,12 +362,12 @@ class alignas(8) AllocHeader
     //               3 bits
     //                  |
     //      AllocFormat |      UserData  CardNo
-    //        10 bits   |       6 bits   10 bits
-    //           |      |         |        |
-    //           |      |         |        |
-    //      ---------- ---     ------ ----------
+    //        10 bits   |       8 bits   10 bits
+    //           |      |        |         |
+    //           |      |        |         |
+    //      ---------- ---   -------- ----------
     //
-    //      FFFFFFFFFF GGG 000 UUUUUU CCCCCCCCCC
+    //      FFFFFFFFFF GGG 0 UUUUUUUU CCCCCCCCCC
     //      bit 31                          bit 0
     //
     //
@@ -384,7 +387,7 @@ class alignas(8) AllocHeader
     uint32_t size_;
 
     typedef Bitfield<uint32_t, uint16_t, 10, 0> CardBitfield;
-    typedef Bitfield<uint32_t, uint8_t, 6, 10> UserBitfield;
+    typedef Bitfield<uint32_t, uint8_t, 8, 10> UserBitfield;
     typedef Bitfield<uint32_t, uint8_t, 3, 19> GcBitfield;
     typedef Bitfield<uint32_t, uint16_t, 10, 22> FormatBitfield;
 

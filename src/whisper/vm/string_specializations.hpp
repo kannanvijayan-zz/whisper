@@ -1,12 +1,9 @@
 #ifndef WHISPER__VM__STRING_SPECIALIZATIONS_HPP
 #define WHISPER__VM__STRING_SPECIALIZATIONS_HPP
 
-#include "common.hpp"
-#include "debug.hpp"
-#include "spew.hpp"
-#include "gc.hpp"
-#include <cstring>
+#include "vm/core.hpp"
 
+#include <cstring>
 #include <new>
 
 //

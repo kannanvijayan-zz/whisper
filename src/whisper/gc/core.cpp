@@ -4,8 +4,11 @@
 #include "debug.hpp"
 #include "gc/core.hpp"
 #include "gc/specializations.hpp"
+
 #include "vm/array.hpp"
 #include "vm/value_type.hpp"
+#include "vm/source_file.hpp"
+#include "vm/module.hpp"
 
 namespace Whisper {
 namespace GC {

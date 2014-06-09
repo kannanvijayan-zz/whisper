@@ -1,38 +1,14 @@
 #ifndef WHISPER__VM__ARRAY_SPECIALIZATIONS_HPP
 #define WHISPER__VM__ARRAY_SPECIALIZATIONS_HPP
 
-#include "common.hpp"
-#include "debug.hpp"
-#include "spew.hpp"
-#include "gc.hpp"
+
+#include "vm/core.hpp"
 
 #include <new>
 
 namespace Whisper {
 namespace VM {
 
-template <typename T> class Array;
-
-
-// Template to annotate types which are used as parameters to
-// Array<>, so that we can derive an AllocFormat for the array of
-// a particular type.
-template <typename T>
-struct ArrayTraits
-{
-    ArrayTraits() = delete;
-
-    // Set to true for all specializations.
-    static const bool Specialized = false;
-
-    // Give an AllocFormat for an array of type T.
-    //
-    // static const GC::AllocFormat ArrayFormat;
-
-    // Give a map-back type T' to map the array format back to
-    // VM::Array<T'>
-    // typedef T T';
-};
 
 // Specialize arrays for primitive types.
 #define DEF_ARRAY_TRAITS_(type, fmtName) \
@@ -79,7 +55,7 @@ struct ArrayTraits<P *> {
 //
 // The Macro simply makes VM::ArrayTraits<type> specify |format|
 // as the AllocFormat of the array, and points
-// GC::AllocFormatTarits<format> to VM::Array<type> as the
+// GC::AllocFormatTraits<format> to VM::Array<type> as the
 // traced type.
 #define WH_VM__DEF_SIMPLE_ARRAY_TRAITS(type, format) \
   namespace Whisper { \

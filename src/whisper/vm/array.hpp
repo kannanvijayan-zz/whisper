@@ -2,19 +2,34 @@
 #define WHISPER__VM__ARRAY_HPP
 
 
-#include "common.hpp"
-#include "debug.hpp"
-#include "spew.hpp"
-#include "slab.hpp"
-#include "runtime.hpp"
-#include "gc.hpp"
+#include "vm/core.hpp"
 
 #include <new>
 
 namespace Whisper {
 namespace VM {
 
-template <typename T> class ArrayTraits;
+
+// Template to annotate types which are used as parameters to
+// Array<>, so that we can derive an AllocFormat for the array of
+// a particular type.
+template <typename T>
+struct ArrayTraits
+{
+    ArrayTraits() = delete;
+
+    // Set to true for all specializations.
+    static const bool Specialized = false;
+
+    // Give an AllocFormat for an array of type T.
+    //
+    // static const GC::AllocFormat ArrayFormat;
+
+    // Give a map-back type T' to map the array format back to
+    // VM::Array<T'>
+    // typedef SomeType T;
+};
+
 
 //
 // A slab-allocated fixed-length array

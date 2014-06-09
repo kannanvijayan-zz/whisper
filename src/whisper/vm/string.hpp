@@ -2,12 +2,7 @@
 #define WHISPER__VM__STRING_HPP
 
 
-#include "common.hpp"
-#include "debug.hpp"
-#include "spew.hpp"
-#include "slab.hpp"
-#include "runtime.hpp"
-#include "gc.hpp"
+#include "vm/core.hpp"
 
 #include <new>
 

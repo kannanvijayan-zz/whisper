@@ -1,7 +1,6 @@
 
 
-#include "common.hpp"
-#include "debug.hpp"
+#include "vm/core.hpp"
 #include "vm/string.hpp"
 
 #include <algorithm>

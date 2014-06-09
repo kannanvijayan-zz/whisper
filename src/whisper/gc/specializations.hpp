@@ -286,9 +286,9 @@ struct TraceTraits<P *>
     static void Scan(Scanner &scanner, const T_ &t,
                      const void *start, const void *end)
     {
-        if (std::less<const void *>(&t, start))
+        if (std::less<const void *>()(&t, start))
             return;
-        if (std::greater_equal<const void *>(&t, end))
+        if (std::greater_equal<const void *>()(&t, end))
             return;
         scanner(&t, reinterpret_cast<AllocThing *>(t));
     }
@@ -297,12 +297,12 @@ struct TraceTraits<P *>
     static void Update(Updater &updater, T_ &t,
                        const void *start, const void *end)
     {
-        if (std::less<const void *>(&t, start))
+        if (std::less<const void *>()(&t, start))
             return;
-        if (std::greater_equal<const void *>(&t, end))
+        if (std::greater_equal<const void *>()(&t, end))
             return;
         AllocThing *tx = updater(&t, reinterpret_cast<AllocThing *>(t));
-        if (tx != t)
+        if (reinterpret_cast<P *>(tx) != t)
             t = reinterpret_cast<P *>(tx);
     }
 };

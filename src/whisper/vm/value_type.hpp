@@ -1,8 +1,7 @@
 #ifndef WHISPER__VM__VALUE_TYPE_HPP
 #define WHISPER__VM__VALUE_TYPE_HPP
 
-#include "common.hpp"
-#include "debug.hpp"
+#include "vm/core.hpp"
 
 namespace Whisper {
 namespace VM {

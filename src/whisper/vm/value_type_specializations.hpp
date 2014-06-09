@@ -1,10 +1,7 @@
 #ifndef WHISPER__VM__VALUE_TYPE_SPECIALIZATIONS_HPP
 #define WHISPER__VM__VALUE_TYPE_SPECIALIZATIONS_HPP
 
-#include "common.hpp"
-#include "debug.hpp"
-#include "spew.hpp"
-#include "gc.hpp"
+#include "vm/core.hpp"
 #include "vm/value_type.hpp"
 
 #include <new>
