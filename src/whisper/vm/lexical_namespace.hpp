@@ -12,21 +12,24 @@ namespace Whisper {
 namespace VM {
 
 
-//
-// The global object encapsulating the domain of computation for a
-// single process.
-//
 class LexicalNamespace
 {
     friend class GC::TraceTraits<LexicalNamespace>;
 
   public:
+    enum Access
+    {
+        Public,
+        Private
+    };
+
     class Entry
     {
       friend class GC::TraceTraits<Entry>;
       private:
         HeapField<String *> name_;
         HeapField<GC::AllocThing *> defn_;
+        uint32_t flags_;
 
       public:
         Entry(String *name) : name_(name), defn_(nullptr) {}

@@ -30,11 +30,17 @@ class Module
     {
       friend class GC::TraceTraits<Entry>;
       private:
+        uint32_t sourceFile_;
         HeapField<String *> name_;
-        HeapField<GC::AllocThing *> defn_;
 
       public:
-        Entry(String *name) : name_(name), defn_(nullptr) {}
+        Entry(uint32_t sourceFile, String *name)
+          : name_(name)
+        {}
+
+        uint32_t sourceFile() const {
+            return sourceFile_;
+        }
 
         String *name() const {
             return name_;
@@ -50,15 +56,22 @@ class Module
     Module(SourceFileArray *sourceFiles, BindingArray *bindings)
       : sourceFiles_(sourceFiles),
         bindings_(bindings)
-    {}
+    {
+        WH_ASSERT(sourceFiles != nullptr);
+        WH_ASSERT(bindings != nullptr);
+    }
 
     SourceFileArray *sourceFiles() const {
         return sourceFiles_;
     }
 
+    inline uint32_t numBindings() const;
+
     BindingArray *bindings() const {
         return bindings_;
     }
+
+    inline Entry const &rawBindingEntry(uint32_t idx) const;
 };
 
 
@@ -67,6 +80,29 @@ class Module
 
 
 #include "vm/module_specializations.hpp"
+
+
+namespace Whisper {
+namespace VM {
+
+
+inline
+uint32_t
+Module::numBindings() const
+{
+    return bindings_->length();
+}
+
+inline
+Module::Entry const &
+Module::rawBindingEntry(uint32_t idx) const
+{
+    return bindings_->getRaw(idx);
+}
+
+
+} // namespace VM
+} // namespace Whisper
 
 
 #endif // WHISPER__VM__MODULE_HPP

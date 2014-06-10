@@ -26,7 +26,6 @@ struct TraceTraits<VM::Module::Entry>
                      const void *start, const void *end)
     {
         entry.name_.scan(scanner, start, end);
-        entry.defn_.scan(scanner, start, end);
     }
 
     template <typename Updater>
@@ -34,7 +33,6 @@ struct TraceTraits<VM::Module::Entry>
                        const void *start, const void *end)
     {
         entry.name_.update(updater, start, end);
-        entry.defn_.update(updater, start, end);
     }
 };
 
