@@ -16,6 +16,7 @@
 #include "vm/string.hpp"
 #include "vm/source_file.hpp"
 #include "vm/module.hpp"
+#include "vm/lexical_namespace.hpp"
 /*
 #include "vm/hash_table.hpp"
 #include "vm/string.hpp"

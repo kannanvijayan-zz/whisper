@@ -1,0 +1,62 @@
+#ifndef WHISPER__VM__LEXICAL_NAMESPACE_HPP
+#define WHISPER__VM__LEXICAL_NAMESPACE_HPP
+
+
+#include "vm/core.hpp"
+#include "vm/string.hpp"
+#include "vm/array.hpp"
+
+#include "vm/lexical_namespace_prelude.hpp"
+
+namespace Whisper {
+namespace VM {
+
+
+//
+// The global object encapsulating the domain of computation for a
+// single process.
+//
+class LexicalNamespace
+{
+    friend class GC::TraceTraits<LexicalNamespace>;
+
+  public:
+    class Entry
+    {
+      friend class GC::TraceTraits<Entry>;
+      private:
+        HeapField<String *> name_;
+        HeapField<GC::AllocThing *> defn_;
+
+      public:
+        Entry(String *name) : name_(name), defn_(nullptr) {}
+
+        String *name() const {
+            return name_;
+        }
+    };
+    typedef Array<Entry> BindingArray;
+
+  private:
+    HeapField<LexicalNamespace *> parent_;
+    HeapField<BindingArray *> bindings_;
+
+  public:
+    LexicalNamespace(LexicalNamespace *parent, BindingArray *bindings);
+
+    LexicalNamespace *parent() const {
+        return parent_;
+    }
+
+    BindingArray *bindings() const {
+        return bindings_;
+    }
+};
+
+
+} // namespace VM
+} // namespace Whisper
+
+#include "vm/lexical_namespace_specializations.hpp"
+
+#endif // WHISPER__VM__LEXICAL_NAMESPACE_HPP

@@ -312,7 +312,9 @@ namespace GC {
     _(ValueTypeArray)           \
     _(SourceFile)               \
     _(Module)                   \
-    _(ModuleBindingsArray)
+    _(ModuleBindingsArray)      \
+    _(LexicalNamespaceBindingsArray) \
+    _(LexicalNamespace)
 
 enum class AllocFormat : uint16_t
 {
