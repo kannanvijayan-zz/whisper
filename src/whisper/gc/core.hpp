@@ -313,6 +313,7 @@ namespace GC {
     _(SourceFile)               \
     _(Module)                   \
     _(ModuleBindingsArray)      \
+    _(System)                   \
     _(LexicalNamespaceBindingsArray) \
     _(LexicalNamespace)
 
