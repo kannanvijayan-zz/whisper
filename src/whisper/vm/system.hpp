@@ -17,7 +17,7 @@ class Module;
 //
 class System
 {
-    friend class GC::TraceTraits<System>;
+    friend struct GC::TraceTraits<System>;
 
   public:
     typedef Array<Module *> ModuleArray;

@@ -16,7 +16,7 @@ namespace VM {
 //
 class SourceFile
 {
-    friend class GC::TraceTraits<SourceFile>;
+    friend struct GC::TraceTraits<SourceFile>;
 
   private:
     HeapField<String *> path_;

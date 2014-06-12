@@ -14,7 +14,7 @@ namespace VM {
 
 class LexicalNamespace
 {
-    friend class GC::TraceTraits<LexicalNamespace>;
+    friend struct GC::TraceTraits<LexicalNamespace>;
 
   public:
     enum Access
@@ -25,7 +25,7 @@ class LexicalNamespace
 
     class Entry
     {
-      friend class GC::TraceTraits<Entry>;
+      friend struct GC::TraceTraits<Entry>;
       private:
         HeapField<String *> name_;
         HeapField<GC::AllocThing *> defn_;

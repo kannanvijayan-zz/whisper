@@ -37,7 +37,7 @@ struct ArrayTraits
 template <typename T>
 class Array
 {
-    friend class GC::TraceTraits<Array<T>>;
+    friend struct GC::TraceTraits<Array<T>>;
 
     // T must be a field type to be usable.
     static_assert(GC::FieldTraits<T>::Specialized,

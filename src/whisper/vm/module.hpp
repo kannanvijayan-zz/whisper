@@ -21,14 +21,14 @@ namespace VM {
 //
 class Module
 {
-    friend class GC::TraceTraits<Module>;
+    friend struct GC::TraceTraits<Module>;
 
   public:
     typedef Array<SourceFile *> SourceFileArray;
 
     class Entry
     {
-      friend class GC::TraceTraits<Entry>;
+      friend struct GC::TraceTraits<Entry>;
       private:
         uint32_t sourceFile_;
         HeapField<String *> name_;
