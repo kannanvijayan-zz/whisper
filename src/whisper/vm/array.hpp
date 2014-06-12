@@ -80,8 +80,14 @@ class Array
         return vals_[idx];
     }
 
-    inline void set(uint32_t idx, const T &val);
-    inline void set(uint32_t idx, T &&val);
+    void set(uint32_t idx, const T &val) {
+        WH_ASSERT(idx < length());
+        vals_[idx].set(val, this);
+    }
+    void set(uint32_t idx, T &&val) {
+        WH_ASSERT(idx < length());
+        vals_[idx].set(val, this);
+    }
 };
 
 
@@ -106,6 +112,7 @@ Array<T>::length() const
     return size / sizeof(T);
 }
 
+/*
 template <typename T>
 inline void
 Array<T>::set(uint32_t idx, const T &val)
@@ -121,6 +128,7 @@ Array<T>::set(uint32_t idx, T &&val)
     WH_ASSERT(idx < length());
     vals_[idx].set(val, this);
 }
+*/
 
 
 } // namespace VM
