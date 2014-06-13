@@ -18,6 +18,7 @@
 #include "vm/module.hpp"
 #include "vm/system.hpp"
 #include "vm/lexical_namespace.hpp"
+#include "vm/vector.hpp"
 /*
 #include "vm/hash_table.hpp"
 #include "vm/string.hpp"

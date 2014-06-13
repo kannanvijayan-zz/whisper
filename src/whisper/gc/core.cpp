@@ -11,6 +11,7 @@
 #include "vm/module.hpp"
 #include "vm/system.hpp"
 #include "vm/lexical_namespace.hpp"
+#include "vm/vector.hpp"
 
 namespace Whisper {
 namespace GC {

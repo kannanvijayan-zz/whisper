@@ -5,6 +5,8 @@
 #include "debug.hpp"
 #include "helpers.hpp"
 
+#include <type_traits>
+
 //
 //
 // INTRODUCTION
@@ -308,6 +310,8 @@ namespace GC {
     _(UntracedThing)            \
     _(AllocThingPointer)        \
     _(AllocThingPointerArray)   \
+    _(Vector)                   \
+    _(AllocThingPointerVectorContents) \
     _(ValueType)                \
     _(ValueTypeArray)           \
     _(SourceFile)               \
@@ -706,6 +710,15 @@ struct DerefTraits
 
 ///////////////////////////////////////////////////////////////////////////////
 
+
+template <typename T>
+struct AllocThingTraits
+{
+    AllocThingTraits() = delete;
+    static constexpr bool Specialized = false;
+};
+
+
 //
 // AllocThing
 //
@@ -731,13 +744,19 @@ class AllocThing
   public:
     template <typename T>
     static inline AllocThing *From(T *ptr) {
-        static_assert(StackTraits<T>::Specialized || HeapTraits<T>::Specialized,
+        static_assert(StackTraits<T>::Specialized ||
+                      HeapTraits<T>::Specialized ||
+                      AllocThingTraits<T>::Specialized ||
+                      std::is_same<T, AllocThing>::value,
                       "Neither StackTraits<T> nor HeapTraits<T> specialized.");
         return reinterpret_cast<AllocThing *>(ptr);
     }
     template <typename T>
     static inline const AllocThing *From(const T *ptr) {
-        static_assert(StackTraits<T>::Specialized || HeapTraits<T>::Specialized,
+        static_assert(StackTraits<T>::Specialized ||
+                      HeapTraits<T>::Specialized ||
+                      AllocThingTraits<T>::Specialized ||
+                      std::is_same<T, AllocThing>::value,
                       "Neither StackTraits<T> nor HeapTraits<T> specialized.");
         return reinterpret_cast<const AllocThing *>(ptr);
     }
