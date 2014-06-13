@@ -711,6 +711,12 @@ struct DerefTraits
 ///////////////////////////////////////////////////////////////////////////////
 
 
+//
+// AllocThingTraits specializations annotate a type as being convertible
+// to an AllocThing pointer, even if it does not have a HeapTraits or
+// StackTraits specialization.  This is useful to enable traced manipulation
+// of pointers to these base types.
+//
 template <typename T>
 struct AllocThingTraits
 {
