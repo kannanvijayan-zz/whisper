@@ -131,6 +131,9 @@ struct TraceTraits<VM::Array<T>>
     static void Scan(Scanner &scanner, const Array_ &array,
                      const void *start, const void *end)
     {
+        if (IsLeaf)
+            return;
+
         // Scan each pointer in the array.
         for (uint32_t i = 0; i < array.length(); i++)
             array.vals_[i].scan(scanner, start, end);
@@ -140,6 +143,9 @@ struct TraceTraits<VM::Array<T>>
     static void Update(Updater &updater, Array_ &array,
                        const void *start, const void *end)
     {
+        if (IsLeaf)
+            return;
+
         // Update each pointer in the array.
         for (uint32_t i = 0; i < array.length(); i++)
             array.vals_[i].update(updater, start, end);
