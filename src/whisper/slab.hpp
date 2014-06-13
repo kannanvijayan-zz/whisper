@@ -217,6 +217,21 @@ class Slab
     }
 };
 
+// RAII helper to destroy a slab on scope exit.
+class AutoDestroySlab
+{
+  private:
+    Slab *slab_;
+
+  public:
+    explicit AutoDestroySlab(Slab *slab) : slab_(slab) {
+        WH_ASSERT(slab_ != nullptr);
+    }
+    ~AutoDestroySlab() {
+        Slab::Destroy(slab_);
+    }
+};
+
 
 //
 // SlabList

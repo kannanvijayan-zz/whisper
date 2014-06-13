@@ -46,14 +46,16 @@ Runtime::registerThread()
     Slab *hatchery = Slab::AllocateStandard(GC::Gen::Hatchery);
     if (!hatchery)
         return "Could not allocate hatchery slab.";
+    AutoDestroySlab _cleanupHatchery(hatchery);
 
     // Create initial tenured space slab.
     Slab *tenured = Slab::AllocateStandard(GC::Gen::Tenured);
     if (!tenured)
         return "Could not allocate tenured slab.";
+    AutoDestroySlab _cleanupTenured(tenured);
 
     // Allocate the ThreadContext
-    ThreadContext *ctx;
+    ThreadContext *ctx = nullptr;
     try {
         ctx = new ThreadContext(this, hatchery, tenured);
         threadContexts_.push_back(ctx);
