@@ -230,6 +230,12 @@ class AutoDestroySlab
     ~AutoDestroySlab() {
         Slab::Destroy(slab_);
     }
+    Slab *steal() {
+        WH_ASSERT(slab != nullptr);
+        Slab *result = slab_;
+        slab_ = nullptr;
+        return result;
+    }
 };
 
 

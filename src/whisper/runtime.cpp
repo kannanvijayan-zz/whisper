@@ -67,9 +67,12 @@ Runtime::registerThread()
     int error = pthread_setspecific(threadKey_, ctx);
     if (error) {
         delete ctx;
-        Slab::Destroy(hatchery);
         return "pthread_setspecific failed to set ThreadContext.";
     }
+
+    // Steal the allocated slabs so they don't get destroyed.
+    _cleanupHatchery.steal();
+    _cleanupTenured.steal();
 
     return nullptr;
 }
