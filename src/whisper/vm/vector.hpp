@@ -45,18 +45,33 @@ class VectorContents
     HeapField<T> vals_[0];
 
   public:
-    VectorContents(uint32_t len, const T *vals)
+    VectorContents(uint32_t capacity)
+      : length_(0)
+    {}
+
+    VectorContents(uint32_t capacity, uint32_t len, const T *vals)
       : length_(len)
     {
+        WH_ASSERT(len <= capacity);
         for (uint32_t i = 0; i < len; i++)
             vals_[i].init(this, vals[i]);
     }
 
-    VectorContents(uint32_t len, const T &val)
+    VectorContents(uint32_t capacity, uint32_t len, const T &val)
       : length_(len)
     {
+        WH_ASSERT(len <= capacity);
         for (uint32_t i = 0; i < len; i++)
             vals_[i].init(this, val);
+    }
+
+    template <typename U>
+    VectorContents(uint32_t capacity, const VectorContents<U> *otherContents)
+      : length_(otherContents->length_)
+    {
+        WH_ASSERT(length_ <= capacity);
+        for (uint32_t i = 0; i < length_; i++)
+            vals_[i].init(this, otherContents->vals_[i]);
     }
 
     uint32_t length() const {
@@ -204,6 +219,8 @@ class Vector : public VectorBase
     uint32_t capacity() const {
         return contents()->capacity();
     }
+
+    inline static Vector<T> *Create(AllocationContext &acx, uint32_t capacity);
 };
 
 
@@ -224,8 +241,27 @@ inline uint32_t
 VectorContents<T>::capacity() const
 {
     uint32_t size = GC::AllocThing::From(this)->size();
+    size -= sizeof(VectorContents<T>);
     WH_ASSERT(size % sizeof(T) == 0);
     return size / sizeof(T);
+}
+
+template <typename T>
+/* static */ inline Vector<T> *
+Vector<T>::Create(AllocationContext &acx, uint32_t capacity)
+{
+    // Allocate contents.
+    Local<VectorContents<T> *> contents(acx,
+        acx.create<VectorContents<T>>(capacity));
+    if (!contents)
+        return nullptr;
+
+    // Allocate vector.
+    Local<Vector<T> *> vec(acx, acx.create<Vector<T>>(contents));
+    if (!vec)
+        return nullptr;
+
+    return vec;
 }
 
 

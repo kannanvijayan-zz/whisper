@@ -102,8 +102,8 @@ struct HeapTraits<VM::VectorContents<T>>
     // All constructor signatures for VectorContents take the length as the
     // first argument.
     template <typename... Args>
-    static uint32_t SizeOf(uint32_t len, Args... rest) {
-        return sizeof(VM::VectorContents<T>) + (len * sizeof(T));
+    static uint32_t SizeOf(uint32_t capacity, Args... rest) {
+        return sizeof(VM::VectorContents<T>) + (capacity * sizeof(T));
     }
 };
 
