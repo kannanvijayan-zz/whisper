@@ -25,6 +25,11 @@ LocalBase::LocalBase(RunContext *runContext, AllocFormat format)
   : LocalBase(runContext->threadContext(), format)
 {}
 
+inline
+LocalBase::LocalBase(AllocationContext &acx, AllocFormat format)
+  : LocalBase(acx.threadContext(), format)
+{}
+
 inline 
 LocalBase::~LocalBase()
 {

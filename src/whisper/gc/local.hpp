@@ -9,6 +9,7 @@ namespace Whisper {
 
 class ThreadContext;
 class RunContext;
+class AllocationContext;
 
 //
 // GC::LocalBase
@@ -30,6 +31,7 @@ class LocalBase
 
     inline LocalBase(ThreadContext *threadContext, AllocFormat format);
     inline LocalBase(RunContext *runContext, AllocFormat format);
+    inline LocalBase(AllocationContext &acx, AllocFormat format);
     inline ~LocalBase();
 
   public:
@@ -91,6 +93,12 @@ class Local : public GC::LocalBase
     template <typename... Args>
     inline Local(RunContext *runContext, Args... args)
       : GC::LocalBase(runContext, GC::StackTraits<T>::Format),
+        val_(std::forward<Args>(args)...)
+    {}
+
+    template <typename... Args>
+    inline Local(AllocationContext &acx, Args... args)
+      : GC::LocalBase(acx, GC::StackTraits<T>::Format),
         val_(std::forward<Args>(args)...)
     {}
 
