@@ -4,7 +4,9 @@
 
 #include "vm/core.hpp"
 #include "vm/string.hpp"
-#include "vm/array.hpp"
+#include "vm/vector.hpp"
+#include "runtime.hpp"
+#include "runtime_inlines.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -18,17 +20,20 @@ class Module;
 class System
 {
     friend struct GC::TraceTraits<System>;
+    friend class Whisper::AllocationContext;
 
   public:
-    typedef Array<Module *> ModuleArray;
+    typedef Vector<Module *> ModuleVector;
 
   private:
-    HeapField<ModuleArray *> modules_;
+    HeapField<ModuleVector *> modules_;
+
+    System(ModuleVector *modules)
+      : modules_(modules)
+    {}
 
   public:
-    System()
-      : modules_(nullptr)
-    {}
+    static inline System *Create(AllocationContext &acx);
 };
 
 
@@ -42,6 +47,23 @@ class System
 namespace Whisper {
 namespace VM {
 
+
+/* static */ inline
+System *
+System::Create(AllocationContext &acx)
+{
+    constexpr uint32_t ModuleVectorStartCapacity = 20;
+    Local<ModuleVector *> modVec(acx,
+        ModuleVector::Create(acx, ModuleVectorStartCapacity));
+    if (!modVec)
+        return nullptr;
+
+    Local<System *> system(acx, acx.create<System>(modVec));
+    if (!system)
+        return nullptr;
+
+    return system;
+}
 
 
 } // namespace VM

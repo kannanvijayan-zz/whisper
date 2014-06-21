@@ -12,13 +12,13 @@
 #include "parser/syntax_tree_inlines.hpp"
 #include "parser/parser.hpp"
 #include "vm/array.hpp"
+#include "vm/vector.hpp"
 #include "vm/value_type.hpp"
 #include "vm/string.hpp"
 #include "vm/source_file.hpp"
 #include "vm/module.hpp"
 #include "vm/system.hpp"
 #include "vm/lexical_namespace.hpp"
-#include "vm/vector.hpp"
 /*
 #include "vm/hash_table.hpp"
 #include "vm/string.hpp"
@@ -141,6 +141,11 @@ int main(int argc, char **argv) {
     RunActivationHelper _rah(runcx);
 
     RunContext *cx = &runcx;
+    AllocationContext acx(cx->inTenured());
+
+    Local<VM::System *> system(cx, VM::System::Create(acx));
+
+    /*
 
     Local<VM::Array<uint32_t> *> arr(cx,
         cx->inHatchery().create<VM::Array<uint32_t>>(5, 5));
@@ -186,6 +191,7 @@ int main(int argc, char **argv) {
                   << arr_str->get(i)->length() << ":"
                   << (char *) arr_str->get(i)->bytes() << std::endl;
     }
+    */
 
     // Generate bytecode.
     /*
