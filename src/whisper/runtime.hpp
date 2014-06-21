@@ -89,6 +89,10 @@ class AllocationContext
     template <typename ObjT, typename... Args>
     inline ObjT *createFlagged(uint8_t flags, Args... args);
 
+    ThreadContext *threadContext() const {
+        return cx_;
+    }
+
   private:
     template <bool Traced>
     inline uint8_t *allocate(uint32_t size, GC::AllocFormat fmt, uint8_t flags);
