@@ -311,36 +311,40 @@ Parser::tryParseFuncDecl(const VisibilityToken &visibility)
 
     // Parse function parameters.
     FuncDeclNode::ParamList params(allocatorFor<FuncDeclNode::Param>());
-    for (;;) {
-        // Parse parameter name.
-        const Token *maybeParamName = checkGetNextToken<Token::Identifier>();
-        if (!maybeParamName)
-            return emitError("Expected function parameter name.");
-        IdentifierToken paramName(*maybeParamName);
 
-        // Parse separating colon.
-        if (!checkNextToken<Token::Colon>())
-            return emitError("Expected ':' after function parameter.");
+    if (!checkNextToken<Token::CloseParen>()) {
+        for (;;) {
+            // Parse parameter name.
+            const Token *maybeParamName =
+                checkGetNextToken<Token::Identifier>();
+            if (!maybeParamName)
+                return emitError("Expected function parameter name.");
+            IdentifierToken paramName(*maybeParamName);
 
-        // Parse parameter type.
-        TypenameNode *paramType = parseType();
-        WH_ASSERT(paramType);
+            // Parse separating colon.
+            if (!checkNextToken<Token::Colon>())
+                return emitError("Expected ':' after function parameter.");
 
-        // Add parameter.
-        params.push_back(FuncDeclNode::Param(paramType, paramName));
+            // Parse parameter type.
+            TypenameNode *paramType = parseType();
+            WH_ASSERT(paramType);
 
-        // Check for continuation.
-        const Token *cont = checkGetNextToken<Token::Comma,
-                                              Token::CloseParen>();
-        if (!cont)
-            return emitError("Malformed function parameters.");
-        cont->debug_markUsed();
+            // Add parameter.
+            params.push_back(FuncDeclNode::Param(paramType, paramName));
 
-        if (cont->isComma())
-            continue;
+            // Check for continuation.
+            const Token *cont = checkGetNextToken<Token::Comma,
+                                                  Token::CloseParen>();
+            if (!cont)
+                return emitError("Malformed function parameters.");
+            cont->debug_markUsed();
 
-        WH_ASSERT(cont->isCloseParen());
-        break;
+            if (cont->isComma())
+                continue;
+
+            WH_ASSERT(cont->isCloseParen());
+            break;
+        }
     }
 
     // Parse colon after function params, before return type.
