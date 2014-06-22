@@ -5,6 +5,7 @@
 #include "spew.hpp"
 #include "memalloc.hpp"
 #include "slab.hpp"
+#include "gc/core.hpp"
 
 namespace Whisper {
 
@@ -205,6 +206,63 @@ Slab::Slab(void *region, uint32_t regionSize,
     headAlloc_ = headStartAlloc();
     tailAlloc_ = tailStartAlloc();
 }
+
+#if defined(ENABLE_DEBUG)
+void
+Slab::debugDump(const char *tag)
+{
+    auto headStart = SlabContentIterator::HeadBegin(this);
+    auto headEnd = SlabContentIterator::HeadEnd(this);
+    auto tailStart = SlabContentIterator::TailBegin(this);
+    auto tailEnd = SlabContentIterator::TailEnd(this);
+
+    for(auto iter = headStart; iter != headEnd; ++iter) {
+        GC::AllocThing *allocThing = *iter;
+        uint8_t *allocThingBytes = reinterpret_cast<uint8_t *>(allocThing);
+        SpewSlabNote("%s - @%u - HEAD - %s",
+                     tag, allocThingBytes - headStartAlloc(),
+                     AllocFormatString(allocThing->format()));
+    }
+
+    for(auto iter = tailStart; iter != tailEnd; ++iter) {
+        GC::AllocThing *allocThing = *iter;
+        uint8_t *allocThingBytes = reinterpret_cast<uint8_t *>(allocThing);
+        SpewSlabNote("%s - @%u - TAIL - %s",
+                     tag, allocThingBytes - tailEndAlloc(),
+                     AllocFormatString(allocThing->format()));
+    }
+}
+#endif // defined(ENABLE_DEBUG)
+
+void SlabContentIterator::nextAllocThing()
+{
+    WH_ASSERT(isCursorContentValid(cur_));
+
+    GC::AllocThing *curThing = currentAllocThing();
+    cur_ = AlignPtrUp(reinterpret_cast<uint8_t *>(curThing), Slab::AllocAlign);
+
+    // If within head or tail, no adjustments needed.
+    if (cur_ < slab_->headEndAlloc() || cur_ >= slab_->tailEndAlloc())
+        return;
+
+    // If at end of head, move to start of tail.
+    if (cur_ == slab_->headEndAlloc())
+        cur_ = slab_->tailEndAlloc();
+}
+
+
+#if defined(ENABLE_DEBUG)
+void
+SlabList::debugDump(const char *tag)
+{
+    for(Iterator iter = begin(); iter != end(); ++iter) {
+        Slab *slab = *iter;
+        SpewSlabNote("SLAB %p {", this);
+        slab->debugDump(tag);
+        SpewSlabNote("}");
+    }
+}
+#endif // defined(ENABLE_DEBUG)
 
 
 } // namespace Whisper

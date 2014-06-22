@@ -8,6 +8,15 @@
 
 namespace Whisper {
 
+namespace GC {
+
+class AllocThing;
+
+} // namespace GC
+
+
+class SlabContentIterator;
+
 
 //
 // Slabs
@@ -215,6 +224,10 @@ class Slab
         uint32_t diff = ptr - allocTop_;
         return diff >> CardSizeLog2;
     }
+
+#if defined(ENABLE_DEBUG)
+    void debugDump(const char *tag);
+#endif // defined(ENABLE_DEBUG)
 };
 
 // RAII helper to destroy a slab on scope exit.
@@ -228,14 +241,116 @@ class AutoDestroySlab
         WH_ASSERT(slab_ != nullptr);
     }
     ~AutoDestroySlab() {
-        Slab::Destroy(slab_);
+        if (slab_)
+            Slab::Destroy(slab_);
     }
     Slab *steal() {
-        WH_ASSERT(slab != nullptr);
+        WH_ASSERT(slab_ != nullptr);
         Slab *result = slab_;
         slab_ = nullptr;
         return result;
     }
+};
+
+// Iterator that walks all allocations in a slab.
+class SlabContentIterator
+{
+  private:
+    Slab *slab_;
+    uint8_t *cur_;
+
+    SlabContentIterator(Slab *slab)
+      : slab_(slab),
+        cur_(slab->headStartAlloc())
+    {}
+
+  public:
+    static SlabContentIterator HeadBegin(Slab *slab) {
+        return SlabContentIterator(slab);
+    }
+    static SlabContentIterator HeadEnd(Slab *slab) {
+        SlabContentIterator iter(slab);
+        iter.resetToHeadEnd();
+        return iter;
+    }
+    static SlabContentIterator TailBegin(Slab *slab) {
+        SlabContentIterator iter(slab);
+        iter.resetToTailBegin();
+        return iter;
+    }
+    static SlabContentIterator TailEnd(Slab *slab) {
+        SlabContentIterator iter(slab);
+        iter.resetToTailEnd();
+        return iter;
+    }
+    static SlabContentIterator Begin(Slab *slab) {
+        return HeadBegin(slab);
+    }
+    static SlabContentIterator End(Slab *slab) {
+        return TailEnd(slab);
+    }
+
+    Slab *slab() const {
+        return slab_;
+    }
+
+    void resetToHeadBegin() {
+        cur_ = slab_->headStartAlloc();
+    }
+
+    void resetToHeadEnd() {
+        resetToTailBegin();
+    }
+
+    void resetToTailBegin() {
+        cur_ = slab_->tailEndAlloc();
+    }
+
+    void resetToTailEnd() {
+        cur_ = slab_->tailStartAlloc();
+    }
+
+    GC::AllocThing *currentAllocThing() const {
+        WH_ASSERT(isCursorContentValid(cur_));
+        return reinterpret_cast<GC::AllocThing *>(cur_);
+    }
+
+    GC::AllocThing * operator *() const {
+        return currentAllocThing();
+    }
+
+    bool operator ==(const SlabContentIterator &other) const {
+        WH_ASSERT(isCursorValid(cur_));
+        WH_ASSERT(other.isCursorValid(other.cur_));
+        WH_ASSERT(slab_ == other.slab_);
+        return cur_ == other.cur_;
+    }
+    bool operator !=(const SlabContentIterator &other) const {
+        return !(*this == other);
+    }
+
+    void nextAllocThing();
+
+    SlabContentIterator &operator++() {
+        nextAllocThing();
+        return *this;
+    }
+
+  private:
+#if defined(ENABLE_DEBUG)
+    bool isCursorContentValid(const uint8_t *cur) const {
+        if (cur < slab_->headStartAlloc())
+            return false;
+        if (cur >= slab_->headEndAlloc() && cur < slab_->tailEndAlloc())
+            return false;
+        if (cur >= slab_->tailStartAlloc())
+            return false;
+        return true;
+    }
+    bool isCursorValid(const uint8_t *cur) const {
+        return isCursorContentValid(cur) || cur == slab_->tailStartAlloc();
+    }
+#endif // defined(ENABLE_DEBUG)
 };
 
 
@@ -318,6 +433,10 @@ class SlabList
     Iterator end() const {
         return Iterator(*this, lastSlab_);
     }
+
+#if defined(ENABLE_DEBUG)
+    void debugDump(const char *tag);
+#endif // defined(ENABLE_DEBUG)
 };
 
 
