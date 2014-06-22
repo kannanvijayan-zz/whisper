@@ -16,6 +16,19 @@
 namespace Whisper {
 namespace GC {
 
+const char *
+AllocFormatString(AllocFormat fmt)
+{
+    switch (fmt) {
+      case AllocFormat::INVALID: return "INVALID";
+#define CASE_(T) case AllocFormat::T: return #T;
+    WHISPER_DEFN_GC_ALLOC_FORMATS(CASE_)
+#undef CASE_
+      case AllocFormat::LIMIT: return "LIMIT";
+      default: return "UNKNOWN";
+    }
+}
+
 template <AllocFormat Format>
 void
 ScanAllocThingImpl_(ScannerBox &scanner, const AllocThing *thing,

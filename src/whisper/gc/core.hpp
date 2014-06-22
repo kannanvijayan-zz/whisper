@@ -334,6 +334,8 @@ inline constexpr uint32_t AllocFormatValue(AllocFormat fmt) {
     return static_cast<uint32_t>(fmt);
 }
 
+const char *AllocFormatString(AllocFormat fmt);
+
 inline constexpr bool IsValidAllocFormat(AllocFormat fmt) {
     return (fmt > AllocFormat::INVALID) && (fmt < AllocFormat::LIMIT);
 }
@@ -786,6 +788,9 @@ class AllocThing
 
     inline const void *end() const {
         return reinterpret_cast<const uint8_t *>(this) + size();
+    }
+    inline void *end() {
+        return reinterpret_cast<uint8_t *>(this) + size();
     }
 
     inline AllocFormat format() const {
