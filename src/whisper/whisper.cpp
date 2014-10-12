@@ -4,27 +4,8 @@
 #include "allocators.hpp"
 #include "fnv_hash.hpp"
 #include "spew.hpp"
-#include "runtime.hpp"
-#include "runtime_inlines.hpp"
-#include "gc.hpp"
 #include "parser/code_source.hpp"
 #include "parser/tokenizer.hpp"
-#include "parser/syntax_tree_inlines.hpp"
-#include "parser/parser.hpp"
-#include "vm/array.hpp"
-#include "vm/vector.hpp"
-#include "vm/value_type.hpp"
-#include "vm/string.hpp"
-#include "vm/source_file.hpp"
-#include "vm/module.hpp"
-#include "vm/system.hpp"
-#include "vm/lexical_namespace.hpp"
-/*
-#include "vm/hash_table.hpp"
-#include "vm/string.hpp"
-#include "vm/string_inlines.hpp"
-#include "vm/module.hpp"
-*/
 
 using namespace Whisper;
 
@@ -34,7 +15,7 @@ void PrintTokens(CodeSource &code, Tokenizer &tokenizer)
     for (;;) {
         Token tok = tokenizer.readToken();
         char buf[20];
-        if (tok.isLineTerminatorSequence() || tok.isWhitespace() ||
+        if (tok.isNewline() || tok.isWhitespace() ||
             tok.isEnd())
         {
             std::cerr << "Token " << tok.typeString() << std::endl;
@@ -95,8 +76,9 @@ int main(int argc, char **argv) {
     InitializeQuickTokenTable();
     Tokenizer tokenizer(wrappedAllocator, inputFile);
 
-    // PrintTokens(inputFile, tokenizer);
+    PrintTokens(inputFile, tokenizer);
 
+    /*
     Parser parser(tokenizer);
 
     FileNode *fileNode = parser.parseFile();
@@ -109,7 +91,6 @@ int main(int argc, char **argv) {
     Printer pr;
     PrintNode(tokenizer.source(), fileNode, pr, 0);
 
-    /*
     // Annotate the program.
     AST::SyntaxAnnotator annotator(wrappedAllocator, program, inputFile);
     if (!annotator.annotate()) {
@@ -120,6 +101,7 @@ int main(int argc, char **argv) {
     }
     */
 
+    /*
     // Initialize a runtime.
     Runtime runtime;
     if (!runtime.initialize()) {
@@ -144,6 +126,7 @@ int main(int argc, char **argv) {
     AllocationContext acx(cx->inTenured());
 
     Local<VM::System *> system(cx, VM::System::Create(acx));
+    */
 
     /*
 

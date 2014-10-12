@@ -39,6 +39,7 @@ static unsigned KEYWORD_TABLE_SECTIONS[KEYWORD_MAX_LENGTH+2];
 static uint32_t
 ComputeLastBytesPacked(const char *str, uint8_t length)
 {
+    WH_ASSERT(length >= 2);
     if (length == 2) {
         return (ToUInt32(str[0]) << 8)
              | (ToUInt32(str[1]) << 0);
@@ -49,7 +50,6 @@ ComputeLastBytesPacked(const char *str, uint8_t length)
              | (ToUInt32(str[1]) << 8)
              | (ToUInt32(str[2]) << 0);
     }
-
 
     str += length - 4;
     return (ToUInt32(str[0]) << 24)
@@ -292,11 +292,6 @@ Tokenizer::readTokenImpl()
     //
 
     unic_t ch = readAsciiChar();
-    if (ch != NonAscii) {
-        Token::Type quickTokenType = LookupQuickToken(ch);
-        if (quickTokenType != Token::INVALID)
-            return emitToken(quickTokenType);
-    }
 
     // Whitespace, simple identifiers, numbers, and strings will be very
     // common.  Check for them first.
@@ -311,6 +306,12 @@ Tokenizer::readTokenImpl()
 
     if (CharOneOf<'\'', '"'>(ch))
         return readStringLiteral(Token::NoFlags, ch);
+
+    if (ch >= 0) {
+        Token::Type quickTokenType = LookupQuickToken(ch);
+        if (quickTokenType != Token::INVALID)
+            return emitToken(quickTokenType);
+    }
 
     // Bare dot and float literals are pretty common.
     if (ch == '.') {
@@ -611,7 +612,7 @@ Tokenizer::readKeywordOrAsciiIdentifierOrStringLiteral(unic_t firstChar)
     if (!IsKeywordStart(firstChar))
         return readAsciiIdentifierRest();
 
-    uint32_t lastBytesPacked = 0;
+    uint32_t lastBytesPacked = firstChar;
     for (;;) {
         unic_t ch = readAsciiChar();
 
