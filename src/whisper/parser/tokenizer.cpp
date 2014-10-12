@@ -30,10 +30,10 @@ static KeywordTableEntry KEYWORD_TABLE[KEYWORD_TABLE_SIZE];
 static bool KEYWORD_TABLE_INITIALIZED = false;
 
 // Array storing ofsets into keyword table for keywords of particular
-// lengths.  Max keyword length is 10.  There are 12 entries in the
-// array to allow for a "zero" entry for length 0, and
-// "final" entry that points to the end of the keyword list.
-static constexpr unsigned KEYWORD_MAX_LENGTH = 10;
+// lengths.  One entry for every length up to the max keyword length,
+// plus an additional two entries, one for dummy "zero-length" keywords,
+// and another to point to the end of the keyword table.
+static constexpr unsigned KEYWORD_MAX_LENGTH = 8;
 static unsigned KEYWORD_TABLE_SECTIONS[KEYWORD_MAX_LENGTH+2];
 
 static uint32_t
@@ -94,7 +94,6 @@ void InitializeKeywordTable()
     // Sort the table for easy lookup.
     // Keywords are sorted by (length, priority)
     struct Less {
-        inline Less() {}
         inline bool operator ()(const KeywordTableEntry &a,
                                 const KeywordTableEntry &b)
         {
@@ -117,7 +116,7 @@ void InitializeKeywordTable()
     KEYWORD_TABLE_INITIALIZED = true;
 }
 
-Token::Type
+static Token::Type
 CheckKeywordTable(const uint8_t *text, unsigned length,
                   uint32_t lastBytesPacked)
 {
@@ -136,7 +135,12 @@ CheckKeywordTable(const uint8_t *text, unsigned length,
     WH_ASSERT(endIdx <= KEYWORD_TABLE_SIZE);
     WH_ASSERT(startIdx <= endIdx);
 
-    // Check for keyword by scanning keyword table by length.
+    // Check for keyword by scanning first for a matching
+    // lastBytesPacked.  For keywords of length 4 or less,
+    // a match of lastBytesPacked means the keyword matches.
+    // For longer keywords, compare all characters in the
+    // string except the last 4 chars (which have already
+    // been matched by lastBytesPacked).
     for (unsigned i = startIdx; i < endIdx; i++) {
         KeywordTableEntry &ent = KEYWORD_TABLE[i];
         WH_ASSERT(ent.length == length);
@@ -164,6 +168,7 @@ struct QuickTokenEntry
 
 static constexpr unsigned QUICK_TOKEN_TABLE_SIZE = 128;
 static QuickTokenEntry QUICK_TOKEN_TABLE[QUICK_TOKEN_TABLE_SIZE];
+static bool QUICK_TOKEN_TABLE_INITIALIZED = false;
 
 static inline void
 SetQuickTokenTableEntry(char ch, Token::Type tokType)
@@ -176,20 +181,24 @@ SetQuickTokenTableEntry(char ch, Token::Type tokType)
 void
 InitializeQuickTokenTable()
 {
+    WH_ASSERT(!QUICK_TOKEN_TABLE_INITIALIZED);
+
     for (unsigned i = 0; i < QUICK_TOKEN_TABLE_SIZE; i++)
         QUICK_TOKEN_TABLE[i].type = Token::INVALID;
 
 #define QUICKTOK_INIT_(tok, chr) SetQuickTokenTableEntry(chr, Token::tok);
     WHISPER_DEFN_QUICK_TOKENS(QUICKTOK_INIT_)
 #undef QUICKTOK_INIT_
+
+    QUICK_TOKEN_TABLE_INITIALIZED = true;
 }
 
 static inline Token::Type
 LookupQuickToken(unic_t ch)
 {
-    if (ch >= 0 && ch <= static_cast<unic_t>(QUICK_TOKEN_TABLE_SIZE))
-        return QUICK_TOKEN_TABLE[ch].type;
-    return Token::INVALID;
+    WH_ASSERT(QUICK_TOKEN_TABLE_INITIALIZED);
+    WH_ASSERT(ch >= 0 && ch <= static_cast<unic_t>(QUICK_TOKEN_TABLE_SIZE));
+    return QUICK_TOKEN_TABLE[ch].type;
 }
 
 
@@ -240,14 +249,6 @@ Tokenizer::gotoMark(const TokenizerMark &mark)
     tok_ = mark.token();
 }
 
-Token
-Tokenizer::getAutomaticSemicolon() const
-{
-    uint32_t lineOffset = stream_.cursor() - lineStart_;
-    return Token(Token::Semicolon, stream_.position(), 0,
-                 line_, lineOffset, line_, lineOffset);
-}
-
 void
 Tokenizer::pushBackLastToken()
 {
@@ -286,59 +287,223 @@ Tokenizer::readTokenImpl()
     // Start the next token.
     startToken();
 
+    //
+    // First: check for ascii start-of-token chars.
+    //
+
     unic_t ch = readAsciiChar();
-    Token::Type quickTokenType = LookupQuickToken(ch);
-    if (quickTokenType != Token::INVALID)
-        return emitToken(quickTokenType);
+    if (ch != NonAscii) {
+        Token::Type quickTokenType = LookupQuickToken(ch);
+        if (quickTokenType != Token::INVALID)
+            return emitToken(quickTokenType);
+    }
 
     // Whitespace, simple identifiers, numbers, and strings will be very
     // common.  Check for them first.
     if (IsWhitespace(ch))
         return readWhitespace();
 
-    if (IsKeywordChar(ch))
-        return readIdentifier(ch);
-
-    if (IsNonKeywordSimpleIdentifierStart(ch))
-        return readIdentifierName();
+    if (IsAsciiIdentifierStart(ch))
+        return readKeywordOrAsciiIdentifierOrStringLiteral(ch);
 
     if (IsDecDigit(ch))
         return readNumericLiteral(ch == '0');
 
+    if (CharOneOf<'\'', '"'>(ch))
+        return readStringLiteral(Token::NoFlags, ch);
+
+    // Bare dot and float literals are pretty common.
+    if (ch == '.') {
+        unic_t ch2 = readAsciiChar();
+        if (IsDecDigit(ch2))
+            return readFloatAfterDotRest(Token::NoFlags);
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Dot);
+    }
+
     // Next, check for punctuators, ordered from an intuitive sense
     // of most common to least common.
-
-    if (ch == ':') {
+    if (ch == '+') {
         unic_t ch2 = readAsciiChar();
-        if (ch2 == ':')
-            return emitToken(Token::ColonColon);
 
-        unreadChar(ch2);
-        return emitToken(Token::Colon);
+        if (ch2 == '=')
+            return emitToken(Token::PlusEqual);
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Plus);
     }
 
-    // Line terminators are probably more common the the following
-    // three punctuators.
-    if (IsAsciiLineTerminator(ch))
-        return readLineTerminatorSequence(ch);
+    if (ch == '-') {
+        unic_t ch2 = readAsciiChar();
 
-    if (ch == '\\') {
-        consumeUnicodeEscapeSequence();
-        return readIdentifierName();
+        if (ch2 == '=')
+            return emitToken(Token::MinusEqual);
+
+        if (ch2 == '>')
+            return emitToken(Token::RightArrow);
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Minus);
     }
 
-    WH_ASSERT(!(CharIn<'(', ')', '{', '}', ',', ';', '.', ':'>(ch)));
+    if (ch == '*') {
+        unic_t ch2 = readAsciiChar();
 
-    // Handle unicode escapes and complex identifiers last.
-    ch = maybeRereadNonAsciiToFull(ch);
+        if (ch2 == '=')
+            return emitToken(Token::StarEqual);
 
-    if (IsNonAsciiLineTerminator(ch)) {
-        startNewLine();
-        return emitToken(Token::LineTerminatorSequence);
+        if (ch2 == '*') {
+            unic_t ch3 = readAsciiChar();
+
+            if (ch3 == '=')
+                return emitToken(Token::StarStarEqual);
+
+            unreadAsciiChar(ch3);
+            return emitToken(Token::StarStar);
+        }
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Star);
     }
 
-    if (IsComplexIdentifierStart(ch))
-        return readIdentifierName();
+    if (ch == '/') {
+        unic_t ch2 = readAsciiChar();
+
+        if (ch2 == '=')
+            return emitToken(Token::SlashEqual);
+
+        if (ch2 == '/') {
+            unic_t ch3 = readAsciiChar();
+
+            if (ch3 == '=')
+                return emitToken(Token::SlashSlashEqual);
+
+            unreadAsciiChar(ch3);
+            return emitToken(Token::SlashSlash);
+        }
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Slash);
+    }
+
+    if (ch == '%') {
+        unic_t ch2 = readAsciiChar();
+
+        if (ch2 == '=')
+            return emitToken(Token::PercentEqual);
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Percent);
+    }
+
+    if (ch == '<') {
+        unic_t ch2 = readAsciiChar();
+
+        if (ch2 == '=')
+            return emitToken(Token::LessEqual);
+
+        if (ch2 == '<') {
+            unic_t ch3 = readAsciiChar();
+
+            if (ch3 == '=')
+                return emitToken(Token::ShiftLeftEqual);
+
+            unreadChar(ch3);
+            return emitToken(Token::ShiftLeft);
+        }
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Less);
+    }
+
+    if (ch == '>') {
+        unic_t ch2 = readAsciiChar();
+
+        if (ch2 == '=')
+            return emitToken(Token::GreaterEqual);
+
+        if (ch2 == '>') {
+            unic_t ch3 = readAsciiChar();
+
+            if (ch3 == '=')
+                return emitToken(Token::ShiftRightEqual);
+
+            unreadChar(ch3);
+            return emitToken(Token::ShiftRight);
+        }
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Greater);
+    }
+
+    if (ch == '=') {
+        unic_t ch2 = readAsciiChar();
+
+        if (ch2 == '=')
+            return emitToken(Token::EqualEqual);
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Equal);
+    }
+
+    if (ch == '!') {
+        unic_t ch2 = readAsciiChar();
+
+        if (ch2 == '=')
+            return emitToken(Token::BangEqual);
+
+        unreadAsciiChar(ch2);
+        emitError("Unrecognized character after '!'.");
+    }
+
+    if (ch == '&') {
+        unic_t ch2 = readAsciiChar();
+
+        if (ch2 == '=')
+            return emitToken(Token::AmpersandEqual);
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Ampersand);
+    }
+
+    if (ch == '|') {
+        unic_t ch2 = readAsciiChar();
+
+        if (ch2 == '=')
+            return emitToken(Token::PipeEqual);
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Pipe);
+    }
+
+    if (ch == '^') {
+        unic_t ch2 = readAsciiChar();
+
+        if (ch2 == '=')
+            return emitToken(Token::CaratEqual);
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Carat);
+    }
+
+    if (ch == '~')
+        return emitToken(Token::Tilde);
+
+    if (ch == '#')
+        return readComment();
+
+    // All brackets should have been handled by the quick token table.
+    WH_ASSERT((!CharOneOf<'(',')','[',']','{','}',',',':',';','@'>(ch)));
+
+    // Line terminators.
+    if (IsNewline(ch)) {
+        finishNewline(ch);
+        return emitToken(Token::Newline);
+    }
+
+    if (ch == '\\')
+        return emitToken(Token::Backslash);
 
     // End of stream is least common.
     if (ch == End)
@@ -381,158 +546,144 @@ Tokenizer::readWhitespace()
 }
 
 const Token &
-Tokenizer::readLineTerminatorSequence(unic_t ch)
-{
-    finishLineTerminator(ch);
-    startNewLine();
-    return emitToken(Token::LineTerminatorSequence);
-}
-
-const Token &
-Tokenizer::readMultiLineComment()
-{
-    bool sawStar = false;
-    for (;;) {
-        unic_t ch = readNonEndChar();
-
-        if (sawStar && (ch == '/'))
-            break;
-
-        if (IsLineTerminator(ch)) {
-            finishLineTerminator(ch);
-            startNewLine();
-        }
-
-        sawStar = (ch == '*');
-    }
-    return emitToken(Token::MultiLineComment);
-}
-
-const Token &
-Tokenizer::readSingleLineComment()
+Tokenizer::readComment()
 {
     for (;;) {
         unic_t ch = readChar();
 
-        if (IsLineTerminator(ch) || ch == End) {
-            unreadChar(ch);
-            break;
-        }
-    }
-    return emitToken(Token::SingleLineComment);
-}
-
-const Token &
-Tokenizer::readIdentifierName()
-{
-    for (;;) {
-        unic_t ch = readAsciiChar();
-
-        // Common case: simple identifier continuation.
-        if (IsSimpleIdentifierContinue(ch))
-            continue;
-
-        if (ch == '\\') {
-            consumeUnicodeEscapeSequence();
-            continue;
-        }
-
-        if (IsDecDigit(ch))
-            emitError("Digit immediately follows identifier.");
-
-        // Any other ASCII char means end of identifier.
-        // Check this first because it's more likely than
-        // a complex identifier continue char.
-        if (IsAscii(ch)) {
+        if (IsNewline(ch)) {
             unreadChar(ch);
             break;
         }
 
-        // May be End or NonAscii here.  If NonAcii, read a full char
-        // before continuing.
-        ch = maybeRereadNonAsciiToFull(ch);
-
-        // Check for complex identifier continue char.
-        if (IsComplexIdentifierContinue(ch))
-            continue;
-
-        // Any other char means end of identifier
-        unreadChar(ch);
-        break;
+        if (ch == End)
+            break;
     }
-    return emitToken(Token::Identifier);
+    return emitToken(Token::Comment);
 }
 
 const Token &
-Tokenizer::readIdentifier(unic_t firstChar)
+Tokenizer::readKeywordOrAsciiIdentifierOrStringLiteral(unic_t firstChar)
 {
-    WH_ASSERT(IsKeywordChar(firstChar));
-    uint32_t lastBytesPacked = firstChar;
+    // Check for string literal prefixes.
+    if (CharOneOf<'r','R'>(firstChar)) {
+        unic_t ch2 = readAsciiChar();
 
+        if (IsStringQuote(ch2))
+            return readStringLiteral(Token::Str_Raw, ch2);
+
+        if (CharOneOf<'b','B'>(ch2)) {
+            unic_t ch3 = readAsciiChar();
+
+            if (IsStringQuote(ch3))
+                return readStringLiteral(Token::Str_RawBytes, ch3);
+
+            unreadAsciiChar(ch3);
+        }
+
+        unreadAsciiChar(ch2);
+    } else if (CharOneOf<'u', 'U'>(firstChar)) {
+        unic_t ch2 = readAsciiChar();
+
+        if (IsStringQuote(ch2))
+            return readStringLiteral(Token::Str_Unicode, ch2);
+
+        unreadChar(ch2);
+    } else if (CharOneOf<'b','B'>(firstChar)) {
+        unic_t ch2 = readAsciiChar();
+
+        if (IsStringQuote(ch2))
+            return readStringLiteral(Token::Str_Bytes, ch2);
+
+        if (CharOneOf<'r','R'>(ch2)) {
+            unic_t ch3 = readAsciiChar();
+
+            if (IsStringQuote(ch3))
+                return readStringLiteral(Token::Str_RawBytes, ch3);
+
+            unreadAsciiChar(ch3);
+        }
+
+        unreadAsciiChar(ch2);
+    }
+
+    // Short-circuit to faster loop on known non-keyword chars.
+    if (!IsKeywordStart(firstChar))
+        return readAsciiIdentifierRest();
+
+    uint32_t lastBytesPacked = 0;
     for (;;) {
         unic_t ch = readAsciiChar();
 
-        if (IsKeywordChar(ch)) {
+        if (IsKeywordContinue(ch)) {
             lastBytesPacked <<= 8;
             lastBytesPacked |= ch;
             continue;
         }
 
-        // Common case: simple identifier continuation.
-        if (IsNonKeywordSimpleIdentifierContinue(ch))
-            return readIdentifierName();
+        // Short-circuit to faster loop on known non-keyword chars.
+        if (IsAsciiIdentifierContinue(ch))
+            return readAsciiIdentifierRest();
 
-        // Unicode escape in identifier means its not a keyword.
-        if (ch == '\\') {
-            consumeUnicodeEscapeSequence();
-            return readIdentifierName();
-        }
+        // In any case, we will be un-reading the ascii char.
+        unreadAsciiChar(ch);
 
-        // Digit immediately following identifier is not allowed.
-        if (IsDecDigit(ch))
-            emitError("Digit immediately follows identifier.");
-
-        // Any other ASCII char means end of identifier.
-        // Check this first because it's more likely than
-        // a complex identifier continue char.
-        if (IsAscii(ch)) {
-            WH_ASSERT(!IsComplexIdentifierContinue(ch));
-            unreadChar(ch);
+        // Any other ascii char (and End) signals end-of-identifier.
+        if (ch != NonAscii)
             break;
-        }
 
-        // May be End or NonAscii here.  If NonAcii, read a full char
-        // before continuing.
-        ch = maybeRereadNonAsciiToFull(ch);
+        // Got NonAscii, re-read a full char and check for non-ascii
+        // identifier chars.
+        ch = readChar();
+        if (IsNonAsciiIdentifierContinue(ch))
+            return readNonAsciiIdentifierRest();
 
-        // Check for complex identifier continue char.
-        // If found, it cannot be a keyword.
-        if (IsComplexIdentifierContinue(ch))
-            return readIdentifierName();
-
-        // Any other char means end of identifier
+        // No matching chars.  Identifier ended.
         unreadChar(ch);
         break;
     }
 
-    unsigned tokenLength = stream_.cursor() - tokStart_;
-    Token::Type kwType = CheckKeywordTable(tokStart_, tokenLength,
+    Token::Type kwType = CheckKeywordTable(tokStart_, stream_.cursor() - tokStart_,
                                            lastBytesPacked);
-    if (kwType == Token::INVALID)
-        return emitToken(Token::Identifier);
+    if (kwType != Token::INVALID)
+        return emitToken(kwType);
 
-    return emitToken(kwType);
+    return emitToken(Token::Identifier);
 }
 
-void
-Tokenizer::consumeUnicodeEscapeSequence()
+const Token &
+Tokenizer::readAsciiIdentifierRest()
 {
-    // Read 4 hex characters.
-    for (int i = 0; i < 4; i++) {
-        unic_t ch = readNonEndChar();
-        if (!IsHexDigit(ch))
-            emitError("Invalid unicode escape sequence.");
+    for (;;) {
+        unic_t ch = readAsciiChar();
+
+        if (IsAsciiIdentifierContinue(ch))
+            continue;
+
+        unreadAsciiChar(ch);
+
+        if (ch == NonAscii)
+            return readNonAsciiIdentifierRest();
+
+        break;
     }
+
+    return emitToken(Token::Identifier);
+}
+
+const Token &
+Tokenizer::readNonAsciiIdentifierRest()
+{
+    for (;;) {
+        unic_t ch = readChar();
+        if (IsAsciiIdentifierContinue(ch) || IsNonAsciiIdentifierContinue(ch))
+            continue;
+
+        unreadChar(ch);
+        break;
+    }
+
+    return emitToken(Token::Identifier);
 }
 
 const Token &
@@ -542,100 +693,83 @@ Tokenizer::readNumericLiteral(bool startsWithZero)
 
     // Check for hex vs. decimal literal.
     if (startsWithZero) {
-        if (CharIn<'x'>(ch))
+        if (CharOneOf<'x','X'>(ch))
             return readHexIntegerLiteral();
-        if (CharIn<'b'>(ch))
+        if (CharOneOf<'b','B'>(ch))
             return readBinIntegerLiteral();
-        if (CharIn<'o'>(ch))
+        if (CharOneOf<'o','O'>(ch))
             return readOctIntegerLiteral();
-        if (CharIn<'d'>(ch))
-            return readOctIntegerLiteral();
+
+        // Skip any more leading '0's
+        while (ch == '0')
+            ch = readAsciiChar();
+
+        if (IsDecDigit(ch))
+            emitError("Digit following 0 in decimal literal.");
     }
+
+    if (IsDecDigit(ch))
+        return readDecIntegerLiteralRest();
 
     // Check for fraction.
     if (ch == '.')
-        return emitError("Cannot parse floats yet.");
+        return readFloatAfterDot();
 
     // Check for exponent.
-    if (CharIn<'e','E'>(ch))
-        return emitError("Cannot parse floats yet.");
+    if (CharOneOf<'e','E'>(ch))
+        return readFloatExponent(Token::NoFlags);
 
-    // If digit, check constraints.
-    if (IsDecDigit(ch)) {
-        // Zero followed by another digit is a not valid.
-        if (startsWithZero)
-            return emitError("Digit following 0 in decimal literal.");
-    } else if (ch != '_') {
-        // Otherwise check for non-digit char.
-        if (IsSimpleIdentifierContinue(ch)) {
-            return emitError("Identifier starts immediately after "
-                             "numeric literal.");
-        }
+    if (CharOneOf<'j','J'>(ch)) {
+        if (!checkFinishNumericLiteralAscii())
+            emitError("Identifier continue after imaginary literal.");
 
-        // Check for non-ascii identifier continues.
-        ch = maybeRereadNonAsciiToFull(ch);
-        if (IsComplexIdentifierContinue(ch)) {
-            return emitError("Identifier starts immediately after "
-                             "numeric literal.");
-        }
-        unreadChar(ch);
-        return emitToken(Token::IntegerLiteral);
+        return emitToken(Token::ImaginaryIntegerLiteral);
     }
 
-    bool allowUnderscore = (ch != '_');
+    unreadAsciiChar(ch);
+    if (ch == NonAscii) {
+        if (!checkFinishNumericLiteralNonAscii())
+            emitError("Identifier continue after integer literal.");
+    }
 
+    return emitToken(Token::IntegerLiteral);
+}
+
+const Token &
+Tokenizer::readDecIntegerLiteralRest()
+{
     // Otherwise, keep reading chars.
     for (;;) {
-        ch = readAsciiChar();
+        unic_t ch = readAsciiChar();
 
-        if (IsDecDigit(ch)) {
-            allowUnderscore = true;
+        if (IsDecDigit(ch))
             continue;
-        }
-
-        if (ch == '_') {
-            if (!allowUnderscore) {
-                return emitError("Multiple sequential undescores not allowed "
-                                 "in integer literals.");
-            }
-            allowUnderscore = false;
-            continue;
-        }
 
         // Check for fraction.
         if (ch == '.')
-            return emitError("Cannot parse floats yet.");
+            return readFloatAfterDot();
 
         // Check for exponent.
-        if (CharIn<'e','E'>(ch))
-            return emitError("Cannot parse floats yet.");
+        if (CharOneOf<'e','E'>(ch))
+            return readFloatExponent(Token::NoFlags);
 
-        if (IsSimpleIdentifierContinue(ch)) {
-            return emitError("Identifier starts immediately after "
-                             "numeric literal.");
+        // Check for imaginary suffix.
+        if (CharOneOf<'j','J'>(ch))  {
+            if (!checkFinishNumericLiteralAscii())
+                emitError("Identifier continue after imaginary literal.");
+
+            return emitToken(Token::ImaginaryIntegerLiteral);
         }
 
-        // Any other ascii character means end of integer literal.
-        if (IsAscii(ch)) {
-            unreadChar(ch);
-            return emitToken(Token::IntegerLiteral);
+        // Ensure literal isn't followed by identifier continue chars.
+        unreadAsciiChar(ch);
+        if (ch == NonAscii) {
+            if (!checkFinishNumericLiteralNonAscii())
+                emitError("Identifier continue after integer literal.");
         }
 
-        ch = maybeRereadNonAsciiToFull(ch);
-
-        if (IsComplexIdentifierContinue(ch)) {
-            return emitError("Identifier starts immediately after "
-                             "numeric literal.");
-        }
-
-        unreadChar(ch);
         break;
     }
-
-    // If allowUnderscore is false, it means integer ended in an
-    // underscore.
-    if (!allowUnderscore)
-        return emitError("Integer literal not allowed to end in underscore.");
 
     return emitToken(Token::IntegerLiteral);
 }
@@ -646,94 +780,25 @@ Tokenizer::readHexIntegerLiteral()
     // Must read at least one valid digit char.
     unic_t ch = readAsciiChar();
     if (!IsHexDigit(ch))
-        return emitError("Starting hex digit not present in hex literal.");
+        emitError("Starting hex digit not present in hex literal.");
 
-    bool allowUnderscore = true;
     for (;;) {
-        unic_t ch = readAsciiChar();
+        ch = readAsciiChar();
 
         if (IsHexDigit(ch))
             continue;
 
-        if (ch == '_') {
-            if (!allowUnderscore) {
-                return emitError("Multiple sequential undescores not allowed "
-                                 "in integer literals.");
-            }
-            allowUnderscore = false;
-            continue;
+        // Ensure literal isn't followed by identifier continue chars.
+        unreadAsciiChar(ch);
+        if (ch == NonAscii) {
+            if (!checkFinishNumericLiteralNonAscii())
+                emitError("Identifier continue after integer literal.");
         }
 
-        if (IsSimpleIdentifierContinue(ch)) {
-            return emitError("Identifier starts immediately after "
-                             "numeric literal.");
-        }
-
-        // Any other ascii character means end of integer literal.
-        if (IsAscii(ch)) {
-            unreadChar(ch);
-            return emitToken(Token::IntegerLiteral, Token::Int_HexPrefix);
-        }
-
-        ch = maybeRereadNonAsciiToFull(ch);
-
-        if (IsComplexIdentifierContinue(ch)) {
-            return emitError("Identifier starts immediately after "
-                             "numeric literal.");
-        }
-
-        unreadChar(ch);
         break;
     }
+
     return emitToken(Token::IntegerLiteral, Token::Int_HexPrefix);
-}
-
-const Token &
-Tokenizer::readDecIntegerLiteral()
-{
-    // Must read at least one valid digit char.
-    unic_t ch = readAsciiChar();
-    if (!IsDecDigit(ch))
-        return emitError("Starting dec digit not present in dec literal.");
-
-    bool allowUnderscore = true;
-    for (;;) {
-        unic_t ch = readAsciiChar();
-
-        if (IsDecDigit(ch))
-            continue;
-
-        if (ch == '_') {
-            if (!allowUnderscore) {
-                return emitError("Multiple sequential undescores not allowed "
-                                 "in integer literals.");
-            }
-            allowUnderscore = false;
-            continue;
-        }
-
-        if (IsSimpleIdentifierContinue(ch)) {
-            return emitError("Identifier starts immediately after "
-                             "numeric literal.");
-        }
-
-        // Any other ascii character means end of integer literal.
-        if (IsAscii(ch)) {
-            unreadChar(ch);
-            return emitToken(Token::IntegerLiteral, Token::Int_DecPrefix);
-        }
-
-        ch = maybeRereadNonAsciiToFull(ch);
-
-        if (IsComplexIdentifierContinue(ch)) {
-            return emitError("Identifier starts immediately after "
-                             "numeric literal.");
-        }
-
-        unreadChar(ch);
-        break;
-    }
-    return emitToken(Token::IntegerLiteral, Token::Int_DecPrefix);
 }
 
 const Token &
@@ -742,48 +807,27 @@ Tokenizer::readOctIntegerLiteral()
     // Must read at least one valid digit char.
     unic_t ch = readAsciiChar();
     if (!IsOctDigit(ch))
-        return emitError("Starting oct digit not present in oct literal.");
+        emitError("Starting oct digit not present in oct literal.");
 
-    bool allowUnderscore = true;
     for (;;) {
         unic_t ch = readAsciiChar();
 
         if (IsOctDigit(ch))
             continue;
 
-        if (ch == '_') {
-            if (!allowUnderscore) {
-                return emitError("Multiple sequential undescores not allowed "
-                                 "in integer literals.");
-            }
-            allowUnderscore = false;
-            continue;
-        }
-
         if (IsDecDigit(ch))
-            return emitError("Oct literal followed by decimal digit.");
+            emitError("Oct literal followed by decimal digit.");
 
-        if (IsSimpleIdentifierContinue(ch)) {
-            return emitError("Identifier starts immediately after "
-                             "numeric literal.");
+        // Ensure literal isn't followed by identifier continue chars.
+        unreadAsciiChar(ch);
+        if (ch == NonAscii) {
+            if (!checkFinishNumericLiteralNonAscii())
+                emitError("Identifier continue after integer literal.");
         }
 
-        // Any other ascii character means end of integer literal.
-        if (IsAscii(ch)) {
-            unreadChar(ch);
-            return emitToken(Token::IntegerLiteral, Token::Int_OctPrefix);
-        }
-
-        ch = maybeRereadNonAsciiToFull(ch);
-
-        if (IsComplexIdentifierContinue(ch)) {
-            return emitError("Identifier starts immediately after "
-                             "numeric literal.");
-        }
-
-        unreadChar(ch);
         break;
     }
+
     return emitToken(Token::IntegerLiteral, Token::Int_OctPrefix);
 }
 
@@ -793,49 +837,427 @@ Tokenizer::readBinIntegerLiteral()
     // Must read at least one valid digit char.
     unic_t ch = readAsciiChar();
     if (!IsBinDigit(ch))
-        return emitError("Starting bin digit not present in bin literal.");
+        emitError("Starting bin digit not present in bin literal.");
 
-    bool allowUnderscore = true;
     for (;;) {
         unic_t ch = readAsciiChar();
 
         if (IsBinDigit(ch))
             continue;
 
-        if (ch == '_') {
-            if (!allowUnderscore) {
-                return emitError("Multiple sequential undescores not allowed "
-                                 "in integer literals.");
+        if (IsDecDigit(ch))
+            emitError("Bin literal followed by decimal digit.");
+
+        unreadAsciiChar(ch);
+        if (ch == NonAscii) {
+            if (!checkFinishNumericLiteralNonAscii())
+                emitError("Identifier continue after integer literal.");
+        }
+
+        break;
+    }
+
+    return emitToken(Token::IntegerLiteral, Token::Int_BinPrefix);
+}
+
+const Token &
+Tokenizer::readFloatAfterDot()
+{
+    unic_t ch = readAsciiChar();
+
+    const Token::Flags flags = Token::Flags(Token::Float_HasLeft | Token::Float_HasDot);
+
+    if (CharOneOf<'e','E'>(ch))
+        return readFloatExponent(flags);
+
+    if (CharOneOf<'j','J'>(ch)) {
+        // Bare float imaginary in "123.j" style.
+        if (!checkFinishNumericLiteralAscii())
+            emitError("Identifier continue after imaginary literal.");
+
+        return emitToken(Token::ImaginaryFloatLiteral, flags);
+    }
+
+    if (IsDecDigit(ch))
+        return readFloatAfterDotRest(flags);
+
+    unreadAsciiChar(ch);
+    if (ch == NonAscii) {
+        if (!checkFinishNumericLiteralNonAscii())
+            emitError("Identifier continue after integer literal.");
+    }
+
+    // Bare float in "123." style.
+    return emitToken(Token::FloatLiteral, flags);
+}
+
+const Token &
+Tokenizer::readFloatAfterDotRest(Token::Flags flags)
+{
+    flags = Token::Flags(flags | Token::Float_HasRight);
+
+    for (;;) {
+        unic_t ch = readAsciiChar();
+
+        if (IsDecDigit(ch))
+            continue;
+
+        if (CharOneOf<'e','E'>(ch))
+            return readFloatExponent(flags);
+
+        if (CharOneOf<'j','J'>(ch)) {
+            // Bare float imaginary in "123.j" style.
+            if (!checkFinishNumericLiteralAscii())
+                emitError("Identifier continue after imaginary literal.");
+
+            return emitToken(Token::ImaginaryFloatLiteral, flags);
+        }
+
+        unreadAsciiChar(ch);
+        if (ch == NonAscii) {
+            if (!checkFinishNumericLiteralNonAscii())
+                emitError("Identifier continue after integer literal.");
+        }
+
+        break;
+    }
+
+    // Simple float in "123.456" style.
+    return emitToken(Token::FloatLiteral, flags);
+}
+
+const Token &
+Tokenizer::readFloatExponent(Token::Flags flags)
+{
+    // Check for sign.
+    unic_t ch = readAsciiNonEndChar();
+
+    flags = Token::Flags(flags | Token::Float_HasExp);
+
+    if (IsDecDigit(ch))
+        return readFloatExponentRest(flags);
+
+    if (CharOneOf<'+','-'>(ch)) {
+        unic_t ch2 = readAsciiNonEndChar();
+        if (!IsDecDigit(ch2))
+            emitError("Invalid character in float exponent.");
+
+        flags = Token::Flags(flags | Token::Float_HasExpSign);
+        return readFloatExponentRest(flags);
+    }
+
+    // No other accepted chars after 'e' in exponent.
+    return emitError("Invalid character in float exponent.");
+}
+
+const Token &
+Tokenizer::readFloatExponentRest(Token::Flags flags)
+{
+    for (;;) {
+        unic_t ch = readAsciiChar();
+
+        if (IsDecDigit(ch))
+            continue;
+
+        if (CharOneOf<'j','J'>(ch)) {
+            // Exponential float imaginary e.g. "2.5E-10j".
+            if (!checkFinishNumericLiteralAscii())
+                emitError("Identifier continue after imaginary literal.");
+
+            return emitToken(Token::ImaginaryFloatLiteral, flags);
+        }
+
+        unreadAsciiChar(ch);
+        if (ch == NonAscii) {
+            if (!checkFinishNumericLiteralNonAscii())
+                emitError("Identifier continue after float literal.");
+        }
+
+        break;
+    }
+
+    return emitToken(Token::FloatLiteral, flags);
+}
+
+bool
+Tokenizer::checkFinishNumericLiteralAscii()
+{
+    unic_t ch = readAsciiChar();
+
+    if (IsAsciiIdentifierContinue(ch))
+        return false;
+
+    unreadAsciiChar(ch);
+    if (ch != NonAscii)
+        return true;
+
+    return checkFinishNumericLiteralNonAscii();
+}
+
+bool
+Tokenizer::checkFinishNumericLiteralNonAscii()
+{
+    unic_t ch = readChar();
+    WH_ASSERT(ch > 0x7f);
+
+    if (IsNonAsciiIdentifierContinue(ch))
+        return false;
+
+    unreadChar(ch);
+    return true;
+}
+
+const Token &
+Tokenizer::readStringLiteral(Token::Flags flags, unic_t quoteChar)
+{
+    unic_t ch = readAsciiNonEndChar();
+    if (ch == quoteChar) {
+        unic_t ch2 = readAsciiChar();
+
+        // Check for triple-quoted string.
+        if (ch2 == quoteChar)
+            return readMultiStringLiteral(flags, quoteChar);
+
+        // Nope, just two bare quotes.  Emit empty string literal.
+        unreadAsciiChar(ch2);
+        if (quoteChar == '"')
+            flags = Token::Flags(flags | Token::Str_DoubleQuote);
+
+        return emitToken(Token::StringLiteral, flags);
+    }
+
+    return readShortStringLiteralRest(flags, quoteChar, ch);
+}
+
+const Token &
+Tokenizer::readMultiStringLiteral(Token::Flags flags, unic_t quoteChar)
+{
+    flags = Token::Flags(flags | Token::Str_Multi);
+
+    for (;;) {
+        unic_t ch = readAsciiNonEndChar();
+
+        if (ch == quoteChar) {
+            unic_t ch2 = readAsciiChar();
+            if (ch2 == quoteChar) {
+                unic_t ch3 = readAsciiChar();
+                if (ch3 == quoteChar)
+                    return emitToken(Token::StringLiteral, flags);
+
+                unreadAsciiChar(ch3);
+                continue;
             }
-            allowUnderscore = false;
+
+            unreadAsciiChar(ch2);
             continue;
         }
 
-        if (IsDecDigit(ch))
-            return emitError("Bin literal followed by decimal digit.");
-
-        if (IsSimpleIdentifierContinue(ch)) {
-            return emitError("Identifier starts immediately after "
-                             "numeric literal.");
+        if (ch == '\\') {
+            if (flags & Token::Str_Raw)
+                consumeStringLiteralEscapeRaw();
+            if (flags & Token::Str_Bytes)
+                consumeStringLiteralEscapeBytes();
+            else
+                consumeStringLiteralEscape();
         }
 
-        // Any other ascii character means end of integer literal.
-        if (IsAscii(ch)) {
-            unreadChar(ch);
-            return emitToken(Token::IntegerLiteral, Token::Int_BinPrefix);
+        if (IsNewline(ch)) {
+            finishNewline(ch);
+            continue;
         }
 
-        ch = maybeRereadNonAsciiToFull(ch);
+        if (ch != NonAscii)
+            continue;
 
-        if (IsComplexIdentifierContinue(ch)) {
-            return emitError("Identifier starts immediately after "
-                             "numeric literal.");
-        }
-
-        unreadChar(ch);
-        break;
+        unreadAsciiChar(ch);
+        ch = readChar();
     }
-    return emitToken(Token::IntegerLiteral, Token::Int_BinPrefix);
+}
+
+const Token &
+Tokenizer::readShortStringLiteralRest(Token::Flags flags,
+                                      unic_t quoteChar,
+                                      unic_t ch)
+{
+    WH_ASSERT(IsAscii(ch) || ch == NonAscii);
+    do {
+        if (IsNewline(ch))
+            emitError("Newline in short string.");
+
+        if (ch == '\\') {
+            if (flags & Token::Str_Raw)
+                consumeStringLiteralEscapeRaw();
+            if (flags & Token::Str_Bytes)
+                consumeStringLiteralEscapeBytes();
+            else
+                consumeStringLiteralEscape();
+        }
+
+        if (ch == quoteChar)
+            break;
+
+        if (ch == NonAscii) {
+            unreadAsciiChar(ch);
+            ch = readChar();
+            continue;
+        }
+
+        if (ch == End)
+            emitError("End-of-input in string literal.");
+
+        ch = readAsciiChar();
+
+    } while(true);
+
+    return emitToken(Token::StringLiteral, flags);
+}
+
+void
+Tokenizer::consumeStringLiteralEscapeRaw()
+{
+    // consume next character unconditionally.
+    unic_t ch = readChar();
+
+    if (IsNewline(ch)) {
+        finishNewline(ch);
+        return;
+    }
+
+    if (ch == End)
+        emitError("End-of-input in string literal.");
+
+    return;
+}
+
+void
+Tokenizer::consumeStringLiteralEscapeBytes()
+{
+    // consume next character unconditionally.
+    unic_t ch = readAsciiChar();
+
+    if (CharOneOf<'n','t','\'','"','r','a','b','v','f'>(ch))
+        return;
+
+    if (ch == 'x') {
+        consumeStringLiteralHexEscape();
+        return;
+    }
+
+    if (IsNewline(ch)) {
+        finishNewline(ch);
+        return;
+    }
+
+    if (IsOctDigit(ch)) {
+        consumeStringLiteralOctEscape();
+        return;
+    }
+
+    if (ch == End)
+        emitError("End-of-input in string literal.");
+
+    if (ch == NonAscii) {
+        unreadAsciiChar(ch);
+        ch = readChar();
+    }
+
+    return;
+}
+
+void
+Tokenizer::consumeStringLiteralEscape()
+{
+    // consume next character unconditionally.
+    unic_t ch = readAsciiChar();
+
+    if (CharOneOf<'n','t','\'','"','r','a','b','v','f'>(ch))
+        return;
+
+    if (ch == 'u') {
+        for (unsigned i = 0; i < 4; i++) {
+            unic_t chDigit = readAsciiChar();
+            if (!IsHexDigit(chDigit))
+                emitError("Expected hex digit in unicode16 escape.");
+        }
+        return;
+    }
+
+    if (ch == 'U') {
+        for (unsigned i = 0; i < 8; i++) {
+            unic_t chDigit = readAsciiChar();
+            if (!IsHexDigit(chDigit))
+                emitError("Expected hex digit in unicode32 escape.");
+        }
+        return;
+    }
+
+    if (ch == 'x') {
+        consumeStringLiteralHexEscape();
+        return;
+    }
+
+    if (IsNewline(ch)) {
+        finishNewline(ch);
+        return;
+    }
+
+    if (IsOctDigit(ch)) {
+        consumeStringLiteralOctEscape();
+        return;
+    }
+
+    if (ch == 'N') {
+        unic_t chBrace = readAsciiChar();
+        if (chBrace != '{')
+            emitError("Expected '{' after unicode-name escape.");
+
+        for (;;) {
+            unic_t chName = readChar();
+            if (chName == '}')
+                break;
+
+            if (IsNewline(chName) || chName == End)
+                emitError("Incomplete unicode-name escape.");
+        }
+
+        return;
+    }
+
+    if (ch == End)
+        emitError("End-of-input in string literal.");
+
+    if (ch == NonAscii) {
+        unreadAsciiChar(ch);
+        ch = readChar();
+    }
+
+    return;
+
+}
+
+void
+Tokenizer::consumeStringLiteralHexEscape()
+{
+    for (unsigned i = 0; i < 2; i++) {
+        unic_t chDigit = readAsciiChar();
+        if (!IsHexDigit(chDigit))
+            emitError("Expected hex digit in hex8 escape.");
+    }
+
+    return;
+}
+
+void
+Tokenizer::consumeStringLiteralOctEscape()
+{
+    for (unsigned i = 0; i < 2; i++) {
+        unic_t chDigit = readAsciiChar();
+        if (!IsOctDigit(chDigit)) {
+            unreadAsciiChar(chDigit);
+            break;
+        }
+    }
+    return;
 }
 
 const Token &
@@ -894,7 +1316,7 @@ Tokenizer::readCharSlow(unic_t firstByte)
         unic_t secondByte = readCharNextByte();
         unic_t thirdByte = readCharNextByte();
 
-        return ((firstByte & 0x1F)  << 12) |
+        return ((firstByte & 0x0F)  << 12) |
                ((secondByte & 0x3F) << 6) |
                ((thirdByte & 0x3F)  << 0);
     }
@@ -909,7 +1331,7 @@ Tokenizer::readCharSlow(unic_t firstByte)
         unic_t thirdByte = readCharNextByte();
         unic_t fourthByte = readCharNextByte();
 
-        return ((firstByte & 0x1F)  << 18) |
+        return ((firstByte & 0x07)  << 18) |
                ((secondByte & 0x3F) << 12) |
                ((thirdByte & 0x3F)  << 6) |
                ((fourthByte & 0x3F) << 0);
@@ -971,36 +1393,17 @@ Tokenizer::slowUnreadChar(unic_t ch)
 }
 
 /* static */ bool
-Tokenizer::IsWhitespaceSlow(unic_t ch)
+Tokenizer::IsNonAsciiIdentifierStart(unic_t ch)
 {
-    static constexpr unic_t FF   = 0x000C;
-    static constexpr unic_t VT   = 0x000B;
-    static constexpr unic_t NBSP = 0x00A0;
-    static constexpr unic_t BOM  = 0xFEFF;
-    WH_ASSERT(!(CharIn<' ', '\t'>(ch)));
-    return CharIn<FF, VT, NBSP, BOM>(ch) ||
-           uc_is_general_category(ch, UC_SPACE_SEPARATOR);
+    WH_ASSERT(!IsAsciiIdentifierStart(ch));
+    return uc_is_property_xid_start(ch);
 }
 
 /* static */ bool
-Tokenizer::IsComplexIdentifierStart(unic_t ch)
+Tokenizer::IsNonAsciiIdentifierContinue(unic_t ch)
 {
-    WH_ASSERT(!IsSimpleIdentifierStart(ch) && (ch != '\\'));
-
-    return uc_is_property(ch, UC_PROPERTY_ID_START);
-}
-
-/* static */ bool
-Tokenizer::IsComplexIdentifierContinue(unic_t ch)
-{
-    WH_ASSERT(!IsSimpleIdentifierContinue(ch) && (ch != '\\'));
-
-    constexpr unic_t ZWNJ = 0x200C;
-    constexpr unic_t ZWJ  = 0x200D;
-    if (CharIn<ZWNJ, ZWJ>(ch))
-        return true;
-
-    return uc_is_property(ch, UC_PROPERTY_ID_CONTINUE);
+    WH_ASSERT(!IsAsciiIdentifierContinue(ch));
+    return uc_is_property_xid_continue(ch);
 }
 
 

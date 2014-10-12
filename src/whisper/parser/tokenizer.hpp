@@ -69,10 +69,25 @@ class Token
         NoFlags                 = 0x0000u,
 
         // Integer flags.
-        Int_BinPrefix           = 0x0001u,
-        Int_OctPrefix           = 0x0002u,
-        Int_DecPrefix           = 0x0004u,
-        Int_HexPrefix           = 0x0008u
+        Int_BinPrefix           = 0x0002u,
+        Int_OctPrefix           = 0x0004u,
+        Int_HexPrefix           = 0x0008u,
+
+        // Float flags.
+        Float_HasDot            = 0x0001u,
+        Float_HasLeft           = 0x0002u,
+        Float_HasRight          = 0x0004u,
+        Float_HasExp            = 0x0008u,
+        Float_HasExpSign        = 0x0010u,
+
+        // String flags.
+        Str_Raw                 = 0x0001u,
+        Str_Bytes               = 0x0002u,
+        Str_Unicode             = 0x0004u,
+        Str_Multi               = 0x0008u,
+        Str_DoubleQuote         = 0x0010u,
+
+        Str_RawBytes            = Str_Raw | Str_Bytes,
     };
 
   protected:
@@ -84,7 +99,6 @@ class Token
     uint32_t startLineOffset_ = 0;
     uint32_t endLine_ = 0;
     uint32_t endLineOffset_ = 0;
-    bool maybeKeyword_ = false;
 
     // Tokens returned from the tokenizer are actually references to
     // a repeatedly used token contained within the tokenizer.
@@ -150,7 +164,6 @@ class Token
         startLineOffset_ = other.startLineOffset_;
         endLine_ = other.endLine_;
         endLineOffset_ = other.endLineOffset_;
-        maybeKeyword_ = other.maybeKeyword_;
         debug_used_ = other.debug_used_;
         debug_pushedBack_ = other.debug_pushedBack_;
         other.debug_used_ = true;
@@ -279,21 +292,20 @@ class TypedToken : public Token
         WHISPER_DEFN_TOKENS(DEF_TYPEDEF_)
 #undef DEF_TYPEDEF_
 
-typedef TypedToken<Token::PublicKeyword, Token::PrivateKeyword>
-        VisibilityToken;
-
 //
 // Tokenizer
 //
 // Parses tokens from a source stream.
 //
-class TokenizerError {
+class TokenizerError
+{
   friend class Tokenizer;
   private:
     inline TokenizerError() {}
 };
 
-class TokenizerMark {
+class TokenizerMark
+{
   private:
     uint32_t position_;
     uint32_t line_;
@@ -385,7 +397,6 @@ class Tokenizer
 
     TokenizerMark mark() const;
     void gotoMark(const TokenizerMark &mark);
-    Token getAutomaticSemicolon() const;
     void pushBackLastToken();
 
     inline bool hasError() const {
@@ -404,21 +415,40 @@ class Tokenizer
   private:
     // Token parsing.
     const Token &readWhitespace();
-    const Token &readLineTerminatorSequence(unic_t ch);
+    const Token &readComment();
+    const Token &readNewline(unic_t ch);
     const Token &readMultiLineComment();
     const Token &readSingleLineComment();
 
-    const Token &readIdentifier(unic_t firstChar);
-    const Token &readIdentifierName();
-
-    // Consume a unicode escape sequence.
-    void consumeUnicodeEscapeSequence();
+    const Token &readKeywordOrAsciiIdentifierOrStringLiteral(unic_t firstChar);
+    const Token &readAsciiIdentifierRest();
+    const Token &readNonAsciiIdentifierRest();
 
     const Token &readNumericLiteral(bool startsWithZero);
-    const Token &readBinIntegerLiteral();
-    const Token &readOctIntegerLiteral();
-    const Token &readDecIntegerLiteral();
+    const Token &readDecIntegerLiteralRest();
     const Token &readHexIntegerLiteral();
+    const Token &readOctIntegerLiteral();
+    const Token &readBinIntegerLiteral();
+
+    const Token &readFloatAfterDot();
+    const Token &readFloatAfterDotRest(Token::Flags flags);
+
+    const Token &readFloatExponent(Token::Flags flags);
+    const Token &readFloatExponentRest(Token::Flags flags);
+
+    bool checkFinishNumericLiteralAscii();
+    bool checkFinishNumericLiteralNonAscii();
+
+    const Token &readStringLiteral(Token::Flags flags, unic_t quoteChar);
+    const Token &readMultiStringLiteral(Token::Flags flags, unic_t ch);
+    const Token &readShortStringLiteralRest(Token::Flags flags,
+                                            unic_t quoteChar,
+                                            unic_t ch);
+    void consumeStringLiteralOctEscape();
+    void consumeStringLiteralHexEscape();
+    void consumeStringLiteralEscape();
+    void consumeStringLiteralEscapeBytes();
+    void consumeStringLiteralEscapeRaw();
 
     // Emit methods.
     const Token &emitToken(Token::Type type, Token::Flags flags);
@@ -434,7 +464,12 @@ class Tokenizer
         tokStartLineOffset_ = tokStart_ - lineStart_;
     }
 
-    inline void startNewLine() {
+    inline void finishNewline(unic_t ch) {
+        if (ch == '\r') {
+            unic_t ch2 = readAsciiChar();
+            if (ch2 != '\n')
+                unreadAsciiChar(ch2);
+        }
         line_++;
         lineStart_ = stream_.cursor();
     }
@@ -473,7 +508,9 @@ class Tokenizer
 
         return readCharSlow(b);
     }
-    inline unic_t readNonEndChar() {
+    inline unic_t readNonEndChar(const char *reason = nullptr) {
+        if (!reason)
+            reason = "Unexpected end of input.";
         unic_t ch = readChar();
         if (ch == End)
             emitError("Unexpected end of input.");
@@ -505,24 +542,14 @@ class Tokenizer
         return ch;
     }
 
-    // Helpers.
-    inline void finishLineTerminator(unic_t ch) {
-        if (ch == '\r') {
-            unic_t ch2 = readChar();
-            if (ch2 != '\n')
-                unreadChar(ch2);
-        }
-    }
-
     // Character predicates.
     template <unic_t Char0>
-    inline static bool CharIn(unic_t ch) {
+    inline static bool CharOneOf(unic_t ch) {
         return ch == Char0;
     }
-
     template <unic_t Char0, unic_t Char1, unic_t... Rest>
-    inline static bool CharIn(unic_t ch) {
-        return ch == Char0 || CharIn<Char1, Rest...>(ch);
+    inline static bool CharOneOf(unic_t ch) {
+        return ch == Char0 || CharOneOf<Char1, Rest...>(ch);
     }
 
     template <unic_t From, unic_t To>
@@ -531,21 +558,14 @@ class Tokenizer
     }
 
     inline static bool IsWhitespace(unic_t ch) {
-        return CharIn<' ','\t'>(ch) || IsWhitespaceSlow(ch);
+        return CharOneOf<' ','\t','\f'>(ch);
     }
-    static bool IsWhitespaceSlow(unic_t ch);
 
-    inline static bool IsAsciiLineTerminator(unic_t ch) {
-        return CharIn<'\r','\n'>(ch);
+    inline static bool IsNewline(unic_t ch) {
+        return CharOneOf<'\r','\n'>(ch);
     }
-    inline static bool IsNonAsciiLineTerminator(unic_t ch) {
-        static constexpr unic_t LS = 0x2028;
-        static constexpr unic_t PS = 0x2029;
-        WH_ASSERT(!(CharIn<'\r', '\n'>(ch)));
-        return CharIn<LS, PS>(ch);
-    }
-    inline static bool IsLineTerminator(unic_t ch) {
-        return IsAsciiLineTerminator(ch) || IsNonAsciiLineTerminator(ch);
+    inline static bool IsStringQuote(unic_t ch) {
+        return CharOneOf<'\'','"'>(ch);
     }
 
     inline static bool IsAscii(unic_t ch) {
@@ -556,52 +576,36 @@ class Tokenizer
         return CharInRange<'a','z'>(ch) || CharInRange<'A','Z'>(ch);
     }
 
-    inline static bool IsKeywordChar(unic_t ch) {
-        return CharInRange<'a','z'>(ch);
-    }
-    inline static bool IsNonKeywordSimpleIdentifierStart(unic_t ch) {
-        WH_ASSERT(!IsKeywordChar(ch));
-        return CharInRange<'A','Z'>(ch) || CharIn<'$','_'>(ch);
-    }
-    inline static bool IsSimpleIdentifierStart(unic_t ch) {
-        return IsKeywordChar(ch) || IsNonKeywordSimpleIdentifierStart(ch);
-    }
-    static bool IsComplexIdentifierStart(unic_t ch);
-    inline static bool IsIdentifierStart(unic_t ch) {
-        return IsSimpleIdentifierStart(ch) || IsComplexIdentifierStart(ch);
-    }
-
-    inline static bool IsNonKeywordSimpleIdentifierContinue(unic_t ch) {
-        WH_ASSERT(!IsKeywordChar(ch));
-        return CharInRange<'A','Z'>(ch) || IsDecDigit(ch) ||
-               CharIn<'$','_'>(ch);
-    }
-    inline static bool IsSimpleIdentifierContinue(unic_t ch) {
-        return IsKeywordChar(ch) || IsNonKeywordSimpleIdentifierContinue(ch);
-    }
-    static bool IsComplexIdentifierContinue(unic_t ch);
-    inline static bool IsIdentifierContinue(unic_t ch) {
-        return IsSimpleIdentifierContinue(ch) ||
-               IsComplexIdentifierContinue(ch);
-    }
-
-
     inline static bool IsHexDigit(unic_t ch) {
         return CharInRange<'0', '9'>(ch) ||
-               CharInRange<'A', 'F'>(ch) ||
-               CharInRange<'a', 'f'>(ch);
+               CharInRange<'a', 'f'>(ch) ||
+               CharInRange<'A', 'F'>(ch);
     }
-
     inline static bool IsDecDigit(unic_t ch) {
         return CharInRange<'0', '9'>(ch);
     }
-
     inline static bool IsOctDigit(unic_t ch) {
         return CharInRange<'0', '7'>(ch);
     }
-
     inline static bool IsBinDigit(unic_t ch) {
-        return CharIn<'0', '1'>(ch);
+        return CharOneOf<'0', '1'>(ch);
+    }
+
+    inline static bool IsAsciiIdentifierStart(unic_t ch) {
+        return IsAsciiLetter(ch) || CharOneOf<'_'>(ch);
+    }
+    static bool IsNonAsciiIdentifierStart(unic_t ch);
+
+    inline static bool IsAsciiIdentifierContinue(unic_t ch) {
+        return IsAsciiIdentifierStart(ch) || IsDecDigit(ch);
+    }
+    static bool IsNonAsciiIdentifierContinue(unic_t ch);
+
+    inline static bool IsKeywordStart(unic_t ch) {
+        return CharInRange<'a','z'>(ch) || CharOneOf<'F','T','N'>(ch);
+    }
+    inline static bool IsKeywordContinue(unic_t ch) {
+        return CharInRange<'a','z'>(ch);
     }
 };
 
