@@ -1085,29 +1085,26 @@ Tokenizer::readShortStringLiteralRest(Token::Flags flags,
         if (IsNewline(ch))
             emitError("Newline in short string.");
 
+        if (ch == quoteChar)
+            break;
+
+        // Swallow any backslash.
         if (ch == '\\') {
             if (flags & Token::Str_Raw)
                 consumeStringLiteralEscapeRaw();
-            if (flags & Token::Str_Bytes)
+            else if (flags & Token::Str_Bytes)
                 consumeStringLiteralEscapeBytes();
             else
                 consumeStringLiteralEscape();
         }
 
-        if (ch == quoteChar)
-            break;
-
+        // Swallow any non-ascii char.
         if (ch == NonAscii) {
             unreadAsciiChar(ch);
-            ch = readChar();
-            continue;
+            readChar();
         }
 
-        if (ch == End)
-            emitError("End-of-input in string literal.");
-
-        ch = readAsciiChar();
-
+        ch = readAsciiNonEndChar();
     } while(true);
 
     return emitToken(Token::StringLiteral, flags);
