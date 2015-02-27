@@ -1,5 +1,6 @@
 
 bin_PROGRAMS = whisper
+whisper_CXXFLAGS = -std=c++14
 whisper_SOURCES = \
     debug.cpp \
     spew.cpp \
@@ -14,6 +15,3 @@ whisper_SOURCES = \
     vm/string.cpp \
     vm/lexical_namespace.cpp \
     whisper.cpp
-
-#    parser/syntax_annotations.cpp \
-#

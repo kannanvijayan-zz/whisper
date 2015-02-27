@@ -60,14 +60,14 @@ if test "$enable_debug" = "yes"; then
                 [Define to enable debugging.])
     AC_DEFINE([ENABLE_SPEW], [],
                 [Define to enable spew.])
-    AM_CONDITIONAL(DEBUG, test x"$enable_debug" = x"yes")
-    AM_CONDITIONAL(SPEW, test x"$enable_spew" = x"yes")
 fi
 
 if test "$enable_spew" = "yes"; then
     AC_DEFINE([ENABLE_SPEW], [],
                 [Define to enable spew.])
-    AM_CONDITIONAL(SPEW, test x"$enable_spew" = x"yes")
 fi
+
+AM_CONDITIONAL(DEBUG, test x"$enable_debug" = x"yes")
+AM_CONDITIONAL(SPEW, test x"$enable_spew" = x"yes")
 
 AC_OUTPUT

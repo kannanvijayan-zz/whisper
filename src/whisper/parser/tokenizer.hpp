@@ -222,6 +222,7 @@ class Token
         return IsKeywordType(type_);
     }
 
+#if defined(ENABLE_DEBUG)
     // explicitly mark this token as being used.
     // This is a no-op in production code.
     inline void debug_markUsed() const {
@@ -243,6 +244,12 @@ class Token
     inline void debug_clearPushedBack() const {
         debug_pushedBack_ = false;
     }
+#else // ! defined(ENABLE_DEBUG)
+    inline void debug_markUsed() const {}
+    inline void debug_clearUsed() const {}
+    inline void debug_markPushedBack() const {}
+    inline void debug_clearPushedBack() const {}
+#endif // defined(ENABLE_DEBUG)
 };
 
 

@@ -182,9 +182,9 @@ Slab::AllocateSingleton(uint32_t objectSize, GC::Gen gen)
 Slab::Destroy(Slab *slab)
 {
     SpewSlabNote("Destroying slab at %p", slab);
-    DebugVal<bool> r = ReleaseMappedMemory(slab->region_, slab->regionSize_);
+    bool r = ReleaseMappedMemory(slab->region_, slab->regionSize_);
     if (!r)
-        SpewSlabError("Failed to destroy slab at %p");
+        SpewSlabError("Failed to destroy slab at %p", slab);
     WH_ASSERT(r);
 }
 
