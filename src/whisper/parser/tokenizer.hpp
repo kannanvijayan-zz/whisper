@@ -14,22 +14,12 @@
 
 namespace Whisper {
 
+//
+// Initialize static data structures required
+// for the tokenizer to work.
+//
 
-//
-// KeywordTable
-//
-// Keeps an ordered table of keywords which can be used to do quick
-// lookups of identifiers which may be keywords.
-//
-void InitializeKeywordTable();
-
-
-//
-// QuickTokenTable
-//
-// Maps ascii characters to immediately-returnable tokens.
-//
-void InitializeQuickTokenTable();
+void InitializeTokenizer();
 
 
 //

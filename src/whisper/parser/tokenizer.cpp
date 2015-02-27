@@ -11,8 +11,11 @@ namespace Whisper {
 
 
 //
-// KeywordTable implementation.
-// 
+// KeywordTable
+//
+// Keeps an ordered table of keywords which can be used to do quick
+// lookups of identifiers which may be keywords.
+//
 struct KeywordTableEntry
 {
     Token::Type token;
@@ -72,7 +75,8 @@ unsigned InitializeKeywordSection(unsigned len, unsigned start)
     return i;
 }
 
-void InitializeKeywordTable()
+static void
+InitializeKeywordTable()
 {
     WH_ASSERT(!KEYWORD_TABLE_INITIALIZED);
 
@@ -154,7 +158,9 @@ CheckKeywordTable(const uint8_t *text, unsigned length,
 
 
 //
-// QuickTokenTable implementation.
+// QuickTokenTable
+//
+// Maps ascii characters to immediately-returnable tokens.
 //
 struct QuickTokenEntry
 {
@@ -173,7 +179,7 @@ SetQuickTokenTableEntry(char ch, Token::Type tokType)
     QUICK_TOKEN_TABLE[idx].type = tokType;
 }
 
-void
+static void
 InitializeQuickTokenTable()
 {
     for (unsigned i = 0; i < QUICK_TOKEN_TABLE_SIZE; i++)
@@ -190,6 +196,17 @@ LookupQuickToken(unic_t ch)
     if (ch >= 0 && ch <= static_cast<unic_t>(QUICK_TOKEN_TABLE_SIZE))
         return QUICK_TOKEN_TABLE[ch].type;
     return Token::INVALID;
+}
+
+
+//
+// InitializeTokenizer
+//
+void
+InitializeTokenizer()
+{
+    InitializeKeywordTable();
+    InitializeQuickTokenTable();
 }
 
 

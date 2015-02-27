@@ -72,7 +72,10 @@ struct Printer {
 int main(int argc, char **argv) {
     std::cout << "Whisper says hello." << std::endl;
 
+    // Initialize static tables.
     InitializeSpew();
+    InitializeTokenizer();
+
     // FIXME: re-enable
     //  Interp::InitializeOpcodeInfo();
 
@@ -91,8 +94,6 @@ int main(int argc, char **argv) {
     }
     BumpAllocator allocator;
     STLBumpAllocator<uint8_t> wrappedAllocator(allocator);
-    InitializeKeywordTable();
-    InitializeQuickTokenTable();
     Tokenizer tokenizer(wrappedAllocator, inputFile);
 
     // PrintTokens(inputFile, tokenizer);
