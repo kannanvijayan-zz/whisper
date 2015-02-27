@@ -206,8 +206,8 @@ class Token
         return endLineOffset_;
     }
 
-    inline const uint8_t *text(const CodeSource &src) const {
-        return src.data() + offset_;
+    inline const uint8_t *text(const SourceReader &src) const {
+        return src.dataAt(offset_);
     }
 
     // Define type check methods
@@ -347,7 +347,7 @@ class Tokenizer
   private:
     STLBumpAllocator<uint8_t> allocator_;
     CodeSource &source_;
-    SourceStream stream_;
+    SourceReader reader_;
     Token tok_;
 
     // Parsing state.
@@ -369,7 +369,7 @@ class Tokenizer
     Tokenizer(const STLBumpAllocator<uint8_t> &allocator, CodeSource &source)
       : allocator_(allocator),
         source_(source),
-        stream_(source_),
+        reader_(source_),
         tok_()
     {
         // Mark the initial token used.
@@ -384,6 +384,9 @@ class Tokenizer
 
     inline CodeSource &source() const {
         return source_;
+    }
+    inline const SourceReader &sourceReader() const {
+        return reader_;
     }
 
     inline uint32_t line() const {
@@ -436,14 +439,14 @@ class Tokenizer
 
     // Token tracking during parsing.
     inline void startToken() {
-        tokStart_ = stream_.cursor();
+        tokStart_ = reader_.cursor();
         tokStartLine_ = line_;
         tokStartLineOffset_ = tokStart_ - lineStart_;
     }
 
     inline void startNewLine() {
         line_++;
-        lineStart_ = stream_.cursor();
+        lineStart_ = reader_.cursor();
     }
 
     // Character reading.
@@ -451,30 +454,30 @@ class Tokenizer
     static constexpr unic_t End = -2;
 
     inline unic_t readAsciiChar() {
-        if (stream_.atEnd())
+        if (reader_.atEnd())
             return End;
 
-        uint8_t b = stream_.readByte();
+        uint8_t b = reader_.readByte();
         if (b <= 0x7Fu)
             return b;
 
         return NonAscii;
     }
     inline unic_t readAsciiNonEndChar() {
-        if (stream_.atEnd())
+        if (reader_.atEnd())
             emitError("Unexpected end of input.");
 
-        uint8_t b = stream_.readByte();
+        uint8_t b = reader_.readByte();
         if (b <= 0x7Fu)
             return b;
 
         return NonAscii;
     }
     inline unic_t readChar() {
-        if (stream_.atEnd())
+        if (reader_.atEnd())
             return End;
 
-        uint8_t b = stream_.readByte();
+        uint8_t b = reader_.readByte();
         if (b <= 0x7Fu)
             return b;
 
@@ -493,11 +496,11 @@ class Tokenizer
     inline void unreadAsciiChar(unic_t ch) {
         WH_ASSERT(ch == NonAscii || ch == End || (ch >= 0 && ch <= 0x7f));
         if (ch >= NonAscii)
-            stream_.rewindBy(1);
+            reader_.rewindBy(1);
     }
     inline void unreadChar(unic_t ch) {
         if (ch >= -1 && ch <= 0x7f)
-            stream_.rewindBy(1);
+            reader_.rewindBy(1);
         else
             slowUnreadChar(ch);
     }
@@ -506,7 +509,7 @@ class Tokenizer
     // Re-read a NonAscii char into a full char, if needed.
     inline unic_t maybeRereadNonAsciiToFull(unic_t ch) {
         if (ch == NonAscii) {
-            stream_.rewindBy(1);
+            reader_.rewindBy(1);
             ch = readChar();
         }
         return ch;

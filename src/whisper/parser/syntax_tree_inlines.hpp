@@ -16,14 +16,14 @@ namespace AST {
 
 #define PREDEC_(ntype) \
     template <typename Printer> \
-    void Print##ntype(const CodeSource &src, const ntype##Node *n, \
+    void Print##ntype(const SourceReader &src, const ntype##Node *n, \
                       Printer pr, int tabDepth);
     WHISPER_DEFN_SYNTAX_NODES(PREDEC_)
 #undef PREDEC_
 
 template <typename Printer>
 void
-PrintNode(const CodeSource &src, const BaseNode *node, Printer pr,
+PrintNode(const SourceReader &src, const BaseNode *node, Printer pr,
           int tabDepth)
 {
     switch (node->type()) {
@@ -39,7 +39,7 @@ PrintNode(const CodeSource &src, const BaseNode *node, Printer pr,
 
 template <typename Printer>
 void
-PrintToken(const CodeSource &src, const Token &token, Printer pr)
+PrintToken(const SourceReader &src, const Token &token, Printer pr)
 {
     pr(token.text(src), token.length());
 }
@@ -54,7 +54,7 @@ PrintTabDepth(int tabDepth, Printer pr)
 
 template <typename Printer>
 void
-PrintExpressionList(const CodeSource &src, const ExpressionList &list,
+PrintExpressionList(const SourceReader &src, const ExpressionList &list,
                     Printer pr, int tabDepth)
 {
     bool first = true;
@@ -68,7 +68,7 @@ PrintExpressionList(const CodeSource &src, const ExpressionList &list,
 
 template <typename Printer>
 void
-PrintBlockElementList(const CodeSource &src,
+PrintBlockElementList(const SourceReader &src,
                       const BlockElementList &elems,
                       Printer pr, int tabDepth)
 {
@@ -81,7 +81,7 @@ PrintBlockElementList(const CodeSource &src,
 
 template <typename Printer>
 void
-PrintModulePath(const CodeSource &src,
+PrintModulePath(const SourceReader &src,
                 const IdentifierTokenList &path,
                 Printer pr)
 {
@@ -96,7 +96,7 @@ PrintModulePath(const CodeSource &src,
 
 template <typename Printer>
 void
-PrintIntType(const CodeSource &src,
+PrintIntType(const SourceReader &src,
              const IntTypeNode *node,
              Printer pr, int tabDepth)
 {
@@ -105,7 +105,7 @@ PrintIntType(const CodeSource &src,
 
 template <typename Printer>
 void
-PrintParenExpr(const CodeSource &src,
+PrintParenExpr(const SourceReader &src,
                const ParenExprNode *node,
                Printer pr, int tabDepth)
 {
@@ -116,7 +116,7 @@ PrintParenExpr(const CodeSource &src,
 
 template <typename Printer>
 void
-PrintIdentifierExpr(const CodeSource &src,
+PrintIdentifierExpr(const SourceReader &src,
                     const IdentifierExprNode *node,
                     Printer pr, int tabDepth)
 {
@@ -126,7 +126,7 @@ PrintIdentifierExpr(const CodeSource &src,
 
 template <typename Printer>
 void
-PrintIntegerLiteralExpr(const CodeSource &src,
+PrintIntegerLiteralExpr(const SourceReader &src,
                         const IntegerLiteralExprNode *node,
                         Printer pr, int tabDepth)
 {
@@ -136,7 +136,7 @@ PrintIntegerLiteralExpr(const CodeSource &src,
 
 template <typename Printer>
 void
-PrintBlock(const CodeSource &src, const BlockNode *node, Printer pr,
+PrintBlock(const SourceReader &src, const BlockNode *node, Printer pr,
            int tabDepth)
 {
     pr("{\n");
@@ -147,7 +147,7 @@ PrintBlock(const CodeSource &src, const BlockNode *node, Printer pr,
 
 template <typename Printer>
 void
-PrintEmptyStmt(const CodeSource &src, const EmptyStmtNode *node,
+PrintEmptyStmt(const SourceReader &src, const EmptyStmtNode *node,
                Printer pr, int tabDepth)
 {
     pr(";\n");
@@ -155,7 +155,7 @@ PrintEmptyStmt(const CodeSource &src, const EmptyStmtNode *node,
 
 template <typename Printer>
 void
-PrintExprStmt(const CodeSource &src,
+PrintExprStmt(const SourceReader &src,
               const ExprStmtNode *node,
               Printer pr, int tabDepth)
 {
@@ -165,7 +165,7 @@ PrintExprStmt(const CodeSource &src,
 
 template <typename Printer>
 void
-PrintReturnStmt(const CodeSource &src, const ReturnStmtNode *node,
+PrintReturnStmt(const SourceReader &src, const ReturnStmtNode *node,
                 Printer pr, int tabDepth)
 {
     pr("return");
@@ -178,7 +178,7 @@ PrintReturnStmt(const CodeSource &src, const ReturnStmtNode *node,
 
 template <typename Printer>
 void
-PrintFuncDecl(const CodeSource &src, const FuncDeclNode *node,
+PrintFuncDecl(const SourceReader &src, const FuncDeclNode *node,
               Printer pr, int tabDepth)
 {
     if (node->hasVisibility()) {
@@ -210,7 +210,7 @@ PrintFuncDecl(const CodeSource &src, const FuncDeclNode *node,
 
 template <typename Printer>
 void
-PrintModuleDecl(const CodeSource &src, const ModuleDeclNode *node,
+PrintModuleDecl(const SourceReader &src, const ModuleDeclNode *node,
                 Printer pr, int tabDepth)
 {
     PrintTabDepth(tabDepth, pr);
@@ -220,7 +220,7 @@ PrintModuleDecl(const CodeSource &src, const ModuleDeclNode *node,
 
 template <typename Printer>
 void
-PrintImportDecl(const CodeSource &src, const ImportDeclNode *node,
+PrintImportDecl(const SourceReader &src, const ImportDeclNode *node,
                 Printer pr, int tabDepth)
 {
     PrintTabDepth(tabDepth, pr);
@@ -250,7 +250,7 @@ PrintImportDecl(const CodeSource &src, const ImportDeclNode *node,
 
 template <typename Printer>
 void
-PrintFile(const CodeSource &src, const FileNode *node,
+PrintFile(const SourceReader &src, const FileNode *node,
           Printer pr, int tabDepth)
 {
     if (node->hasModule()) {

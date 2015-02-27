@@ -28,23 +28,18 @@ namespace Whisper {
 class CodeSource
 {
   protected:
-    const char *name_;
-
-    const uint8_t *data_;
-    const uint8_t *dataEnd_;
-    uint32_t dataSize_;
-
-    CodeSource(const char *name);
-    ~CodeSource();
+    CodeSource() {}
 
   public:
-    const char *name() const;
+    virtual ~CodeSource() {}
 
-    const uint8_t *data() const;
+    virtual const char *name() const = 0;
+    virtual uint32_t size() const = 0;
 
-    uint32_t dataSize() const;
+    virtual bool read(const uint8_t **dataOut, uint32_t *dataSizeOut) = 0;
 
-    const uint8_t *dataEnd() const;
+    virtual bool hasError() const = 0;
+    virtual const char *error() const = 0;
 };
 
 //
@@ -55,55 +50,145 @@ class CodeSource
 class FileCodeSource : public CodeSource
 {
   private:
-    int fd_ = -1;
-    const char *error_ = nullptr;
+    const char *filename_;
+    int fd_;
+    uint32_t size_;
+    void *data_;
+
+    const char *error_;
 
   public:
-    FileCodeSource(const char *filename);
+    FileCodeSource(const char *filename)
+      : CodeSource(),
+        filename_(filename),
+        fd_(-1),
+        size_(0),
+        data_(nullptr)
+    {
+        if (!initialize()) {
+            WH_ASSERT(hasError());
+            finalize();
+        }
+    }
 
-    ~FileCodeSource();
+    virtual ~FileCodeSource() {
+        finalize();
+    }
 
-    void finalize();
+    virtual const char *name() const override {
+        WH_ASSERT(!error_);
+        return filename_;
+    }
+    virtual uint32_t size() const override {
+        WH_ASSERT(!error_);
+        return size_;
+    }
 
-  public:
+    virtual bool read(const uint8_t **dataOut,
+                      uint32_t *dataSizeOut)
+        override
+    {
+        WH_ASSERT(!error_);
+        *dataOut = reinterpret_cast<const uint8_t *>(data_);
+        *dataSizeOut = size_;
+        return true;
+    }
+
+    virtual bool hasError() const override {
+        return error_ != nullptr;
+    }
+    virtual const char *error() const override {
+        WH_ASSERT(hasError());
+        return error_;
+    }
+
+  private:
     bool initialize();
-
-    bool hasError() const;
-    const char *error() const;
+    void finalize();
 };
 
 //
-// SourceStream
+// SourceReader
 //
-// A stream API built on top of a CodeStream to allow byte-by-byte
-// access.  The read interface is buffered via a direct, stack-allocated
-// buffer to avoid virtual-function-call overhead for readByte()
+// A reader API built on top of a CodeSource to allow byte-by-byte
+// access.
 //
-class SourceStream
+class SourceReader
 {
   private:
     CodeSource &source_;
+    uint32_t size_;
+    const uint8_t *start_;
+    const uint8_t *end_;
     const uint8_t *cursor_;
+    bool atEndOfInput_;
+
+    const char *error_;
 
   public:
-    SourceStream(CodeSource &source);
+    SourceReader(CodeSource &source);
 
-    CodeSource &source() const;
+    CodeSource &source() const {
+        WH_ASSERT(!error_);
+        return source_;
+    }
 
-    const uint8_t *cursor() const;
+    uint32_t bufferSize() const {
+        return end_ - start_;
+    }
 
-    uint32_t positionOf(const uint8_t *ptr) const;
-    uint32_t position() const;
+    const uint8_t *cursor() const {
+        WH_ASSERT(!error_);
+        return cursor_;
+    }
+    const uint8_t *dataAt(uint32_t posn) const {
+        WH_ASSERT(posn <= bufferSize());
+        return start_ + posn;
+    }
 
-    bool atEnd() const;
+    uint32_t positionOf(const uint8_t *ptr) const {
+        WH_ASSERT(!error_);
+        WH_ASSERT(ptr >= start_ && ptr <= end_);
+        return ptr - start_;
+    }
+    uint32_t position() const {
+        WH_ASSERT(!error_);
+        return positionOf(cursor_);
+    }
 
-    uint8_t readByte();
+    bool atEnd() const {
+        WH_ASSERT(cursor_ <= end_);
+        return cursor_ == end_;
+    }
 
-    void rewindTo(uint32_t pos);
+    uint8_t readByte() {
+        WH_ASSERT(!atEnd());
+        return *cursor_++;
+    }
 
-    void advanceTo(uint32_t pos);
+    void rewindTo(uint32_t pos) {
+        WH_ASSERT(pos <= position());
+        cursor_ = start_ + pos;
+    }
 
-    void rewindBy(uint32_t count);
+    void advanceTo(uint32_t pos) {
+        WH_ASSERT(pos >= position());
+        WH_ASSERT(pos <= positionOf(end_));
+        cursor_ = start_ + pos;
+    }
+
+    void rewindBy(uint32_t count) {
+        WH_ASSERT(count <= position());
+        cursor_ -= count;
+    }
+
+  private:
+    void installBuffer(const uint8_t *start, uint32_t size, uint32_t posn) {
+        WH_ASSERT(posn <= size);
+        start_ = start;
+        end_ = start_ + size;
+        cursor_ = start_ + posn;
+    }
 };
 
 

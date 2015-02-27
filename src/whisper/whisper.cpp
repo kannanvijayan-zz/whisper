@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
     }
 
     FileCodeSource inputFile(argv[1]);
-    if (!inputFile.initialize()) {
+    if (inputFile.hasError()) {
         std::cerr << "Could not open input file " << argv[1]
                   << " for reading." << std::endl;
         std::cerr << inputFile.error() << std::endl;
@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
     }
 
     Printer pr;
-    PrintNode(tokenizer.source(), fileNode, pr, 0);
+    PrintNode(tokenizer.sourceReader(), fileNode, pr, 0);
 
     /*
     // Annotate the program.

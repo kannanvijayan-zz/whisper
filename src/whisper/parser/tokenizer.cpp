@@ -222,9 +222,9 @@ Token::TypeString(Type type)
 TokenizerMark
 Tokenizer::mark() const
 {
-    return TokenizerMark(stream_.position(),
+    return TokenizerMark(reader_.position(),
                          line_,
-                         stream_.cursor() - lineStart_,
+                         reader_.cursor() - lineStart_,
                          pushedBackToken_,
                          tok_);
 }
@@ -232,9 +232,9 @@ Tokenizer::mark() const
 void
 Tokenizer::gotoMark(const TokenizerMark &mark)
 {
-    stream_.rewindTo(mark.position());
+    reader_.rewindTo(mark.position());
     line_ = mark.line();
-    lineStart_ = stream_.cursor() - mark.lineOffset();
+    lineStart_ = reader_.cursor() - mark.lineOffset();
     WH_ASSERT(mark.pushedBackToken() == mark.token().debug_isPushedBack());
     pushedBackToken_ = mark.pushedBackToken();
     tok_ = mark.token();
@@ -243,8 +243,8 @@ Tokenizer::gotoMark(const TokenizerMark &mark)
 Token
 Tokenizer::getAutomaticSemicolon() const
 {
-    uint32_t lineOffset = stream_.cursor() - lineStart_;
-    return Token(Token::Semicolon, stream_.position(), 0,
+    uint32_t lineOffset = reader_.cursor() - lineStart_;
+    return Token(Token::Semicolon, reader_.position(), 0,
                  line_, lineOffset, line_, lineOffset);
 }
 
@@ -351,18 +351,18 @@ void
 Tokenizer::rewindToToken(const Token &tok)
 {
     // Find the stream position to rewind to.
-    stream_.rewindTo(tok.offset());
+    reader_.rewindTo(tok.offset());
     line_ = tok.startLine();
-    lineStart_ = stream_.cursor() - tok.startLineOffset();
+    lineStart_ = reader_.cursor() - tok.startLineOffset();
 }
 
 void
 Tokenizer::advancePastToken(const Token &tok)
 {
     // Find the stream position to advance to.
-    stream_.advanceTo(tok.endOffset());
+    reader_.advanceTo(tok.endOffset());
     line_ = tok.endLine();
-    lineStart_ = stream_.cursor() - tok.endLineOffset();
+    lineStart_ = reader_.cursor() - tok.endLineOffset();
 }
 
 const Token &
@@ -515,7 +515,7 @@ Tokenizer::readIdentifier(unic_t firstChar)
         break;
     }
 
-    unsigned tokenLength = stream_.cursor() - tokStart_;
+    unsigned tokenLength = reader_.cursor() - tokStart_;
     Token::Type kwType = CheckKeywordTable(tokStart_, tokenLength,
                                            lastBytesPacked);
     if (kwType == Token::INVALID)
@@ -847,10 +847,10 @@ Tokenizer::emitToken(Token::Type type, Token::Flags flags)
     WH_ASSERT(tok_.debug_isUsed());
 
     tok_ = Token(type, flags,
-                 stream_.positionOf(tokStart_),
-                 stream_.cursor() - tokStart_,
+                 reader_.positionOf(tokStart_),
+                 reader_.cursor() - tokStart_,
                  tokStartLine_, tokStartLineOffset_,
-                 line_, stream_.cursor() - lineStart_);
+                 line_, reader_.cursor() - lineStart_);
     return tok_;
 }
 
@@ -924,11 +924,11 @@ Tokenizer::readCharSlow(unic_t firstByte)
 uint8_t
 Tokenizer::readCharNextByte()
 {
-    if (stream_.atEnd())
+    if (reader_.atEnd())
         emitError("Incomplete unicode character.");
 
     // Non-first unicode characters must be in range 1000-0000 to 1011-1111
-    uint8_t byte = stream_.readByte();
+    uint8_t byte = reader_.readByte();
     if (byte < 0x80 || byte > 0xBF)
         emitError("Invalid unicode character: <0x80 | >0xBF.");
 
@@ -945,21 +945,21 @@ Tokenizer::slowUnreadChar(unic_t ch)
     // Up to 5 + 6 bits = 11 bits, 2 byte char
     // 3 + 8 bits
     if (ch <= 0x7ff) {
-        stream_.rewindBy(2);
+        reader_.rewindBy(2);
         return;
     }
 
     // Up to 4 + 6 + 6 bits = 16 bits, 3 byte char
     // 8 + 8 bits
     if (ch <= 0xffff) {
-        stream_.rewindBy(3);
+        reader_.rewindBy(3);
         return;
     }
 
     // Up to 3 + 6 + 6 + 6 bits = 21 bits, 4 byte char
     // 5 + 8 + 8 bits
     if (ch <= 0x1fffff) {
-        stream_.rewindBy(4);
+        reader_.rewindBy(4);
         return;
     }
 

@@ -13,52 +13,50 @@ namespace Whisper {
 
 
 //
-// CodeSource
-//
-
-CodeSource::CodeSource(const char *name)
-  : name_(name)
-{}
-
-CodeSource::~CodeSource()
-{}
-
-const char *
-CodeSource::name() const
-{
-    return name_;
-}
-
-const uint8_t *
-CodeSource::data() const
-{
-    return data_;
-}
-
-uint32_t
-CodeSource::dataSize() const
-{
-    return dataSize_;
-}
-
-const uint8_t *
-CodeSource::dataEnd() const
-{
-    return dataEnd_;
-}
-
-//
 // FileCodeSource
 //
 
-
-FileCodeSource::FileCodeSource(const char *filename)
-  : CodeSource(filename)
-{}
-
-FileCodeSource::~FileCodeSource()
+bool
+FileCodeSource::initialize()
 {
-    finalize();
+    WH_ASSERT(fd_ == -1);
+
+    // try to open the file.
+    fd_ = open(filename_, O_RDONLY);
+    if (fd_ == -1) {
+        error_ = "Could not open.";
+        return false;
+    }
+
+    // find the size of the file
+    struct stat st;
+    if (fstat(fd_, &st) == -1) {
+        error_ = "Could not stat.";
+        return false;
+    }
+
+    // size too large.
+    if (st.st_size > UINT32_MAX) {
+        error_ = "File too large.";
+        return false;
+    }
+    size_ = st.st_size;
+
+    // For zero-length file, skip mmap
+    if (size_ == 0) {
+        data_ = nullptr;
+        return true;
+    }
+
+    // mmap the file.
+    void *data = mmap(NULL, size_, PROT_READ, MAP_PRIVATE, fd_, 0);
+    if (data == MAP_FAILED) {
+        error_ = "Could not mmap.";
+        return false;
+    }
+    data_ = reinterpret_cast<uint8_t *>(data);
+
+    return true;
 }
 
 void
@@ -69,141 +67,46 @@ FileCodeSource::finalize()
 
     // unmap the file if needed.
     if (data_ != nullptr)
-        munmap(const_cast<uint8_t *>(data_), dataSize_);
+        munmap(data_, size_);
 
     close(fd_);
 #if defined(ENABLE_DEBUG)
     fd_ = -1;
+    data_ = nullptr;
 #endif
 }
 
-bool
-FileCodeSource::initialize()
-{
-    WH_ASSERT(fd_ == -1);
-
-    // try to open the file.
-    fd_ = open(name_, O_RDONLY);
-    if (fd_ == -1) {
-        finalize();
-        error_ = "Could not open.";
-        return false;
-    }
-
-    // find the size of the file
-    struct stat st;
-    if (fstat(fd_, &st) == -1) {
-        finalize();
-        error_ = "Could not stat.";
-        return false;
-    }
-
-    // size too large.
-    if (st.st_size > UINT32_MAX) {
-        finalize();
-        error_ = "File too large.";
-        return false;
-    }
-    dataSize_ = st.st_size;
-
-    // For zero-length file, skip mmap
-    if (dataSize_ == 0) {
-        data_ = dataEnd_ = nullptr;
-        return true;
-    }
-
-    // mmap the file.
-    void *data = mmap(NULL, dataSize_, PROT_READ, MAP_PRIVATE, fd_, 0);
-    if (data == MAP_FAILED) {
-        finalize();
-        error_ = "Could not mmap.";
-        return false;
-    }
-    data_ = reinterpret_cast<uint8_t *>(data);
-    dataEnd_ = data_ + dataSize_;
-
-    return true;
-}
-
-bool
-FileCodeSource::hasError() const
-{
-    return error_;
-}
-
-const char *
-FileCodeSource::error() const
-{
-    WH_ASSERT(hasError());
-    return error_;
-}
-
 //
-// SourceStream
+// SourceReader
 //
 
-SourceStream::SourceStream(CodeSource &source)
-    : source_(source),
-      cursor_(source_.data())
-{}
-
-CodeSource &
-SourceStream::source() const
+SourceReader::SourceReader(CodeSource &source)
+  : source_(source),
+    size_(0),
+    start_(nullptr),
+    end_(nullptr),
+    cursor_(nullptr),
+    atEndOfInput_(false),
+    error_(nullptr)
 {
-    return source_;
-}
+    WH_ASSERT(!source_.hasError());
 
-const uint8_t *
-SourceStream::cursor() const
-{
-    return cursor_;
-}
+    size_ = source.size();
 
-uint32_t
-SourceStream::positionOf(const uint8_t *ptr) const
-{
-    WH_ASSERT(ptr >= source_.data() && ptr <= source_.dataEnd());
-    return ptr - source_.data();
-}
+    const uint8_t *buf = nullptr;
+    uint32_t bufSize = 0;
+    if (!source_.read(&buf, &bufSize)) {
+        WH_ASSERT(source_.hasError());
+        error_ = source_.error();
+        return;
+    }
 
-uint32_t
-SourceStream::position() const
-{
-    return positionOf(cursor_);
-}
+    if (bufSize != size_) {
+        error_ = "Incomplete read of code source.";
+        return;
+    }
 
-bool
-SourceStream::atEnd() const
-{
-    return cursor_ == source_.dataEnd();
-}
-
-uint8_t
-SourceStream::readByte()
-{
-    // readByte() should never be called on an EOLed stream.
-    WH_ASSERT(!atEnd());
-    return *cursor_++;
-}
-
-void
-SourceStream::rewindTo(uint32_t pos)
-{
-    WH_ASSERT(pos <= position());
-    cursor_ = source_.data() + pos;
-}
-
-void
-SourceStream::advanceTo(uint32_t pos)
-{
-    WH_ASSERT(pos >= position());
-    cursor_ = source_.data() + pos;
-}
-
-void
-SourceStream::rewindBy(uint32_t count) {
-    WH_ASSERT(count <= position());
-    cursor_ -= count;
+    installBuffer(buf, bufSize, 0);
 }
 
 
