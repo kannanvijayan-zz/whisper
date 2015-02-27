@@ -54,57 +54,6 @@ PrintTabDepth(int tabDepth, Printer pr)
 
 template <typename Printer>
 void
-PrintExpressionList(const SourceReader &src, const ExpressionList &list,
-                    Printer pr, int tabDepth)
-{
-    bool first = true;
-    for (auto expr : list) {
-        if (!first)
-            pr(", ");
-        PrintNode(src, expr, pr, tabDepth);
-        first = false;
-    }
-}
-
-template <typename Printer>
-void
-PrintBlockElementList(const SourceReader &src,
-                      const BlockElementList &elems,
-                      Printer pr, int tabDepth)
-{
-    for (auto elem : elems) {
-        PrintTabDepth(tabDepth, pr);
-        PrintNode(src, elem, pr, tabDepth);
-        pr("\n");
-    }
-}
-
-template <typename Printer>
-void
-PrintModulePath(const SourceReader &src,
-                const IdentifierTokenList &path,
-                Printer pr)
-{
-    bool first = true;
-    for (auto part : path) {
-        if (!first)
-            pr(".");
-        PrintToken(src, part, pr);
-        first = false;
-    }
-}
-
-template <typename Printer>
-void
-PrintIntType(const SourceReader &src,
-             const IntTypeNode *node,
-             Printer pr, int tabDepth)
-{
-    pr("int");
-}
-
-template <typename Printer>
-void
 PrintParenExpr(const SourceReader &src,
                const ParenExprNode *node,
                Printer pr, int tabDepth)
@@ -136,13 +85,74 @@ PrintIntegerLiteralExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintBlock(const SourceReader &src, const BlockNode *node, Printer pr,
-           int tabDepth)
+PrintPosExpr(const SourceReader &src,
+             const PosExprNode *node,
+             Printer pr, int tabDepth)
 {
-    pr("{\n");
-    PrintBlockElementList(src, node->elements(), pr, tabDepth+1);
-    PrintTabDepth(tabDepth, pr);
-    pr("}\n");
+    pr("+");
+    PrintNode(src, node->subexpr(), pr, tabDepth);
+}
+
+template <typename Printer>
+void
+PrintNegExpr(const SourceReader &src,
+             const NegExprNode *node,
+             Printer pr, int tabDepth)
+{
+    pr("-");
+    PrintNode(src, node->subexpr(), pr, tabDepth);
+}
+
+template <typename Printer>
+void
+PrintMulExpr(const SourceReader &src,
+             const MulExprNode *node,
+             Printer pr, int tabDepth)
+{
+    pr("(");
+    PrintNode(src, node->lhs(), pr, tabDepth);
+    pr(" * ");
+    PrintNode(src, node->rhs(), pr, tabDepth);
+    pr(")");
+}
+
+template <typename Printer>
+void
+PrintDivExpr(const SourceReader &src,
+             const DivExprNode *node,
+             Printer pr, int tabDepth)
+{
+    pr("(");
+    PrintNode(src, node->lhs(), pr, tabDepth);
+    pr(" / ");
+    PrintNode(src, node->rhs(), pr, tabDepth);
+    pr(")");
+}
+
+template <typename Printer>
+void
+PrintAddExpr(const SourceReader &src,
+             const AddExprNode *node,
+             Printer pr, int tabDepth)
+{
+    pr("(");
+    PrintNode(src, node->lhs(), pr, tabDepth);
+    pr(" + ");
+    PrintNode(src, node->rhs(), pr, tabDepth);
+    pr(")");
+}
+
+template <typename Printer>
+void
+PrintSubExpr(const SourceReader &src,
+             const SubExprNode *node,
+             Printer pr, int tabDepth)
+{
+    pr("(");
+    PrintNode(src, node->lhs(), pr, tabDepth);
+    pr(" - ");
+    PrintNode(src, node->rhs(), pr, tabDepth);
+    pr(")");
 }
 
 template <typename Printer>
@@ -165,111 +175,12 @@ PrintExprStmt(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintReturnStmt(const SourceReader &src, const ReturnStmtNode *node,
-                Printer pr, int tabDepth)
-{
-    pr("return");
-    if (node->hasValue()) {
-        pr(" ");
-        PrintNode(src, node->value(), pr, tabDepth);
-    }
-    pr(";");
-}
-
-template <typename Printer>
-void
-PrintFuncDecl(const SourceReader &src, const FuncDeclNode *node,
-              Printer pr, int tabDepth)
-{
-    if (node->hasVisibility()) {
-        PrintToken(src, node->visibility(), pr);
-        pr(" ");
-    }
-
-    pr("func ");
-    PrintToken(src, node->name(), pr);
-    pr("(");
-    bool first = true;
-    for (auto param : node->params()) {
-        if (!first)
-            pr(",");
-        PrintToken(src, param.name(), pr);
-        pr(" : ");
-        PrintNode(src, param.type(), pr, 0);
-        first = false;
-    }
-    pr(") : ");
-    PrintNode(src, node->returnType(), pr, 0);
-    pr("\n");
-    PrintTabDepth(tabDepth, pr);
-    pr("{\n");
-    PrintBlockElementList(src, node->body()->elements(), pr, tabDepth+1);
-    PrintTabDepth(tabDepth, pr);
-    pr("}");
-}
-
-template <typename Printer>
-void
-PrintModuleDecl(const SourceReader &src, const ModuleDeclNode *node,
-                Printer pr, int tabDepth)
-{
-    PrintTabDepth(tabDepth, pr);
-    pr("module ");
-    PrintModulePath(src, node->path(), pr);
-}
-
-template <typename Printer>
-void
-PrintImportDecl(const SourceReader &src, const ImportDeclNode *node,
-                Printer pr, int tabDepth)
-{
-    PrintTabDepth(tabDepth, pr);
-    pr("import ");
-    PrintModulePath(src, node->path(), pr);
-    if (node->hasAsName()) {
-        pr(" as ");
-        PrintToken(src, node->asName(), pr);
-    }
-
-    if (!node->members().empty()) {
-        pr(" (");
-        bool first = true;
-        for (auto member : node->members()) {
-            if (!first)
-                pr(", ");
-            PrintToken(src, member.name(), pr);
-            if (member.hasAsName()) {
-                pr(" as ");
-                PrintToken(src, member.asName(), pr);
-            }
-            first = false;
-        }
-        pr(")");
-    }
-}
-
-template <typename Printer>
-void
 PrintFile(const SourceReader &src, const FileNode *node,
           Printer pr, int tabDepth)
 {
-    if (node->hasModule()) {
+    for (auto stmt : node->statements()) {
         PrintTabDepth(tabDepth, pr);
-        PrintNode(src, node->module(), pr, tabDepth);
-        pr(";\n\n");
-    }
-    if (!node->imports().empty()) {
-        for (auto import : node->imports()) {
-            PrintTabDepth(tabDepth, pr);
-            PrintNode(src, import, pr, tabDepth);
-            pr(";\n");
-        }
-        pr("\n");
-    }
-
-    for (auto elem : node->contents()) {
-        PrintTabDepth(tabDepth, pr);
-        PrintNode(src, elem, pr, tabDepth);
+        PrintNode(src, stmt, pr, tabDepth);
         pr("\n");
     }
 }

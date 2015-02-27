@@ -50,12 +50,15 @@ class CodeSource
 class FileCodeSource : public CodeSource
 {
   private:
+    static constexpr unsigned ErrorMaxLength = 128;
+
+  private:
     const char *filename_;
     int fd_;
     uint32_t size_;
     void *data_;
-
-    const char *error_;
+    bool hasError_;
+    char error_[ErrorMaxLength];
 
   public:
     FileCodeSource(const char *filename)
@@ -63,10 +66,11 @@ class FileCodeSource : public CodeSource
         filename_(filename),
         fd_(-1),
         size_(0),
-        data_(nullptr)
+        data_(nullptr),
+        hasError_(false)
     {
         if (!initialize()) {
-            WH_ASSERT(hasError());
+            WH_ASSERT(hasError_);
             finalize();
         }
     }
@@ -76,11 +80,11 @@ class FileCodeSource : public CodeSource
     }
 
     virtual const char *name() const override {
-        WH_ASSERT(!error_);
+        WH_ASSERT(!hasError_);
         return filename_;
     }
     virtual uint32_t size() const override {
-        WH_ASSERT(!error_);
+        WH_ASSERT(!hasError_);
         return size_;
     }
 
@@ -88,23 +92,26 @@ class FileCodeSource : public CodeSource
                       uint32_t *dataSizeOut)
         override
     {
-        WH_ASSERT(!error_);
+        WH_ASSERT(!hasError_);
         *dataOut = reinterpret_cast<const uint8_t *>(data_);
         *dataSizeOut = size_;
         return true;
     }
 
     virtual bool hasError() const override {
-        return error_ != nullptr;
+        return hasError_;
     }
     virtual const char *error() const override {
-        WH_ASSERT(hasError());
+        WH_ASSERT(hasError_);
         return error_;
     }
 
   private:
     bool initialize();
     void finalize();
+
+    void setError(const char *msg);
+    void setError(const char *msg, const char *data);
 };
 
 //

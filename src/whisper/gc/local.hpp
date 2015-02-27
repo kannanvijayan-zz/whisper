@@ -64,6 +64,9 @@ class LocalBase
 
 } // namespace GC
 
+template <typename T> class MutHandle;
+template <typename T> class Handle;
+
 
 //
 // Local
@@ -152,6 +155,9 @@ class Local : public GC::LocalBase
     inline DerefType *operator ->() {
         return GC::DerefTraits<T>::Deref(val_);
     }
+
+    inline MutHandle<T> mutHandle();
+    inline Handle<T> handle() const;
 };
 
 

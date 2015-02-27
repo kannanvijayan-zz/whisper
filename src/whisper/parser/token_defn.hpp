@@ -15,11 +15,10 @@
     /* General punctuation. */              \
     _(Semicolon)           /* ; */          \
     _(Comma)               /* , */          \
-    _(Colon)               /* : */          \
     \
-    /* Qualified accessors. */              \
-    _(ColonColon)          /* :: */         \
-    _(Dot)                 /* . */          \
+    /* Property accessors. */               \
+    _(Dot)                 /* .  */         \
+    _(Arrow)               /* -> */         \
     \
     /* Nested braces. */                    \
     _(OpenParen)           /* ( */          \
@@ -27,8 +26,12 @@
     _(OpenBrace)           /* { */          \
     _(CloseBrace)          /* } */          \
     \
-    /* Assignment operators. */             \
-    _(Assign)              /* = */          \
+    /* Punctuation. */                      \
+    _(Equal)               /* = */          \
+    _(Plus)                /* + */          \
+    _(Minus)               /* - */          \
+    _(Star)                /* * */          \
+    _(Slash)               /* / */          \
     \
     /* Literals. */                         \
     _(IntegerLiteral)                       \
@@ -68,11 +71,9 @@
     \
     _(Semicolon,                    ';'                                  )  \
     _(Comma,                        ','                                  )  \
-    _(Dot,                          '.'                                  )  \
     _(OpenParen,                    '('                                  )  \
     _(CloseParen,                   ')'                                  )  \
     _(OpenBrace,                    '{'                                  )  \
-    _(CloseBrace,                   '}'                                  )  \
-    _(Assign,                       '='                                  )
+    _(CloseBrace,                   '}'                                  )
 
 #endif // WHISPER__PARSER__TOKEN_DEFN_HPP

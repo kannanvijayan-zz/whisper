@@ -5,6 +5,7 @@
 #include "debug.hpp"
 #include "runtime.hpp"
 #include "gc/local.hpp"
+#include "gc/handle.hpp"
 #include "gc/specializations.hpp"
 
 namespace Whisper {
@@ -54,5 +55,27 @@ LocalBase::Update(Updater &updater, void *start, void *end)
 
 } // namespace GC
 } // namespace Whisper
+
+
+namespace Whisper {
+
+
+template <typename T>
+inline MutHandle<T>
+Local<T>::mutHandle()
+{
+    return MutHandle<T>(*this);
+}
+
+template <typename T>
+inline Handle<T>
+Local<T>::handle() const
+{
+    return Handle<T>(*this);
+}
+
+
+} // namespace Whisper
+
 
 #endif // WHISPER__GC__LOCAL_INLINES_HPP

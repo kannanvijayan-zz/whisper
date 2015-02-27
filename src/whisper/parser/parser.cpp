@@ -27,449 +27,143 @@ FileNode *
 Parser::parseFile()
 {
     try {
-        return tryParseFile();
+        // Parse statements.
+        StatementList stmts(allocatorFor<StatementNode *>());
+        tryParseStatementList(stmts);
+
+        // Should have reached end of file.
+        if (!checkNextToken<Token::Type::End>())
+            emitError("Expected end-of-input after statements.");
+
+        // Construct and return a FileNode.
+        return make<FileNode>(std::move(stmts));
+
     } catch (ParserError err) {
         return nullptr;
-    }
-}
 
-FileNode *
-Parser::tryParseFile()
-{
-    // Try to parse a module declaration.
-    ModuleDeclNode *module = tryParseModuleDecl();
-
-    // Try to parse more import declarations.
-    FileNode::ImportDeclList imports(allocatorFor<ImportDeclNode *>());
-    for (;;) {
-        ImportDeclNode *import = tryParseImportDecl();
-        if (!import)
-            break;
-
-        imports.push_back(import);
-    }
-
-    // Parse file contents.
-    FileNode::FileDeclarationList decls(allocatorFor<FileDeclarationNode *>());
-    for (;;) {
-        FileDeclarationNode *decl = tryParseFileDeclaration();
-        if (!decl)
-            break;
-
-        decls.push_back(decl);
-    }
-
-    // Next token must be end of input.
-    if (!checkNextToken<Token::End>())
-        return emitError("Expected end of input.");
-
-    return make<FileNode>(module, std::move(imports), std::move(decls));
-}
-
-ModuleDeclNode *
-Parser::tryParseModuleDecl()
-{
-    //
-    // module a.b.c;
-    //
-
-    // Check for module keyword
-    if (!checkNextToken<Token::ModuleKeyword>())
+    } catch (BumpAllocatorError err) {
+        error_ = "Memory allocation failed during parse.";
         return nullptr;
+    }
+}
 
-    // Parse module path.
-    IdentifierTokenList path(allocatorFor<IdentifierToken>());
+void
+Parser::tryParseStatementList(StatementList &stmts)
+{
     for (;;) {
         const Token &tok = nextToken();
 
-        if (tok.isIdentifier()) {
-            path.push_back(IdentifierToken(tok));
-
-            const Token *cont = checkGetNextToken<Token::Dot,
-                                                  Token::Semicolon>();
-            if (!cont)
-                return emitError("Malformed module declaration.");
-            cont->debug_markUsed();
-
-            if (cont->isDot())
-                continue;
-
-            WH_ASSERT(cont->isSemicolon());
-            break;
-        }
-
-        // Check for premature end.
-        if (tok.isSemicolon() || tok.isEnd()) {
+        // Check for expression-starting tokens.
+        if (tok.isIdentifier() || tok.isIntegerLiteral() ||
+            tok.isPlus() || tok.isMinus())
+        {
             pushBackLastToken();
-            return emitError("Unexpected end of module declaration.");
-        }
+            ExpressionNode *expr = parseExpression();
 
-        pushBackLastToken();
-        return emitError("Malformed module declaration.");
-    }
+            // Consume semicolon at end of statement.
+            if (!checkNextToken<Token::Type::Semicolon>())
+                emitError("Expected semicolon at end of expression.");
 
-    return make<ModuleDeclNode>(std::move(path));
-}
+            stmts.push_back(make<ExprStmtNode>(expr));
+            continue;
+        } 
 
-ImportDeclNode *
-Parser::tryParseImportDecl()
-{
-    //
-    // import a.b.c;
-    // import a.b.c as foo;
-    //
-    // import a.b.c (x as m, y as y, z as qqq);
-    // import a.b.c (x as m, y, z as qqq); # equivalent
-    //
-
-    // Check for import keyword
-    if (!checkNextToken<Token::ImportKeyword>())
-        return nullptr;
-
-    // Parse import path.
-    IdentifierTokenList path(allocatorFor<IdentifierToken>());
-    bool parseAs = false;
-    bool parseMembers = false;
-    bool gotSemicolon = false;
-    for (;;) {
-        const Token &tok = nextToken();
-
-        // Expect an identifier.
-        if (tok.isIdentifier()) {
-            path.push_back(IdentifierToken(tok));
-
-            const Token *cont = checkGetNextToken<Token::Dot,
-                                                  Token::Semicolon,
-                                                  Token::AsKeyword,
-                                                  Token::OpenParen>();
-            if (!cont)
-                return emitError("Malformed import declaration.");
-            cont->debug_markUsed();
-
-            if (cont->isDot())
-                continue;
-
-            WH_ASSERT(cont->isSemicolon() || cont->isAsKeyword() ||
-                      cont->isOpenParen());
-
-            if (cont->isAsKeyword())
-                parseAs = true;
-            else if (cont->isOpenParen())
-                parseMembers = true;
-            else if (cont->isSemicolon())
-                gotSemicolon = true;
-            break;
-        }
-
-        // Check for premature end.
-        if (tok.isSemicolon() || tok.isEnd()) {
-            pushBackLastToken();
-            return emitError("Unexpected end of import declaration.");
-        }
-
-        pushBackLastToken();
-        return emitError("Malformed import declaration.");
-    }
-
-    WH_ASSERT_IF(parseAs, !gotSemicolon && !parseMembers);
-    WH_ASSERT_IF(parseMembers, !gotSemicolon && !parseAs);
-    WH_ASSERT_IF(gotSemicolon, !parseAs && !parseMembers);
-
-    IdentifierToken asName;
-    if (parseAs) {
-        const Token *maybeAsName = checkGetNextToken<Token::Identifier>();
-        if (!maybeAsName)
-            return emitError("Expected name after 'as' in import declaration.");
-        asName = IdentifierToken(*maybeAsName);
-
-        const Token *cont = checkGetNextToken<Token::Semicolon, 
-                                              Token::OpenParen>();
-        if (!cont)
-            return emitError("Malformed import declaration.");
-        cont->debug_markUsed();
-
-        if (cont->isOpenParen())
-            parseMembers = true;
-        else if (cont->isSemicolon())
-            gotSemicolon = true;
-    }
-
-    WH_ASSERT_IF(gotSemicolon, !parseMembers);
-    WH_ASSERT_IF(parseMembers, !gotSemicolon);
-  
-    ImportDeclNode::MemberList members(allocatorFor<ImportDeclNode::Member>());
-    if (parseMembers) {
-        for (;;) {
-            // Get member name.
-            const Token *maybeMember = checkGetNextToken<Token::Identifier>();
-            if (!maybeMember)
-                return emitError("Malformed member clause in import.");
-            IdentifierToken member = IdentifierToken(*maybeMember);
-
-            const Token *cont = checkGetNextToken<Token::AsKeyword,
-                                                  Token::Comma,
-                                                  Token::CloseParen>();
-            if (!cont)
-                return emitError("Malformed member clause in import.");
-            cont->debug_markUsed();
-
-            if (cont->isCloseParen()) {
-                members.push_back(ImportDeclNode::Member(member));
-                break;
-            }
-
-            if (cont->isComma()) {
-                members.push_back(ImportDeclNode::Member(member));
-                continue;
-            }
-
-            WH_ASSERT(cont->isAsKeyword());
-            const Token *memberAsName = checkGetNextToken<Token::Identifier>();
-            if (!memberAsName) {
-                return emitError("Expected identifier after 'as' in import "
-                                 "declaration.");
-            }
-
-            members.push_back(
-                ImportDeclNode::Member(member, IdentifierToken(*memberAsName)));
-
-            cont = checkGetNextToken<Token::Comma, Token::CloseParen>();
-            if (!cont)
-                return emitError("Malformed member clause in import.");
-            cont->debug_markUsed();
-
-            if (cont->isComma())
-                continue;
-
-            WH_ASSERT(cont->isCloseParen());
-            break;
-        }
-    }
-
-    if (!gotSemicolon) {
-        if (!checkNextToken<Token::Semicolon>())
-            return emitError("Expected semicolon after import declaration.");
-    }
-
-    return make<ImportDeclNode>(std::move(path), asName, std::move(members));
-}
-
-FileDeclarationNode *
-Parser::tryParseFileDeclaration()
-{
-    //
-    // func ...;
-    // public func ...;
-    // private func ...;
-    //
-
-    VisibilityToken visibility;
-
-    const Token *tok;
-
-    // Check for visibility prefix.
-    {
-        const Token &vis = nextToken();
-        if (vis.isPublicKeyword() || vis.isPrivateKeyword()) {
-            visibility = VisibilityToken(vis);
-            const Token &afterVis = nextToken();
-            tok = &afterVis;
-        } else {
-            tok = &vis;
-        }
-    }
-
-    // Check next token.
-    if (tok->isFuncKeyword()) {
-        tok->debug_markUsed();
-        return tryParseFuncDecl(visibility);
-    }
-
-    // If visibility modifier was given, but no recognizable continuation
-    // follows, error.
-    if (!visibility.isINVALID())
-        return emitError("Unknown file declaration after visibility modifier.");
-
-    pushBackLastToken();
-    return nullptr;
-}
-
-FuncDeclNode *
-Parser::tryParseFuncDecl(const VisibilityToken &visibility)
-{
-    //
-    // func F(p1 : T1, p2 : T2, ...) : RT { ... }
-    //
-
-    // Function name.
-    const Token *maybeName = checkGetNextToken<Token::Identifier>();
-    if (!maybeName)
-        return emitError("Expected function name.");
-    IdentifierToken name(*maybeName);
-
-    // Parameter list.
-    if (!checkNextToken<Token::OpenParen>())
-        return emitError("Expected '(' after function name.");
-
-    // Parse function parameters.
-    FuncDeclNode::ParamList params(allocatorFor<FuncDeclNode::Param>());
-
-    if (!checkNextToken<Token::CloseParen>()) {
-        for (;;) {
-            // Parse parameter name.
-            const Token *maybeParamName =
-                checkGetNextToken<Token::Identifier>();
-            if (!maybeParamName)
-                return emitError("Expected function parameter name.");
-            IdentifierToken paramName(*maybeParamName);
-
-            // Parse separating colon.
-            if (!checkNextToken<Token::Colon>())
-                return emitError("Expected ':' after function parameter.");
-
-            // Parse parameter type.
-            TypenameNode *paramType = parseType();
-            WH_ASSERT(paramType);
-
-            // Add parameter.
-            params.push_back(FuncDeclNode::Param(paramType, paramName));
-
-            // Check for continuation.
-            const Token *cont = checkGetNextToken<Token::Comma,
-                                                  Token::CloseParen>();
-            if (!cont)
-                return emitError("Malformed function parameters.");
-            cont->debug_markUsed();
-
-            if (cont->isComma())
-                continue;
-
-            WH_ASSERT(cont->isCloseParen());
-            break;
-        }
-    }
-
-    // Parse colon after function params, before return type.
-    if (!checkNextToken<Token::Colon>())
-        return emitError("Expected ':' after function parameter list.");
-
-    // Return type.
-    TypenameNode *returnType = parseType();
-    WH_ASSERT(returnType);
-
-    // Parse function body.
-    if (!checkNextToken<Token::OpenBrace>())
-        return emitError("Expected '{' after function name.");
-
-    BlockElementList elems(allocatorFor<BlockElementNode *>());
-    for (;;) {
-        BlockElementNode *elem = tryParseBlockElement();
-        if (elem) {
-            elems.push_back(elem);
+        if (tok.isSemicolon()) {
+            stmts.push_back(make<EmptyStmtNode>());
             continue;
         }
 
-        if (!checkNextToken<Token::CloseBrace>())
-            return emitError("Expeced close brace for block.");
+        pushBackLastToken();
 
         break;
     }
-
-    return make<FuncDeclNode>(visibility, returnType, name,
-                              std::move(params),
-                              make<BlockNode>(std::move(elems)));
-}
-
-TypenameNode *
-Parser::parseType()
-{
-    const Token &tok = nextToken();
-    if (tok.isIntKeyword())
-        return make<IntTypeNode>(IntKeywordToken(tok));
-
-    return emitError("Unrecognized type.");
-}
-
-BlockElementNode *
-Parser::tryParseBlockElement()
-{
-    const Token &tok = nextToken();
-
-    if (tok.isReturnKeyword()) {
-        tok.debug_markUsed();
-        return parseReturnStmt();
-    }
-
-    if (tok.isCloseBrace()) {
-        pushBackLastToken();
-        return nullptr;
-    }
-        
-    return emitError("Unrecognized block element.");
-}
-
-ReturnStmtNode *
-Parser::parseReturnStmt()
-{
-    // Try parsing return expression
-    const Token &tok = nextToken();
-    if (tok.isSemicolon())
-        return make<ReturnStmtNode>(nullptr);
-
-    pushBackLastToken();
-    ExpressionNode *expr = parseExpression(Prec_Lowest, Token::Semicolon);
-    WH_ASSERT(expr);
-
-    return make<ReturnStmtNode>(expr);
 }
 
 ExpressionNode *
-Parser::parseExpression(Precedence prec, Token::Type endType)
+Parser::parseExpression(const Token &startToken, Precedence prec)
 {
-    WH_ASSERT(prec >= Prec_Lowest && prec < Prec_Highest);
+    ExpressionNode *expr = nullptr;
+    if (startToken.isIdentifier()) {
+        expr = make<IdentifierExprNode>(IdentifierToken(startToken));
 
-    TokenizerMark markExpr = tokenizer_.mark();
+    } else if (startToken.isIntegerLiteral()) {
+        expr = make<IntegerLiteralExprNode>(IntegerLiteralToken(startToken));
 
-    // Read first token.
-    // Allow RegExps and keywords.
-    const Token &tok = nextToken();
-    tok.debug_markUsed();
+    } else if (startToken.isMinus()) {
+        ExpressionNode *subexpr = parseExpression(Prec_Unary);
+        expr = make<NegExprNode>(subexpr);
 
-    ExpressionNode *curExpr = nullptr;
-
-    // Parse initial "starter" expression.
-    if (tok.isIdentifier()) {
-        curExpr = make<IdentifierExprNode>(IdentifierToken(tok));
-
-    } else if (tok.isIntegerLiteral()) {
-        curExpr = make<IntegerLiteralExprNode>(IntegerLiteralToken(tok));
-
-    } else if (tok.isOpenParen()) {
-        // Parse sub-expression
-        auto subexpr = parseExpression(Prec_Lowest, Token::CloseParen);
-        if (!subexpr)
-            emitError("Could not parse expression within parenthesis.");
-        curExpr = make<ParenExprNode>(subexpr);
+    } else if (startToken.isPlus()) {
+        ExpressionNode *subexpr = parseExpression(Prec_Unary);
+        expr = make<PosExprNode>(subexpr);
 
     } else {
-        // No expression possible, return.
-        tokenizer_.gotoMark(markExpr);
-        return emitError("Could not parse expression.");
+        emitError("Unrecognized expression token.");
     }
 
-    // Recursively forward-parse expressions.
-    for (;;) {
-        WH_ASSERT(prec >= Prec_Lowest && prec < Prec_Highest);
+    return parseExpressionRest(expr, prec);
+}
 
+ExpressionNode *
+Parser::parseExpressionRest(ExpressionNode *seedExpr, Precedence prec)
+{
+    WH_ASSERT(prec > Prec_Highest && prec <= Prec_Lowest);
+
+    ExpressionNode *curExpr = seedExpr;
+    Precedence curPrec = prec;
+
+    for (;;) {
+        // Read first token.
         const Token &optok = nextToken();
         optok.debug_markUsed();
 
-        // No matching continuation of expression.  Must be at end.
-        if (optok.type() != endType) {
-            pushBackLastToken();
-            return emitError("Invalid expression.");
+        // Check from highest to lowest precedence.
+        if (optok.isStar()) {
+            if (prec <= Prec_Product) {
+                pushBackLastToken();
+                break;
+            }
+
+            ExpressionNode *rhsExpr = parseExpression(Prec_Product);
+            curExpr = make<MulExprNode>(curExpr, rhsExpr);
+            continue;
         }
 
+        if (optok.isSlash()) {
+            if (prec <= Prec_Product) {
+                pushBackLastToken();
+                break;
+            }
+
+            ExpressionNode *rhsExpr = parseExpression(Prec_Product);
+            curExpr = make<DivExprNode>(curExpr, rhsExpr);
+            continue;
+        }
+
+        if (optok.isPlus()) {
+            if (prec <= Prec_Sum) {
+                pushBackLastToken();
+                break;
+            }
+
+            ExpressionNode *rhsExpr = parseExpression(Prec_Sum);
+            curExpr = make<AddExprNode>(curExpr, rhsExpr);
+            continue;
+        }
+
+        if (optok.isMinus()) {
+            if (prec <= Prec_Sum) {
+                pushBackLastToken();
+                break;
+            }
+
+            ExpressionNode *rhsExpr = parseExpression(Prec_Sum);
+            curExpr = make<SubExprNode>(curExpr, rhsExpr);
+            continue;
+        }
+
+        // Got an unrecognized token.  Let caller handle it.
+        pushBackLastToken();
         break;
     }
 

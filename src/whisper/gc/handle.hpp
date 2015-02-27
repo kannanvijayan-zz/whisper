@@ -21,7 +21,7 @@ class MutHandle
     typedef typename GC::DerefTraits<T>::Type DerefType;
 
   private:
-    volatile T * const valAddr_;
+    T * const valAddr_;
 
     inline MutHandle(T *valAddr)
       : valAddr_(valAddr)
@@ -92,7 +92,7 @@ class Handle
     typedef typename GC::DerefTraits<T>::Type DerefType;
 
   private:
-    volatile const T * const valAddr_;
+    const T * const valAddr_;
 
     inline Handle(const T *valAddr)
       : valAddr_(valAddr)

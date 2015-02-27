@@ -1,6 +1,12 @@
 
 bin_PROGRAMS = whisper
-whisper_CXXFLAGS = -std=c++14
+whisper_CXXFLAGS = -Wall -std=c++14
+if DEBUG
+  whisper_CXXFLAGS += -g -O0 -gdwarf-4
+endif
+if WARNERR
+  whisper_CXXFLAGS += -Werror
+endif
 whisper_SOURCES = \
     debug.cpp \
     spew.cpp \

@@ -1,4 +1,6 @@
 
+#include <errno.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -24,20 +26,20 @@ FileCodeSource::initialize()
     // try to open the file.
     fd_ = open(filename_, O_RDONLY);
     if (fd_ == -1) {
-        error_ = "Could not open.";
+        setError("Could not open file", strerror(errno));
         return false;
     }
 
     // find the size of the file
     struct stat st;
     if (fstat(fd_, &st) == -1) {
-        error_ = "Could not stat.";
+        setError("Could not stat file", strerror(errno));
         return false;
     }
 
     // size too large.
     if (st.st_size > UINT32_MAX) {
-        error_ = "File too large.";
+        setError("Input file too large.");
         return false;
     }
     size_ = st.st_size;
@@ -51,7 +53,7 @@ FileCodeSource::initialize()
     // mmap the file.
     void *data = mmap(NULL, size_, PROT_READ, MAP_PRIVATE, fd_, 0);
     if (data == MAP_FAILED) {
-        error_ = "Could not mmap.";
+        setError("Could not mmap file", strerror(errno));
         return false;
     }
     data_ = reinterpret_cast<uint8_t *>(data);
@@ -74,6 +76,22 @@ FileCodeSource::finalize()
     fd_ = -1;
     data_ = nullptr;
 #endif
+}
+
+void
+FileCodeSource::setError(const char *msg)
+{
+    WH_ASSERT(!hasError_);
+    snprintf(error_, ErrorMaxLength, "%s", msg);
+    hasError_ = true;
+}
+
+void
+FileCodeSource::setError(const char *msg, const char *data)
+{
+    WH_ASSERT(!hasError_);
+    snprintf(error_, ErrorMaxLength, "%s: %s", msg, data);
+    hasError_ = true;
 }
 
 //

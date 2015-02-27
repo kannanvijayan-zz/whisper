@@ -58,7 +58,7 @@ System::Create(AllocationContext &acx)
     if (!modVec)
         return nullptr;
 
-    Local<System *> system(acx, acx.create<System>(modVec));
+    Local<System *> system(acx, acx.create<System>(modVec.handle()));
     if (!system)
         return nullptr;
 

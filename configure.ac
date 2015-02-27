@@ -7,8 +7,9 @@ echo "==== Testing for C++ compiler"
 AC_PROG_CXX
 AC_LANG([C++])
 
-AC_ARG_ENABLE(debug, [  --enable-debug          Enable debugging.])
-AC_ARG_ENABLE(spew, [  --enable-spew           Enable spew.])
+AC_ARG_ENABLE(debug, [  --enable-debug       Enable debugging.])
+AC_ARG_ENABLE(spew, [  --enable-spew        Enable spew.])
+AC_ARG_ENABLE(warnerr, [  --enable-warnerr        Enable warnings-as-errors.])
 
 AC_CHECK_HEADER([iostream],
                 [AC_DEFINE([HAVE_IOSTREAM], [1],
@@ -69,5 +70,6 @@ fi
 
 AM_CONDITIONAL(DEBUG, test x"$enable_debug" = x"yes")
 AM_CONDITIONAL(SPEW, test x"$enable_spew" = x"yes")
+AM_CONDITIONAL(WARNERR, test x"$enable_warnerr" = x"yes")
 
 AC_OUTPUT

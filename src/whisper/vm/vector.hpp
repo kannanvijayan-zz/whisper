@@ -257,7 +257,7 @@ Vector<T>::Create(AllocationContext &acx, uint32_t capacity)
         return nullptr;
 
     // Allocate vector.
-    Local<Vector<T> *> vec(acx, acx.create<Vector<T>>(contents));
+    Local<Vector<T> *> vec(acx, acx.create<Vector<T>>(contents.handle()));
     if (!vec)
         return nullptr;
 

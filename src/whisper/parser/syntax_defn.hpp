@@ -6,24 +6,20 @@
     /* Top level. */                        \
     _(File)                                 \
     \
-    /* File declarations. */                \
-    _(ModuleDecl)                           \
-    _(ImportDecl)                           \
-    _(FuncDecl)                             \
-    _(Block)                                \
-    \
     /* Statements. */                       \
-    _(ReturnStmt)                           \
     _(EmptyStmt)                            \
     _(ExprStmt)                             \
     \
     /* Expressions. */                      \
+    _(PosExpr)                              \
+    _(NegExpr)                              \
+    _(AddExpr)                              \
+    _(SubExpr)                              \
+    _(MulExpr)                              \
+    _(DivExpr)                              \
     _(ParenExpr)                            \
     _(IdentifierExpr)                       \
-    _(IntegerLiteralExpr)                   \
-    \
-    /* Typenames. */                        \
-    _(IntType)
+    _(IntegerLiteralExpr)
 
 
 #endif // WHISPER__PARSER__SYNTAX_DEFN_HPP

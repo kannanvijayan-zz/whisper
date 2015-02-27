@@ -322,17 +322,40 @@ Tokenizer::readTokenImpl()
     if (IsDecDigit(ch))
         return readNumericLiteral(ch == '0');
 
-    // Next, check for punctuators, ordered from an intuitive sense
-    // of most common to least common.
+    if (ch == '.')
+        return emitToken(Token::Dot);
 
-    if (ch == ':') {
+    if (ch == '/') {
+        // Check for '/', '//' or '/*'
         unic_t ch2 = readAsciiChar();
-        if (ch2 == ':')
-            return emitToken(Token::ColonColon);
+        if (ch2 == '/')
+            return readSingleLineComment();
 
-        unreadChar(ch2);
-        return emitToken(Token::Colon);
+        if (ch2 == '*')
+            return readMultiLineComment();
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Slash);
     }
+
+    if (ch == '-') {
+        // Check for '-' or '->'
+        unic_t ch2 = readAsciiChar();
+        if (ch2 == '>')
+            return emitToken(Token::Arrow);
+
+        unreadAsciiChar(ch2);
+        return emitToken(Token::Minus);
+    }
+
+    if (ch == '+')
+        return emitToken(Token::Plus);
+
+    if (ch == '*')
+        return emitToken(Token::Star);
+
+    if (ch == '=')
+        return emitToken(Token::Equal);
 
     // Line terminators are probably more common the the following
     // three punctuators.
@@ -344,7 +367,8 @@ Tokenizer::readTokenImpl()
         return readIdentifierName();
     }
 
-    WH_ASSERT(!(CharIn<'(', ')', '{', '}', ',', ';', '.', ':'>(ch)));
+    WH_ASSERT(!(CharIn<'(', ')', '{', '}', ',', ';', '.'>(ch)));
+    WH_ASSERT(!(CharIn<'+', '-', '/', '*', '='>(ch)));
 
     // Handle unicode escapes and complex identifiers last.
     ch = maybeRereadNonAsciiToFull(ch);
