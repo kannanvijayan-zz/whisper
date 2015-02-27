@@ -15,8 +15,10 @@ namespace Whisper {
 // Parser
 //
 
-Parser::Parser(Tokenizer &tokenizer)
-  : tokenizer_(tokenizer)
+Parser::Parser(const STLBumpAllocator<uint8_t> &allocator,
+               Tokenizer &tokenizer)
+  : allocator_(allocator),
+    tokenizer_(tokenizer)
 {}
 
 Parser::~Parser() {}

@@ -25,13 +25,15 @@ class ParserError {
 class Parser
 {
   private:
+    STLBumpAllocator<uint8_t> allocator_;
     Tokenizer &tokenizer_;
 
     // Error message.
     const char *error_ = nullptr;
 
   public:
-    Parser(Tokenizer &tokenizer);
+    Parser(const STLBumpAllocator<uint8_t> &allocator,
+           Tokenizer &tokenizer);
     ~Parser();
 
     FileNode *parseFile();
@@ -128,7 +130,7 @@ class Parser
 
     template <typename T>
     inline STLBumpAllocator<T> allocatorFor() const {
-        return STLBumpAllocator<T>(tokenizer_.allocator());
+        return STLBumpAllocator<T>(allocator_);
     }
 
     template <typename T, typename... ARGS>

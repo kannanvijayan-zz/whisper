@@ -92,13 +92,13 @@ int main(int argc, char **argv) {
         std::cerr << inputFile.error() << std::endl;
         exit(1);
     }
-    BumpAllocator allocator;
-    STLBumpAllocator<uint8_t> wrappedAllocator(allocator);
-    Tokenizer tokenizer(wrappedAllocator, inputFile);
+    Tokenizer tokenizer(inputFile);
 
     // PrintTokens(inputFile, tokenizer);
 
-    Parser parser(tokenizer);
+    BumpAllocator allocator;
+    STLBumpAllocator<uint8_t> wrappedAllocator(allocator);
+    Parser parser(wrappedAllocator, tokenizer);
 
     FileNode *fileNode = parser.parseFile();
     if (!fileNode) {

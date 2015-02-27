@@ -335,7 +335,6 @@ class TokenizerMark {
 class Tokenizer
 {
   private:
-    STLBumpAllocator<uint8_t> allocator_;
     CodeSource &source_;
     SourceReader reader_;
     Token tok_;
@@ -356,9 +355,8 @@ class Tokenizer
     bool pushedBackToken_ = false;
 
   public:
-    Tokenizer(const STLBumpAllocator<uint8_t> &allocator, CodeSource &source)
-      : allocator_(allocator),
-        source_(source),
+    Tokenizer(CodeSource &source)
+      : source_(source),
         reader_(source_),
         tok_()
     {
@@ -367,10 +365,6 @@ class Tokenizer
     }
 
     inline ~Tokenizer() {}
-
-    const STLBumpAllocator<uint8_t> &allocator() const {
-        return allocator_;
-    }
 
     inline CodeSource &source() const {
         return source_;
