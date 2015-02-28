@@ -75,29 +75,107 @@ Parser::tryParseStatement()
         return make<ExprStmtNode>(expr);
     }
 
-    if (tok.isReturnKeyword()) {
-        Token nextTok = nextToken();
+    if (tok.isReturnKeyword())
+        return parseReturnStatement();
 
-        // Parse return statement.
-        Expression *expr = tryParseExpression(nextTok, Prec_Statement);
-        if (expr) {
-            if (!checkNextToken<Token::Type::Semicolon>())
-                emitError("Expected semicolon after return statement.");
-
-            return make<ReturnStmtNode>(expr);
-        }
-
-        if (nextTok.isSemicolon())
-            return make<ReturnStmtNode>(nullptr);
-
-        emitError("Expected semicolon after return statement.");
-    }
+    if (tok.isIfKeyword())
+        return parseIfStatement();
 
     if (tok.isSemicolon())
         return make<EmptyStmtNode>();
 
     rewindToToken(tok);
     return nullptr;
+}
+
+ReturnStmtNode *
+Parser::parseReturnStatement()
+{
+    Token nextTok = nextToken();
+
+    // Parse return statement.
+    Expression *expr = tryParseExpression(nextTok, Prec_Statement);
+    if (expr) {
+        if (!checkNextToken<Token::Type::Semicolon>())
+            emitError("Expected semicolon after return statement.");
+
+        return make<ReturnStmtNode>(expr);
+    }
+
+    if (!nextTok.isSemicolon())
+        emitError("Expected semicolon after return statement.");
+
+    return make<ReturnStmtNode>(nullptr);
+}
+
+IfStmtNode *
+Parser::parseIfStatement()
+{
+    IfStmtNode::CondPair ifPair = parseIfCondPair();
+
+    // List of elsif cond pairs.
+    IfStmtNode::CondPairList elsifPairs(allocatorFor<IfStmtNode::CondPair>());
+
+    Block *elseBlock = nullptr;
+
+    // Check for following 'elsif' or 'else'
+    Token::Type type = checkTypeNextToken<Token::Type::ElseKeyword,
+                                          Token::Type::ElsifKeyword>();
+    while (type == Token::Type::ElsifKeyword) {
+
+        elsifPairs.push_back(parseIfCondPair());
+
+        type = checkTypeNextToken<Token::Type::ElseKeyword,
+                                  Token::Type::ElsifKeyword>();
+    }
+
+    if (type == Token::Type::ElseKeyword) {
+        // Expect open-brace afterward.
+        if (!checkNextToken<Token::Type::OpenBrace>())
+            emitError("Expected '{' after 'else' keyword.");
+
+        elseBlock = parseBlock();
+    }
+
+    return make<IfStmtNode>(ifPair, std::move(elsifPairs), elseBlock);
+}
+
+IfStmtNode::CondPair
+Parser::parseIfCondPair()
+{
+    // Must be followed by '('
+    if (!checkNextToken<Token::Type::OpenParen>())
+        emitError("Expected '(' in conditional pair.");
+
+    // Parse a conditional expression.
+    Expression *expr = parseExpression(Prec_Lowest);
+
+    // Expect close paren afterward.
+    if (!checkNextToken<Token::Type::CloseParen>())
+        emitError("Expected ')' in conditional pair.");
+
+    // Expect open-brace afterward.
+    if (!checkNextToken<Token::Type::OpenBrace>())
+        emitError("Expected '{' in conditional pair.");
+
+    Block *block = parseBlock();
+
+    return IfStmtNode::CondPair(expr, block);
+}
+
+Block *
+Parser::parseBlock()
+{
+    // Parse statements.
+    StatementList stmts(allocatorFor<Statement *>());
+    tryParseStatementList(stmts);
+
+    // Should have reached end-of-block.
+    if (!checkNextToken<Token::Type::CloseBrace>())
+        emitError("Expected '}' at end of block.");
+
+    // Construct and return a FileNode.
+    return make<Block>(std::move(stmts));
 }
 
 Expression *

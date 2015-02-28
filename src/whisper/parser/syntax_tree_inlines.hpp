@@ -111,12 +111,11 @@ PrintCallExpr(const SourceReader &src,
 {
     PrintNode(src, node->receiver(), pr, tabDepth);
     pr("(");
-    const ExpressionList &args = node->args();
     uint32_t i = 0;
-    for (auto iter = args.begin(); iter != args.end(); iter++) {
+    for (const Expression *arg : node->args()) {
         if (i > 0)
             pr(", ");
-        PrintNode(src, *iter, pr, tabDepth);
+        PrintNode(src, arg, pr, tabDepth);
     }
     pr(")");
 }
@@ -226,11 +225,50 @@ PrintReturnStmt(const SourceReader &src,
 }
 
 template <typename Printer>
+static void
+PrintBlock(const SourceReader &src,
+           const Block *block,
+           Printer pr, int tabDepth)
+{
+    pr("{\n");
+    for (const Statement *stmt : block->statements()) {
+        PrintTabDepth(tabDepth+1, pr);
+        PrintNode(src, stmt, pr, tabDepth+1);
+    }
+    pr("}");
+}
+
+template <typename Printer>
+void
+PrintIfStmt(const SourceReader &src,
+            const IfStmtNode *node,
+            Printer pr, int tabDepth)
+{
+    pr("if (");
+    PrintNode(src, node->ifPair().cond(), pr, tabDepth);
+    pr(") ");
+    PrintBlock(src, node->ifPair().block(), pr, tabDepth);
+
+    for (const IfStmtNode::CondPair &elsifPair : node->elsifPairs()) {
+        pr(" elsif (");
+        PrintNode(src, elsifPair.cond(), pr, tabDepth);
+        pr(") ");
+        PrintBlock(src, elsifPair.block(), pr, tabDepth);
+    }
+
+    if (node->hasElseBlock()) {
+        pr(" else ");
+        PrintBlock(src, node->elseBlock(), pr, tabDepth);
+    }
+    pr("\n");
+}
+
+template <typename Printer>
 void
 PrintFile(const SourceReader &src, const FileNode *node,
           Printer pr, int tabDepth)
 {
-    for (auto stmt : node->statements()) {
+    for (const Statement *stmt : node->statements()) {
         PrintTabDepth(tabDepth, pr);
         PrintNode(src, stmt, pr, tabDepth);
     }

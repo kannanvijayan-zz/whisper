@@ -10,6 +10,7 @@
     _(EmptyStmt)                            \
     _(ExprStmt)                             \
     _(ReturnStmt)                           \
+    _(IfStmt)                               \
     \
     /* Expressions. */                      \
     _(CallExpr)                             \

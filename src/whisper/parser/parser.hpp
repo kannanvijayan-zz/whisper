@@ -51,6 +51,12 @@ class Parser
     void tryParseStatementList(StatementList &stmts);
 
     Statement *tryParseStatement();
+    ReturnStmtNode *parseReturnStatement();
+
+    IfStmtNode *parseIfStatement();
+    IfStmtNode::CondPair parseIfCondPair();
+
+    Block *parseBlock();
 
     // Enum for expression precedence, from highest precedence to
     // lowest.
@@ -116,6 +122,18 @@ class Parser
             return &tok;
         tokenizer_.pushBackLastToken();
         return nullptr;
+    }
+
+    template <Token::Type... TYPES>
+    inline const Token::Type checkTypeNextToken()
+    {
+        const Token &tok = nextToken();
+        if (TestTokenType<TYPES...>(tok.type())) {
+            tok.debug_markUsed();
+            return tok.type();
+        }
+        tokenizer_.pushBackLastToken();
+        return Token::Type::INVALID;
     }
 
     // Check to see if upcoming token matches expected type.

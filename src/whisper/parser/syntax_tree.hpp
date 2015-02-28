@@ -46,6 +46,7 @@ class FileNode;
 class EmptyStmtNode;
 class ExprStmtNode;
 class ReturnStmtNode;
+class IfStmtNode;
 
 class CallExprNode;
 class DotExprNode;
@@ -364,6 +365,22 @@ class ParenExprNode : public Expression
 //////////////////
 
 //
+// Block is a helper type to represent { ... } statement lists.
+//
+class Block
+{
+  private:
+    StatementList statements_;
+
+  public:
+    inline Block(StatementList &&statements) : statements_(statements) {}
+
+    const StatementList &statements() const {
+        return statements_;
+    }
+};
+
+//
 // EmptyStmt syntax element
 //
 class EmptyStmtNode : public Statement
@@ -414,6 +431,68 @@ class ReturnStmtNode : public Statement
     inline Expression *expr() const {
         WH_ASSERT(hasExpr());
         return expr_;
+    }
+};
+
+//
+// IfStmt syntax element
+//
+class IfStmtNode : public Statement
+{
+  public:
+    class CondPair {
+      private:
+        Expression *cond_;
+        Block *block_;
+
+      public:
+        CondPair(Expression *cond, Block *block)
+          : cond_(cond),
+            block_(block)
+        {
+            WH_ASSERT(cond_);
+            WH_ASSERT(block_);
+        }
+
+        const Expression *cond() const {
+            return cond_;
+        }
+        const Block *block() const {
+            return block_;
+        }
+    };
+    typedef List<CondPair> CondPairList;
+
+  private:
+    CondPair ifPair_;
+    CondPairList elsifPairs_;
+    Block *elseBlock_;
+
+  public:
+    explicit IfStmtNode(const CondPair &ifPair,
+                        CondPairList &&elsifPairs,
+                        Block *elseBlock)
+      : Statement(IfStmt),
+        ifPair_(ifPair),
+        elsifPairs_(elsifPairs),
+        elseBlock_(elseBlock)
+    {}
+
+    const CondPair &ifPair() const {
+        return ifPair_;
+    }
+
+    const CondPairList &elsifPairs() const {
+        return elsifPairs_;
+    }
+
+    bool hasElseBlock() const {
+        return elseBlock_ != nullptr;
+    }
+
+    Block *elseBlock() const {
+        WH_ASSERT(hasElseBlock());
+        return elseBlock_;
     }
 };
 
