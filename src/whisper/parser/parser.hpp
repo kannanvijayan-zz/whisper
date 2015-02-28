@@ -50,7 +50,7 @@ class Parser
   private:
     void tryParseStatementList(StatementList &stmts);
 
-    StatementNode *tryParseStatement();
+    Statement *tryParseStatement();
 
     // Enum for expression precedence, from highest precedence to
     // lowest.
@@ -65,19 +65,19 @@ class Parser
         Prec_Lowest
     };
 
-    ExpressionNode *parseExpression(const Token &startToken, Precedence prec);
+    Expression *parseExpression(const Token &startToken, Precedence prec);
 
-    ExpressionNode *parseExpression(Precedence prec) {
+    Expression *parseExpression(Precedence prec) {
         return parseExpression(nextToken(), prec);
     }
 
-    ExpressionNode *tryParseExpression(const Token &startToken,
-                                       Precedence prec);
+    Expression *tryParseExpression(const Token &startToken,
+                                   Precedence prec);
 
-    ExpressionNode *parseExpressionRest(ExpressionNode *seedExpr,
-                                        Precedence prec);
+    Expression *parseExpressionRest(Expression *seedExpr,
+                                    Precedence prec);
 
-    ExpressionNode *parseCallTrailer(PropertyExpressionNode *propExpr);
+    Expression *parseCallTrailer(PropertyExpression *propExpr);
 
     // Push back token.
     inline void pushBackLastToken() {

@@ -31,13 +31,13 @@ const char *NodeTypeString(NodeType nodeType);
 
 // Abstract pre-declarations.
 
-class StatementNode;
-class ExpressionNode;
-class PropertyExpressionNode;
-class LiteralExpressionNode;
+class Statement;
+class Expression;
+class PropertyExpression;
+class LiteralExpression;
 
-template <NodeType TYPE> class UnaryExpressionNode;
-template <NodeType TYPE> class BinaryExpressionNode;
+template <NodeType TYPE> class UnaryExpression;
+template <NodeType TYPE> class BinaryExpression;
 
 // Concrete pre-declarations.
 
@@ -50,12 +50,12 @@ class CallExprNode;
 class DotExprNode;
 class ArrowExprNode;
 
-typedef UnaryExpressionNode<NegExpr> NegExprNode;
-typedef UnaryExpressionNode<PosExpr> PosExprNode;
-typedef BinaryExpressionNode<MulExpr> MulExprNode;
-typedef BinaryExpressionNode<DivExpr> DivExprNode;
-typedef BinaryExpressionNode<AddExpr> AddExprNode;
-typedef BinaryExpressionNode<SubExpr> SubExprNode;
+typedef UnaryExpression<NegExpr> NegExprNode;
+typedef UnaryExpression<PosExpr> PosExprNode;
+typedef BinaryExpression<MulExpr> MulExprNode;
+typedef BinaryExpression<DivExpr> DivExprNode;
+typedef BinaryExpression<AddExpr> AddExprNode;
+typedef BinaryExpression<SubExpr> SubExprNode;
 
 class NameExprNode;
 class IntegerExprNode;
@@ -124,10 +124,10 @@ void PrintNode(const CodeSource &source, const BaseNode *node, Printer printer,
 //                                   //
 ///////////////////////////////////////
 
-class StatementNode : public BaseNode
+class Statement : public BaseNode
 {
   protected:
-    inline StatementNode(NodeType type) : BaseNode(type) {}
+    inline Statement(NodeType type) : BaseNode(type) {}
 
   public:
     virtual inline bool isStatement() const override {
@@ -135,10 +135,10 @@ class StatementNode : public BaseNode
     }
 };
 
-class ExpressionNode : public BaseNode
+class Expression : public BaseNode
 {
   protected:
-    inline ExpressionNode(NodeType type) : BaseNode(type) {}
+    inline Expression(NodeType type) : BaseNode(type) {}
 
   public:
     virtual inline bool isExpression() const override {
@@ -146,14 +146,14 @@ class ExpressionNode : public BaseNode
     }
 };
 
-class LiteralExpressionNode : public ExpressionNode
+class LiteralExpression : public Expression
 {
   protected:
-    LiteralExpressionNode(NodeType type) : ExpressionNode(type) {}
+    LiteralExpression(NodeType type) : Expression(type) {}
 };
 
-typedef BaseNode::List<ExpressionNode *> ExpressionList;
-typedef BaseNode::List<StatementNode *> StatementList;
+typedef BaseNode::List<Expression *> ExpressionList;
+typedef BaseNode::List<Statement *> StatementList;
 
 
 ///////////////////
@@ -163,18 +163,18 @@ typedef BaseNode::List<StatementNode *> StatementList;
 ///////////////////
 
 //
-// PropertyExpressionNode
+// PropertyExpression
 //
-class PropertyExpressionNode : public ExpressionNode
+class PropertyExpression : public Expression
 {
   private:
-    ExpressionNode *target_;
+    Expression *target_;
     IdentifierToken name_;
 
   public:
-    PropertyExpressionNode(NodeType type, ExpressionNode *target,
-                           const IdentifierToken &name)
-      : ExpressionNode(type),
+    PropertyExpression(NodeType type, Expression *target,
+                       const IdentifierToken &name)
+      : Expression(type),
         target_(target),
         name_(name)
     {
@@ -185,7 +185,7 @@ class PropertyExpressionNode : public ExpressionNode
         return target_ != nullptr;
     }
 
-    const ExpressionNode *target() const {
+    const Expression *target() const {
         WH_ASSERT(hasTarget());
         return target_;
     }
@@ -198,42 +198,42 @@ class PropertyExpressionNode : public ExpressionNode
 //
 // ArrowExpr
 //
-class ArrowExprNode : public PropertyExpressionNode
+class ArrowExprNode : public PropertyExpression
 {
   public:
-    ArrowExprNode(ExpressionNode *target, const IdentifierToken &name)
-      : PropertyExpressionNode(ArrowExpr, target, name)
+    ArrowExprNode(Expression *target, const IdentifierToken &name)
+      : PropertyExpression(ArrowExpr, target, name)
     {}
 };
 
 //
 // DotExpr
 //
-class DotExprNode : public PropertyExpressionNode
+class DotExprNode : public PropertyExpression
 {
   public:
-    DotExprNode(ExpressionNode *target, const IdentifierToken &name)
-      : PropertyExpressionNode(DotExpr, target, name)
+    DotExprNode(Expression *target, const IdentifierToken &name)
+      : PropertyExpression(DotExpr, target, name)
     {}
 };
 
 //
 // CallExpr
 //
-class CallExprNode : public ExpressionNode
+class CallExprNode : public Expression
 {
   private:
-    PropertyExpressionNode *receiver_;
+    PropertyExpression *receiver_;
     ExpressionList args_;
 
   public:
-    CallExprNode(PropertyExpressionNode *receiver, ExpressionList &&args)
-      : ExpressionNode(CallExpr),
+    CallExprNode(PropertyExpression *receiver, ExpressionList &&args)
+      : Expression(CallExpr),
         receiver_(receiver),
         args_(args)
     {}
 
-    const PropertyExpressionNode *receiver() const {
+    const PropertyExpression *receiver() const {
         return receiver_;
     }
 
@@ -246,15 +246,15 @@ class CallExprNode : public ExpressionNode
 // BinaryExpr template class.
 //
 template <NodeType TYPE>
-class BinaryExpressionNode : public ExpressionNode
+class BinaryExpression : public Expression
 {
   private:
-    ExpressionNode *lhs_;
-    ExpressionNode *rhs_;
+    Expression *lhs_;
+    Expression *rhs_;
 
   public:
-    BinaryExpressionNode(ExpressionNode *lhs, ExpressionNode *rhs)
-      : ExpressionNode(TYPE),
+    BinaryExpression(Expression *lhs, Expression *rhs)
+      : Expression(TYPE),
         lhs_(lhs),
         rhs_(rhs)
     {
@@ -262,11 +262,11 @@ class BinaryExpressionNode : public ExpressionNode
         WH_ASSERT(rhs_);
     }
 
-    const ExpressionNode *lhs() const {
+    const Expression *lhs() const {
         return lhs_;
     }
 
-    const ExpressionNode *rhs() const {
+    const Expression *rhs() const {
         return rhs_;
     }
 };
@@ -275,20 +275,20 @@ class BinaryExpressionNode : public ExpressionNode
 // UnaryExpr template class.
 //
 template <NodeType TYPE>
-class UnaryExpressionNode : public ExpressionNode
+class UnaryExpression : public Expression
 {
   private:
-    ExpressionNode *subexpr_;
+    Expression *subexpr_;
 
   public:
-    UnaryExpressionNode(ExpressionNode *subexpr)
-      : ExpressionNode(TYPE),
+    UnaryExpression(Expression *subexpr)
+      : Expression(TYPE),
         subexpr_(subexpr)
     {
         WH_ASSERT(subexpr);
     }
 
-    const ExpressionNode *subexpr() const {
+    const Expression *subexpr() const {
         return subexpr_;
     }
 };
@@ -296,25 +296,25 @@ class UnaryExpressionNode : public ExpressionNode
 //
 // NameExpr
 //
-class NameExprNode : public PropertyExpressionNode
+class NameExprNode : public PropertyExpression
 {
   public:
     NameExprNode(const IdentifierToken &name)
-      : PropertyExpressionNode(NameExpr, nullptr, name)
+      : PropertyExpression(NameExpr, nullptr, name)
     {}
 };
 
 //
 // IntegerExpr
 //
-class IntegerExprNode : public LiteralExpressionNode
+class IntegerExprNode : public LiteralExpression
 {
   private:
     IntegerLiteralToken token_;
 
   public:
     IntegerExprNode(const IntegerLiteralToken &token)
-      : LiteralExpressionNode(IntegerExpr),
+      : LiteralExpression(IntegerExpr),
         token_(token)
     {}
 
@@ -326,20 +326,20 @@ class IntegerExprNode : public LiteralExpressionNode
 //
 // ParenExpr syntax element
 //
-class ParenExprNode : public ExpressionNode
+class ParenExprNode : public Expression
 {
   private:
-    ExpressionNode *subexpr_;
+    Expression *subexpr_;
 
   public:
-    ParenExprNode(ExpressionNode *subexpr)
-      : ExpressionNode(ParenExpr),
+    ParenExprNode(Expression *subexpr)
+      : Expression(ParenExpr),
         subexpr_(subexpr)
     {
         WH_ASSERT(subexpr);
     }
 
-    const ExpressionNode *subexpr() const {
+    const Expression *subexpr() const {
         return subexpr_;
     }
 };
@@ -364,29 +364,29 @@ class ParenExprNode : public ExpressionNode
 //
 // EmptyStmt syntax element
 //
-class EmptyStmtNode : public StatementNode
+class EmptyStmtNode : public Statement
 {
   public:
-    inline EmptyStmtNode() : StatementNode(EmptyStmt) {}
+    inline EmptyStmtNode() : Statement(EmptyStmt) {}
 };
 
 //
 // ExprStmt syntax element
 //
-class ExprStmtNode : public StatementNode
+class ExprStmtNode : public Statement
 {
   private:
-    ExpressionNode *expr_;
+    Expression *expr_;
 
   public:
-    explicit inline ExprStmtNode(ExpressionNode *expr)
-      : StatementNode(ExprStmt),
+    explicit inline ExprStmtNode(Expression *expr)
+      : Statement(ExprStmt),
         expr_(expr)
     {
         WH_ASSERT(expr_);
     }
 
-    inline ExpressionNode *expr() const {
+    inline Expression *expr() const {
         return expr_;
     }
 };
@@ -403,9 +403,6 @@ class ExprStmtNode : public StatementNode
 //
 class FileNode : public BaseNode
 {
-  public:
-    typedef List<StatementNode *> StatementList;
-
   private:
     StatementList statements_;
 

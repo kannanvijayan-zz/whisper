@@ -28,7 +28,7 @@ Parser::parseFile()
 {
     try {
         // Parse statements.
-        StatementList stmts(allocatorFor<StatementNode *>());
+        StatementList stmts(allocatorFor<Statement *>());
         tryParseStatementList(stmts);
 
         // Should have reached end of file.
@@ -51,7 +51,7 @@ void
 Parser::tryParseStatementList(StatementList &stmts)
 {
     for (;;) {
-        StatementNode *stmt = tryParseStatement();
+        Statement *stmt = tryParseStatement();
         if (stmt) {
             stmts.push_back(stmt);
             continue;
@@ -61,12 +61,12 @@ Parser::tryParseStatementList(StatementList &stmts)
     }
 }
 
-StatementNode *
+Statement *
 Parser::tryParseStatement()
 {
     const Token &tok = nextToken();
 
-    ExpressionNode *expr = tryParseExpression(tok, Prec_Statement);
+    Expression *expr = tryParseExpression(tok, Prec_Statement);
     if (expr) {
         // Consume semicolon at end of statement.
         if (!checkNextToken<Token::Type::Semicolon>())
@@ -84,20 +84,20 @@ Parser::tryParseStatement()
     return nullptr;
 }
 
-ExpressionNode *
+Expression *
 Parser::parseExpression(const Token &startToken, Precedence prec)
 {
-    ExpressionNode *expr = tryParseExpression(startToken, prec);
+    Expression *expr = tryParseExpression(startToken, prec);
     if (!expr)
         emitError("Expected expression.");
 
     return expr;
 }
 
-ExpressionNode *
+Expression *
 Parser::tryParseExpression(const Token &startToken, Precedence prec)
 {
-    ExpressionNode *expr = nullptr;
+    Expression *expr = nullptr;
     if (startToken.isIdentifier()) {
         expr = make<NameExprNode>(IdentifierToken(startToken));
 
@@ -106,12 +106,12 @@ Parser::tryParseExpression(const Token &startToken, Precedence prec)
 
     } else if (startToken.isMinus()) {
         startToken.debug_markUsed();
-        ExpressionNode *subexpr = parseExpression(Prec_Unary);
+        Expression *subexpr = parseExpression(Prec_Unary);
         expr = make<NegExprNode>(subexpr);
 
     } else if (startToken.isPlus()) {
         startToken.debug_markUsed();
-        ExpressionNode *subexpr = parseExpression(Prec_Unary);
+        Expression *subexpr = parseExpression(Prec_Unary);
         expr = make<PosExprNode>(subexpr);
 
     } else {
@@ -122,12 +122,12 @@ Parser::tryParseExpression(const Token &startToken, Precedence prec)
     return parseExpressionRest(expr, prec);
 }
 
-ExpressionNode *
-Parser::parseExpressionRest(ExpressionNode *seedExpr, Precedence prec)
+Expression *
+Parser::parseExpressionRest(Expression *seedExpr, Precedence prec)
 {
     WH_ASSERT(prec > Prec_Highest && prec <= Prec_Lowest);
 
-    ExpressionNode *curExpr = seedExpr;
+    Expression *curExpr = seedExpr;
 
     for (;;) {
         // Read first token.
@@ -168,7 +168,7 @@ Parser::parseExpressionRest(ExpressionNode *seedExpr, Precedence prec)
                 break;
             }
 
-            ExpressionNode *rhsExpr = parseExpression(Prec_Product);
+            Expression *rhsExpr = parseExpression(Prec_Product);
             curExpr = make<MulExprNode>(curExpr, rhsExpr);
             continue;
         }
@@ -179,7 +179,7 @@ Parser::parseExpressionRest(ExpressionNode *seedExpr, Precedence prec)
                 break;
             }
 
-            ExpressionNode *rhsExpr = parseExpression(Prec_Product);
+            Expression *rhsExpr = parseExpression(Prec_Product);
             curExpr = make<DivExprNode>(curExpr, rhsExpr);
             continue;
         }
@@ -190,7 +190,7 @@ Parser::parseExpressionRest(ExpressionNode *seedExpr, Precedence prec)
                 break;
             }
 
-            ExpressionNode *rhsExpr = parseExpression(Prec_Sum);
+            Expression *rhsExpr = parseExpression(Prec_Sum);
             curExpr = make<AddExprNode>(curExpr, rhsExpr);
             continue;
         }
@@ -201,7 +201,7 @@ Parser::parseExpressionRest(ExpressionNode *seedExpr, Precedence prec)
                 break;
             }
 
-            ExpressionNode *rhsExpr = parseExpression(Prec_Sum);
+            Expression *rhsExpr = parseExpression(Prec_Sum);
             curExpr = make<SubExprNode>(curExpr, rhsExpr);
             continue;
         }
@@ -215,8 +215,8 @@ Parser::parseExpressionRest(ExpressionNode *seedExpr, Precedence prec)
     return curExpr;
 }
 
-ExpressionNode *
-Parser::parseCallTrailer(PropertyExpressionNode *propExpr)
+Expression *
+Parser::parseCallTrailer(PropertyExpression *propExpr)
 {
     // Check for open paren.
     const Token *tok = checkGetNextToken<Token::Type::OpenParen>();
@@ -225,11 +225,11 @@ Parser::parseCallTrailer(PropertyExpressionNode *propExpr)
     tok->debug_markUsed();
 
     // Got open paren, parse call.
-    ExpressionList expressions(allocatorFor<ExpressionNode *>());
+    ExpressionList expressions(allocatorFor<Expression *>());
     for (;;) {
         const Token &tok = nextToken();
 
-        ExpressionNode *expr = tryParseExpression(tok, Prec_Comma);
+        Expression *expr = tryParseExpression(tok, Prec_Comma);
         if (expr) {
             const Token *nextTok =
                 checkGetNextToken<Token::Type::Comma,
