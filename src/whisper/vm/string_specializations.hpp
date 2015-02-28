@@ -20,21 +20,7 @@ struct HeapTraits<VM::String>
 
     static constexpr bool Specialized = true;
     static constexpr GC::AllocFormat Format = GC::AllocFormat::UntracedThing;
-
-    // All constructor signatures for Array take the length as the
-    // first argument.
-    template <typename... Args>
-    static uint32_t SizeOf(uint32_t len, Args... rest) {
-        return sizeof(VM::String) + len;
-    }
-
-    static uint32_t SizeOf(const char *str) {
-        return sizeof(VM::String) + strlen(str);
-    }
-
-    static uint32_t SizeOf(const VM::String &other) {
-        return AllocThing::From(&other)->size();
-    }
+    static constexpr bool VarSized = true;
 };
 
 

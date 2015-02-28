@@ -193,20 +193,11 @@
 //
 //          static constexpr bool Specialized = true;
 //          static constexpr AllocFormat Format;
+//          static constexpr bool VarSized;
 //
-//          static uint32_t CalculateSize(...);
-//
-//      An implementation of CalculateSize must be given for every possible
-//      constructor signature for the type.  The method will be called
-//      with the constructor arguments to determine the size of the
-//      structure being allocated dynamically.
-//
-//      For simple fixed-size types, this method can simply be:
-//
-//          template <typename... Args>
-//          static uint32_t CalculateSize(Args... args) {
-//              return sizeof(MyFixedSizeType);
-//          }
+//      VarSized indicates that the underlying type may have variable
+//      size, and thus must be allocated only using methods which
+//      explicitly specify its size.
 //
 //  3. struct FieldTraits<T>
 //
@@ -520,17 +511,8 @@ struct StackTraits
 //
 //      // Methods to calculate the size of the object, given
 //      // constructor arguments.
-//      template <typename... Args>
-//      static uint32_t CalculateSize();
+//      static constexpr bool VarSized;
 //      
-//      
-//
-//  Since heap-allocations can have dynamic size, the HeapTraits
-//  specialization enables dynamically sized types.
-//
-//  When heap-allocating instances, the CalculateSize() method
-//  is used with the same arguments as the constructor, to calculate
-//  the size of the newly generated instance.
 template <typename T>
 struct HeapTraits
 {
@@ -539,9 +521,7 @@ struct HeapTraits
     static constexpr bool Specialized = false;
 
     // static constexpr AllocFormat Format;
-
-    // template <typename... Args>
-    // static uint32_t CalculateSize();
+    // static constexpr bool VarSized;
 };
 
 // FieldTraits

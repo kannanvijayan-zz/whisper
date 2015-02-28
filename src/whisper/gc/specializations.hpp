@@ -49,11 +49,7 @@ struct AllocFormatTraits<AllocFormat::UntracedThing>
         HeapTraits() = delete; \
         static constexpr bool Specialized = true; \
         static constexpr AllocFormat Format = AllocFormat::UntracedThing; \
-        \
-        template <typename... Args> \
-        static uint32_t CalculateSize(Args... args) { \
-            return sizeof(type); \
-        } \
+        static constexpr bool VarSized  = false; \
     }; \
     template <> \
     struct FieldTraits<type> \
@@ -119,11 +115,7 @@ struct HeapTraits<AllocThing *>
 
     static constexpr bool Specialized = true;
     static constexpr AllocFormat Format = AllocFormat::AllocThingPointer;
-
-    template <typename... Args>
-    static uint32_t CalculateSize(Args... args) {
-        return sizeof(AllocThing *);
-    }
+    static constexpr bool VarSized = false;
 };
 
 template <>
@@ -158,11 +150,7 @@ struct HeapTraits<P *>
 
     static constexpr bool Specialized = true;
     static constexpr AllocFormat Format = AllocFormat::AllocThingPointer;
-
-    template <typename... Args>
-    static uint32_t CalculateSize(Args... args) {
-        return sizeof(P *);
-    }
+    static constexpr bool VarSized = false;
 };
 
 template <typename P>

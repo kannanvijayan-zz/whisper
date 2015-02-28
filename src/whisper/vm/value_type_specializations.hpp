@@ -21,13 +21,7 @@ struct HeapTraits<VM::ValueType>
 
     static constexpr bool Specialized = true;
     static constexpr AllocFormat Format = AllocFormat::ValueType;
-
-    // All constructor signatures for Array take the length as the
-    // first argument.
-    template <typename... Args>
-    static uint32_t SizeOf(Args... rest) {
-        return sizeof(VM::ValueType);
-    }
+    static constexpr bool VarSized = false;
 };
 
 

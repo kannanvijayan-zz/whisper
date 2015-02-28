@@ -87,7 +87,7 @@ class AllocationContext
     inline ObjT *create(Args... args);
 
     template <typename ObjT, typename... Args>
-    inline ObjT *createFlagged(uint8_t flags, Args... args);
+    inline ObjT *createSized(uint32_t size, Args... args);
 
     ThreadContext *threadContext() const {
         return cx_;

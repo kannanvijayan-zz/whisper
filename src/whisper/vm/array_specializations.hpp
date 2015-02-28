@@ -96,17 +96,7 @@ struct HeapTraits<VM::Array<T>>
     static constexpr bool Specialized = true;
     static constexpr GC::AllocFormat Format =
         VM::ArrayTraits<T>::ArrayFormat;
-
-    // All constructor signatures for Array take the length as the
-    // first argument.
-    template <typename... Args>
-    static uint32_t SizeOf(uint32_t len, Args... rest) {
-        return len * sizeof(T);
-    }
-
-    static uint32_t SizeOf(const VM::Array<T> &other) {
-        return other.length() * sizeof(T);
-    }
+    static constexpr bool VarSized = true;
 };
 
 template <>

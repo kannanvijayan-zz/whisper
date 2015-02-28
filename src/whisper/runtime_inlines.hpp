@@ -18,25 +18,41 @@ AllocationContext::create(Args... args)
 {
     static_assert(GC::HeapTraits<ObjT>::Specialized,
                   "GC::HeapTraits not specialized for ObjT.");
-    return createFlagged<ObjT, Args...>(0, std::forward<Args>(args)...);
+    static_assert(!GC::HeapTraits<ObjT>::VarSized,
+                  "Use createSized* methods to allocate varsized objects.");
+
+    uint32_t size = sizeof(ObjT);
+
+    // Allocate the space for the object.
+    constexpr GC::AllocFormat FMT = GC::HeapTraits<ObjT>::Format;
+    typedef typename GC::AllocFormatTraits<FMT>::Type TRACE_TYPE;
+    constexpr bool TRACED = ! GC::TraceTraits<TRACE_TYPE>::IsLeaf;
+    uint8_t *mem = allocate<TRACED>(size, FMT, 0);
+    if (!mem)
+        return nullptr;
+
+    // Construct object in memory.
+    new (mem) ObjT(std::forward<Args>(args)...);
+
+    return reinterpret_cast<ObjT *>(mem);
 }
 
 template <typename ObjT, typename... Args>
 inline ObjT *
-AllocationContext::createFlagged(uint8_t flags, Args... args)
+AllocationContext::createSized(uint32_t size, Args... args)
 {
     static_assert(GC::HeapTraits<ObjT>::Specialized,
                   "GC::HeapTraits not specialized for ObjT.");
-    WH_ASSERT(flags <= GC::AllocHeader::UserDataMax);
+    static_assert(GC::HeapTraits<ObjT>::VarSized,
+                  "Explicitly sized create called for fixed-size object.");
 
-    uint32_t size = GC::HeapTraits<ObjT>::template SizeOf(args...);
     WH_ASSERT(size >= sizeof(ObjT));
 
     // Allocate the space for the object.
     constexpr GC::AllocFormat FMT = GC::HeapTraits<ObjT>::Format;
     typedef typename GC::AllocFormatTraits<FMT>::Type TRACE_TYPE;
     constexpr bool TRACED = ! GC::TraceTraits<TRACE_TYPE>::IsLeaf;
-    uint8_t *mem = allocate<TRACED>(size, FMT, flags);
+    uint8_t *mem = allocate<TRACED>(size, FMT, 0);
     if (!mem)
         return nullptr;
 

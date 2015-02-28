@@ -19,11 +19,7 @@ struct HeapTraits<VM::Vector<T>>
 
     static constexpr bool Specialized = true;
     static constexpr GC::AllocFormat Format = GC::AllocFormat::Vector;
-
-    template <typename... Args>
-    static uint32_t SizeOf(Args... rest) {
-        return sizeof(VM::VectorBase);
-    }
+    static constexpr bool VarSized = false;
 };
 
 template <>

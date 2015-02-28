@@ -98,13 +98,7 @@ struct HeapTraits<VM::VectorContents<T>>
     static constexpr bool Specialized = true;
     static constexpr GC::AllocFormat Format =
         VM::VectorTraits<T>::VectorContentsFormat;
-
-    // All constructor signatures for VectorContents take the length as the
-    // first argument.
-    template <typename... Args>
-    static uint32_t SizeOf(uint32_t capacity, Args... rest) {
-        return sizeof(VM::VectorContents<T>) + (capacity * sizeof(T));
-    }
+    static constexpr bool VarSized = true;
 };
 
 template <>
