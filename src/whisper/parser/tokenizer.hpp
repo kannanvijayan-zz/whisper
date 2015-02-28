@@ -276,9 +276,6 @@ class TypedToken : public Token
         WHISPER_DEFN_TOKENS(DEF_TYPEDEF_)
 #undef DEF_TYPEDEF_
 
-typedef TypedToken<Token::PublicKeyword, Token::PrivateKeyword>
-        VisibilityToken;
-
 //
 // Tokenizer
 //

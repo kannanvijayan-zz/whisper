@@ -40,30 +40,24 @@
     _(Identifier)                           \
     \
     /* Keywords. */                         \
-    _(ModuleKeyword)                        \
-    _(ImportKeyword)                        \
-    _(AsKeyword)                            \
-    _(PublicKeyword)                        \
-    _(PrivateKeyword)                       \
-    _(FuncKeyword)                          \
-    _(IntKeyword)                           \
+    _(DefKeyword)                           \
+    _(IfKeyword)                            \
+    _(ElseKeyword)                          \
+    _(ElsifKeyword)                         \
     _(ReturnKeyword)
 
-#define WHISPER_FIRST_KEYWORD_TOKEN             ModuleKeyword
+#define WHISPER_FIRST_KEYWORD_TOKEN             DefKeyword
 #define WHISPER_LAST_KEYWORD_TOKEN              ReturnKeyword
 
 #define WHISPER_DEFN_KEYWORDS(_) \
     /* TokenId                     String           Priority            */  \
     \
     /* Keywords and Literals. */                                            \
-    _(ModuleKeyword,               "module",        (6+0+0+0+0+0+0+0+0)   ) \
-    _(ImportKeyword,               "import",        (6+0+0+0+0+0+0+0+0)   ) \
-    _(AsKeyword,                   "as",            (5+0+0+0+0+0+0+0+0)   ) \
-    _(PublicKeyword,               "public",        (5+0+0+0+0+0+0+0+0)   ) \
-    _(PrivateKeyword,              "private",       (5+0+0+0+0+0+0+0+0)   ) \
-    _(FuncKeyword,                 "func",          (4+0+0+0+0+0+0+0+0)   ) \
-    _(IntKeyword,                  "int",           (3+0+0+0+0+0+0+0+0)   ) \
-    _(ReturnKeyword,               "return",        (3+0+0+0+0+0+0+0+0)   )
+    _(DefKeyword,                  "def",           1                     ) \
+    _(IfKeyword,                   "if",            1                     ) \
+    _(ElseKeyword,                 "else",          1                     ) \
+    _(ElsifKeyword,                "elsif",         1                     ) \
+    _(ReturnKeyword,               "return",        1                     )
 
 
 #define WHISPER_DEFN_QUICK_TOKENS(_) \
