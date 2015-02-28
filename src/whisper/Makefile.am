@@ -19,5 +19,4 @@ whisper_SOURCES = \
     parser/parser.cpp \
     gc/core.cpp \
     vm/string.cpp \
-    vm/lexical_namespace.cpp \
     whisper.cpp

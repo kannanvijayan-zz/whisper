@@ -16,15 +16,6 @@
 #include "vm/value_type.hpp"
 #include "vm/string.hpp"
 #include "vm/source_file.hpp"
-#include "vm/module.hpp"
-#include "vm/system.hpp"
-#include "vm/lexical_namespace.hpp"
-/*
-#include "vm/hash_table.hpp"
-#include "vm/string.hpp"
-#include "vm/string_inlines.hpp"
-#include "vm/module.hpp"
-*/
 
 using namespace Whisper;
 
@@ -143,92 +134,6 @@ int main(int argc, char **argv) {
 
     RunContext *cx = &runcx;
     AllocationContext acx(cx->inTenured());
-
-    Local<VM::System *> system(cx, VM::System::Create(acx));
-
-    /*
-
-    Local<VM::Array<uint32_t> *> arr(cx,
-        cx->inHatchery().create<VM::Array<uint32_t>>(5, 5));
-
-    Local<VM::Array<uint32_t> *> arr2(cx,
-        cx->inHatchery().create<VM::Array<uint32_t>>(17, 9));
-
-    std::cerr << "arr.length = " << arr->length() << std::endl;
-    for (uint32_t i = 0; i < arr->length(); i++) {
-        arr->set(i, arr->get(i) + i);
-        std::cerr << "arr[" << i << "] = " << arr->get(i) << std::endl;
-    }
-
-    std::cerr << "arr2.length = " << arr2->length() << std::endl;
-    for (uint32_t i = 0; i < arr2->length(); i++) {
-        arr2->set(i, arr2->get(i) + i);
-        std::cerr << "arr2[" << i << "] = " << arr2->get(i) << std::endl;
-    }
-
-    Local<VM::Array<VM::ValueType> *> arr_type(cx,
-        cx->inHatchery().create<VM::Array<VM::ValueType>>(
-                                    17, VM::PrimitiveTypeCode::Int));
-    for (uint32_t i = 0; i < arr_type->length(); i++) {
-        std::cerr << "arr_type[" << i << "] = "
-            << VM::PrimitiveTypeCodeString(arr_type->get(i).primitiveTypeCode())
-            << std::endl;
-    }
-
-    Local<VM::Array<VM::String *> *> arr_str(cx,
-        cx->inHatchery().create<VM::Array<VM::String *>>(20,
-            static_cast<VM::String *>(nullptr)));
-    for (uint32_t i = 0; i < arr_str->length(); i++) {
-        char buf[100];
-        snprintf(buf, 100, "Bing%d%d%d", i, i*i, i*i*i);
-        Local<VM::String *> str(cx,
-            cx->inHatchery().create<VM::String>(buf));
-        arr_str->set(i, str);
-    }
-    for (uint32_t i = 0; i < arr_str->length(); i++) {
-        Local<VM::String *> str(cx,
-            cx->inHatchery().create<VM::String>("foobix"));
-        std::cerr << "String @" << (void*)str << " - " << i << " length "
-                  << arr_str->get(i)->length() << ":"
-                  << (char *) arr_str->get(i)->bytes() << std::endl;
-    }
-    */
-
-    // Generate bytecode.
-    /*
-    Interp::BytecodeGenerator bcgen(cx, wrappedAllocator, program, annotator,
-                                    false);
-    Root<VM::Bytecode *> bc(cx, bcgen.generateBytecode());
-    if (bcgen.hasError()) {
-        std::cerr << "Codgen error: " << bcgen.error() << "!" << std::endl;
-        return 1;
-    }
-    WH_ASSERT(bc != nullptr);
-
-    // Get constant pool tuple.
-    Root<VM::Tuple *> constants(cx);
-    if (!bcgen.constants(constants))
-        return false;
-
-    VM::Script::Config scriptCfg(false, VM::Script::TopLevel,
-                                    bcgen.maxStackDepth());
-    Root<VM::Script *> script(cx,
-            cx->inHatchery().create<VM::Script>(bc, constants, scriptCfg));
-    std::cerr << "Created script with max stack depth " <<
-                 script->maxStackDepth() << std::endl;
-
-    // Print memory contents.
-    VM::SpewHeapThingSlab(cx->hatchery());
-
-    // Print bytecode contents.
-    VM::SpewBytecodeObject(bc);
-
-    // Interpret the script.
-    std::cerr << "Running script" << std::endl;
-    bool interpResult = Interp::InterpretScript(cx, script);
-    std::cerr << "Script result: " << interpResult << std::endl;
-
-*/
 
     return 0;
 }

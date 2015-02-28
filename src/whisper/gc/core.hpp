@@ -314,12 +314,7 @@ namespace GC {
     _(AllocThingPointerVectorContents) \
     _(ValueType)                \
     _(ValueTypeArray)           \
-    _(SourceFile)               \
-    _(Module)                   \
-    _(ModuleBindingsArray)      \
-    _(System)                   \
-    _(LexicalNamespaceBindingsArray) \
-    _(LexicalNamespace)
+    _(SourceFile)
 
 enum class AllocFormat : uint16_t
 {
