@@ -12,6 +12,9 @@
     _(ReturnStmt)                           \
     _(IfStmt)                               \
     _(DefStmt)                              \
+    _(ConstStmt)                            \
+    _(VarStmt)                              \
+    _(LoopStmt)                             \
     \
     /* Expressions. */                      \
     _(CallExpr)                             \

@@ -136,7 +136,7 @@ CheckKeywordTable(const uint8_t *text, unsigned length,
     unsigned startIdx = KEYWORD_TABLE_SECTIONS[length];
     unsigned endIdx = KEYWORD_TABLE_SECTIONS[length+1];
 
-    WH_ASSERT(startIdx < KEYWORD_TABLE_SIZE);
+    WH_ASSERT(startIdx <= KEYWORD_TABLE_SIZE);
     WH_ASSERT(endIdx <= KEYWORD_TABLE_SIZE);
     WH_ASSERT(startIdx <= endIdx);
 

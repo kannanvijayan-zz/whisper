@@ -236,6 +236,7 @@ PrintBlock(const SourceReader &src,
         PrintTabDepth(tabDepth+1, pr);
         PrintNode(src, stmt, pr, tabDepth+1);
     }
+    PrintTabDepth(tabDepth, pr);
     pr("}");
 }
 
@@ -281,6 +282,58 @@ PrintDefStmt(const SourceReader &src,
         i++;
     }
     pr(") ");
+    PrintBlock(src, node->bodyBlock(), pr, tabDepth);
+    pr("\n");
+}
+
+template <typename Printer>
+void
+PrintVarStmt(const SourceReader &src,
+             const VarStmtNode *node,
+             Printer pr, int tabDepth)
+{
+    pr("var ");
+    unsigned i = 0;
+    for (const BindingStatement::Binding &binding : node->bindings()) {
+        if (i > 0)
+            pr(", ");
+        PrintToken(src, binding.name(), pr);
+        if (binding.hasValue()) {
+            pr(" = ");
+            PrintNode(src, binding.value(), pr, tabDepth);
+        }
+        i++;
+    }
+    pr(";\n");
+}
+
+template <typename Printer>
+void
+PrintConstStmt(const SourceReader &src,
+               const ConstStmtNode *node,
+               Printer pr, int tabDepth)
+{
+    pr("const ");
+    unsigned i = 0;
+    for (const BindingStatement::Binding &binding : node->bindings()) {
+        if (i > 0)
+            pr(", ");
+        PrintToken(src, binding.name(), pr);
+        WH_ASSERT(binding.hasValue());
+        pr(" = ");
+        PrintNode(src, binding.value(), pr, tabDepth);
+        i++;
+    }
+    pr(";\n");
+}
+
+template <typename Printer>
+void
+PrintLoopStmt(const SourceReader &src,
+              const LoopStmtNode *node,
+              Printer pr, int tabDepth)
+{
+    pr("loop ");
     PrintBlock(src, node->bodyBlock(), pr, tabDepth);
     pr("\n");
 }

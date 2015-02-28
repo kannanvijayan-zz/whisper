@@ -48,6 +48,9 @@ class ExprStmtNode;
 class ReturnStmtNode;
 class IfStmtNode;
 class DefStmtNode;
+class ConstStmtNode;
+class VarStmtNode;
+class LoopStmtNode;
 
 class CallExprNode;
 class DotExprNode;
@@ -235,7 +238,7 @@ class CallExprNode : public Expression
     CallExprNode(PropertyExpression *receiver, ExpressionList &&args)
       : Expression(CallExpr),
         receiver_(receiver),
-        args_(args)
+        args_(std::move(args))
     {}
 
     const PropertyExpression *receiver() const {
@@ -367,6 +370,54 @@ class ParenExprNode : public Expression
 //////////////////
 
 //
+// BindingStatement
+//
+class BindingStatement : public Statement
+{
+  public:
+    class Binding
+    {
+      private:
+        IdentifierToken name_;
+        Expression *value_;
+
+      public:
+        Binding(const IdentifierToken &name, Expression *value)
+          : name_(name),
+            value_(value)
+        {}
+
+        const IdentifierToken &name() const {
+            return name_;
+        }
+
+        bool hasValue() const {
+            return value_ != nullptr;
+        }
+
+        const Expression *value() const {
+            WH_ASSERT(hasValue());
+            return value_;
+        }
+    };
+
+    typedef List<Binding> BindingList;
+
+  private:
+    BindingList bindings_;
+
+  public:
+    explicit BindingStatement(NodeType type, BindingList &&bindings)
+      : Statement(type),
+        bindings_(std::move(bindings))
+    {}
+
+    const BindingList &bindings() const {
+        return bindings_;
+    }
+};
+
+//
 // Block is a helper type to represent { ... } statement lists.
 //
 class Block
@@ -375,7 +426,9 @@ class Block
     StatementList statements_;
 
   public:
-    inline Block(StatementList &&statements) : statements_(statements) {}
+    inline Block(StatementList &&statements)
+      : statements_(std::move(statements))
+    {}
 
     const StatementList &statements() const {
         return statements_;
@@ -442,7 +495,8 @@ class ReturnStmtNode : public Statement
 class IfStmtNode : public Statement
 {
   public:
-    class CondPair {
+    class CondPair
+    {
       private:
         Expression *cond_;
         Block *block_;
@@ -476,7 +530,7 @@ class IfStmtNode : public Statement
                         Block *elseBlock)
       : Statement(IfStmt),
         ifPair_(ifPair),
-        elsifPairs_(elsifPairs),
+        elsifPairs_(std::move(elsifPairs)),
         elseBlock_(elseBlock)
     {}
 
@@ -514,7 +568,7 @@ class DefStmtNode : public Statement
                          Block *bodyBlock)
       : Statement(DefStmt),
         name_(name),
-        paramNames_(paramNames),
+        paramNames_(std::move(paramNames)),
         bodyBlock_(bodyBlock)
     {
         WH_ASSERT(bodyBlock_);
@@ -526,6 +580,49 @@ class DefStmtNode : public Statement
 
     const IdentifierList &paramNames() const {
         return paramNames_;
+    }
+
+    const Block *bodyBlock() const {
+        return bodyBlock_;
+    }
+};
+
+//
+// ConstStmt
+//
+class ConstStmtNode : public BindingStatement
+{
+  public:
+    explicit ConstStmtNode(BindingList &&bindings)
+      : BindingStatement(ConstStmt, std::move(bindings))
+    {}
+};
+
+//
+// VarStmt
+//
+class VarStmtNode : public BindingStatement
+{
+  public:
+    explicit VarStmtNode(BindingList &&bindings)
+      : BindingStatement(VarStmt, std::move(bindings))
+    {}
+};
+
+//
+// LoopStmt
+//
+class LoopStmtNode : public Statement
+{
+  private:
+    Block *bodyBlock_;
+
+  public:
+    explicit LoopStmtNode(Block *bodyBlock)
+      : Statement(LoopStmt),
+        bodyBlock_(bodyBlock)
+    {
+        WH_ASSERT(bodyBlock_);
     }
 
     const Block *bodyBlock() const {
@@ -551,7 +648,7 @@ class FileNode : public BaseNode
   public:
     explicit inline FileNode(StatementList &&statements)
       : BaseNode(File),
-        statements_(statements)
+        statements_(std::move(statements))
     {}
 
     inline const StatementList &statements() const {

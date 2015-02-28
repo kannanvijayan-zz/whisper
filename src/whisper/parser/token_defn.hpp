@@ -44,6 +44,9 @@
     _(IfKeyword)                            \
     _(ElseKeyword)                          \
     _(ElsifKeyword)                         \
+    _(VarKeyword)                           \
+    _(ConstKeyword)                         \
+    _(LoopKeyword)                          \
     _(ReturnKeyword)
 
 #define WHISPER_FIRST_KEYWORD_TOKEN             DefKeyword
@@ -57,6 +60,9 @@
     _(IfKeyword,                   "if",            1                     ) \
     _(ElseKeyword,                 "else",          1                     ) \
     _(ElsifKeyword,                "elsif",         1                     ) \
+    _(VarKeyword,                  "var",           1                     ) \
+    _(ConstKeyword,                "const",         1                     ) \
+    _(LoopKeyword,                 "loop",          1                     ) \
     _(ReturnKeyword,               "return",        1                     )
 
 

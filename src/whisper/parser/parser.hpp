@@ -51,12 +51,14 @@ class Parser
     void tryParseStatementList(StatementList &stmts);
 
     Statement *tryParseStatement();
-    ReturnStmtNode *parseReturnStatement();
 
-    IfStmtNode *parseIfStatement();
-    IfStmtNode::CondPair parseIfCondPair();
-
+    VarStmtNode *parseVarStatement();
+    ConstStmtNode *parseConstStatement();
     DefStmtNode *parseDefStatement();
+    ReturnStmtNode *parseReturnStatement();
+    IfStmtNode *parseIfStatement();
+    LoopStmtNode *parseLoopStatement();
+    IfStmtNode::CondPair parseIfCondPair();
 
     Block *parseBlock();
 

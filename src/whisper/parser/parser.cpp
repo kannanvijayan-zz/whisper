@@ -75,20 +75,167 @@ Parser::tryParseStatement()
         return make<ExprStmtNode>(expr);
     }
 
-    if (tok.isReturnKeyword())
-        return parseReturnStatement();
+    if (tok.isVarKeyword())
+        return parseVarStatement();
+
+    if (tok.isConstKeyword())
+        return parseConstStatement();
 
     if (tok.isDefKeyword())
         return parseDefStatement();
 
+    if (tok.isReturnKeyword())
+        return parseReturnStatement();
+
     if (tok.isIfKeyword())
         return parseIfStatement();
+
+    if (tok.isLoopKeyword())
+        return parseLoopStatement();
 
     if (tok.isSemicolon())
         return make<EmptyStmtNode>();
 
     rewindToToken(tok);
     return nullptr;
+}
+
+VarStmtNode *
+Parser::parseVarStatement()
+{
+    BindingStatement::BindingList bindings(
+        allocatorFor<BindingStatement::Binding>());
+
+    for (;;) {
+        // Get name.
+        const Token *nameTok = checkGetNextToken<Token::Type::Identifier>();
+        if (!nameTok)
+            emitError("Expected variable name in 'var' statement.");
+
+        IdentifierToken name(*nameTok);
+
+        // Check for '=' assign, or ',' or ';'
+        Token::Type nextType = checkTypeNextToken<Token::Type::Equal,
+                                                  Token::Type::Comma,
+                                                  Token::Type::Semicolon>();
+        if (nextType == Token::Type::INVALID)
+            emitError("Unexpected token after name in 'var' statement.");
+
+        if (nextType == Token::Type::Equal) {
+            // Parse initializer expression.
+            Expression *expr = parseExpression(Prec_Comma);
+            bindings.push_back(BindingStatement::Binding(name, expr));
+
+            // Expect a ',' or ';' after it.
+            nextType = checkTypeNextToken<Token::Type::Comma,
+                                          Token::Type::Semicolon>();
+            if (nextType == Token::Type::INVALID)
+                emitError("Expected ',' or ';' after var initializer.");
+
+            if (nextType == Token::Type::Comma)
+                continue;
+
+            WH_ASSERT(nextType == Token::Type::Semicolon);
+            break;
+        }
+
+        if (nextType == Token::Type::Comma)
+            continue;
+
+        WH_ASSERT(nextType == Token::Type::Semicolon);
+        break;
+    }
+
+    return make<VarStmtNode>(std::move(bindings));
+}
+
+ConstStmtNode *
+Parser::parseConstStatement()
+{
+    BindingStatement::BindingList bindings(
+        allocatorFor<BindingStatement::Binding>());
+
+    for (;;) {
+        // Get name.
+        const Token *nameTok = checkGetNextToken<Token::Type::Identifier>();
+        if (!nameTok)
+            emitError("Expected variable name in 'const' statement.");
+
+        IdentifierToken name(*nameTok);
+
+        // Check for '=' or ';'
+        if (!checkNextToken<Token::Type::Equal>())
+            emitError("Expected '=' after 'const' name.");
+
+        // Parse initializer expression.
+        Expression *expr = parseExpression(Prec_Comma);
+        bindings.push_back(BindingStatement::Binding(name, expr));
+
+        // Expect a ',' or ';' after it.
+        Token::Type nextType = checkTypeNextToken<Token::Type::Comma,
+                                                  Token::Type::Semicolon>();
+        if (nextType == Token::Type::INVALID)
+            emitError("Expected ',' or ';' after 'const' initializer.");
+
+        if (nextType == Token::Type::Comma)
+            continue;
+
+        WH_ASSERT(nextType == Token::Type::Semicolon);
+        break;
+    }
+
+    return make<ConstStmtNode>(std::move(bindings));
+}
+
+DefStmtNode *
+Parser::parseDefStatement()
+{
+    // Must be followed by name.
+    const Token *nameTok = checkGetNextToken<Token::Type::Identifier>();
+    if (!nameTok)
+        emitError("Expected name after 'def'.");
+
+    IdentifierToken name(*nameTok);
+
+    // Must be followed by '('
+    if (!checkNextToken<Token::Type::OpenParen>())
+        emitError("Expected '(' in conditional pair.");
+
+    // Parse parameter list.
+    IdentifierList paramNames(allocatorFor<IdentifierToken>());
+    for (;;) {
+        const Token *paramTok = checkGetNextToken<Token::Type::Identifier,
+                                                  Token::Type::CloseParen>();
+        if (!paramTok)
+            emitError("Unexpected token in def parameter list.");
+
+        if (paramTok->isIdentifier()) {
+            paramNames.push_back(IdentifierToken(*paramTok));
+            Token::Type nextType =
+                checkTypeNextToken<Token::Type::Comma,
+                                   Token::Type::CloseParen>();
+
+            if (nextType == Token::Type::INVALID)
+                emitError("Expected ',' or ')' in def params.");
+
+            if (nextType == Token::Type::Comma)
+                continue;
+
+            WH_ASSERT(nextType == Token::Type::CloseParen);
+            break;
+        }
+
+        if (paramTok->isCloseParen())
+            break;
+    }
+
+    // Expect open-brace afterward.
+    if (!checkNextToken<Token::Type::OpenBrace>())
+        emitError("Expected '{' after def params.");
+
+    Block *block = parseBlock();
+
+    return make<DefStmtNode>(name, std::move(paramNames), block);
 }
 
 ReturnStmtNode *
@@ -166,55 +313,15 @@ Parser::parseIfCondPair()
     return IfStmtNode::CondPair(expr, block);
 }
 
-DefStmtNode *
-Parser::parseDefStatement()
+LoopStmtNode *
+Parser::parseLoopStatement()
 {
-    // Must be followed by name.
-    const Token *nameTok = checkGetNextToken<Token::Type::Identifier>();
-    if (!nameTok)
-        emitError("Expected name after 'def'.");
-
-    IdentifierToken name(*nameTok);
-
-    // Must be followed by '('
-    if (!checkNextToken<Token::Type::OpenParen>())
-        emitError("Expected '(' in conditional pair.");
-
-    // Parse parameter list.
-    IdentifierList paramNames(allocatorFor<IdentifierToken>());
-    for (;;) {
-        const Token *paramTok = checkGetNextToken<Token::Type::Identifier,
-                                                  Token::Type::CloseParen>();
-        if (!paramTok)
-            emitError("Unexpected token in def parameter list.");
-
-        if (paramTok->isIdentifier()) {
-            paramNames.push_back(IdentifierToken(*paramTok));
-            Token::Type nextType =
-                checkTypeNextToken<Token::Type::Comma,
-                                   Token::Type::CloseParen>();
-
-            if (nextType == Token::Type::INVALID)
-                emitError("Expected ',' or ')' in def params.");
-
-            if (nextType == Token::Type::Comma)
-                continue;
-
-            WH_ASSERT(nextType == Token::Type::CloseParen);
-            break;
-        }
-
-        if (paramTok->isCloseParen())
-            break;
-    }
-
     // Expect open-brace afterward.
     if (!checkNextToken<Token::Type::OpenBrace>())
-        emitError("Expected '{' after def params.");
+        emitError("Expected '{' after 'loop' keyword.");
 
     Block *block = parseBlock();
-
-    return make<DefStmtNode>(name, std::move(paramNames), block);
+    return make<LoopStmtNode>(block);
 }
 
 Block *
@@ -247,7 +354,10 @@ Parser::tryParseExpression(const Token &startToken, Precedence prec)
 {
     Expression *expr = nullptr;
     if (startToken.isIdentifier()) {
-        expr = make<NameExprNode>(IdentifierToken(startToken));
+        NameExprNode *nameExpr = make<NameExprNode>(
+                                    IdentifierToken(startToken));
+
+        expr = parseCallTrailer(nameExpr);
 
     } else if (startToken.isIntegerLiteral()) {
         expr = make<IntegerExprNode>(IntegerLiteralToken(startToken));
