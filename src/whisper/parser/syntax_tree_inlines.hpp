@@ -213,6 +213,20 @@ PrintExprStmt(const SourceReader &src,
 
 template <typename Printer>
 void
+PrintReturnStmt(const SourceReader &src,
+                const ReturnStmtNode *node,
+                Printer pr, int tabDepth)
+{
+    pr("return");
+    if (node->hasExpr()) {
+        pr(" ");
+        PrintNode(src, node->expr(), pr, tabDepth);
+    }
+    pr(";\n");
+}
+
+template <typename Printer>
+void
 PrintFile(const SourceReader &src, const FileNode *node,
           Printer pr, int tabDepth)
 {

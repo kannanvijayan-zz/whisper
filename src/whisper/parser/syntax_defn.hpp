@@ -9,6 +9,7 @@
     /* Statements. */                       \
     _(EmptyStmt)                            \
     _(ExprStmt)                             \
+    _(ReturnStmt)                           \
     \
     /* Expressions. */                      \
     _(CallExpr)                             \

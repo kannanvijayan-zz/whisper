@@ -395,6 +395,9 @@ Tokenizer::rewindToToken(const Token &tok)
     reader_.rewindTo(tok.offset());
     line_ = tok.startLine();
     lineStart_ = reader_.cursor() - tok.startLineOffset();
+
+    // Rewinding to a token discards any pushed-back tokens.
+    pushedBackToken_ = false;
 }
 
 void
@@ -404,6 +407,9 @@ Tokenizer::advancePastToken(const Token &tok)
     reader_.advanceTo(tok.endOffset());
     line_ = tok.endLine();
     lineStart_ = reader_.cursor() - tok.endLineOffset();
+
+    // Advancing past a token discards any pushed-back tokens.
+    pushedBackToken_ = false;
 }
 
 const Token &

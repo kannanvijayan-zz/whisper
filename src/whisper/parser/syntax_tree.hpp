@@ -45,6 +45,7 @@ class FileNode;
 
 class EmptyStmtNode;
 class ExprStmtNode;
+class ReturnStmtNode;
 
 class CallExprNode;
 class DotExprNode;
@@ -52,6 +53,7 @@ class ArrowExprNode;
 
 typedef UnaryExpression<NegExpr> NegExprNode;
 typedef UnaryExpression<PosExpr> PosExprNode;
+
 typedef BinaryExpression<MulExpr> MulExprNode;
 typedef BinaryExpression<DivExpr> DivExprNode;
 typedef BinaryExpression<AddExpr> AddExprNode;
@@ -387,6 +389,30 @@ class ExprStmtNode : public Statement
     }
 
     inline Expression *expr() const {
+        return expr_;
+    }
+};
+
+//
+// ReturnStmt syntax element
+//
+class ReturnStmtNode : public Statement
+{
+  private:
+    Expression *expr_;
+
+  public:
+    explicit inline ReturnStmtNode(Expression *expr)
+      : Statement(ReturnStmt),
+        expr_(expr)
+    {}
+
+    inline bool hasExpr() const {
+        return expr_ != nullptr;
+    }
+
+    inline Expression *expr() const {
+        WH_ASSERT(hasExpr());
         return expr_;
     }
 };

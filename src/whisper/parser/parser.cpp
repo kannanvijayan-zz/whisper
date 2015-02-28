@@ -73,7 +73,27 @@ Parser::tryParseStatement()
             emitError("Expected semicolon at end of expression.");
 
         return make<ExprStmtNode>(expr);
-    } 
+    }
+
+    if (tok.isReturnKeyword()) {
+        tok.debug_markUsed();
+
+        const Token &nextTok = nextToken();
+
+        // Parse return statement.
+        Expression *expr = tryParseExpression(nextTok, Prec_Statement);
+        if (expr) {
+            if (!checkNextToken<Token::Type::Semicolon>())
+                emitError("Expected semicolon after return statement.");
+
+            return make<ReturnStmtNode>(expr);
+        }
+
+        if (nextTok.isSemicolon())
+            return make<ReturnStmtNode>(nullptr);
+
+        emitError("Expected semicolon after return statement.");
+    }
 
     if (tok.isSemicolon()) {
         tok.debug_markUsed();
