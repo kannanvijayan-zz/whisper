@@ -16,6 +16,7 @@
 #include "vm/value_type.hpp"
 #include "vm/string.hpp"
 #include "vm/source_file.hpp"
+#include "vm/shype.hpp"
 
 using namespace Whisper;
 

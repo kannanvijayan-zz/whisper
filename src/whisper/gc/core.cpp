@@ -9,6 +9,7 @@
 #include "vm/value_type.hpp"
 #include "vm/source_file.hpp"
 #include "vm/vector.hpp"
+#include "vm/shype.hpp"
 
 namespace Whisper {
 namespace GC {

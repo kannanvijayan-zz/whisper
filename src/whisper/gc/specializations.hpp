@@ -156,7 +156,8 @@ struct HeapTraits<P *>
 template <typename P>
 struct FieldTraits<P *>
 {
-    static_assert(HeapTraits<P>::Specialized,
+    static_assert(HeapTraits<P>::Specialized ||
+                  AllocThingTraits<P>::Specialized,
                   "HeapTraits not specialized for underlying type.");
 
     FieldTraits() = delete;
@@ -167,7 +168,8 @@ struct FieldTraits<P *>
 template <typename P>
 struct DerefTraits<P *>
 {
-    static_assert(HeapTraits<P>::Specialized,
+    static_assert(HeapTraits<P>::Specialized ||
+                  AllocThingTraits<P>::Specialized,
                   "HeapTraits not specialized for underlying type.");
 
     DerefTraits() = delete;
@@ -261,8 +263,10 @@ template <typename P>
 struct TraceTraits<P *>
 {
     // Traced pointers are assumed to be pointers to heap-things by default.
-    static_assert(HeapTraits<P>::Specialized,
-                  "HeapTraits not specialized for underlying type.");
+    static_assert(HeapTraits<P>::Specialized ||
+                  AllocThingTraits<P>::Specialized,
+                  "HeapTraits or AllocThingTraits not specialized for "
+                  "underlying type.");
     typedef P * T_;
 
     TraceTraits() = delete;

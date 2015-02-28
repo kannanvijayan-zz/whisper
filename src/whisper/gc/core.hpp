@@ -305,6 +305,8 @@ namespace GC {
     _(AllocThingPointerVectorContents) \
     _(ValueType)                \
     _(ValueTypeArray)           \
+    _(RootShype)                \
+    _(AddSlotShype)             \
     _(SourceFile)
 
 enum class AllocFormat : uint16_t
