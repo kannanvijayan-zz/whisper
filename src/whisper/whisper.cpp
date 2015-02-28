@@ -101,17 +101,6 @@ int main(int argc, char **argv) {
     Printer pr;
     PrintNode(tokenizer.sourceReader(), fileNode, pr, 0);
 
-    /*
-    // Annotate the program.
-    AST::SyntaxAnnotator annotator(wrappedAllocator, program, inputFile);
-    if (!annotator.annotate()) {
-        WH_ASSERT(annotator.hasError());
-        std::cerr << "Syntax annotation failed: " << annotator.error()
-                  << std::endl;
-        return 1;
-    }
-    */
-
     // Initialize a runtime.
     Runtime runtime;
     if (!runtime.initialize()) {

@@ -11,6 +11,9 @@
     _(ExprStmt)                             \
     \
     /* Expressions. */                      \
+    _(CallExpr)                             \
+    _(DotExpr)                              \
+    _(ArrowExpr)                            \
     _(PosExpr)                              \
     _(NegExpr)                              \
     _(AddExpr)                              \
@@ -18,8 +21,8 @@
     _(MulExpr)                              \
     _(DivExpr)                              \
     _(ParenExpr)                            \
-    _(IdentifierExpr)                       \
-    _(IntegerLiteralExpr)
+    _(NameExpr)                             \
+    _(IntegerExpr)
 
 
 #endif // WHISPER__PARSER__SYNTAX_DEFN_HPP

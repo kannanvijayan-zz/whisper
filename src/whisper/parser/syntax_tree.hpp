@@ -33,10 +33,8 @@ const char *NodeTypeString(NodeType nodeType);
 
 class StatementNode;
 class ExpressionNode;
+class PropertyExpressionNode;
 class LiteralExpressionNode;
-
-template <typename BASE, NodeType TYPE, typename TOKTYPE>
-class SingleTokenNode;
 
 template <NodeType TYPE> class UnaryExpressionNode;
 template <NodeType TYPE> class BinaryExpressionNode;
@@ -48,6 +46,10 @@ class FileNode;
 class EmptyStmtNode;
 class ExprStmtNode;
 
+class CallExprNode;
+class DotExprNode;
+class ArrowExprNode;
+
 typedef UnaryExpressionNode<NegExpr> NegExprNode;
 typedef UnaryExpressionNode<PosExpr> PosExprNode;
 typedef BinaryExpressionNode<MulExpr> MulExprNode;
@@ -55,12 +57,8 @@ typedef BinaryExpressionNode<DivExpr> DivExprNode;
 typedef BinaryExpressionNode<AddExpr> AddExprNode;
 typedef BinaryExpressionNode<SubExpr> SubExprNode;
 
-typedef SingleTokenNode<ExpressionNode, IdentifierExpr, IdentifierToken>
-        IdentifierExprNode;
-
-typedef SingleTokenNode<LiteralExpressionNode, IntegerLiteralExpr,
-                        IntegerLiteralToken>
-        IntegerLiteralExprNode;
+class NameExprNode;
+class IntegerExprNode;
 
 class ParenExprNode;
 
@@ -154,30 +152,8 @@ class LiteralExpressionNode : public ExpressionNode
     LiteralExpressionNode(NodeType type) : ExpressionNode(type) {}
 };
 
+typedef BaseNode::List<ExpressionNode *> ExpressionList;
 typedef BaseNode::List<StatementNode *> StatementList;
-
-//
-// SingleTokenNode is a template base class for syntax nodes whose
-// contents are a single token.
-// 
-template <typename BASE, NodeType TYPE, typename TOKTYPE>
-class SingleTokenNode : public BASE
-{
-  private:
-    TOKTYPE token_;
-
-  public:
-    inline SingleTokenNode(const TOKTYPE &token)
-      : BASE(TYPE),
-        token_(token)
-    {
-        WH_ASSERT(token_.isValid());
-    }
-
-    inline const TOKTYPE &token() const {
-        return token_;
-    }
-};
 
 
 ///////////////////
@@ -185,6 +161,86 @@ class SingleTokenNode : public BASE
 //  Expressions  //
 //               //
 ///////////////////
+
+//
+// PropertyExpressionNode
+//
+class PropertyExpressionNode : public ExpressionNode
+{
+  private:
+    ExpressionNode *target_;
+    IdentifierToken name_;
+
+  public:
+    PropertyExpressionNode(NodeType type, ExpressionNode *target,
+                           const IdentifierToken &name)
+      : ExpressionNode(type),
+        target_(target),
+        name_(name)
+    {
+        WH_ASSERT_IF(type != NameExpr, target_);
+    }
+
+    bool hasTarget() const {
+        return target_ != nullptr;
+    }
+
+    const ExpressionNode *target() const {
+        WH_ASSERT(hasTarget());
+        return target_;
+    }
+
+    const IdentifierToken &name() const {
+        return name_;
+    }
+};
+
+//
+// ArrowExpr
+//
+class ArrowExprNode : public PropertyExpressionNode
+{
+  public:
+    ArrowExprNode(ExpressionNode *target, const IdentifierToken &name)
+      : PropertyExpressionNode(ArrowExpr, target, name)
+    {}
+};
+
+//
+// DotExpr
+//
+class DotExprNode : public PropertyExpressionNode
+{
+  public:
+    DotExprNode(ExpressionNode *target, const IdentifierToken &name)
+      : PropertyExpressionNode(DotExpr, target, name)
+    {}
+};
+
+//
+// CallExpr
+//
+class CallExprNode : public ExpressionNode
+{
+  private:
+    PropertyExpressionNode *receiver_;
+    ExpressionList args_;
+
+  public:
+    CallExprNode(PropertyExpressionNode *receiver, ExpressionList &&args)
+      : ExpressionNode(CallExpr),
+        receiver_(receiver),
+        args_(args)
+    {}
+
+    const PropertyExpressionNode *receiver() const {
+        return receiver_;
+    }
+
+    const ExpressionList &args() const {
+        return args_;
+    }
+};
 
 //
 // BinaryExpr template class.
@@ -234,6 +290,36 @@ class UnaryExpressionNode : public ExpressionNode
 
     const ExpressionNode *subexpr() const {
         return subexpr_;
+    }
+};
+
+//
+// NameExpr
+//
+class NameExprNode : public PropertyExpressionNode
+{
+  public:
+    NameExprNode(const IdentifierToken &name)
+      : PropertyExpressionNode(NameExpr, nullptr, name)
+    {}
+};
+
+//
+// IntegerExpr
+//
+class IntegerExprNode : public LiteralExpressionNode
+{
+  private:
+    IntegerLiteralToken token_;
+
+  public:
+    IntegerExprNode(const IntegerLiteralToken &token)
+      : LiteralExpressionNode(IntegerExpr),
+        token_(token)
+    {}
+
+    const IntegerLiteralToken &token() const {
+        return token_;
     }
 };
 

@@ -65,22 +65,60 @@ PrintParenExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintIdentifierExpr(const SourceReader &src,
-                    const IdentifierExprNode *node,
-                    Printer pr, int tabDepth)
+PrintNameExpr(const SourceReader &src,
+              const NameExprNode *node,
+              Printer pr, int tabDepth)
 {
-    pr("ID:");
+    PrintToken(src, node->name(), pr);
+}
+
+template <typename Printer>
+void
+PrintIntegerExpr(const SourceReader &src,
+                 const IntegerExprNode *node,
+                 Printer pr, int tabDepth)
+{
     PrintToken(src, node->token(), pr);
 }
 
 template <typename Printer>
 void
-PrintIntegerLiteralExpr(const SourceReader &src,
-                        const IntegerLiteralExprNode *node,
-                        Printer pr, int tabDepth)
+PrintDotExpr(const SourceReader &src,
+             const DotExprNode *node,
+             Printer pr, int tabDepth)
 {
-    pr("INT:");
-    PrintToken(src, node->token(), pr);
+    PrintNode(src, node->target(), pr, tabDepth);
+    pr(".");
+    PrintToken(src, node->name(), pr);
+}
+
+template <typename Printer>
+void
+PrintArrowExpr(const SourceReader &src,
+               const ArrowExprNode *node,
+               Printer pr, int tabDepth)
+{
+    PrintNode(src, node->target(), pr, tabDepth);
+    pr("->");
+    PrintToken(src, node->name(), pr);
+}
+
+template <typename Printer>
+void
+PrintCallExpr(const SourceReader &src,
+              const CallExprNode *node,
+              Printer pr, int tabDepth)
+{
+    PrintNode(src, node->receiver(), pr, tabDepth);
+    pr("(");
+    const ExpressionList &args = node->args();
+    uint32_t i = 0;
+    for (auto iter = args.begin(); iter != args.end(); iter++) {
+        if (i > 0)
+            pr(", ");
+        PrintNode(src, *iter, pr, tabDepth);
+    }
+    pr(")");
 }
 
 template <typename Printer>
@@ -181,7 +219,6 @@ PrintFile(const SourceReader &src, const FileNode *node,
     for (auto stmt : node->statements()) {
         PrintTabDepth(tabDepth, pr);
         PrintNode(src, stmt, pr, tabDepth);
-        pr("\n");
     }
 }
 

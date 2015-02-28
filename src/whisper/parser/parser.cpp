@@ -51,54 +51,72 @@ void
 Parser::tryParseStatementList(StatementList &stmts)
 {
     for (;;) {
-        const Token &tok = nextToken();
-
-        // Check for expression-starting tokens.
-        if (tok.isIdentifier() || tok.isIntegerLiteral() ||
-            tok.isPlus() || tok.isMinus())
-        {
-            pushBackLastToken();
-            ExpressionNode *expr = parseExpression();
-
-            // Consume semicolon at end of statement.
-            if (!checkNextToken<Token::Type::Semicolon>())
-                emitError("Expected semicolon at end of expression.");
-
-            stmts.push_back(make<ExprStmtNode>(expr));
-            continue;
-        } 
-
-        if (tok.isSemicolon()) {
-            stmts.push_back(make<EmptyStmtNode>());
+        StatementNode *stmt = tryParseStatement();
+        if (stmt) {
+            stmts.push_back(stmt);
             continue;
         }
-
-        pushBackLastToken();
 
         break;
     }
 }
 
+StatementNode *
+Parser::tryParseStatement()
+{
+    const Token &tok = nextToken();
+
+    ExpressionNode *expr = tryParseExpression(tok, Prec_Statement);
+    if (expr) {
+        // Consume semicolon at end of statement.
+        if (!checkNextToken<Token::Type::Semicolon>())
+            emitError("Expected semicolon at end of expression.");
+
+        return make<ExprStmtNode>(expr);
+    } 
+
+    if (tok.isSemicolon()) {
+        tok.debug_markUsed();
+        return make<EmptyStmtNode>();
+    }
+
+    pushBackLastToken();
+    return nullptr;
+}
+
 ExpressionNode *
 Parser::parseExpression(const Token &startToken, Precedence prec)
 {
+    ExpressionNode *expr = tryParseExpression(startToken, prec);
+    if (!expr)
+        emitError("Expected expression.");
+
+    return expr;
+}
+
+ExpressionNode *
+Parser::tryParseExpression(const Token &startToken, Precedence prec)
+{
     ExpressionNode *expr = nullptr;
     if (startToken.isIdentifier()) {
-        expr = make<IdentifierExprNode>(IdentifierToken(startToken));
+        expr = make<NameExprNode>(IdentifierToken(startToken));
 
     } else if (startToken.isIntegerLiteral()) {
-        expr = make<IntegerLiteralExprNode>(IntegerLiteralToken(startToken));
+        expr = make<IntegerExprNode>(IntegerLiteralToken(startToken));
 
     } else if (startToken.isMinus()) {
+        startToken.debug_markUsed();
         ExpressionNode *subexpr = parseExpression(Prec_Unary);
         expr = make<NegExprNode>(subexpr);
 
     } else if (startToken.isPlus()) {
+        startToken.debug_markUsed();
         ExpressionNode *subexpr = parseExpression(Prec_Unary);
         expr = make<PosExprNode>(subexpr);
 
     } else {
-        emitError("Unrecognized expression token.");
+        return nullptr;
+
     }
 
     return parseExpressionRest(expr, prec);
@@ -110,7 +128,6 @@ Parser::parseExpressionRest(ExpressionNode *seedExpr, Precedence prec)
     WH_ASSERT(prec > Prec_Highest && prec <= Prec_Lowest);
 
     ExpressionNode *curExpr = seedExpr;
-    Precedence curPrec = prec;
 
     for (;;) {
         // Read first token.
@@ -118,6 +135,33 @@ Parser::parseExpressionRest(ExpressionNode *seedExpr, Precedence prec)
         optok.debug_markUsed();
 
         // Check from highest to lowest precedence.
+
+        if (optok.isDot()) {
+            const Token *maybeName =
+                checkGetNextToken<Token::Type::Identifier>();
+            if (!maybeName)
+                emitError("Expected identifier after '.'");
+
+            IdentifierToken name(*maybeName);
+
+            DotExprNode *dotExpr = make<DotExprNode>(curExpr, name);
+            curExpr = parseCallTrailer(dotExpr);
+            continue;
+        }
+
+        if (optok.isArrow()) {
+            const Token *maybeName =
+                checkGetNextToken<Token::Type::Identifier>();
+            if (!maybeName)
+                emitError("Expected identifier after '->'");
+
+            IdentifierToken name(*maybeName);
+
+            ArrowExprNode *arrowExpr = make<ArrowExprNode>(curExpr, name);
+            curExpr = parseCallTrailer(arrowExpr);
+            continue;
+        }
+
         if (optok.isStar()) {
             if (prec <= Prec_Product) {
                 pushBackLastToken();
@@ -169,6 +213,53 @@ Parser::parseExpressionRest(ExpressionNode *seedExpr, Precedence prec)
 
     WH_ASSERT(curExpr);
     return curExpr;
+}
+
+ExpressionNode *
+Parser::parseCallTrailer(PropertyExpressionNode *propExpr)
+{
+    // Check for open paren.
+    const Token *tok = checkGetNextToken<Token::Type::OpenParen>();
+    if (!tok)
+        return propExpr;
+    tok->debug_markUsed();
+
+    // Got open paren, parse call.
+    ExpressionList expressions(allocatorFor<ExpressionNode *>());
+    for (;;) {
+        const Token &tok = nextToken();
+
+        ExpressionNode *expr = tryParseExpression(tok, Prec_Comma);
+        if (expr) {
+            const Token *nextTok =
+                checkGetNextToken<Token::Type::Comma,
+                                  Token::Type::CloseParen>();
+
+            if (!nextTok)
+                emitError("Expected ',' or ')' at end of expression.");
+
+            expressions.push_back(expr);
+
+            if (nextTok->isComma()) {
+                nextTok->debug_markUsed();
+                continue;
+            }
+
+            WH_ASSERT(nextTok->isCloseParen());
+            nextTok->debug_markUsed();
+            break;
+        }
+
+        if (tok.isCloseParen()) {
+            tok.debug_markUsed();
+            break;
+        }
+
+        pushBackLastToken();
+        emitError("Expected ')' at end of call expression.");
+    }
+
+    return make<CallExprNode>(propExpr, std::move(expressions));
 }
 
 const Token &
