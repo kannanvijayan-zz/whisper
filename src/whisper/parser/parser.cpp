@@ -64,7 +64,7 @@ Parser::tryParseStatementList(StatementList &stmts)
 Statement *
 Parser::tryParseStatement()
 {
-    const Token &tok = nextToken();
+    Token tok = nextToken();
 
     Expression *expr = tryParseExpression(tok, Prec_Statement);
     if (expr) {
@@ -76,9 +76,7 @@ Parser::tryParseStatement()
     }
 
     if (tok.isReturnKeyword()) {
-        tok.debug_markUsed();
-
-        const Token &nextTok = nextToken();
+        Token nextTok = nextToken();
 
         // Parse return statement.
         Expression *expr = tryParseExpression(nextTok, Prec_Statement);
@@ -95,12 +93,10 @@ Parser::tryParseStatement()
         emitError("Expected semicolon after return statement.");
     }
 
-    if (tok.isSemicolon()) {
-        tok.debug_markUsed();
+    if (tok.isSemicolon())
         return make<EmptyStmtNode>();
-    }
 
-    pushBackLastToken();
+    rewindToToken(tok);
     return nullptr;
 }
 
@@ -239,15 +235,13 @@ Expression *
 Parser::parseCallTrailer(PropertyExpression *propExpr)
 {
     // Check for open paren.
-    const Token *tok = checkGetNextToken<Token::Type::OpenParen>();
-    if (!tok)
+    if (!checkNextToken<Token::Type::OpenParen>())
         return propExpr;
-    tok->debug_markUsed();
 
     // Got open paren, parse call.
     ExpressionList expressions(allocatorFor<Expression *>());
     for (;;) {
-        const Token &tok = nextToken();
+        Token tok = nextToken();
 
         Expression *expr = tryParseExpression(tok, Prec_Comma);
         if (expr) {
@@ -270,13 +264,12 @@ Parser::parseCallTrailer(PropertyExpression *propExpr)
             break;
         }
 
-        if (tok.isCloseParen()) {
-            tok.debug_markUsed();
-            break;
+        if (!tok.isCloseParen()) {
+            rewindToToken(tok);
+            emitError("Expected ')' at end of call expression.");
         }
 
-        pushBackLastToken();
-        emitError("Expected ')' at end of call expression.");
+        break;
     }
 
     return make<CallExprNode>(propExpr, std::move(expressions));

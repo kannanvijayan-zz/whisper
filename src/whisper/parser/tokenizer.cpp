@@ -271,8 +271,7 @@ Tokenizer::pushBackLastToken()
     WH_ASSERT(!pushedBackToken_);
     WH_ASSERT(!tok_.debug_isPushedBack());
     WH_ASSERT(!tok_.isError());
-    pushedBackToken_ = true;
-    rewindToToken(tok_);
+    rewindToToken(tok_, /* forPushBack = */ true);
     tok_.debug_markPushedBack();
 }
 
@@ -391,13 +390,19 @@ Tokenizer::readTokenImpl()
 void
 Tokenizer::rewindToToken(const Token &tok)
 {
+    rewindToToken(tok, /* forPushBack = */ false);
+}
+
+void
+Tokenizer::rewindToToken(const Token &tok, bool forPushBack)
+{
     // Find the stream position to rewind to.
     reader_.rewindTo(tok.offset());
     line_ = tok.startLine();
     lineStart_ = reader_.cursor() - tok.startLineOffset();
 
     // Rewinding to a token discards any pushed-back tokens.
-    pushedBackToken_ = false;
+    pushedBackToken_ = forPushBack;
 }
 
 void

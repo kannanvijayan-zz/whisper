@@ -83,6 +83,9 @@ class Parser
     inline void pushBackLastToken() {
         tokenizer_.pushBackLastToken();
     }
+    inline void rewindToToken(const Token &tok) {
+        tokenizer_.rewindToToken(tok);
+    }
 
     // Read next token.
     const Token &nextToken();

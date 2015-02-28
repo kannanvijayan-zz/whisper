@@ -425,6 +425,8 @@ class Tokenizer
         tokStartLineOffset_ = tokStart_ - lineStart_;
     }
 
+    void rewindToToken(const Token &tok, bool forPushBack);
+
     inline void startNewLine() {
         line_++;
         lineStart_ = reader_.cursor();
