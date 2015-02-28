@@ -11,6 +11,7 @@
     _(ExprStmt)                             \
     _(ReturnStmt)                           \
     _(IfStmt)                               \
+    _(DefStmt)                              \
     \
     /* Expressions. */                      \
     _(CallExpr)                             \

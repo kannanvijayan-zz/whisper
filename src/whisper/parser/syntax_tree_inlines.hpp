@@ -116,6 +116,7 @@ PrintCallExpr(const SourceReader &src,
         if (i > 0)
             pr(", ");
         PrintNode(src, arg, pr, tabDepth);
+        i++;
     }
     pr(")");
 }
@@ -260,6 +261,27 @@ PrintIfStmt(const SourceReader &src,
         pr(" else ");
         PrintBlock(src, node->elseBlock(), pr, tabDepth);
     }
+    pr("\n");
+}
+
+template <typename Printer>
+void
+PrintDefStmt(const SourceReader &src,
+             const DefStmtNode *node,
+             Printer pr, int tabDepth)
+{
+    pr("def ");
+    PrintToken(src, node->name(), pr);
+    pr("(");
+    unsigned i = 0;
+    for (const IdentifierToken &paramName : node->paramNames()) {
+        if (i > 0)
+            pr(", ");
+        PrintToken(src, paramName, pr);
+        i++;
+    }
+    pr(") ");
+    PrintBlock(src, node->bodyBlock(), pr, tabDepth);
     pr("\n");
 }
 

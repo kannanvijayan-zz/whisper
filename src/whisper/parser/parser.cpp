@@ -78,6 +78,9 @@ Parser::tryParseStatement()
     if (tok.isReturnKeyword())
         return parseReturnStatement();
 
+    if (tok.isDefKeyword())
+        return parseDefStatement();
+
     if (tok.isIfKeyword())
         return parseIfStatement();
 
@@ -161,6 +164,57 @@ Parser::parseIfCondPair()
     Block *block = parseBlock();
 
     return IfStmtNode::CondPair(expr, block);
+}
+
+DefStmtNode *
+Parser::parseDefStatement()
+{
+    // Must be followed by name.
+    const Token *nameTok = checkGetNextToken<Token::Type::Identifier>();
+    if (!nameTok)
+        emitError("Expected name after 'def'.");
+
+    IdentifierToken name(*nameTok);
+
+    // Must be followed by '('
+    if (!checkNextToken<Token::Type::OpenParen>())
+        emitError("Expected '(' in conditional pair.");
+
+    // Parse parameter list.
+    IdentifierList paramNames(allocatorFor<IdentifierToken>());
+    for (;;) {
+        const Token *paramTok = checkGetNextToken<Token::Type::Identifier,
+                                                  Token::Type::CloseParen>();
+        if (!paramTok)
+            emitError("Unexpected token in def parameter list.");
+
+        if (paramTok->isIdentifier()) {
+            paramNames.push_back(IdentifierToken(*paramTok));
+            Token::Type nextType =
+                checkTypeNextToken<Token::Type::Comma,
+                                   Token::Type::CloseParen>();
+
+            if (nextType == Token::Type::INVALID)
+                emitError("Expected ',' or ')' in def params.");
+
+            if (nextType == Token::Type::Comma)
+                continue;
+
+            WH_ASSERT(nextType == Token::Type::CloseParen);
+            break;
+        }
+
+        if (paramTok->isCloseParen())
+            break;
+    }
+
+    // Expect open-brace afterward.
+    if (!checkNextToken<Token::Type::OpenBrace>())
+        emitError("Expected '{' after def params.");
+
+    Block *block = parseBlock();
+
+    return make<DefStmtNode>(name, std::move(paramNames), block);
 }
 
 Block *

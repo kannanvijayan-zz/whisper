@@ -47,6 +47,7 @@ class EmptyStmtNode;
 class ExprStmtNode;
 class ReturnStmtNode;
 class IfStmtNode;
+class DefStmtNode;
 
 class CallExprNode;
 class DotExprNode;
@@ -157,6 +158,7 @@ class LiteralExpression : public Expression
 
 typedef BaseNode::List<Expression *> ExpressionList;
 typedef BaseNode::List<Statement *> StatementList;
+typedef BaseNode::List<IdentifierToken> IdentifierList;
 
 
 ///////////////////
@@ -493,6 +495,41 @@ class IfStmtNode : public Statement
     Block *elseBlock() const {
         WH_ASSERT(hasElseBlock());
         return elseBlock_;
+    }
+};
+
+//
+// DefStmt
+//
+class DefStmtNode : public Statement
+{
+  private:
+    IdentifierToken name_;
+    IdentifierList paramNames_;
+    Block *bodyBlock_;
+
+  public:
+    explicit DefStmtNode(const IdentifierToken &name,
+                         IdentifierList &&paramNames,
+                         Block *bodyBlock)
+      : Statement(DefStmt),
+        name_(name),
+        paramNames_(paramNames),
+        bodyBlock_(bodyBlock)
+    {
+        WH_ASSERT(bodyBlock_);
+    }
+
+    const IdentifierToken &name() const {
+        return name_;
+    }
+
+    const IdentifierList &paramNames() const {
+        return paramNames_;
+    }
+
+    const Block *bodyBlock() const {
+        return bodyBlock_;
     }
 };
 

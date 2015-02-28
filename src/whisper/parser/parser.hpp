@@ -56,6 +56,8 @@ class Parser
     IfStmtNode *parseIfStatement();
     IfStmtNode::CondPair parseIfCondPair();
 
+    DefStmtNode *parseDefStatement();
+
     Block *parseBlock();
 
     // Enum for expression precedence, from highest precedence to
