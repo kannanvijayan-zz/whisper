@@ -111,14 +111,6 @@ class BaseNode
     }
     WHISPER_DEFN_SYNTAX_NODES(METHODS_)
 #undef METHODS_
-
-    virtual inline bool isStatement() const {
-        return false;
-    }
-
-    virtual inline bool isExpression() const {
-        return false;
-    }
 };
 
 template <typename Printer>
@@ -135,22 +127,12 @@ class Statement : public BaseNode
 {
   protected:
     inline Statement(NodeType type) : BaseNode(type) {}
-
-  public:
-    virtual inline bool isStatement() const override {
-        return true;
-    }
 };
 
 class Expression : public BaseNode
 {
   protected:
     inline Expression(NodeType type) : BaseNode(type) {}
-
-  public:
-    virtual inline bool isExpression() const override {
-        return true;
-    }
 };
 
 class LiteralExpression : public Expression
