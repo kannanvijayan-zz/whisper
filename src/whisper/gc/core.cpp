@@ -6,7 +6,6 @@
 #include "gc/specializations.hpp"
 
 #include "vm/array.hpp"
-#include "vm/value_type.hpp"
 #include "vm/source_file.hpp"
 #include "vm/vector.hpp"
 #include "vm/shype.hpp"

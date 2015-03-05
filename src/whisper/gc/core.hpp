@@ -303,8 +303,6 @@ namespace GC {
     _(AllocThingPointerArray)   \
     _(Vector)                   \
     _(AllocThingPointerVectorContents) \
-    _(ValueType)                \
-    _(ValueTypeArray)           \
     _(RootShype)                \
     _(AddSlotShype)             \
     _(SourceFile)
@@ -792,10 +790,6 @@ class AllocThing
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-
-//
-// AllocThing
-//
 
 //
 // ScannerBox, ScannerBoxFor<T>, UpdaterBox, and UpdaterBoxFor<T>

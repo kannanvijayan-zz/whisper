@@ -113,8 +113,11 @@ class BaseNode
 #undef METHODS_
 };
 
+template <typename Writer>
+void WritePacked(const CodeSource &src, const BaseNode *node, Writer &wr);
+
 template <typename Printer>
-void PrintNode(const CodeSource &source, const BaseNode *node, Printer printer,
+void PrintNode(const CodeSource &src, const BaseNode *node, Printer pr,
                int tabDepth);
 
 ///////////////////////////////////////
@@ -213,18 +216,18 @@ class DotExprNode : public PropertyExpression
 class CallExprNode : public Expression
 {
   private:
-    PropertyExpression *receiver_;
+    PropertyExpression *callee_;
     ExpressionList args_;
 
   public:
-    CallExprNode(PropertyExpression *receiver, ExpressionList &&args)
+    CallExprNode(PropertyExpression *callee, ExpressionList &&args)
       : Expression(CallExpr),
-        receiver_(receiver),
+        callee_(callee),
         args_(std::move(args))
     {}
 
-    const PropertyExpression *receiver() const {
-        return receiver_;
+    const PropertyExpression *callee() const {
+        return callee_;
     }
 
     const ExpressionList &args() const {

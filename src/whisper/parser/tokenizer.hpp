@@ -507,6 +507,7 @@ class Tokenizer
         }
     }
 
+  public:
     // Character predicates.
     template <unic_t Char0>
     inline static bool CharIn(unic_t ch) {

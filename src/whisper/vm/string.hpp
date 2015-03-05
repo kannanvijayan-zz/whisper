@@ -64,6 +64,10 @@ class String
     String(const char *data);
     String(const String &other);
 
+    static uint32_t CalculateSize(uint32_t byteLength) {
+        return sizeof(String) + byteLength;
+    }
+
     uint32_t length() const {
         return length_;
     }

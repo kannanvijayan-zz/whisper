@@ -109,7 +109,7 @@ PrintCallExpr(const SourceReader &src,
               const CallExprNode *node,
               Printer pr, int tabDepth)
 {
-    PrintNode(src, node->receiver(), pr, tabDepth);
+    PrintNode(src, node->callee(), pr, tabDepth);
     pr("(");
     uint32_t i = 0;
     for (const Expression *arg : node->args()) {
