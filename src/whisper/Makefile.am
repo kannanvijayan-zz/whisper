@@ -18,6 +18,7 @@ whisper_SOURCES = \
     parser/syntax_tree.cpp \
     parser/parser.cpp \
     parser/packed_writer.cpp \
+    parser/packed_reader.cpp \
     gc/core.cpp \
     vm/string.cpp \
     whisper.cpp

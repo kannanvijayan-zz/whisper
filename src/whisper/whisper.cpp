@@ -12,6 +12,7 @@
 #include "parser/syntax_tree_inlines.hpp"
 #include "parser/parser.hpp"
 #include "parser/packed_writer.hpp"
+#include "parser/packed_reader.hpp"
 #include "vm/array.hpp"
 #include "vm/vector.hpp"
 #include "vm/string.hpp"
@@ -60,6 +61,7 @@ struct Printer {
             std::cerr << static_cast<char>(s[i]);
     }
 };
+
 
 int main(int argc, char **argv) {
     std::cout << "Whisper says hello." << std::endl;
@@ -132,21 +134,43 @@ int main(int argc, char **argv) {
     packedWriter.writeNode(fileNode);
 
     const uint32_t *buffer = packedWriter.buffer();
-    fprintf(stderr, "Packed Syntax Tree:\n\n");
-    for (uint32_t bufi = 0; bufi < packedWriter.bufferSize(); bufi += 4) {
-        fprintf(stderr, "[%04d]  %08x %08x %08x %08x\n", bufi,
-                buffer[bufi], buffer[bufi+1],
-                buffer[bufi+2], buffer[bufi+3]);
+    uint32_t bufferSize = packedWriter.bufferSize();
+    fprintf(stderr, "Packed Syntax Tree:\n");
+    for (uint32_t bufi = 0; bufi < bufferSize; bufi += 4) {
+        if (bufferSize - bufi >= 4) {
+            fprintf(stderr, "[%04d]  %08x %08x %08x %08x\n", bufi,
+                    buffer[bufi], buffer[bufi+1],
+                    buffer[bufi+2], buffer[bufi+3]);
+        } else if (bufferSize - bufi == 3) {
+            fprintf(stderr, "[%04d]  %08x %08x %08x\n", bufi,
+                    buffer[bufi], buffer[bufi+1], buffer[bufi+2]);
+        } else if (bufferSize - bufi == 2) {
+            fprintf(stderr, "[%04d]  %08x %08x\n", bufi,
+                    buffer[bufi], buffer[bufi+1]);
+        } else {
+            fprintf(stderr, "[%04d]  %08x\n", bufi,
+                    buffer[bufi]);
+        }
     }
 
-    GC::AllocThing **allocThings = packedWriter.constPool();
+    GC::AllocThing **constPool = packedWriter.constPool();
+    uint32_t constPoolSize = packedWriter.constPoolSize();
     fprintf(stderr, "Constant Pool:\n");
-    for (uint32_t i = 0; i < packedWriter.constPoolSize(); i++) {
-        fprintf(stderr, "[%04d]  %p\n", i, allocThings[i]);
+    for (uint32_t i = 0; i < constPoolSize; i++) {
+        fprintf(stderr, "[%04d]  %p\n", i, constPool[i]);
         fprintf(stderr, "    %s (size=%d)\n",
-                allocThings[i]->header().formatString(),
-                allocThings[i]->header().size());
+                constPool[i]->header().formatString(),
+                constPool[i]->header().size());
     }
+
+    Printer pr2;
+    AST::PrintingPackedVisitor<Printer> packedVisitor(pr2);
+
+    fprintf(stderr, "Visited syntax tree:\n");
+    AST::PackedReader packedReader(buffer, bufferSize,
+                                   constPool, constPoolSize);
+
+    packedReader.visitAt(buffer, &packedVisitor);
 
     return 0;
 }

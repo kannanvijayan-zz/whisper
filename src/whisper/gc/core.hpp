@@ -480,6 +480,14 @@ class alignas(8) AllocHeader
     void *payload() {
         return reinterpret_cast<uint8_t *>(this) + sizeof(AllocHeader);
     }
+
+#define METHOD_(fmt) \
+    bool isFormat_##fmt() const { \
+        return format() == AllocFormat::fmt; \
+    }
+    WHISPER_DEFN_GC_ALLOC_FORMATS(METHOD_)
+#undef METHOD_
+
 };
 
 

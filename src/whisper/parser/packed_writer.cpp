@@ -15,6 +15,9 @@ PackedWriter::writeNode(const BaseNode *node)
         switch (node->type()) {
 #define CASE_(ntype) \
           case ntype: \
+            /*fprintf(stderr, "Writing NodeType %s at %d\n", */\
+            /*        NodeTypeString(node->type()), */\
+            /*        int(cursor_ - start_)); */\
             write(static_cast<uint32_t>(node->type())); \
             write##ntype(node->to##ntype()); \
             break;
@@ -67,7 +70,9 @@ PackedWriter::addIdentifier(const IdentifierToken &ident)
     if (!str)
         emitError("Could not allocate identifier.");
 
-    return addToConstPool(GC::AllocThing::From(str));
+    uint32_t idx = addToConstPool(GC::AllocThing::From(str));
+    identifierMap_.insert(IdentifierMap::value_type(key, idx));
+    return idx;
 }
 
 uint32_t
@@ -113,68 +118,29 @@ PackedWriter::writeNameExpr(const NameExprNode *node)
 }
 
 void
-PackedWriter::parseIntegerLiteral(const IntegerLiteralToken &token,
-                                  int32_t *resultOut)
+PackedWriter::parseInteger(const IntegerLiteralToken &token,
+                           int32_t *resultOut)
 {
     WH_ASSERT(resultOut != nullptr);
 
     const uint8_t *text = token.text(src_);
     uint32_t len = token.length();
     if (token.hasFlag(Token::Int_BinPrefix)) {
-        WH_ASSERT(len > 2);
-        WH_ASSERT(text[0] == '0');
-        WH_ASSERT(text[1] == 'b');
-        unsigned bits = 0;
+        parseBinInteger(token, resultOut);
+
+    } else if (token.hasFlag(Token::Int_OctPrefix)) {
+        parseOctInteger(token, resultOut);
+
+    } else if (token.hasFlag(Token::Int_DecPrefix)) {
+        parseDecInteger(token, resultOut);
+
+    } else if (token.hasFlag(Token::Int_HexPrefix)) {
+        parseHexInteger(token, resultOut);
+
+    } else {
         int32_t result = 0;
-        for (uint32_t i = 2; i < len; i++) {
+        for (uint32_t i = 0; i < len; i++) {
             unic_t ch = text[i];
-            WH_ASSERT((ch == '_') || Tokenizer::IsBinDigit(ch));
-
-            if (ch == '_')
-                continue;
-
-            result <<= 1;
-            result |= (ch - static_cast<uint8_t>('0'));
-
-            bits++;
-            if (bits > 31)
-                emitError("Binary integer literal too large.");
-        }
-        *resultOut = result;
-        return;
-    }
-
-    if (token.hasFlag(Token::Int_OctPrefix)) {
-        WH_ASSERT(len > 2);
-        WH_ASSERT(text[0] == '0');
-        WH_ASSERT(text[1] == 'o');
-        unsigned bits = 0;
-        int32_t result = 0;
-        for (uint32_t i = 2; i < len; i++) {
-            uint8_t ch = text[i];
-            WH_ASSERT((ch == '_') || Tokenizer::IsOctDigit(ch));
-
-            if (ch == '_')
-                continue;
-
-            result <<= 3;
-            result |= (ch - static_cast<uint8_t>('0'));
-
-            bits += 3;
-            if (bits > 31)
-                emitError("Octal integer literal too large.");
-        }
-        *resultOut = result;
-        return;
-    }
-
-    if (token.hasFlag(Token::Int_DecPrefix)) {
-        WH_ASSERT(len > 2);
-        WH_ASSERT(text[0] == '0');
-        WH_ASSERT(text[1] == 'd');
-        int32_t result = 0;
-        for (uint32_t i = 2; i < len; i++) {
-            uint8_t ch = text[i];
             WH_ASSERT((ch == '_') || Tokenizer::IsDecDigit(ch));
 
             if (ch == '_')
@@ -188,42 +154,126 @@ PackedWriter::parseIntegerLiteral(const IntegerLiteralToken &token,
             result += digit;
         }
         *resultOut = result;
-        return;
     }
+}
 
-    if (token.hasFlag(Token::Int_HexPrefix)) {
-        WH_ASSERT(len > 2);
-        WH_ASSERT(text[0] == '0');
-        WH_ASSERT(text[1] == 'x');
-        unsigned bits = 0;
-        int32_t result = 0;
-        for (uint32_t i = 2; i < len; i++) {
-            uint8_t ch = text[i];
-            WH_ASSERT((ch == '_') || Tokenizer::IsHexDigit(ch));
+void
+PackedWriter::parseBinInteger(const IntegerLiteralToken &token,
+                              int32_t *resultOut)
+{
+    const uint8_t *text = token.text(src_);
+    uint32_t len = token.length();
+    WH_ASSERT(len > 2);
+    WH_ASSERT(text[0] == '0');
+    WH_ASSERT(text[1] == 'b');
 
-            if (ch == '_')
-                continue;
+    int32_t result = 0;
+    for (uint32_t i = 2; i < len; i++) {
+        unic_t ch = text[i];
+        WH_ASSERT((ch == '_') || Tokenizer::IsBinDigit(ch));
 
-            int digit = ch - static_cast<uint8_t>('0');
-            if (result > ((std::numeric_limits<int32_t>::max() - digit) / 10))
+        if (ch == '_')
+            continue;
 
-            result <<= 4;
-            result |= digit;
+        if (result > (std::numeric_limits<int32_t>::max() >> 1))
+            emitError("Binary integer literal too large.");
 
-            bits += 4;
-            if (bits > 31)
-                emitError("Hex integer literal too large.");
-        }
-        *resultOut = result;
-        return;
+        result <<= 1;
+        result |= (ch - static_cast<uint8_t>('0'));
     }
+    *resultOut = result;
+}
+
+void
+PackedWriter::parseOctInteger(const IntegerLiteralToken &token,
+                              int32_t *resultOut)
+{
+    const uint8_t *text = token.text(src_);
+    uint32_t len = token.length();
+    WH_ASSERT(len > 2);
+    WH_ASSERT(text[0] == '0');
+    WH_ASSERT(text[1] == 'o');
+
+    int32_t result = 0;
+    for (uint32_t i = 2; i < len; i++) {
+        uint8_t ch = text[i];
+        WH_ASSERT((ch == '_') || Tokenizer::IsOctDigit(ch));
+
+        if (ch == '_')
+            continue;
+
+        if (result > (std::numeric_limits<int32_t>::max() >> 3))
+            emitError("Octal integer literal too large.");
+
+        result <<= 3;
+        result |= (ch - static_cast<uint8_t>('0'));
+    }
+    *resultOut = result;
+}
+
+void
+PackedWriter::parseDecInteger(const IntegerLiteralToken &token,
+                              int32_t *resultOut)
+{
+    const uint8_t *text = token.text(src_);
+    uint32_t len = token.length();
+    WH_ASSERT(len > 2);
+    WH_ASSERT(text[0] == '0');
+    WH_ASSERT(text[1] == 'd');
+
+    int32_t result = 0;
+    for (uint32_t i = 2; i < len; i++) {
+        uint8_t ch = text[i];
+        WH_ASSERT((ch == '_') || Tokenizer::IsDecDigit(ch));
+
+        if (ch == '_')
+            continue;
+
+        int digit = ch - static_cast<uint8_t>('0');
+        if (result > ((std::numeric_limits<int32_t>::max() - digit) / 10))
+            emitError("Decimal integer literal too large.");
+
+        result *= 10;
+        result += digit;
+    }
+    *resultOut = result;
+}
+
+void
+PackedWriter::parseHexInteger(const IntegerLiteralToken &token,
+                              int32_t *resultOut)
+{
+    const uint8_t *text = token.text(src_);
+    uint32_t len = token.length();
+    WH_ASSERT(len > 2);
+    WH_ASSERT(text[0] == '0');
+    WH_ASSERT(text[1] == 'x');
+
+    int32_t result = 0;
+    for (uint32_t i = 2; i < len; i++) {
+        uint8_t ch = text[i];
+        WH_ASSERT((ch == '_') || Tokenizer::IsHexDigit(ch));
+
+        if (ch == '_')
+            continue;
+
+        if (result > (std::numeric_limits<int32_t>::max() >> 3))
+            emitError("Hexadecimal integer literal too large.");
+
+        int digit = ch - static_cast<uint8_t>('0');
+        if (result > ((std::numeric_limits<int32_t>::max() - digit) / 10))
+
+        result <<= 4;
+        result |= digit;
+    }
+    *resultOut = result;
 }
 
 void
 PackedWriter::writeIntegerExpr(const IntegerExprNode *node)
 {
     int32_t val;
-    parseIntegerLiteral(node->token(), &val);
+    parseInteger(node->token(), &val);
     write(static_cast<uint32_t>(val));
 }
 
@@ -283,6 +333,7 @@ void
 PackedWriter::writeBinaryExpr(const Expression *lhs, const Expression *rhs)
 {
     Position rhsOffsetPos = position();
+    writeDummy();
     writeNode(lhs);
     writeOffsetDistance(&rhsOffsetPos);
     writeNode(rhs);

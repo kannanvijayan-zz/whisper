@@ -201,8 +201,11 @@ class PackedWriter
     uint32_t addToConstPool(GC::AllocThing *ptr);
     void expandConstPool();
 
-    void parseIntegerLiteral(const IntegerLiteralToken &token,
-                             int32_t *resultOut);
+    void parseInteger(const IntegerLiteralToken &token, int32_t *resultOut);
+    void parseBinInteger(const IntegerLiteralToken &token, int32_t *resultOut);
+    void parseOctInteger(const IntegerLiteralToken &token, int32_t *resultOut);
+    void parseDecInteger(const IntegerLiteralToken &token, int32_t *resultOut);
+    void parseHexInteger(const IntegerLiteralToken &token, int32_t *resultOut);
 
     void writeBinaryExpr(const Expression *lhs, const Expression *rhs);
     void writeBlock(const Block *block);
