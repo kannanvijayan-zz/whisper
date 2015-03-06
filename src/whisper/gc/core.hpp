@@ -299,6 +299,7 @@ namespace GC {
 
 #define WHISPER_DEFN_GC_ALLOC_FORMATS(_) \
     _(UntracedThing)            \
+    _(String)                   \
     _(AllocThingPointer)        \
     _(AllocThingPointerArray)   \
     _(Vector)                   \
@@ -430,6 +431,9 @@ class alignas(8) AllocHeader
 
     inline AllocFormat format() const {
         return static_cast<AllocFormat>(formatBitfield().value());
+    }
+    inline const char *formatString() const {
+        return AllocFormatString(format());
     }
     inline uint16_t card() const {
         return cardBitfield().value();
@@ -701,6 +705,14 @@ struct AllocThingTraits
     static constexpr bool Specialized = false;
 };
 
+//
+// UntracedType
+//
+// A well-understood gc-traced type that contains no pointers.
+// Mapping to this type in AllocFormatTraits is an easy way
+// to specify TraceTraits for leaf-objects.
+// 
+class UntracedType {};
 
 //
 // AllocThing

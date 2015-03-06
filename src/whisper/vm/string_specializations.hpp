@@ -19,8 +19,15 @@ struct HeapTraits<VM::String>
     HeapTraits() = delete;
 
     static constexpr bool Specialized = true;
-    static constexpr GC::AllocFormat Format = GC::AllocFormat::UntracedThing;
+    static constexpr AllocFormat Format = AllocFormat::String;
     static constexpr bool VarSized = true;
+};
+
+template <>
+struct AllocFormatTraits<AllocFormat::String>
+{
+    AllocFormatTraits() = delete;
+    typedef UntracedType Type;
 };
 
 

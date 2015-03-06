@@ -73,6 +73,7 @@ struct AllocFormatTraits<AllocFormat::UntracedThing>
         static void Update(Updater &, T_ &, const void *, const void *) {} \
     }
 
+    PRIM_TRACE_TRAITS_DEF_(UntracedType);
     PRIM_TRACE_TRAITS_DEF_(bool);
 
     PRIM_TRACE_TRAITS_DEF_(uint8_t);

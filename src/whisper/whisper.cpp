@@ -125,5 +125,28 @@ int main(int argc, char **argv) {
     RunContext *cx = &runcx;
     AllocationContext acx(cx->inTenured());
 
+    // Write out the syntax tree in packed format.
+    AST::PackedWriter packedWriter(wrappedAllocator,
+                                   tokenizer.sourceReader(),
+                                   acx);
+    packedWriter.writeNode(fileNode);
+
+    const uint32_t *buffer = packedWriter.buffer();
+    fprintf(stderr, "Packed Syntax Tree:\n\n");
+    for (uint32_t bufi = 0; bufi < packedWriter.bufferSize(); bufi += 4) {
+        fprintf(stderr, "[%04d]  %08x %08x %08x %08x\n", bufi,
+                buffer[bufi], buffer[bufi+1],
+                buffer[bufi+2], buffer[bufi+3]);
+    }
+
+    GC::AllocThing **allocThings = packedWriter.constPool();
+    fprintf(stderr, "Constant Pool:\n");
+    for (uint32_t i = 0; i < packedWriter.constPoolSize(); i++) {
+        fprintf(stderr, "[%04d]  %p\n", i, allocThings[i]);
+        fprintf(stderr, "    %s (size=%d)\n",
+                allocThings[i]->header().formatString(),
+                allocThings[i]->header().size());
+    }
+
     return 0;
 }

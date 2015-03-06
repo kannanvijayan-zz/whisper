@@ -125,6 +125,19 @@ class PackedWriter
 
     bool writeNode(const BaseNode *node);
 
+    uint32_t bufferSize() const {
+        return (cursor_ - start_);
+    }
+    const uint32_t *buffer() const {
+        return start_;
+    }
+
+    uint32_t constPoolSize() const {
+        return constPoolSize_;
+    }
+    GC::AllocThing **constPool() const {
+        return constPool_;
+    }
   private:
     void write(uint32_t word) {
         WH_ASSERT(cursor_ <= end_);
