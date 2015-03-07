@@ -11,6 +11,7 @@
 #include "parser/tokenizer.hpp"
 #include "parser/syntax_tree_inlines.hpp"
 #include "parser/parser.hpp"
+#include "parser/packed_syntax.hpp"
 #include "parser/packed_writer.hpp"
 #include "parser/packed_reader.hpp"
 #include "vm/array.hpp"
