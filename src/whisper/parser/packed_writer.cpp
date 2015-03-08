@@ -388,12 +388,16 @@ PackedWriter::writeBlock(const Block *block)
 {
     WH_ASSERT(block->statements().size() <= MaxBlockStatements);
     Position offsetPosn = position();
-    for (uint32_t i = 0; i < block->statements().size(); i++)
+    // First offset is not written.
+    for (uint32_t i = 1; i < block->statements().size(); i++)
         writeDummy();
 
+    uint32_t i = 0;
     for (const Statement *stmt : block->statements()) {
-        writeOffsetDistance(&offsetPosn);
+        if (i > 0)
+            writeOffsetDistance(&offsetPosn);
         writeNode(stmt);
+        i++;
     }
 }
 
@@ -478,21 +482,19 @@ PackedWriter::writeVarStmt(const VarStmtNode *node)
     writeTypeExtra(numBindings);
 
     Position offsetPos = position();
-    for (uint32_t i = 0; i < numBindings; i++)
+    for (const BindingStatement::Binding &binding : node->bindings()) {
+        write(addIdentifier(binding.name()));
         writeDummy();
+    }
 
     for (const BindingStatement::Binding &binding : node->bindings()) {
-        writeOffsetDistance(&offsetPos);
-
-        uint32_t bindingIdx = addIdentifier(binding.name());
-        bool hasValue = binding.hasValue();
-        uint32_t idxAndFlag = bindingIdx;
-        if (hasValue)
-            idxAndFlag |= static_cast<uint32_t>(1) << 31;
-        write(idxAndFlag);
-
-        if (hasValue)
+        offsetPos++;
+        if (binding.hasValue()) {
+            writeOffsetDistance(&offsetPos);
             writeNode(binding.value());
+        } else {
+            writeAt(offsetPos++, 0);
+        }
     }
 }
 
@@ -506,14 +508,15 @@ PackedWriter::writeConstStmt(const ConstStmtNode *node)
     writeTypeExtra(numBindings);
 
     Position offsetPos = position();
-    for (uint32_t i = 0; i < numBindings; i++)
+    for (const BindingStatement::Binding &binding : node->bindings()) {
+        write(addIdentifier(binding.name()));
         writeDummy();
+    }
 
     for (const BindingStatement::Binding &binding : node->bindings()) {
+        WH_ASSERT(binding.hasValue());
+        offsetPos++;
         writeOffsetDistance(&offsetPos);
-
-        uint32_t bindingIdx = addIdentifier(binding.name());
-        write(bindingIdx);
         writeNode(binding.value());
     }
 }
@@ -533,12 +536,15 @@ PackedWriter::writeFile(const FileNode *node)
 
     WH_ASSERT(numStatements <= MaxBlockStatements);
     Position offsetPosn = position();
-    for (uint32_t i = 0; i < numStatements; i++)
+    for (uint32_t i = 1; i < numStatements; i++)
         writeDummy();
 
+    int32_t i = 0;
     for (const Statement *stmt : node->statements()) {
-        writeOffsetDistance(&offsetPosn);
+        if (i > 0)
+            writeOffsetDistance(&offsetPosn);
         writeNode(stmt);
+        i++;
     }
 }
 

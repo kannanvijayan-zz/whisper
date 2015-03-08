@@ -44,6 +44,12 @@ class PackedSyntaxElement
     const uint32_t *text() const {
         return text_;
     }
+    const uint32_t *textEnd() const {
+        return text_ + size_;
+    }
+    uint32_t size() const {
+        return size_;
+    }
 
   protected:
     uint32_t adjustedSize(uint32_t adj) const {
@@ -138,6 +144,10 @@ class PackedSizedBlock : public PackedSyntaxElement
         if (idx == 0)
             return nodeAt(numStatements());
         return indirectNodeAt(idx);
+    }
+
+    PackedBlock unsizedBlock() const {
+        return PackedBlock(text_ + 1, adjustedSize(1), numStatements());
     }
 };
 
@@ -456,7 +466,7 @@ class PackedCallExprNode : public PackedBaseNode
     }
     PackedBaseNode arg(uint32_t idx) const {
         WH_ASSERT(idx < numArgs());
-        return nodeAt(1 + numArgs());
+        return indirectNodeAt(1 + idx);
     }
 };
 
@@ -617,7 +627,7 @@ class PackedNameExprNode : public PackedBaseNode
         WH_ASSERT(type() == NameExpr);
     }
 
-    uint32_t NameCid() const {
+    uint32_t nameCid() const {
         return refAt(1);
     }
 };

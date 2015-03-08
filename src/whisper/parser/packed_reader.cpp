@@ -7,20 +7,15 @@ namespace AST {
 
 
 void
-PackedReader::visitAt(const uint32_t *position, PackedVisitor *visitor) const
+PackedReader::visitNode(PackedBaseNode node, PackedVisitor *visitor) const
 {
-    WH_ASSERT(position >= buffer());
-    WH_ASSERT(position < bufferEnd());
+    WH_ASSERT(node.text() >= buffer());
+    WH_ASSERT(node.textEnd() == bufferEnd());
 
-    // First word contains type.
-    uint32_t typeAndExtra = *position;
-    NodeType type = static_cast<NodeType>(typeAndExtra & 0xfff);
-    uint32_t extra = typeAndExtra >> 12;
-
-    switch (type) {
+    switch (node.type()) {
 #define CASE_(ntype) \
       case ntype: \
-        visitor->visit##ntype(*this, position, extra); \
+        visitor->visit##ntype(*this, node.as##ntype()); \
         break;
     WHISPER_DEFN_SYNTAX_NODES(CASE_)
 #undef CASE_

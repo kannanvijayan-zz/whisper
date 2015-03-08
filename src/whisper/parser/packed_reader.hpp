@@ -7,7 +7,7 @@
 #include "runtime.hpp"
 #include "fnv_hash.hpp"
 #include "parser/code_source.hpp"
-#include "parser/syntax_tree.hpp"
+#include "parser/packed_syntax.hpp"
 #include "vm/string.hpp"
 
 namespace Whisper {
@@ -26,8 +26,7 @@ class PackedVisitor
 
 #define METHOD_(ntype) \
     virtual void visit##ntype(const PackedReader &reader, \
-                              const uint32_t *posn, \
-                              uint32_t typeExtra) \
+                              Packed##ntype##Node packedNode) \
     { \
         WH_UNREACHABLE("Abstract base method visit" #ntype); \
     }
@@ -72,7 +71,10 @@ class PackedReader
         return constPool_[idx];
     }
 
-    void visitAt(const uint32_t *position, PackedVisitor *visitor) const;
+    void visitNode(PackedBaseNode node, PackedVisitor *visitor) const;
+    void visit(PackedVisitor *visitor) const {
+        visitNode(PackedBaseNode(buffer_, bufferSize_), visitor);
+    }
 };
 
 template <typename Printer>
@@ -90,285 +92,223 @@ class PrintingPackedVisitor : public PackedVisitor
     virtual ~PrintingPackedVisitor() {}
 
     virtual void visitFile(const PackedReader &reader,
-                           const uint32_t *posn,
-                           uint32_t typeExtra)
+                           PackedFileNode file)
         override
     {
-        uint32_t numStatements = typeExtra;
-        fprintf(stderr, "visitFile: numStatements = %d (%08x)\n", (int)numStatements, *posn);
-        const uint32_t *offsetPosn = posn + 1;
-        for (uint32_t i = 0; i < numStatements; i++) {
-            // Visit i'th statement.
-            reader.visitAt(readIncrOffsetPosn(&offsetPosn), this);
-        }
+        for (uint32_t i = 0; i < file.numStatements(); i++)
+            reader.visitNode(file.statement(i), this);
     }
 
     virtual void visitEmptyStmt(const PackedReader &reader,
-                                const uint32_t *posn,
-                                uint32_t typeExtra)
+                                PackedEmptyStmtNode emptyStmt)
         override
     {
         pr(";\n");
     }
 
     virtual void visitExprStmt(const PackedReader &reader,
-                               const uint32_t *posn,
-                               uint32_t typeExtra)
+                               PackedExprStmtNode exprStmt)
         override
     {
         // visit expression.
-        reader.visitAt(posn + 1, this);
+        reader.visitNode(exprStmt.expression(), this);
         pr(";\n");
     }
 
     virtual void visitReturnStmt(const PackedReader &reader,
-                                 const uint32_t *posn,
-                                 uint32_t typeExtra)
+                                 PackedReturnStmtNode returnStmt)
         override
     {
         pr("return");
-        if (typeExtra) {
-            // visit return expression.
+        if (returnStmt.hasExpression()) {
             pr(" ");
-            reader.visitAt(posn + 1, this);
+            reader.visitNode(returnStmt.expression(), this);
         }
         pr(";\n");
     }
 
     virtual void visitIfStmt(const PackedReader &reader,
-                             const uint32_t *posn,
-                             uint32_t typeExtra)
+                             PackedIfStmtNode ifStmt)
         override
     {
-        bool hasElse = typeExtra & 1;
-        uint32_t numElsifs = typeExtra >> 1;
-
-        const uint32_t *offsetPosn = posn + 1;
         pr("if (");
-        const uint32_t *ifCondPosn = offsetPosn + numElsifs + (hasElse ? 1 : 0);
-        reader.visitAt(ifCondPosn, this);
+        reader.visitNode(ifStmt.ifCond(), this);
         pr(") ");
-        const uint32_t *ifBlockPosn = offsetPosn + *offsetPosn;
-        visitSizedBlock(reader, ifBlockPosn);
-        offsetPosn++;
+        visitSizedBlock(reader, ifStmt.ifBlock());
 
-        for (uint32_t i = 0; i < numElsifs; i++) {
+        for (uint32_t i = 0; i < ifStmt.numElsifs(); i++) {
             pr(" elsif (");
-            reader.visitAt(readIncrOffsetPosn(&offsetPosn), this);
+            reader.visitNode(ifStmt.elsifCond(i), this);
             pr(") ");
-            visitSizedBlock(reader, readIncrOffsetPosn(&offsetPosn));
+            visitSizedBlock(reader, ifStmt.elsifBlock(i));
         }
 
-        if (hasElse) {
+        if (ifStmt.hasElse()) {
             pr(" else ");
-            visitSizedBlock(reader, readIncrOffsetPosn(&offsetPosn));
-            offsetPosn++;
+            visitSizedBlock(reader, ifStmt.elseBlock());
         }
         pr("\n");
     }
 
     virtual void visitDefStmt(const PackedReader &reader,
-                              const uint32_t *posn,
-                              uint32_t typeExtra)
+                              PackedDefStmtNode defStmt)
         override
     {
-        uint32_t numParams = typeExtra;
-
         pr("def ");
-        visitIdentifier(reader, posn[1]);
+        visitIdentifier(reader, defStmt.nameCid());
         pr("(");
 
-        for (uint32_t i = 0; i < numParams; i++) {
+        for (uint32_t i = 0; i < defStmt.numParams(); i++) {
             if (i > 0)
                 pr(", ");
-            visitIdentifier(reader, posn[2 + i]);
+            visitIdentifier(reader, defStmt.paramCid(i));
         }
         pr(") ");
-        visitSizedBlock(reader, posn + 2 + numParams);
+        visitSizedBlock(reader, defStmt.bodyBlock());
         pr("\n");
     }
 
     virtual void visitConstStmt(const PackedReader &reader,
-                                const uint32_t *posn,
-                                uint32_t typeExtra)
+                                PackedConstStmtNode constStmt)
         override
     {
-        uint32_t numBindings = typeExtra;
-
-        const uint32_t *offsetPosn = posn + 1;
         pr("const ");
-
-        for (uint32_t i = 0; i < numBindings; i++) {
+        for (uint32_t i = 0; i < constStmt.numBindings(); i++) {
             if (i > 0)
                 pr(", ");
-            const uint32_t *bindingPosn = readIncrOffsetPosn(&offsetPosn);
-            uint32_t bindingIdx = *bindingPosn;
-            visitIdentifier(reader, bindingIdx);
+            visitIdentifier(reader, constStmt.varnameCid(i));
             pr(" = ");
-            reader.visitAt(bindingPosn + 1, this);
+            reader.visitNode(constStmt.varexpr(i), this);
         }
         pr(";\n");
     }
 
     virtual void visitVarStmt(const PackedReader &reader,
-                              const uint32_t *posn,
-                              uint32_t typeExtra)
+                              PackedVarStmtNode varStmt)
         override
     {
-        uint32_t numBindings = typeExtra;
-
-        const uint32_t *offsetPosn = posn + 1;
         pr("var ");
-
-        for (uint32_t i = 0; i < numBindings; i++) {
+        for (uint32_t i = 0; i < varStmt.numBindings(); i++) {
             if (i > 0)
                 pr(", ");
-            const uint32_t *bindingPosn = readIncrOffsetPosn(&offsetPosn);
-            uint32_t hasValueMask = static_cast<uint32_t>(1) << 31;
-            bool hasValue = !!(*bindingPosn & hasValueMask);
-            uint32_t bindingIdx = *bindingPosn & ~hasValueMask;
-            visitIdentifier(reader, bindingIdx);
-            if (hasValue) {
+            visitIdentifier(reader, varStmt.varnameCid(i));
+            if (varStmt.hasVarexpr(i)) {
                 pr(" = ");
-                reader.visitAt(bindingPosn + 1, this);
+                reader.visitNode(varStmt.varexpr(i), this);
             }
         }
         pr(";\n");
     }
 
     virtual void visitLoopStmt(const PackedReader &reader,
-                               const uint32_t *posn,
-                               uint32_t typeExtra)
+                               PackedLoopStmtNode loopStmt)
         override
     {
-        uint32_t blockSize = typeExtra;
         pr("loop ");
-        visitBlock(reader, blockSize, posn + 1);
+        visitBlock(reader, loopStmt.bodyBlock());
         pr("\n");
     }
 
     virtual void visitCallExpr(const PackedReader &reader,
-                               const uint32_t *posn,
-                               uint32_t typeExtra)
+                               PackedCallExprNode callExpr)
         override
     {
-        uint32_t numArgs = typeExtra;
-
-        const uint32_t *offsetPosn = posn + 1;
-
-        // print callee expr
-        reader.visitAt(offsetPosn + numArgs, this);
+        reader.visitNode(callExpr.callee(), this);
         pr("(");
-        for (uint32_t i = 0; i < typeExtra; i++) {
+        for (uint32_t i = 0; i < callExpr.numArgs(); i++) {
             if (i > 0)
                 pr(", ");
-            reader.visitAt(readIncrOffsetPosn(&offsetPosn), this);
+            reader.visitNode(callExpr.arg(i), this);
         }
         pr(")");
     }
 
     virtual void visitDotExpr(const PackedReader &reader,
-                              const uint32_t *posn,
-                              uint32_t typeExtra)
+                              PackedDotExprNode dotExpr)
         override
     {
-        reader.visitAt(posn + 2, this);
+        reader.visitNode(dotExpr.target(), this);
         pr(".");
-        visitIdentifier(reader, posn[1]);
+        visitIdentifier(reader, dotExpr.nameCid());
     }
 
     virtual void visitArrowExpr(const PackedReader &reader,
-                                const uint32_t *posn,
-                                uint32_t typeExtra)
+                                PackedArrowExprNode arrowExpr)
         override
     {
-        reader.visitAt(posn + 2, this);
+        reader.visitNode(arrowExpr.target(), this);
         pr("->");
-        visitIdentifier(reader, posn[1]);
+        visitIdentifier(reader, arrowExpr.nameCid());
     }
 
     virtual void visitPosExpr(const PackedReader &reader,
-                              const uint32_t *posn,
-                              uint32_t typeExtra)
+                              PackedPosExprNode posExpr)
         override
     {
-        visitUnaryExpr(reader, posn, "+");
+        visitUnaryExpr(reader, posExpr.subexpr(), "+");
     }
 
     virtual void visitNegExpr(const PackedReader &reader,
-                              const uint32_t *posn,
-                              uint32_t typeExtra)
+                              PackedNegExprNode negExpr)
         override
     {
-        visitUnaryExpr(reader, posn, "+");
+        visitUnaryExpr(reader, negExpr.subexpr(), "-");
     }
 
     virtual void visitAddExpr(const PackedReader &reader,
-                              const uint32_t *posn,
-                              uint32_t typeExtra)
+                              PackedAddExprNode addExpr)
         override
     {
-        visitBinaryExpr(reader, posn, "+");
+        visitBinaryExpr(reader, addExpr.lhs(), addExpr.rhs(), "+");
     }
 
     virtual void visitSubExpr(const PackedReader &reader,
-                              const uint32_t *posn,
-                              uint32_t typeExtra)
+                              PackedSubExprNode subExpr)
         override
     {
-        visitBinaryExpr(reader, posn, "-");
+        visitBinaryExpr(reader, subExpr.lhs(), subExpr.rhs(), "-");
     }
 
     virtual void visitMulExpr(const PackedReader &reader,
-                              const uint32_t *posn,
-                              uint32_t typeExtra)
+                              PackedMulExprNode mulExpr)
         override
     {
-        visitBinaryExpr(reader, posn, "*");
+        visitBinaryExpr(reader, mulExpr.lhs(), mulExpr.rhs(), "*");
     }
 
     virtual void visitDivExpr(const PackedReader &reader,
-                              const uint32_t *posn,
-                              uint32_t typeExtra)
+                              PackedDivExprNode divExpr)
         override
     {
-        visitBinaryExpr(reader, posn, "/");
+        visitBinaryExpr(reader, divExpr.lhs(), divExpr.rhs(), "/");
     }
 
     virtual void visitParenExpr(const PackedReader &reader,
-                                const uint32_t *posn,
-                                uint32_t typeExtra)
+                                PackedParenExprNode parenExpr)
         override
     {
         pr("(");
-        reader.visitAt(posn + 1, this);
+        reader.visitNode(parenExpr.subexpr(), this);
         pr(")");
     }
 
     virtual void visitNameExpr(const PackedReader &reader,
-                               const uint32_t *posn,
-                               uint32_t typeExtra)
+                               PackedNameExprNode nameExpr)
         override
     {
-        visitIdentifier(reader, posn[1]);
+        visitIdentifier(reader, nameExpr.nameCid());
     }
 
     virtual void visitIntegerExpr(const PackedReader &reader,
-                                  const uint32_t *posn,
-                                  uint32_t typeExtra)
+                                  PackedIntegerExprNode integerExpr)
         override
     {
         char buf[64];
-        snprintf(buf, 64, "%d", static_cast<int32_t>(posn[1]));
+        snprintf(buf, 64, "%d", integerExpr.value());
         pr(buf);
     }
 
   private:
-    const uint32_t *readIncrOffsetPosn(const uint32_t **offsetPosnPtr) {
-        const uint32_t *offsetPosn = *offsetPosnPtr;
-        ++*offsetPosnPtr;
-        return offsetPosn + *offsetPosn;
-    }
 
     void tab(uint32_t depth) {
         for (unsigned i = 0; i < depth; i++)
@@ -381,23 +321,26 @@ class PrintingPackedVisitor : public PackedVisitor
     }
 
     void visitUnaryExpr(const PackedReader &reader,
-                        const uint32_t *posn,
+                        PackedBaseNode node,
                         const char *op)
     {
+        pr("(| ");
         pr(op);
-        reader.visitAt(posn + 1, this);
+        pr(" ");
+        reader.visitNode(node, this);
+        pr(" |)");
     }
 
     void visitBinaryExpr(const PackedReader &reader,
-                         const uint32_t *posn,
+                         PackedBaseNode lhs,
+                         PackedBaseNode rhs,
                          const char *op)
     {
-        const uint32_t *offsetPosn = posn + 1;
-        pr("@(");
-        reader.visitAt(posn + 2, this);
+        pr("(| ");
+        reader.visitNode(lhs, this);
         pr(op);
-        reader.visitAt(readIncrOffsetPosn(&offsetPosn), this);
-        pr(")@");
+        reader.visitNode(rhs, this);
+        pr(" |)");
     }
 
     void visitIdentifier(const PackedReader &reader,
@@ -414,21 +357,18 @@ class PrintingPackedVisitor : public PackedVisitor
         }
     }
 
-    void visitSizedBlock(const PackedReader &reader, const uint32_t *block)
+    void visitSizedBlock(const PackedReader &reader, PackedSizedBlock block)
     {
-        visitBlock(reader, *block, block + 1);
+        visitBlock(reader, block.unsizedBlock());
     }
 
-    void visitBlock(const PackedReader &reader, uint32_t size,
-                    const uint32_t *block)
+    void visitBlock(const PackedReader &reader, PackedBlock block)
     {
-        const uint32_t *offsetPosn = block;
-
         pr("{\n");
         tabDepth_++;
-        for (uint32_t i = 0; i < size; i++) {
+        for (uint32_t i = 0; i < block.numStatements(); i++) {
             tab();
-            reader.visitAt(readIncrOffsetPosn(&offsetPosn), this);
+            reader.visitNode(block.statement(i), this);
         }
         tabDepth_--;
         tab();

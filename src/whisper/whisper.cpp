@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
     AST::PackedReader packedReader(buffer, bufferSize,
                                    constPool, constPoolSize);
 
-    packedReader.visitAt(buffer, &packedVisitor);
+    packedReader.visit(&packedVisitor);
 
     return 0;
 }
