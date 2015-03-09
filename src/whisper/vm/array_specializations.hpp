@@ -50,37 +50,6 @@ struct ArrayTraits<P *> {
 } // namespace Whisper
 
 
-// A handy macro for defining VM::ArrayTraits<T> and
-// GC::AllocFormatTraits<FMT> for a given array type.
-//
-// The Macro simply makes VM::ArrayTraits<type> specify |format|
-// as the AllocFormat of the array, and points
-// GC::AllocFormatTraits<format> to VM::Array<type> as the
-// traced type.
-#define WH_VM__DEF_SIMPLE_ARRAY_TRAITS(type, format) \
-  namespace Whisper { \
-   namespace VM { \
-    template <> struct ArrayTraits<type> { \
-        static_assert(GC::FieldTraits<type>::Specialized, \
-                      "Underlying type is not field-specialized."); \
-        ArrayTraits() = delete; \
-        static constexpr bool Specialized = true; \
-        static const GC::AllocFormat ArrayFormat = GC::AllocFormat::format; \
-    }; \
-   } \
-   \
-   namespace GC { \
-    template <> struct AllocFormatTraits<GC::AllocFormat::format> { \
-        static_assert(TraceTraits<type>::Specialized, \
-                      "Underlying type is not trace-specialized."); \
-        AllocFormatTraits() = delete; \
-        static constexpr bool Specialized = true; \
-        typedef VM::Array<type> Type; \
-    }; \
-   } \
-  }
-
-
 //
 // GC-Specializations for Array
 //
