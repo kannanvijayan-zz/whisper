@@ -29,6 +29,7 @@ class LocalBase
     LocalBase *next_;
     AllocHeader header_;
 
+    inline LocalBase(const LocalBase &other);
     inline LocalBase(ThreadContext *threadContext, AllocFormat format);
     inline LocalBase(RunContext *runContext, AllocFormat format);
     inline LocalBase(AllocationContext &acx, AllocFormat format);
@@ -87,22 +88,39 @@ class Local : public GC::LocalBase
     T val_;
 
   public:
-    template <typename... Args>
-    inline Local(ThreadContext *threadContext, Args... args)
+    inline Local(const Local<T> &other)
+      : GC::LocalBase(other),
+        val_(other.val_)
+    {}
+    inline Local(Local<T> &&other)
+      : GC::LocalBase(other),
+        val_(std::move(other.val_))
+    {}
+
+    inline Local(ThreadContext *threadContext)
       : GC::LocalBase(threadContext, GC::StackTraits<T>::Format),
-        val_(std::forward<Args>(args)...)
+        val_()
+    {}
+    inline Local(ThreadContext *threadContext, const T &val)
+      : GC::LocalBase(threadContext, GC::StackTraits<T>::Format),
+        val_(val)
+    {}
+    inline Local(ThreadContext *threadContext, T &&val)
+      : GC::LocalBase(threadContext, GC::StackTraits<T>::Format),
+        val_(std::move(val))
     {}
 
-    template <typename... Args>
-    inline Local(RunContext *runContext, Args... args)
+    inline Local(RunContext *runContext)
       : GC::LocalBase(runContext, GC::StackTraits<T>::Format),
-        val_(std::forward<Args>(args)...)
+        val_()
     {}
-
-    template <typename... Args>
-    inline Local(AllocationContext &acx, Args... args)
-      : GC::LocalBase(acx, GC::StackTraits<T>::Format),
-        val_(std::forward<Args>(args)...)
+    inline Local(RunContext *runContext, const T &val)
+      : GC::LocalBase(runContext, GC::StackTraits<T>::Format),
+        val_(val)
+    {}
+    inline Local(RunContext *runContext, T &&val)
+      : GC::LocalBase(runContext, GC::StackTraits<T>::Format),
+        val_(std::move(val))
     {}
 
     inline const T &get() const {

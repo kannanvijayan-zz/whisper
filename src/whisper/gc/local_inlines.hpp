@@ -13,6 +13,15 @@ namespace GC {
 
 
 inline
+LocalBase::LocalBase(const LocalBase &other)
+  : threadContext_(other.threadContext_),
+    next_(threadContext_->locals()),
+    header_(other.header_.format(), GC::Gen::OnStack, 0, 0)
+{
+    threadContext_->locals_ = this;
+}
+
+inline
 LocalBase::LocalBase(ThreadContext *threadContext, AllocFormat format)
   : threadContext_(threadContext),
     next_(threadContext_->locals()),

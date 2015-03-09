@@ -28,9 +28,14 @@ class BaseField
     T val_;
 
   public:
-    template <typename... Args>
-    inline BaseField(Args... args)
-      : val_(std::forward<Args>(args)...)
+    inline BaseField()
+      : val_()
+    {}
+    inline BaseField(const T &val)
+      : val_(val)
+    {}
+    inline BaseField(T &&val)
+      : val_(std::move(val))
     {}
 
     inline const T &get() const {
@@ -84,9 +89,14 @@ template <typename T>
 class HeapField : public GC::BaseField<T>
 {
   public:
-    template <typename... Args>
-    inline HeapField(Args... args)
-      : GC::BaseField<T>(std::forward<Args>(args)...)
+    inline HeapField()
+      : GC::BaseField<T>()
+    {}
+    inline HeapField(const T &val)
+      : GC::BaseField<T>(val)
+    {}
+    inline HeapField(T &&val)
+      : GC::BaseField<T>(std::move(val))
     {}
 
     inline void notifySetPre(GC::AllocThing *container) {
@@ -140,9 +150,14 @@ template <typename T>
 class StackField : public GC::BaseField<T>
 {
   public:
-    template <typename... Args>
-    inline StackField(Args... args)
-      : GC::BaseField<T>(std::forward<Args>(args)...)
+    inline StackField()
+      : GC::BaseField<T>()
+    {}
+    inline StackField(const T &val)
+      : GC::BaseField<T>(val)
+    {}
+    inline StackField(T &&val)
+      : GC::BaseField<T>(std::move(val))
     {}
 
     template <typename AllocThingT>
