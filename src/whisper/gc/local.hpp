@@ -144,13 +144,6 @@ class Local : public GC::LocalBase
         return &val_;
     }
 
-    inline operator const T &() const {
-        return get();
-    }
-    inline operator T &() {
-        return get();
-    }
-
     inline const T *operator &() const {
         return address();
     }
