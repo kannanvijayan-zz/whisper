@@ -4,6 +4,7 @@
 #include "vm/string.hpp"
 
 #include <algorithm>
+#include <cstring>
 
 namespace Whisper {
 namespace VM {

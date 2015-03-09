@@ -8,6 +8,37 @@
 
 namespace Whisper {
 namespace VM {
+    class String;
+} // namespace VM
+} // namespace Whisper
+
+
+namespace Whisper {
+namespace GC {
+
+    template <>
+    struct HeapTraits<VM::String>
+    {
+        HeapTraits() = delete;
+
+        static constexpr bool Specialized = true;
+        static constexpr AllocFormat Format = AllocFormat::String;
+        static constexpr bool VarSized = true;
+    };
+
+    template <>
+    struct AllocFormatTraits<AllocFormat::String>
+    {
+        AllocFormatTraits() = delete;
+        typedef UntracedType Type;
+    };
+
+} // namespace GC
+} // namespace Whisper
+
+
+namespace Whisper {
+namespace VM {
 
 //
 // A UTF-8 String.
@@ -72,7 +103,12 @@ class String
         return length_;
     }
 
-    inline uint32_t byteLength() const;
+    inline uint32_t byteLength() const
+    {
+        uint32_t size = GC::AllocThing::From(this)->size();
+        WH_ASSERT(size >= sizeof(VM::String));
+        return size - sizeof(VM::String);
+    }
 
     const uint8_t *bytes() const {
         return data_;
@@ -89,27 +125,6 @@ class String
     unic_t read(const Cursor &cursor) const;
     unic_t readAdvance(Cursor &cursor) const;
 };
-
-
-} // namespace VM
-} // namespace Whisper
-
-// Include array template specializations for describing strings to
-// the GC.
-#include "vm/string_specializations.hpp"
-
-
-namespace Whisper {
-namespace VM {
-
-
-inline uint32_t
-String::byteLength() const
-{
-    uint32_t size = GC::AllocThing::From(this)->size();
-    WH_ASSERT(size >= sizeof(VM::String));
-    return size - sizeof(VM::String);
-}
 
 
 } // namespace VM
