@@ -8,37 +8,6 @@
 
 namespace Whisper {
 namespace VM {
-    class String;
-} // namespace VM
-} // namespace Whisper
-
-
-namespace Whisper {
-namespace GC {
-
-    template <>
-    struct HeapTraits<VM::String>
-    {
-        HeapTraits() = delete;
-
-        static constexpr bool Specialized = true;
-        static constexpr AllocFormat Format = AllocFormat::String;
-        static constexpr bool VarSized = true;
-    };
-
-    template <>
-    struct AllocFormatTraits<AllocFormat::String>
-    {
-        AllocFormatTraits() = delete;
-        typedef UntracedType Type;
-    };
-
-} // namespace GC
-} // namespace Whisper
-
-
-namespace Whisper {
-namespace VM {
 
 //
 // A UTF-8 String.
@@ -128,6 +97,30 @@ class String
 
 
 } // namespace VM
+} // namespace Whisper
+
+
+namespace Whisper {
+namespace GC {
+
+    template <>
+    struct HeapTraits<VM::String>
+    {
+        HeapTraits() = delete;
+
+        static constexpr bool Specialized = true;
+        static constexpr AllocFormat Format = AllocFormat::String;
+        static constexpr bool VarSized = true;
+    };
+
+    template <>
+    struct AllocFormatTraits<AllocFormat::String>
+    {
+        AllocFormatTraits() = delete;
+        typedef UntracedType Type;
+    };
+
+} // namespace GC
 } // namespace Whisper
 
 
