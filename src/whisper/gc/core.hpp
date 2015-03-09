@@ -302,6 +302,8 @@ class AllocThing;
     _(UntracedThing)            \
     _(String)                   \
     _(Box)                      \
+    _(BoxArray)                 \
+    _(PackedSyntaxTree)         \
     _(AllocThingPointer)        \
     _(AllocThingPointerArray)   \
     _(Vector)                   \

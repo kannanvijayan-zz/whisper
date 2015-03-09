@@ -10,6 +10,7 @@
 #include "vm/vector.hpp"
 #include "vm/shype.hpp"
 #include "vm/box.hpp"
+#include "vm/packed_syntax_tree.hpp"
 
 namespace Whisper {
 namespace GC {

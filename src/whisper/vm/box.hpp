@@ -3,6 +3,7 @@
 
 
 #include "vm/core.hpp"
+#include "vm/array.hpp"
 
 #include <new>
 
@@ -58,6 +59,15 @@ class Box
     }
 };
 
+template <>
+struct ArrayTraits<Box>
+{
+    ArrayTraits() = delete;
+
+    static const bool Specialized = true;
+    static const GC::AllocFormat ArrayFormat = GC::AllocFormat::BoxArray;
+};
+
 
 } // namespace VM
 } // namespace Whisper
@@ -98,6 +108,13 @@ namespace GC {
     {
         AllocFormatTraits() = delete;
         typedef VM::Box Type;
+    };
+
+    template <>
+    struct AllocFormatTraits<AllocFormat::BoxArray>
+    {
+        AllocFormatTraits() = delete;
+        typedef VM::Array<VM::Box> Type;
     };
 
     template <>
