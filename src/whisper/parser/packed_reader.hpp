@@ -9,6 +9,7 @@
 #include "parser/code_source.hpp"
 #include "parser/packed_syntax.hpp"
 #include "vm/string.hpp"
+#include "vm/box.hpp"
 
 namespace Whisper {
 namespace AST {
@@ -42,13 +43,13 @@ class PackedReader
     uint32_t bufferSize_;
 
     // Constant pool.
-    GC::AllocThing *const *constPool_;
+    const VM::Box *constPool_;
     uint32_t constPoolSize_;
 
   public:
     PackedReader(const uint32_t *buffer,
                  uint32_t bufferSize,
-                 GC::AllocThing *const *constPool,
+                 const VM::Box *constPool,
                  uint32_t constPoolSize)
       : buffer_(buffer),
         bufferSize_(bufferSize),
@@ -66,7 +67,7 @@ class PackedReader
         return bufferSize_;
     }
 
-    GC::AllocThing *constant(uint32_t idx) const {
+    VM::Box constant(uint32_t idx) const {
         WH_ASSERT(idx < constPoolSize_);
         return constPool_[idx];
     }
@@ -346,9 +347,10 @@ class PrintingPackedVisitor : public PackedVisitor
     void visitIdentifier(const PackedReader &reader,
                          uint32_t idx)
     {
-        GC::AllocThing *thing = reader.constant(idx);
-        WH_ASSERT(thing->header().isFormat_String());
-        VM::String *string = reinterpret_cast<VM::String *>(thing);
+        VM::Box box = reader.constant(idx);
+        WH_ASSERT(box.isPointer());
+        WH_ASSERT(box.pointer<GC::AllocThing>()->isString());
+        VM::String *string = box.pointer<VM::String>();
         for (uint32_t i = 0; i < string->byteLength(); i++) {
             char cs[2];
             cs[0] = string->bytes()[i];

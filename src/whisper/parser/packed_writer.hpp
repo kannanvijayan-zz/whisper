@@ -8,6 +8,7 @@
 #include "parser/code_source.hpp"
 #include "parser/syntax_tree.hpp"
 #include "vm/string.hpp"
+#include "vm/box.hpp"
 #include "gc.hpp"
 
 namespace Whisper {
@@ -91,7 +92,7 @@ class PackedWriter
 
     // Output constPool array.
     static constexpr uint32_t InitialConstPoolSize = 16;
-    GC::AllocThing **constPool_;
+    VM::Box *constPool_;
     uint32_t constPoolCapacity_;
     uint32_t constPoolSize_;
 
@@ -137,7 +138,7 @@ class PackedWriter
     uint32_t constPoolSize() const {
         return constPoolSize_;
     }
-    GC::AllocThing **constPool() const {
+    VM::Box *constPool() const {
         return constPool_;
     }
   private:
@@ -200,7 +201,7 @@ class PackedWriter
 
     static constexpr uint32_t MaxConstants = 0xffffffu;
     uint32_t addIdentifier(const IdentifierToken &ident);
-    uint32_t addToConstPool(GC::AllocThing *ptr);
+    uint32_t addToConstPool(VM::Box thing);
     void expandConstPool();
 
     void parseInteger(const IntegerLiteralToken &token, int32_t *resultOut);
@@ -255,8 +256,10 @@ namespace GC {
         static void Scan(Scanner &scanner, const AST::PackedWriter &pw,
                          const void *start, const void *end)
         {
-            for (uint32_t i = 0; i < pw.constPoolSize_; i++)
-                scanner(&(pw.constPool_[i]), pw.constPool_[i]);
+            for (uint32_t i = 0; i < pw.constPoolSize_; i++) {
+                TraceTraits<VM::Box>::Scan(scanner, pw.constPool_[i],
+                                           start, end);
+            }
         }
 
         template <typename Updater>
@@ -264,10 +267,8 @@ namespace GC {
                            const void *start, const void *end)
         {
             for (uint32_t i = 0; i < pw.constPoolSize_; i++) {
-                GC::AllocThing *movedThing =
-                    updater(&(pw.constPool_[i]), pw.constPool_[i]);
-                if (movedThing != pw.constPool_[i])
-                    pw.constPool_[i] = movedThing;
+                TraceTraits<VM::Box>::Update(updater, pw.constPool_[i],
+                                             start, end);
             }
         }
     };

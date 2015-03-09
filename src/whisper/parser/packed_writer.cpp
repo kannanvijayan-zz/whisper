@@ -57,6 +57,10 @@ PackedWriter::expandBuffer()
 uint32_t
 PackedWriter::addIdentifier(const IdentifierToken &ident)
 {
+    // Ensure capacity in const pool.
+    if (constPoolSize_ == constPoolCapacity_)
+        expandConstPool();
+
     // Check identifier map.
     uint32_t bytes = ident.length();
     IdentifierKey key(ident.text(src_), bytes);
@@ -70,19 +74,18 @@ PackedWriter::addIdentifier(const IdentifierToken &ident)
     if (!str)
         emitError("Could not allocate identifier.");
 
-    uint32_t idx = addToConstPool(GC::AllocThing::From(str));
+    WH_ASSERT(constPoolSize_ < constPoolCapacity_);
+    uint32_t idx = addToConstPool(VM::Box(str));
     identifierMap_.insert(IdentifierMap::value_type(key, idx));
     return idx;
 }
 
 uint32_t
-PackedWriter::addToConstPool(GC::AllocThing *ptr)
+PackedWriter::addToConstPool(VM::Box thing)
 {
-    WH_ASSERT(constPoolSize_ <= constPoolCapacity_);
-    if (constPoolSize_ == constPoolCapacity_)
-        expandConstPool();
+    WH_ASSERT(constPoolSize_ < constPoolCapacity_);
     uint32_t idx = constPoolSize_;
-    constPool_[idx] = ptr;
+    constPool_[idx] = thing;
     constPoolSize_++;
     return idx;
 }
@@ -91,12 +94,12 @@ void
 PackedWriter::expandConstPool()
 {
     WH_ASSERT(!hasError());
-    STLBumpAllocator<GC::AllocThing *> alloc(allocator_);
+    STLBumpAllocator<VM::Box> alloc(allocator_);
     uint32_t newCapacity = constPoolCapacity_ * 2;
     if (newCapacity == 0)
         newCapacity = InitialConstPoolSize;
 
-    GC::AllocThing **newConstPool = alloc.allocate(newCapacity);
+    VM::Box *newConstPool = alloc.allocate(newCapacity);
     std::copy(constPool_, constPool_ + constPoolSize_, newConstPool);
     if (constPool_)
         alloc.deallocate(constPool_, constPoolCapacity_);

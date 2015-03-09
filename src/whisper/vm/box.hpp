@@ -2,10 +2,10 @@
 #define WHISPER__VM__BOX_HPP
 
 
+#include <cstdio>
+
 #include "vm/core.hpp"
 #include "vm/array.hpp"
-
-#include <new>
 
 namespace Whisper {
 namespace VM {
@@ -45,6 +45,14 @@ class Box
                       "Retreiving non-AllocThing pointer from box.");
         WH_ASSERT(isPointer());
         return reinterpret_cast<T *>(value_);
+    }
+
+    void snprint(char *buf, size_t n) const {
+        if (isPointer()) {
+            snprintf(buf, n, "ptr(%p)", pointer<GC::AllocThing>());
+            return;
+        }
+        WH_UNREACHABLE("Unknown box kind.");
     }
 
   private:

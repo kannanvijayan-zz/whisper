@@ -157,14 +157,20 @@ int main(int argc, char **argv) {
         }
     }
 
-    GC::AllocThing **constPool = packedWriter->constPool();
+    VM::Box *constPool = packedWriter->constPool();
     uint32_t constPoolSize = packedWriter->constPoolSize();
     fprintf(stderr, "Constant Pool:\n");
     for (uint32_t i = 0; i < constPoolSize; i++) {
-        fprintf(stderr, "[%04d]  %p\n", i, constPool[i]);
-        fprintf(stderr, "    %s (size=%d)\n",
-                constPool[i]->header().formatString(),
-                constPool[i]->header().size());
+        VM::Box &box = constPool[i];
+        char buf[50];
+        box.snprint(buf, 50);
+        fprintf(stderr, "[%04d]  %p\n", i, buf);
+        if (box.isPointer()) {
+            GC::AllocThing *thing = box.pointer<GC::AllocThing>();
+            fprintf(stderr, "    Ptr to %s (size=%d)\n",
+                    thing->header().formatString(),
+                    thing->header().size());
+        }
     }
 
     Printer pr2;
