@@ -296,10 +296,12 @@
 namespace Whisper {
 namespace GC {
 
+class AllocThing;
 
 #define WHISPER_DEFN_GC_ALLOC_FORMATS(_) \
     _(UntracedThing)            \
     _(String)                   \
+    _(Box)                      \
     _(AllocThingPointer)        \
     _(AllocThingPointerArray)   \
     _(Vector)                   \
@@ -601,7 +603,7 @@ struct AllocFormatTraits
 //
 //      Assume |scanner| is a callable with the following signature:
 //
-//          void scanner(void *addr, AllocThing *ptr);
+//          void scanner(const void *addr, AllocThing *ptr);
 //
 //      The |scanner| should be called for every reference to an AllocThing
 //      contained within T.  For each call, |addr| should be the address
@@ -713,6 +715,15 @@ struct AllocThingTraits
     static constexpr bool Specialized = false;
 };
 
+// AllocThing automatically gets a specialization for
+// AllocThingTraits.
+template <>
+struct AllocThingTraits<AllocThing>
+{
+    AllocThingTraits() = delete;
+    static constexpr bool Specialized = true;
+};
+
 //
 // UntracedType
 //
@@ -749,8 +760,7 @@ class AllocThing
     static inline AllocThing *From(T *ptr) {
         static_assert(StackTraits<T>::Specialized ||
                       HeapTraits<T>::Specialized ||
-                      AllocThingTraits<T>::Specialized ||
-                      std::is_same<T, AllocThing>::value,
+                      AllocThingTraits<T>::Specialized,
                       "Neither StackTraits<T> nor HeapTraits<T> specialized.");
         return reinterpret_cast<AllocThing *>(ptr);
     }
@@ -758,8 +768,7 @@ class AllocThing
     static inline const AllocThing *From(const T *ptr) {
         static_assert(StackTraits<T>::Specialized ||
                       HeapTraits<T>::Specialized ||
-                      AllocThingTraits<T>::Specialized ||
-                      std::is_same<T, AllocThing>::value,
+                      AllocThingTraits<T>::Specialized,
                       "Neither StackTraits<T> nor HeapTraits<T> specialized.");
         return reinterpret_cast<const AllocThing *>(ptr);
     }

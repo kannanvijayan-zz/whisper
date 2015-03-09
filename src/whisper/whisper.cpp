@@ -17,6 +17,7 @@
 #include "vm/array.hpp"
 #include "vm/vector.hpp"
 #include "vm/string.hpp"
+#include "vm/box.hpp"
 #include "vm/source_file.hpp"
 #include "vm/shype.hpp"
 
