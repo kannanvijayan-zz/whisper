@@ -173,8 +173,15 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Visited syntax tree:\n");
     AST::PackedReader packedReader(buffer, bufferSize,
                                    constPool, constPoolSize);
-
     packedReader.visit(&packedVisitor);
+
+    // Create a PackedSyntaxTree object for the new syntax tree.
+    uint32_t arraySize =
+        VM::Array<uint32_t>::CalculateSize(packedWriter->bufferSize());
+    Local<VM::Array<uint32_t> *> packedStData(cx,
+        acx.createSized<VM::Array<uint32_t>>(arraySize,
+                                             packedWriter->bufferSize(),
+                                             packedWriter->buffer()));
 
     return 0;
 }

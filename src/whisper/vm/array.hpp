@@ -49,6 +49,10 @@ class Array
     HeapField<T> vals_[0];
 
   public:
+    static uint32_t CalculateSize(uint32_t len) {
+        return sizeof(Array<T>) + (sizeof(HeapField<T>) * len);
+    }
+
     Array(uint32_t len, const T *vals) {
         for (uint32_t i = 0; i < len; i++)
             vals_[i].init(this, vals[i]);
