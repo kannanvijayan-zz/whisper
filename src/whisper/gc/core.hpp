@@ -309,8 +309,6 @@ class AllocThing;
     _(AllocThingPointerArray)   \
     _(Vector)                   \
     _(AllocThingPointerVectorContents) \
-    _(RootShype)                \
-    _(AddSlotShype)             \
     _(SourceFile)
 
 enum class AllocFormat : uint16_t

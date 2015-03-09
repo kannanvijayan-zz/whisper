@@ -20,7 +20,6 @@
 #include "vm/box.hpp"
 #include "vm/source_file.hpp"
 #include "vm/packed_syntax_tree.hpp"
-#include "vm/shype.hpp"
 
 using namespace Whisper;
 

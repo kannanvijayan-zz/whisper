@@ -8,7 +8,6 @@
 #include "vm/array.hpp"
 #include "vm/source_file.hpp"
 #include "vm/vector.hpp"
-#include "vm/shype.hpp"
 #include "vm/box.hpp"
 #include "vm/packed_syntax_tree.hpp"
 #include "parser/packed_writer.hpp"
