@@ -92,10 +92,10 @@ class HeapField : public GC::BaseField<T>
     inline HeapField()
       : GC::BaseField<T>()
     {}
-    inline HeapField(const T &val)
+    explicit inline HeapField(const T &val)
       : GC::BaseField<T>(val)
     {}
-    inline HeapField(T &&val)
+    explicit inline HeapField(T &&val)
       : GC::BaseField<T>(std::move(val))
     {}
 
@@ -153,10 +153,10 @@ class StackField : public GC::BaseField<T>
     inline StackField()
       : GC::BaseField<T>()
     {}
-    inline StackField(const T &val)
+    explicit inline StackField(const T &val)
       : GC::BaseField<T>(val)
     {}
-    inline StackField(T &&val)
+    explicit inline StackField(T &&val)
       : GC::BaseField<T>(std::move(val))
     {}
 
