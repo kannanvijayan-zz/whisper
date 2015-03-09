@@ -130,13 +130,15 @@ int main(int argc, char **argv) {
     AllocationContext acx(cx->inTenured());
 
     // Write out the syntax tree in packed format.
-    AST::PackedWriter packedWriter(wrappedAllocator,
-                                   tokenizer.sourceReader(),
-                                   acx);
-    packedWriter.writeNode(fileNode);
+    Local<AST::PackedWriter> packedWriter(cx,
+        PackedWriter(
+            STLBumpAllocator<uint32_t>(wrappedAllocator),
+            tokenizer.sourceReader(),
+            acx));
+    packedWriter->writeNode(fileNode);
 
-    const uint32_t *buffer = packedWriter.buffer();
-    uint32_t bufferSize = packedWriter.bufferSize();
+    const uint32_t *buffer = packedWriter->buffer();
+    uint32_t bufferSize = packedWriter->bufferSize();
     fprintf(stderr, "Packed Syntax Tree:\n");
     for (uint32_t bufi = 0; bufi < bufferSize; bufi += 4) {
         if (bufferSize - bufi >= 4) {
@@ -155,8 +157,8 @@ int main(int argc, char **argv) {
         }
     }
 
-    GC::AllocThing **constPool = packedWriter.constPool();
-    uint32_t constPoolSize = packedWriter.constPoolSize();
+    GC::AllocThing **constPool = packedWriter->constPool();
+    uint32_t constPoolSize = packedWriter->constPoolSize();
     fprintf(stderr, "Constant Pool:\n");
     for (uint32_t i = 0; i < constPoolSize; i++) {
         fprintf(stderr, "[%04d]  %p\n", i, constPool[i]);

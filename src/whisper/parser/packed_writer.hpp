@@ -8,6 +8,7 @@
 #include "parser/code_source.hpp"
 #include "parser/syntax_tree.hpp"
 #include "vm/string.hpp"
+#include "gc.hpp"
 
 namespace Whisper {
 namespace AST {
@@ -73,6 +74,7 @@ class IdentifierKey
 
 class PackedWriter
 {
+    friend class GC::TraceTraits<PackedWriter>;
   public:
     typedef uint32_t *Position;
 
@@ -218,6 +220,59 @@ class PackedWriter
 
 
 } // namespace AST
+} // namespace Whisper
+
+
+namespace Whisper {
+namespace GC {
+
+
+    template <>
+    struct StackTraits<AST::PackedWriter>
+    {
+        StackTraits() = delete;
+
+        static constexpr bool Specialized = true;
+        static constexpr AllocFormat Format = AllocFormat::PackedWriter;
+    };
+
+    template <>
+    struct AllocFormatTraits<AllocFormat::PackedWriter>
+    {
+        AllocFormatTraits() = delete;
+        typedef AST::PackedWriter Type;
+    };
+
+    template <>
+    struct TraceTraits<AST::PackedWriter>
+    {
+        TraceTraits() = delete;
+
+        static constexpr bool Specialized = true;
+        static constexpr bool IsLeaf = false;
+
+        template <typename Scanner>
+        static void Scan(Scanner &scanner, const AST::PackedWriter &pw,
+                         const void *start, const void *end)
+        {
+            for (uint32_t i = 0; i < pw.constPoolSize_; i++)
+                scanner(&(pw.constPool_[i]), pw.constPool_[i]);
+        }
+
+        template <typename Updater>
+        static void Update(Updater &updater, AST::PackedWriter &pw,
+                           const void *start, const void *end)
+        {
+            for (uint32_t i = 0; i < pw.constPoolSize_; i++) {
+                GC::AllocThing *movedThing =
+                    updater(&(pw.constPool_[i]), pw.constPool_[i]);
+                if (movedThing != pw.constPool_[i])
+                    pw.constPool_[i] = movedThing;
+            }
+        }
+    };
+
+} // namespace GC
 } // namespace Whisper
 
 #endif // WHISPER__PARSER__PACKED_WRITER_HPP

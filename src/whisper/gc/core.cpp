@@ -11,6 +11,7 @@
 #include "vm/shype.hpp"
 #include "vm/box.hpp"
 #include "vm/packed_syntax_tree.hpp"
+#include "parser/packed_writer.hpp"
 
 namespace Whisper {
 namespace GC {

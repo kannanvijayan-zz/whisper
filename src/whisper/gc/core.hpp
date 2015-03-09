@@ -304,6 +304,7 @@ class AllocThing;
     _(Box)                      \
     _(BoxArray)                 \
     _(PackedSyntaxTree)         \
+    _(PackedWriter)             \
     _(AllocThingPointer)        \
     _(AllocThingPointerArray)   \
     _(Vector)                   \
