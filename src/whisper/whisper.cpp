@@ -19,6 +19,7 @@
 #include "vm/string.hpp"
 #include "vm/box.hpp"
 #include "vm/source_file.hpp"
+#include "vm/packed_syntax_tree.hpp"
 #include "vm/shype.hpp"
 
 using namespace Whisper;
@@ -137,6 +138,8 @@ int main(int argc, char **argv) {
             acx));
     packedWriter->writeNode(fileNode);
 
+    fprintf(stderr, "PackedWriter local @%p\n", &packedWriter);
+
     const uint32_t *buffer = packedWriter->buffer();
     uint32_t bufferSize = packedWriter->bufferSize();
     fprintf(stderr, "Packed Syntax Tree:\n");
@@ -182,12 +185,26 @@ int main(int argc, char **argv) {
     packedReader.visit(&packedVisitor);
 
     // Create a PackedSyntaxTree object for the new syntax tree.
-    uint32_t arraySize =
-        VM::Array<uint32_t>::CalculateSize(packedWriter->bufferSize());
+    uint32_t packedDataArraySize =
+        VM::Array<uint32_t>::CalculateSize(bufferSize);
     Local<VM::Array<uint32_t> *> packedStData(cx,
-        acx.createSized<VM::Array<uint32_t>>(arraySize,
-                                             packedWriter->bufferSize(),
-                                             packedWriter->buffer()));
+        acx.createSized<VM::Array<uint32_t>>(packedDataArraySize,
+                                             bufferSize,
+                                             buffer));
+    fprintf(stderr, "packedStData local @%p\n", &packedStData);
+
+    uint32_t packedConstPoolArraySize =
+        VM::Array<VM::Box>::CalculateSize(constPoolSize);
+    Local<VM::Array<VM::Box> *> packedStConstPool(cx,
+        acx.createSized<VM::Array<VM::Box>>(packedConstPoolArraySize,
+                                            constPoolSize,
+                                            constPool));
+    fprintf(stderr, "packedStConstPool local @%p\n", &packedStConstPool);
+
+    Local<VM::PackedSyntaxTree *> packedSt(cx,
+        acx.create<VM::PackedSyntaxTree>(packedStData.get(),
+                                         packedStConstPool.get()));
+    fprintf(stderr, "packedSt local @%p\n", &packedSt);
 
     return 0;
 }
