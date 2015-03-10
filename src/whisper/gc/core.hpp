@@ -321,6 +321,7 @@ class AllocThing;
     _(FloatArray)               \
     _(DoubleArray)              \
     _(String)                   \
+    _(PropertyName)             \
     _(Box)                      \
     _(BoxArray)                 \
     _(PackedSyntaxTree)         \
