@@ -6,39 +6,54 @@
 
 #include <new>
 
-namespace Whisper {
-namespace VM {
-
 
 // Specialize arrays for primitive types.
-#define DEF_ARRAY_TRAITS_(type, fmtName) \
+#define DEF_PRIM_ARRAY_TRAITS_(type, fmtName) \
+  namespace Whisper { \
+  namespace VM { \
     template <> \
     struct ArrayTraits<type> { \
         ArrayTraits() = delete; \
         static const bool Specialized = true; \
         static const GC::AllocFormat ArrayFormat = GC::AllocFormat::fmtName; \
-    };
+    }; \
+  } \
+  namespace GC { \
+    template <> \
+    struct AllocFormatTraits<AllocFormat::fmtName> { \
+        AllocFormatTraits() = delete; \
+        static const bool Specialized = true; \
+        typedef VM::Array<type> Type; \
+    }; \
+  } \
+  } \
 
-DEF_ARRAY_TRAITS_(uint8_t, UntracedThing);
-DEF_ARRAY_TRAITS_(uint16_t, UntracedThing);
-DEF_ARRAY_TRAITS_(uint32_t, UntracedThing);
-DEF_ARRAY_TRAITS_(uint64_t, UntracedThing);
-DEF_ARRAY_TRAITS_(int8_t, UntracedThing);
-DEF_ARRAY_TRAITS_(int16_t, UntracedThing);
-DEF_ARRAY_TRAITS_(int32_t, UntracedThing);
-DEF_ARRAY_TRAITS_(int64_t, UntracedThing);
-DEF_ARRAY_TRAITS_(float, UntracedThing);
-DEF_ARRAY_TRAITS_(double, UntracedThing);
-DEF_ARRAY_TRAITS_(GC::AllocThing *, AllocThingPointerArray);
+DEF_PRIM_ARRAY_TRAITS_(uint8_t, UInt8Array);
+DEF_PRIM_ARRAY_TRAITS_(uint16_t, UInt16Array);
+DEF_PRIM_ARRAY_TRAITS_(uint32_t, UInt32Array);
+DEF_PRIM_ARRAY_TRAITS_(uint64_t, UInt64Array);
+DEF_PRIM_ARRAY_TRAITS_(int8_t, Int8Array);
+DEF_PRIM_ARRAY_TRAITS_(int16_t, Int16Array);
+DEF_PRIM_ARRAY_TRAITS_(int32_t, Int32Array);
+DEF_PRIM_ARRAY_TRAITS_(int64_t, Int64Array);
+DEF_PRIM_ARRAY_TRAITS_(float, FloatArray);
+DEF_PRIM_ARRAY_TRAITS_(double, DoubleArray);
 
-#undef DEF_ARRAY_TRAITS_
+#undef DEF_PRIM_ARRAY_TRAITS_
+
+
+namespace Whisper {
+namespace VM {
+
 
 // Specialize arrays for general pointer types.
 // Treat them by default as arrays of pointers-to-alloc-things.
 template <typename P>
 struct ArrayTraits<P *> {
-    static_assert(GC::HeapTraits<P>::Specialized,
-                  "Underlying type of pointer is not a heap thing.");
+    static_assert(GC::HeapTraits<P>::Specialized ||
+                  GC::AllocThingTraits<P>::Specialized,
+                  "Underlying type of pointer is not a heap thing or "
+                  "alloc thing.");
     ArrayTraits() = delete;
     static constexpr bool Specialized = true;
     static const GC::AllocFormat ArrayFormat =

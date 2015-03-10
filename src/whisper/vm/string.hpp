@@ -117,8 +117,12 @@ namespace GC {
     struct AllocFormatTraits<AllocFormat::String>
     {
         AllocFormatTraits() = delete;
-        typedef UntracedType Type;
+        typedef VM::String Type;
     };
+
+    template <>
+    struct TraceTraits<VM::String> : public UntracedTraceTraits<VM::String>
+    {};
 
 } // namespace GC
 } // namespace Whisper

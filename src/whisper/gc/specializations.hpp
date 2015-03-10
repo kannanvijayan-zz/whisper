@@ -10,22 +10,6 @@
 namespace Whisper {
 namespace GC {
 
-///////////////////////////////////////////////////////////////////////////////
-////
-//// Specialization of UntracedThing format.
-////
-//// AllocFormat::UntracedThing is handy for use by structures that want
-//// to be allocated on heap and managed by the gc, but not be traced at all.
-////
-///////////////////////////////////////////////////////////////////////////////
-
-template <>
-struct AllocFormatTraits<AllocFormat::UntracedThing>
-{
-    AllocFormatTraits() = delete;
-
-    typedef uint32_t Type;
-};
 
 ///////////////////////////////////////////////////////////////////////////////
 ////
@@ -35,20 +19,20 @@ struct AllocFormatTraits<AllocFormat::UntracedThing>
 ///////////////////////////////////////////////////////////////////////////////
 
 // Primitive-type specializations for trace traits.
-#define PRIM_TRACE_TRAITS_DEF_(type) \
+#define PRIM_TRACE_TRAITS_DEF_(type, fmtName) \
     template <> \
     struct StackTraits<type> \
     { \
         StackTraits() = delete; \
         static constexpr bool Specialized = true; \
-        static constexpr AllocFormat Format = AllocFormat::UntracedThing; \
+        static constexpr AllocFormat Format = AllocFormat::fmtName; \
     }; \
     template <> \
     struct HeapTraits<type> \
     { \
         HeapTraits() = delete; \
         static constexpr bool Specialized = true; \
-        static constexpr AllocFormat Format = AllocFormat::UntracedThing; \
+        static constexpr AllocFormat Format = AllocFormat::fmtName; \
         static constexpr bool VarSized  = false; \
     }; \
     template <> \
@@ -58,36 +42,29 @@ struct AllocFormatTraits<AllocFormat::UntracedThing>
         static constexpr bool Specialized = true; \
     }; \
     template <> \
-    struct TraceTraits<type> \
+    struct AllocFormatTraits<AllocFormat::fmtName> \
     { \
-        typedef type T_; \
-        \
-        TraceTraits() = delete; \
+        AllocFormatTraits() = delete; \
         static constexpr bool Specialized = true; \
-        static constexpr bool IsLeaf = true; \
-        \
-        template <typename Scanner> \
-        static void Scan(Scanner &, const T_ &, const void *, const void *) {} \
-        \
-        template <typename Updater> \
-        static void Update(Updater &, T_ &, const void *, const void *) {} \
-    }
+        typedef type Type; \
+    }; \
+    template <> \
+    struct TraceTraits<type> : public UntracedTraceTraits<type> {};
 
-    PRIM_TRACE_TRAITS_DEF_(UntracedType);
-    PRIM_TRACE_TRAITS_DEF_(bool);
+    PRIM_TRACE_TRAITS_DEF_(bool, Bool);
 
-    PRIM_TRACE_TRAITS_DEF_(uint8_t);
-    PRIM_TRACE_TRAITS_DEF_(uint16_t);
-    PRIM_TRACE_TRAITS_DEF_(uint32_t);
-    PRIM_TRACE_TRAITS_DEF_(uint64_t);
+    PRIM_TRACE_TRAITS_DEF_(uint8_t, UInt8);
+    PRIM_TRACE_TRAITS_DEF_(uint16_t, UInt16);
+    PRIM_TRACE_TRAITS_DEF_(uint32_t, UInt32);
+    PRIM_TRACE_TRAITS_DEF_(uint64_t, UInt64);
 
-    PRIM_TRACE_TRAITS_DEF_(int8_t);
-    PRIM_TRACE_TRAITS_DEF_(int16_t);
-    PRIM_TRACE_TRAITS_DEF_(int32_t);
-    PRIM_TRACE_TRAITS_DEF_(int64_t);
+    PRIM_TRACE_TRAITS_DEF_(int8_t, Int8);
+    PRIM_TRACE_TRAITS_DEF_(int16_t, Int16);
+    PRIM_TRACE_TRAITS_DEF_(int32_t, Int32);
+    PRIM_TRACE_TRAITS_DEF_(int64_t, Int64);
 
-    PRIM_TRACE_TRAITS_DEF_(float);
-    PRIM_TRACE_TRAITS_DEF_(double);
+    PRIM_TRACE_TRAITS_DEF_(float, Float);
+    PRIM_TRACE_TRAITS_DEF_(double, Double);
 
 #undef PRIM_TRACE_TRAITS_DEF_
 

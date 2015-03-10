@@ -299,7 +299,27 @@ namespace GC {
 class AllocThing;
 
 #define WHISPER_DEFN_GC_ALLOC_FORMATS(_) \
-    _(UntracedThing)            \
+    _(Bool)                     \
+    _(UInt8)                    \
+    _(UInt16)                   \
+    _(UInt32)                   \
+    _(UInt64)                   \
+    _(Int8)                     \
+    _(Int16)                    \
+    _(Int32)                    \
+    _(Int64)                    \
+    _(Float)                    \
+    _(Double)                   \
+    _(UInt8Array)               \
+    _(UInt16Array)              \
+    _(UInt32Array)              \
+    _(UInt64Array)              \
+    _(Int8Array)                \
+    _(Int16Array)               \
+    _(Int32Array)               \
+    _(Int64Array)               \
+    _(FloatArray)               \
+    _(DoubleArray)              \
     _(String)                   \
     _(Box)                      \
     _(BoxArray)                 \
@@ -307,8 +327,6 @@ class AllocThing;
     _(PackedWriter)             \
     _(AllocThingPointer)        \
     _(AllocThingPointerArray)   \
-    _(Vector)                   \
-    _(AllocThingPointerVectorContents) \
     _(SourceFile)
 
 enum class AllocFormat : uint16_t
@@ -669,6 +687,25 @@ struct TraceTraits
     // template <typename Updater>
     // static void Update(Updater &updater, T &t,
     //                    const void *start, const void *end);
+};
+
+template <typename T>
+struct UntracedTraceTraits
+{
+    UntracedTraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = true;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const T &t,
+                     const void *start, const void *end)
+    {}
+
+    template <typename Updater>
+    static void Update(Updater &updater, T &t,
+                       const void *start, const void *end)
+    {}
 };
 
 // DerefTraits<T>
