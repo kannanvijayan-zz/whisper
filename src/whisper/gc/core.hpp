@@ -347,10 +347,11 @@ enum class Gen : uint8_t {
     LIMIT
 };
 
+const char *GenString(Gen gen);
+
 class alignas(8) AllocHeader
 {
   private:
-    //
     //
     //  The High 32-bit word of the AllocHeader is simply the size of the
     //  allocation in bytes.
@@ -382,6 +383,7 @@ class alignas(8) AllocHeader
     //      which indicates its allocation site.
     //
     //      The high 10 bits specify the AllocFormat for the structure.
+    //
     uint32_t header_;
     uint32_t size_;
 
@@ -447,6 +449,9 @@ class alignas(8) AllocHeader
 
     inline Gen gen() const {
         return static_cast<Gen>(gcBitfield().value());
+    }
+    inline const char *genString() const {
+        return GenString(gen());
     }
     inline bool isOnStack() const {
         return gen() == Gen::OnStack;

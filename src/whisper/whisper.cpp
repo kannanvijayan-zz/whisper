@@ -1,5 +1,9 @@
 
 #include <iostream>
+#include <vector>
+#include <map>
+#include <set>
+
 #include "common.hpp"
 #include "allocators.hpp"
 #include "fnv_hash.hpp"
@@ -64,6 +68,77 @@ struct Printer {
     }
 };
 
+
+struct TracedThing {
+    GC::AllocThing *ptr;
+    typedef std::vector<TracedThing *> ChildList;
+    ChildList children;
+
+    TracedThing(GC::AllocThing *ptr) : ptr(ptr), children() {}
+
+    void addChild(TracedThing *child) {
+        children.push_back(child);
+    }
+};
+
+// HeapTracer calculates the rooted object graph.
+struct HeapGraph {
+    // Mapping from heap to thing.
+    typedef std::map<GC::AllocThing *, TracedThing *> HeapToThingMap;
+    HeapToThingMap heapToThing;
+
+    // Set of things remaining to be scanned.
+    typedef std::set<TracedThing *> RemainingSet;
+    RemainingSet remaining;
+
+    // List of root things.
+    typedef std::vector<TracedThing *> ThingList;
+    ThingList rootThings;
+
+    HeapGraph() : heapToThing(), remaining(), rootThings() {}
+
+    TracedThing *addRoot(GC::AllocThing *rootPtr) {
+        WH_ASSERT(heapToThing.find(rootPtr) == heapToThing.end());
+
+        TracedThing *traced = new TracedThing(rootPtr);
+        heapToThing.insert(HeapToThingMap::value_type(rootPtr, traced));
+        rootThings.push_back(traced);
+        remaining.insert(traced);
+        return traced;
+    }
+
+    void addChild(TracedThing *thing, GC::AllocThing *child) {
+        HeapToThingMap::const_iterator childIter = heapToThing.find(child);
+        TracedThing *tracedChild = nullptr;
+        if (childIter == heapToThing.end()) {
+            tracedChild = new TracedThing(child);
+            heapToThing.insert(HeapToThingMap::value_type(child, tracedChild));
+            remaining.insert(tracedChild);
+        } else {
+            tracedChild = childIter->second;
+        }
+        thing->addChild(tracedChild);
+    }
+};
+
+struct HeapTracer
+{
+    TracedThing *thing;
+    HeapGraph *graph;
+
+    HeapTracer(TracedThing *thing, HeapGraph *graph)
+      : thing(thing), graph(graph)
+    {}
+
+    inline void operator () (const void *addr, GC::AllocThing *ptr) {
+        fprintf(stderr, "    HeapTracer found %p(%s gen %s) child %p(%s gen %s)\n",
+                thing->ptr, thing->ptr->header().formatString(),
+                thing->ptr->header().genString(),
+                ptr, ptr->header().formatString(),
+                ptr->header().genString());
+        graph->addChild(thing, ptr);
+    }
+};
 
 int main(int argc, char **argv) {
     std::cout << "Whisper says hello." << std::endl;
@@ -137,7 +212,7 @@ int main(int argc, char **argv) {
             acx));
     packedWriter->writeNode(fileNode);
 
-    fprintf(stderr, "PackedWriter local @%p\n", &packedWriter);
+    fprintf(stderr, "PackedWriter local @%p\n", packedWriter.allocThing());
 
     const uint32_t *buffer = packedWriter->buffer();
     uint32_t bufferSize = packedWriter->bufferSize();
@@ -190,7 +265,7 @@ int main(int argc, char **argv) {
         acx.createSized<VM::Array<uint32_t>>(packedDataArraySize,
                                              bufferSize,
                                              buffer));
-    fprintf(stderr, "packedStData local @%p\n", &packedStData);
+    fprintf(stderr, "packedStData local @%p\n", packedStData.allocThing());
 
     uint32_t packedConstPoolArraySize =
         VM::Array<VM::Box>::CalculateSize(constPoolSize);
@@ -198,12 +273,33 @@ int main(int argc, char **argv) {
         acx.createSized<VM::Array<VM::Box>>(packedConstPoolArraySize,
                                             constPoolSize,
                                             constPool));
-    fprintf(stderr, "packedStConstPool local @%p\n", &packedStConstPool);
+    fprintf(stderr, "packedStConstPool local @%p\n", packedStConstPool.allocThing());
 
     Local<VM::PackedSyntaxTree *> packedSt(cx,
         acx.create<VM::PackedSyntaxTree>(packedStData.get(),
                                          packedStConstPool.get()));
-    fprintf(stderr, "packedSt local @%p\n", &packedSt);
+    fprintf(stderr, "packedSt local @%p\n", packedSt.allocThing());
+
+    // Scan the root set.
+    HeapGraph heapGraph;
+    for (GC::LocalBase *base = thrcx->locals();
+         base != nullptr;
+         base = base->next())
+    {
+        TracedThing *traced = heapGraph.addRoot(base->allocThing());
+        fprintf(stderr, "Added traced %p (allocthing %p - %s gen=%s)\n",
+                traced, traced->ptr, traced->ptr->header().formatString(), traced->ptr->header().genString());
+    }
+
+    // Process remainings.
+    while (!heapGraph.remaining.empty()) {
+        TracedThing *traced = *heapGraph.remaining.begin();
+        fprintf(stderr, "Processing traced %p (allocthing %p - %s gen=%s)\n",
+                traced, traced->ptr, traced->ptr->header().formatString(), traced->ptr->header().genString());
+        HeapTracer tracer(traced, &heapGraph);
+        GC::ScanAllocThing<HeapTracer>(tracer, traced->ptr, nullptr, nullptr);
+        heapGraph.remaining.erase(traced);
+    }
 
     return 0;
 }

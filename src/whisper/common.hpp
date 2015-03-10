@@ -6,6 +6,7 @@
 #include <limits.h>
 #include "config.h"
 #include <limits>
+#include <utility>
 
 // Exactly one of ARCH_BITS_32 or ARCH_BITS_64 should be defined.
 #if defined(ARCH_BITS_32) && defined(ARCH_BITS_64)

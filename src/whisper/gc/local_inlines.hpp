@@ -45,14 +45,14 @@ LocalBase::~LocalBase()
 
 template <typename Scanner>
 void
-LocalBase::Scan(Scanner &scanner, void *start, void *end) const
+LocalBase::scan(Scanner &scanner, void *start, void *end) const
 {
     GcScanAllocFormat(format(), dataAfter(), scanner, start, end);
 }
 
 template <typename Updater>
 void
-LocalBase::Update(Updater &updater, void *start, void *end)
+LocalBase::update(Updater &updater, void *start, void *end)
 {
     GcUpdateAllocFormat(format(), dataAfter(), updater, start, end);
 }

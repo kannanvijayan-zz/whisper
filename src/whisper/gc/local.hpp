@@ -48,18 +48,26 @@ class LocalBase
         return header_.format();
     }
 
+    const AllocThing *allocThing() const {
+        return reinterpret_cast<const AllocThing *>(dataAfter());
+    }
+    AllocThing *allocThing() {
+        return reinterpret_cast<AllocThing *>(dataAfter());
+    }
+
     template <typename Scanner>
-    void Scan(Scanner &scanner, void *start, void *end) const;
+    void scan(Scanner &scanner, void *start, void *end) const;
 
     template <typename Updater>
-    void Update(Updater &updater, void *start, void *end);
+    void update(Updater &updater, void *start, void *end);
 
   private:
     void *dataAfter() {
-        return reinterpret_cast<uint8_t *>(this) + sizeof(this);
+        return reinterpret_cast<uint8_t *>(&header_) + sizeof(AllocHeader);
     }
     const void *dataAfter() const {
-        return reinterpret_cast<const uint8_t *>(this) + sizeof(this);
+        return reinterpret_cast<const uint8_t *>(&header_)
+                + sizeof(AllocHeader);
     }
 };
 

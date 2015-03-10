@@ -28,6 +28,22 @@ AllocFormatString(AllocFormat fmt)
     }
 }
 
+const char *
+GenString(Gen gen)
+{
+    switch (gen) {
+      case Gen::None:        return "None";
+      case Gen::OnStack:     return "OnStack";
+      case Gen::LocalHeap:   return "LocalHeap";
+      case Gen::Hatchery:    return "Hatchery";
+      case Gen::Nursery:     return "Nursery";
+      case Gen::Mature:      return "Mature";
+      case Gen::Tenured:     return "Tenured";
+      case Gen::LIMIT:       return "LIMIT";
+      default:               return "UNKNOWN";
+    }
+}
+
 template <AllocFormat Format>
 void
 ScanAllocThingImpl_(ScannerBox &scanner, const AllocThing *thing,
