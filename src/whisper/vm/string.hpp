@@ -87,7 +87,7 @@ class String
         return Cursor(0);
     }
     Cursor end() const {
-        return Cursor(length());
+        return Cursor(byteLength());
     }
 
     void advance(Cursor &cursor) const;
