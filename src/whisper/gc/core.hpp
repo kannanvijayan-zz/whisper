@@ -329,7 +329,10 @@ class AllocThing;
     _(PackedWriter)             \
     _(AllocThingPointer)        \
     _(AllocThingPointerArray)   \
-    _(SourceFile)
+    _(SourceFile)               \
+    _(DictShype)                \
+    _(PropertyDict)             \
+    _(Wobject)
 
 enum class AllocFormat : uint16_t
 {

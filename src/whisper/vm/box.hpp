@@ -91,7 +91,7 @@ namespace GC {
 
         static constexpr bool Specialized = true;
         static constexpr AllocFormat Format = AllocFormat::Box;
-        static constexpr bool VarSized = true;
+        static constexpr bool VarSized = false;
     };
 
     template <>
