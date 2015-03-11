@@ -2,7 +2,7 @@
 #define WHISPER__VM__SHYPE__SHYPE_HPP
 
 #include "vm/core.hpp"
-#include "vm/property_name.hpp"
+#include "vm/properties.hpp"
 
 /**
  * A shype is an internal shape/type held by all whisper objects.

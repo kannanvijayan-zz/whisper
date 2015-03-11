@@ -5,9 +5,10 @@
 #include "gc/core.hpp"
 #include "gc/specializations.hpp"
 
-#include "vm/string.hpp"
 #include "parser/packed_writer.hpp"
-#include "vm/property_name.hpp"
+
+#include "vm/string.hpp"
+#include "vm/properties.hpp"
 #include "vm/array.hpp"
 #include "vm/source_file.hpp"
 #include "vm/box.hpp"

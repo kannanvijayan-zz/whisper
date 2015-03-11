@@ -1,5 +1,5 @@
-#ifndef WHISPER__VM__PROPERTY_NAME_HPP
-#define WHISPER__VM__PROPERTY_NAME_HPP
+#ifndef WHISPER__VM__PROPERTIES_HPP
+#define WHISPER__VM__PROPERTIES_HPP
 
 
 #include "vm/core.hpp"
@@ -187,4 +187,4 @@ namespace GC {
 } // namespace Whisper
 
 
-#endif // WHISPER__VM__PROPERTY_NAME_HPP
+#endif // WHISPER__VM__PROPERTIES_HPP

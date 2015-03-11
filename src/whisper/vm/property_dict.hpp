@@ -4,7 +4,7 @@
 #include "vm/core.hpp"
 #include "vm/box.hpp"
 #include "vm/string.hpp"
-#include "vm/property_name.hpp"
+#include "vm/properties.hpp"
 
 namespace Whisper {
 namespace VM {
