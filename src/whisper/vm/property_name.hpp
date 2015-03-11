@@ -52,6 +52,20 @@ class PropertyName
         return length_;
     }
 
+    bool equals(String *str) const {
+        if (isVMString())
+            return vmString()->equals(str);
+
+        WH_ASSERT(isCString());
+        return str->equals(cString(), length());
+    }
+
+    String *createString(AllocationContext acx) const {
+        if (isVMString())
+            return vmString();
+        return String::Create(acx, length(), cString());
+    }
+
   private:
     void gcUpdateVMString(String *str) {
         WH_ASSERT(str->length() == length_);
@@ -63,18 +77,13 @@ class PropertyDescriptor
 {
   friend class GC::TraceTraits<PropertyDescriptor>;
   private:
-    PropertyName name_;
-    Box value_;
+    StackField<Box> value_;
 
   public:
-    PropertyDescriptor(const PropertyName &name, const Box &value)
-      : name_(name),
-        value_(value)
+    PropertyDescriptor(const Box &value)
+      : value_(value)
     {}
 
-    const PropertyName &name() const {
-        return name_;
-    }
     const Box &value() const {
         return value_;
     }
@@ -162,8 +171,7 @@ namespace GC {
                          const VM::PropertyDescriptor &propDesc,
                          const void *start, const void *end)
         {
-            TraceTraits<VM::PropertyName>::Scan<Scanner>(
-                scanner, propDesc.name_, start, end);
+            propDesc.value_.scan(scanner, start, end);
         }
 
         template <typename Updater>
@@ -171,8 +179,7 @@ namespace GC {
                            VM::PropertyDescriptor &propDesc,
                            const void *start, const void *end)
         {
-            TraceTraits<VM::PropertyName>::Update<Updater>(
-                updater, propDesc.name_, start, end);
+            propDesc.value_.update(updater, start, end);
         }
     };
 

@@ -21,4 +21,7 @@ whisper_SOURCES = \
     parser/packed_reader.cpp \
     gc/core.cpp \
     vm/string.cpp \
+    vm/shype/shype.cpp \
+    vm/shype/dict_shype.cpp \
+    vm/wobject.cpp \
     whisper.cpp

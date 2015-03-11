@@ -59,6 +59,9 @@ class BaseField
     inline const DerefType *operator ->() const {
         return GC::DerefTraits<T>::Deref(val_);
     }
+    inline DerefType *operator ->() {
+        return GC::DerefTraits<T>::Deref(val_);
+    }
 
     T &operator =(const BaseField<T> &other) = delete;
 
@@ -186,6 +189,7 @@ class StackField : public GC::BaseField<T>
 
     T &operator =(const StackField<T> &other) {
         this->val_ = other.val_;
+        return this->val_;
     }
 };
 

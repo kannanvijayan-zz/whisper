@@ -5,6 +5,7 @@
 #include "vm/core.hpp"
 
 #include <new>
+#include <cstring>
 
 namespace Whisper {
 namespace VM {
@@ -60,9 +61,13 @@ class String
 
   public:
     String(uint32_t byteLength, const uint8_t *data);
-    String(uint32_t byteLength, const char *data);
-    String(const char *data);
-    String(const String &other);
+
+    static String *Create(AllocationContext acx,
+                          uint32_t byteLength, const uint8_t *data);
+    static String *Create(AllocationContext acx,
+                          uint32_t byteLength, const char *data);
+    static String *Create(AllocationContext acx, const char *data);
+    static String *Create(AllocationContext acx, const String *other);
 
     static uint32_t CalculateSize(uint32_t byteLength) {
         return sizeof(String) + byteLength;
@@ -81,6 +86,15 @@ class String
 
     const uint8_t *bytes() const {
         return data_;
+    }
+
+    bool equals(const String *other) const {
+        return (byteLength() == other->byteLength()) &&
+               (memcmp(bytes(), other->bytes(), byteLength()) == 0);
+    }
+    bool equals(const char *str, uint32_t length) const {
+        return (byteLength() == length) &&
+               (memcmp(bytes(), str, length) == 0);
     }
 
     Cursor begin() const {

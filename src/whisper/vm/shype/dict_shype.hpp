@@ -22,14 +22,14 @@ class DictShype : public Shype
     {}
 
     bool lookupDictProperty(RunContext *cx,
-                            Handle<Wobject *> obj,
-                            Handle<PropertyName> name,
-                            MutHandle<PropertyDescriptor> result);
+                            Wobject *obj,
+                            const PropertyName &name,
+                            PropertyDescriptor *resultOut);
 
     bool defineDictProperty(RunContext *cx,
-                            Handle<Wobject *> obj,
-                            Handle<PropertyName> name,
-                            Handle<PropertyDescriptor> defn);
+                            Wobject *obj,
+                            const PropertyName &name,
+                            const PropertyDescriptor &defn);
 };
 
 

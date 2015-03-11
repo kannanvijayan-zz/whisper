@@ -2,6 +2,7 @@
 #define WHISPER__VM__SHYPE__SHYPE_HPP
 
 #include "vm/core.hpp"
+#include "vm/property_name.hpp"
 
 /**
  * A shype is an internal shape/type held by all whisper objects.
@@ -19,14 +20,14 @@ class Shype
 
   public:
     bool lookupProperty(RunContext *cx,
-                        Handle<Wobject *> obj,
-                        Handle<PropertyName> name,
-                        MutHandle<PropertyDescriptor> result);
+                        Wobject *obj,
+                        const PropertyName &name,
+                        PropertyDescriptor *resultOut);
 
     bool defineProperty(RunContext *cx,
-                        Handle<Wobject *> obj,
-                        Handle<PropertyName> name,
-                        Handle<PropertyDescriptor> defn);
+                        Wobject *obj,
+                        const PropertyName &name,
+                        const PropertyDescriptor &defn);
 };
 
 

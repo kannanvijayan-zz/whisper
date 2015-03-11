@@ -2,6 +2,7 @@
 
 #include "vm/core.hpp"
 #include "vm/string.hpp"
+#include "runtime_inlines.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -76,22 +77,31 @@ String::String(uint32_t byteLength, const uint8_t *data)
         length_++;
 }
 
-String::String(uint32_t byteLength, const char *data)
-  : length_(byteLength)
+/* static */ String *
+String::Create(AllocationContext acx,
+               uint32_t byteLength, const uint8_t *data)
 {
-    std::copy(data, data + byteLength, data_);
+    uint32_t size = CalculateSize(byteLength);
+    return acx.createSized<String>(size, byteLength, data);
 }
 
-String::String(const char *data)
-  : length_(strlen(data))
+/* static */ String *
+String::Create(AllocationContext acx,
+               uint32_t byteLength, const char *data)
 {
-    std::copy(data, data + length_, data_);
+    return Create(acx, byteLength, reinterpret_cast<const uint8_t *>(data));
 }
 
-String::String(const String &other)
-  : length_(other.length_)
+/* static */ String *
+String::Create(AllocationContext acx, const char *data)
 {
-    std::copy(other.data_, other.data_ + other.byteLength(), data_);
+    return Create(acx, strlen(data), data);
+}
+
+/* static */ String *
+String::Create(AllocationContext acx, const String *other)
+{
+    return Create(acx, other->byteLength(), other->bytes());
 }
 
 void

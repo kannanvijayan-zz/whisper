@@ -4,6 +4,7 @@
 #include "vm/core.hpp"
 #include "vm/box.hpp"
 #include "vm/string.hpp"
+#include "vm/property_name.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -34,6 +35,33 @@ class PropertyDict
     }
     uint32_t size() const {
         return size_;
+    }
+
+    String *name(uint32_t idx) const {
+        WH_ASSERT(idx < size());
+        return entries_[idx].name;
+    }
+    Box value(uint32_t idx) const {
+        WH_ASSERT(idx < size());
+        return entries_[idx].value;
+    }
+
+    void setValue(uint32_t idx, const PropertyDescriptor &descr) {
+        WH_ASSERT(idx < size());
+        entries_[idx].value.set(descr.value(), this);
+    }
+
+    bool addEntry(String *name, const PropertyDescriptor &descr) {
+        WH_ASSERT(size() <= capacity());
+
+        uint32_t idx = size();
+        if (idx == capacity())
+            return false;
+
+        entries_[idx].name.init(this, name);
+        entries_[idx].value.init(this, descr.value());
+        size_++;
+        return true;
     }
 };
 

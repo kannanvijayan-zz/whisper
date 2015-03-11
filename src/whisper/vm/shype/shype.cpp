@@ -9,25 +9,26 @@ namespace VM {
 
 bool
 Shype::lookupProperty(RunContext *cx,
-                      Handle<Wobject *> obj,
-                      Handle<PropertyName> name,
-                      MutHandle<PropertyDescriptor> result)
+                      Wobject *obj,
+                      const PropertyName &name,
+                      PropertyDescriptor *resultOut)
 {
     switch (GC::AllocThing::From(this)->header().format()) {
       case GC::AllocFormat::DictShype: {
         DictShype *dictShype = reinterpret_cast<DictShype *>(this);
-        return dictShype->lookupDictProperty(cx, obj, name, result);
+        return dictShype->lookupDictProperty(cx, obj, name, resultOut);
       }
       default:
         WH_UNREACHABLE("Unknown shype format.");
+        return false;
     }
 }
 
 bool
 Shype::defineProperty(RunContext *cx,
-                      Handle<Wobject *> obj,
-                      Handle<PropertyName> name,
-                      Handle<PropertyDescriptor> defn)
+                      Wobject *obj,
+                      const PropertyName &name,
+                      const PropertyDescriptor &defn)
 {
     switch (GC::AllocThing::From(this)->header().format()) {
       case GC::AllocFormat::DictShype: {
@@ -36,6 +37,7 @@ Shype::defineProperty(RunContext *cx,
       }
       default:
         WH_UNREACHABLE("Unknown shype format.");
+        return false;
     }
 }
 

@@ -30,6 +30,16 @@ class Wobject
     Shype *shype() const {
         return shype_;
     }
+
+    bool lookupPropertyIndex(Handle<PropertyName> name,
+                             uint32_t *indexOut);
+
+    bool lookupProperty(Handle<PropertyName> name,
+                        MutHandle<PropertyDescriptor> result);
+
+    bool defineProperty(RunContext *cx,
+                        Handle<PropertyName> name,
+                        Handle<PropertyDescriptor> defn);
 };
 
 
