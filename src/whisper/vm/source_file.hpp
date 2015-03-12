@@ -22,7 +22,11 @@ class SourceFile
     HeapField<String *> path_;
 
   public:
-    SourceFile(String *path) : path_(path) {}
+    SourceFile(String *path)
+      : path_(path)
+    {
+        WH_ASSERT(path != nullptr);
+    }
 
     String *path() const {
         return path_;

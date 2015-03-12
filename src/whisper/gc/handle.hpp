@@ -92,9 +92,9 @@ class Handle
     typedef typename GC::DerefTraits<T>::Type DerefType;
 
   private:
-    const T * const valAddr_;
+    T * const valAddr_;
 
-    inline Handle(const T *valAddr)
+    inline Handle(T *valAddr)
       : valAddr_(valAddr)
     {}
 
@@ -128,7 +128,7 @@ class Handle
         return address();
     }
 
-    inline const DerefType *operator ->() const {
+    inline DerefType *operator ->() const {
         return GC::DerefTraits<T>::Deref(*valAddr_);
     }
 

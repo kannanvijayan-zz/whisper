@@ -16,6 +16,7 @@
 #include "vm/shype/dict_shype.hpp"
 #include "vm/property_dict.hpp"
 #include "vm/wobject.hpp"
+#include "vm/plain_object.hpp"
 
 namespace Whisper {
 namespace GC {

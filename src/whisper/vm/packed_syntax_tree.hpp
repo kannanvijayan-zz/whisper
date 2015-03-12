@@ -28,7 +28,10 @@ class PackedSyntaxTree
     PackedSyntaxTree(Array<uint32_t> *data, Array<Box> *constants)
       : data_(data),
         constants_(constants)
-    {}
+    {
+        WH_ASSERT(data != nullptr);
+        WH_ASSERT(constants != nullptr);
+    }
 
     Array<uint32_t> *data() const {
         return data_;

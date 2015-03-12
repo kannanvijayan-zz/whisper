@@ -23,15 +23,21 @@ class PropertyName
     PropertyName(String *vmString)
       : val_(reinterpret_cast<uintptr_t>(vmString) | 0x1u),
         length_(vmString->length())
-    {}
+    {
+        WH_ASSERT(vmString != nullptr);
+    }
     PropertyName(const char *cString, uint32_t length)
       : val_(reinterpret_cast<uintptr_t>(cString)),
         length_(length)
-    {}
+    {
+        WH_ASSERT(cString != nullptr);
+    }
     PropertyName(const char *cString)
       : val_(reinterpret_cast<uintptr_t>(cString)),
         length_(strlen(cString))
-    {}
+    {
+        WH_ASSERT(cString != nullptr);
+    }
 
     bool isVMString() const {
         return (val_ & 1) == 1;

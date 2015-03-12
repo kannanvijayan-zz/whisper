@@ -332,7 +332,7 @@ class AllocThing;
     _(SourceFile)               \
     _(DictShype)                \
     _(PropertyDict)             \
-    _(Wobject)
+    _(PlainObject)
 
 enum class AllocFormat : uint16_t
 {

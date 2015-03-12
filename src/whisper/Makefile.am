@@ -24,4 +24,5 @@ whisper_SOURCES = \
     vm/shype/shype.cpp \
     vm/shype/dict_shype.cpp \
     vm/wobject.cpp \
+    vm/plain_object.cpp \
     whisper.cpp
