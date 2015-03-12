@@ -68,6 +68,25 @@ class Array
             vals_[i].init(this, other.vals_[i]);
     }
 
+    static Array<T> *Create(AllocationContext acx,
+                            uint32_t length,
+                            const T *vals)
+    {
+        return acx.createSized<Array<T>>(CalculateSize(length), length, vals);
+    }
+    static Array<T> *Create(AllocationContext acx,
+                            uint32_t length,
+                            const T &val)
+    {
+        return acx.createSized<Array<T>>(CalculateSize(length), length, val);
+    }
+    static Array<T> *Create(AllocationContext acx, const Array<T> &other) {
+        return acx.createSized<Array<T>>(
+            CalculateSize(other.length()),
+            other.length(),
+            reinterpret_cast<const T *>(other.vals_));
+    }
+
     inline uint32_t length() const;
 
     const T &getRaw(uint32_t idx) const {

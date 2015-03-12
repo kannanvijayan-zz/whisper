@@ -63,9 +63,11 @@ class String
     String(uint32_t byteLength, const uint8_t *data);
 
     static String *Create(AllocationContext acx,
-                          uint32_t byteLength, const uint8_t *data);
+                          uint32_t byteLength,
+                          const uint8_t *data);
     static String *Create(AllocationContext acx,
-                          uint32_t byteLength, const char *data);
+                          uint32_t byteLength,
+                          const char *data);
     static String *Create(AllocationContext acx, const char *data);
     static String *Create(AllocationContext acx, const String *other);
 

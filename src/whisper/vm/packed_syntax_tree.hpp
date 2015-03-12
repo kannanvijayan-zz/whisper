@@ -33,6 +33,12 @@ class PackedSyntaxTree
         WH_ASSERT(constants != nullptr);
     }
 
+    static PackedSyntaxTree *Create(AllocationContext acx,
+                                    uint32_t dataSize,
+                                    const uint32_t *data,
+                                    uint32_t constPoolSize,
+                                    const Box *constPool);
+
     Array<uint32_t> *data() const {
         return data_;
     }

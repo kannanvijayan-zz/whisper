@@ -68,9 +68,7 @@ PackedWriter::addIdentifier(const IdentifierToken &ident)
     if (iter != identifierMap_.end())
         return iter->second;
 
-    uint32_t stringSize = VM::String::CalculateSize(bytes);
-    VM::String *str = acx_.createSized<VM::String>(stringSize, bytes,
-                                                   ident.text(src_));
+    VM::String *str = VM::String::Create(acx_, bytes, ident.text(src_));
     if (!str)
         emitError("Could not allocate identifier.");
 

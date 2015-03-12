@@ -257,26 +257,9 @@ int main(int argc, char **argv) {
                                    constPool, constPoolSize);
     packedReader.visit(&packedVisitor);
 
-    // Create a PackedSyntaxTree object for the new syntax tree.
-    uint32_t packedDataArraySize =
-        VM::Array<uint32_t>::CalculateSize(bufferSize);
-    Local<VM::Array<uint32_t> *> packedStData(cx,
-        acx.createSized<VM::Array<uint32_t>>(packedDataArraySize,
-                                             bufferSize,
-                                             buffer));
-    fprintf(stderr, "packedStData local @%p\n", packedStData.allocThing());
-
-    uint32_t packedConstPoolArraySize =
-        VM::Array<VM::Box>::CalculateSize(constPoolSize);
-    Local<VM::Array<VM::Box> *> packedStConstPool(cx,
-        acx.createSized<VM::Array<VM::Box>>(packedConstPoolArraySize,
-                                            constPoolSize,
-                                            constPool));
-    fprintf(stderr, "packedStConstPool local @%p\n", packedStConstPool.allocThing());
-
     Local<VM::PackedSyntaxTree *> packedSt(cx,
-        acx.create<VM::PackedSyntaxTree>(packedStData.get(),
-                                         packedStConstPool.get()));
+        VM::PackedSyntaxTree::Create(acx, bufferSize, buffer,
+                                     constPoolSize, constPool));
     fprintf(stderr, "packedSt local @%p\n", packedSt.allocThing());
 
     // Scan the root set.
