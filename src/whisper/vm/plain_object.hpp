@@ -3,7 +3,6 @@
 
 #include "vm/core.hpp"
 #include "vm/box.hpp"
-#include "vm/shype/shype.hpp"
 #include "vm/wobject.hpp"
 #include "vm/property_dict.hpp"
 
@@ -18,8 +17,8 @@ class PlainObject : public Wobject
     HeapField<PropertyDict *> dict_;
 
   public:
-    PlainObject(Shype *shype, PropertyDict *dict)
-      : Wobject(shype),
+    PlainObject(PropertyDict *dict)
+      : Wobject(),
         dict_(dict)
     {}
 

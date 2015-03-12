@@ -330,7 +330,6 @@ class AllocThing;
     _(AllocThingPointer)        \
     _(AllocThingPointerArray)   \
     _(SourceFile)               \
-    _(DictShype)                \
     _(PropertyDict)             \
     _(PlainObject)
 

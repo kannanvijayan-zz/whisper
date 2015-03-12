@@ -13,7 +13,6 @@
 #include "vm/source_file.hpp"
 #include "vm/box.hpp"
 #include "vm/packed_syntax_tree.hpp"
-#include "vm/shype/dict_shype.hpp"
 #include "vm/property_dict.hpp"
 #include "vm/wobject.hpp"
 #include "vm/plain_object.hpp"

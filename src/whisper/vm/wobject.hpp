@@ -3,11 +3,9 @@
 
 #include "vm/core.hpp"
 #include "vm/box.hpp"
-#include "vm/shype/shype.hpp"
 
 /**
  * A Wobject is the base type for all objects visible to the runtime.
- * Every Wobject refers to a Shype to specify its behaviour.
  */
 
 namespace Whisper {
@@ -18,18 +16,9 @@ class Wobject
 {
   friend class GC::TraceTraits<Wobject>;
   private:
-    HeapField<Shype *> shype_;
 
   public:
-    Wobject(Shype *shype)
-      : shype_(shype)
-    {
-        WH_ASSERT(shype != nullptr);
-    }
-
-    Shype *shype() const {
-        return shype_;
-    }
+    Wobject() {}
 };
 
 
@@ -59,14 +48,12 @@ namespace GC {
         static void Scan(Scanner &scanner, const VM::Wobject &wobj,
                          const void *start, const void *end)
         {
-            wobj.shype_.scan(scanner, start, end);
         }
 
         template <typename Updater>
         static void Update(Updater &updater, VM::Wobject &wobj,
                            const void *start, const void *end)
         {
-            wobj.shype_.update(updater, start, end);
         }
     };
 
