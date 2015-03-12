@@ -109,7 +109,8 @@ struct FieldTraits<AllocThing *>
 template <typename P>
 struct StackTraits<P *>
 {
-    static_assert(HeapTraits<P>::Specialized,
+    static_assert(HeapTraits<P>::Specialized ||
+                  AllocThingTraits<P>::Specialized,
                   "HeapTraits not specialized for underlying type.");
 
     StackTraits() = delete;
@@ -121,7 +122,8 @@ struct StackTraits<P *>
 template <typename P>
 struct HeapTraits<P *>
 {
-    static_assert(HeapTraits<P>::Specialized,
+    static_assert(HeapTraits<P>::Specialized ||
+                  AllocThingTraits<P>::Specialized,
                   "HeapTraits not specialized for underlying type.");
 
     HeapTraits() = delete;

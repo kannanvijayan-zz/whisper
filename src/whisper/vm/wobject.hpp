@@ -2,7 +2,7 @@
 #define WHISPER__VM__WOBJECT_HPP
 
 #include "vm/core.hpp"
-#include "vm/box.hpp"
+#include "vm/properties.hpp"
 
 /**
  * A Wobject is the base type for all objects visible to the runtime.
@@ -19,7 +19,22 @@ class Wobject
 
   public:
     Wobject() {}
+
+    static bool LookupProperty(RunContext *cx,
+                               Handle<Wobject *> obj,
+                               Handle<PropertyName> name,
+                               MutHandle<PropertyDescriptor> result);
+
+    static bool DefineProperty(RunContext *cx,
+                               Handle<Wobject *> obj,
+                               Handle<PropertyName> name,
+                               Handle<PropertyDescriptor> defn);
 };
+
+
+//
+// Procedures to manipulate objects.
+//
 
 
 } // namespace VM

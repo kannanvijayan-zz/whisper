@@ -28,7 +28,7 @@ class MutHandle
     {}
 
   public:
-    inline MutHandle(const Local<T> &stackVal)
+    inline MutHandle(Local<T> &stackVal)
       : valAddr_(stackVal.address())
     {}
 
@@ -99,7 +99,7 @@ class Handle
     {}
 
   public:
-    inline Handle(const Local<T> &stackVal)
+    inline Handle(Local<T> &stackVal)
       : valAddr_(stackVal.address())
     {}
 
