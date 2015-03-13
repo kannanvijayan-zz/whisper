@@ -5,6 +5,7 @@
 #include "vm/box.hpp"
 #include "vm/wobject.hpp"
 #include "vm/property_dict.hpp"
+#include "vm/array.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -14,19 +15,26 @@ class PlainObject : public Wobject
 {
   friend class GC::TraceTraits<PlainObject>;
   private:
+    HeapField<Array<Wobject *> *> delegates_;
     HeapField<PropertyDict *> dict_;
 
   public:
-    PlainObject(PropertyDict *dict)
+    PlainObject(Array<Wobject *> *delegates, PropertyDict *dict)
       : Wobject(),
+        delegates_(delegates),
         dict_(dict)
     {}
+
+    static bool GetDelegates(RunContext *cx,
+                             Handle<PlainObject *> obj,
+                             MutHandle<Array<Wobject *> *> delegatesOut);
 
     static bool LookupPropertyIndex(Handle<PlainObject *> obj,
                                     Handle<PropertyName> name,
                                     uint32_t *indexOut);
 
-    static bool LookupProperty(Handle<PlainObject *> obj,
+    static bool LookupProperty(RunContext *cx,
+                               Handle<PlainObject *> obj,
                                Handle<PropertyName> name,
                                MutHandle<PropertyDescriptor> result);
 
@@ -74,6 +82,7 @@ namespace GC {
                          const void *start, const void *end)
         {
             TraceTraits<VM::Wobject>::Scan(scanner, obj, start, end);
+            obj.delegates_.scan(scanner, start, end);
             obj.dict_.scan(scanner, start, end);
         }
 
@@ -82,6 +91,7 @@ namespace GC {
                            const void *start, const void *end)
         {
             TraceTraits<VM::Wobject>::Update(updater, obj, start, end);
+            obj.delegates_.update(updater, start, end);
             obj.dict_.update(updater, start, end);
         }
     };

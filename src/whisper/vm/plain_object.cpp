@@ -6,6 +6,15 @@ namespace VM {
 
 
 /* static */ bool
+PlainObject::GetDelegates(RunContext *cx,
+                          Handle<PlainObject *> obj,
+                          MutHandle<Array<Wobject *> *> delegatesOut)
+{
+    delegatesOut = obj->delegates_;
+    return true;
+}
+
+/* static */ bool
 PlainObject::LookupPropertyIndex(Handle<PlainObject *> obj,
                                  Handle<PropertyName> name,
                                  uint32_t *indexOut)
@@ -21,7 +30,8 @@ PlainObject::LookupPropertyIndex(Handle<PlainObject *> obj,
 }
 
 /* static */ bool
-PlainObject::LookupProperty(Handle<PlainObject *> obj,
+PlainObject::LookupProperty(RunContext *cx,
+                            Handle<PlainObject *> obj,
                             Handle<PropertyName> name,
                             MutHandle<PropertyDescriptor> result)
 {

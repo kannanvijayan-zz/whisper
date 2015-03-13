@@ -3,6 +3,7 @@
 
 #include "vm/core.hpp"
 #include "vm/properties.hpp"
+#include "vm/array.hpp"
 
 /**
  * A Wobject is the base type for all objects visible to the runtime.
@@ -19,6 +20,10 @@ class Wobject
 
   public:
     Wobject() {}
+
+    static bool GetDelegates(RunContext *cx,
+                             Handle<Wobject *> obj,
+                             MutHandle<Array<Wobject *> *> delegatesOut);
 
     static bool LookupProperty(RunContext *cx,
                                Handle<Wobject *> obj,

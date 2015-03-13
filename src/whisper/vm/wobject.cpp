@@ -7,6 +7,22 @@ namespace VM {
 
 
 /* static */ bool
+Wobject::GetDelegates(RunContext *cx,
+                      Handle<Wobject *> obj,
+                      MutHandle<Array<Wobject *> *> delegatesOut)
+{
+    GC::AllocThing *allocThing = GC::AllocThing::From(obj.get());
+    if (allocThing->isPlainObject()) {
+        Local<PlainObject *> plainObj(cx,
+            reinterpret_cast<PlainObject *>(allocThing));
+        return PlainObject::GetDelegates(cx, plainObj, delegatesOut);
+    }
+
+    WH_UNREACHABLE("Unknown object kind");
+    return false;
+}
+
+/* static */ bool
 Wobject::LookupProperty(RunContext *cx,
                         Handle<Wobject *> obj,
                         Handle<PropertyName> name,
@@ -16,7 +32,7 @@ Wobject::LookupProperty(RunContext *cx,
     if (allocThing->isPlainObject()) {
         Local<PlainObject *> plainObj(cx,
             reinterpret_cast<PlainObject *>(allocThing));
-        return PlainObject::LookupProperty(plainObj, name, result);
+        return PlainObject::LookupProperty(cx, plainObj, name, result);
     }
 
     WH_UNREACHABLE("Unknown object kind");
