@@ -68,79 +68,91 @@ struct Printer {
 };
 
 
-/*
-struct TracedThing {
-    AllocThing *ptr;
-    typedef std::vector<TracedThing *> ChildList;
+template <typename T> struct Node;
+typedef Node<HeapThing> HeapNode;
+typedef Node<StackThing> StackNode;
+
+template <typename T>
+struct Node {
+    T *ptr;
+    typedef std::vector<HeapNode *> ChildList;
     ChildList children;
 
-    TracedThing(AllocThing *ptr) : ptr(ptr), children() {}
+    Node(T *ptr) : ptr(ptr), children() {}
 
-    void addChild(TracedThing *child) {
+    void addChild(HeapNode *child) {
         children.push_back(child);
     }
 };
 
+
 // HeapTracer calculates the rooted object graph.
 struct HeapGraph {
-    // Mapping from heap to thing.
-    typedef std::map<AllocThing *, TracedThing *> HeapToThingMap;
-    HeapToThingMap heapToThing;
+    // Mapping from heapthings to graph nodes.
+    typedef std::map<HeapThing *, HeapNode *> HeapToNodeMap;
+    HeapToNodeMap heapToNode;
 
     // Set of things remaining to be scanned.
-    typedef std::set<TracedThing *> RemainingSet;
+    typedef std::set<HeapNode *> RemainingSet;
     RemainingSet remaining;
 
-    // List of root things.
-    typedef std::vector<TracedThing *> ThingList;
-    ThingList rootThings;
+    // List of root stack things.
+    typedef std::vector<StackNode *> RootList;
+    RootList rootList;
 
-    HeapGraph() : heapToThing(), remaining(), rootThings() {}
+    HeapGraph() : heapToNode(), remaining(), rootList() {}
 
-    TracedThing *addRoot(AllocThing *rootPtr) {
-        WH_ASSERT(heapToThing.find(rootPtr) == heapToThing.end());
-
-        TracedThing *traced = new TracedThing(rootPtr);
-        heapToThing.insert(HeapToThingMap::value_type(rootPtr, traced));
-        rootThings.push_back(traced);
-        remaining.insert(traced);
-        return traced;
+    StackNode *addRoot(StackThing *rootPtr) {
+        StackNode *rootNode = new StackNode(rootPtr);
+        rootList.push_back(rootNode);
+        fprintf(stderr, "Add Root %p(%s)\n", rootPtr,
+                StackFormatString(rootPtr->format()));
+        return rootNode;
     }
 
-    void addChild(TracedThing *thing, AllocThing *child) {
-        HeapToThingMap::const_iterator childIter = heapToThing.find(child);
-        TracedThing *tracedChild = nullptr;
-        if (childIter == heapToThing.end()) {
-            tracedChild = new TracedThing(child);
-            heapToThing.insert(HeapToThingMap::value_type(child, tracedChild));
-            remaining.insert(tracedChild);
-        } else {
-            tracedChild = childIter->second;
-        }
-        thing->addChild(tracedChild);
+    HeapNode *addChild(HeapNode *parentNode, HeapThing *child) {
+        HeapNode *childNode = getOrAddHeapThing(child);
+        parentNode->addChild(childNode);
+        fprintf(stderr, "Add Heap %p(%s) --> %p(%s)\n",
+                parentNode->ptr, HeapFormatString(parentNode->ptr->format()),
+                child, HeapFormatString(child->format()));
+        return childNode;
+    }
+
+    HeapNode *addChild(StackNode *stackNode, HeapThing *child) {
+        HeapNode *childNode = getOrAddHeapThing(child);
+        stackNode->addChild(childNode);
+        fprintf(stderr, "Add Stack %p(%s) --> %p(%s)\n",
+                stackNode->ptr, StackFormatString(stackNode->ptr->format()),
+                child, HeapFormatString(child->format()));
+        return childNode;
+    }
+
+    HeapNode *getOrAddHeapThing(HeapThing *heapThing) {
+        HeapToNodeMap::const_iterator iter = heapToNode.find(heapThing);
+        if (iter != heapToNode.end())
+            return iter->second;
+        HeapNode *node = new HeapNode(heapThing);
+        heapToNode.insert(HeapToNodeMap::value_type(heapThing, node));
+        remaining.insert(node);
+        return node;
     }
 };
 
-struct HeapTracer
+template <typename T>
+struct Tracer
 {
-    TracedThing *thing;
+    Node<T> *node;
     HeapGraph *graph;
 
-    HeapTracer(TracedThing *thing, HeapGraph *graph)
-      : thing(thing), graph(graph)
+    Tracer(Node<T> *node, HeapGraph *graph)
+      : node(node), graph(graph)
     {}
 
-    inline void operator () (const void *addr, AllocThing *ptr) {
-        fprintf(stderr, "    HeapTracer found %p(%s gen %s) child %p(%s gen %s)\n",
-                thing->ptr, thing->ptr->header().formatString(),
-                thing->ptr->header().genString(),
-                ptr, ptr->header().formatString(),
-                ptr->header().genString());
-        graph->addChild(thing, ptr);
+    inline void operator () (const void *addr, HeapThing *ptr) {
+        graph->addChild(node, ptr);
     }
 };
-
-*/
 
 int main(int argc, char **argv) {
     std::cout << "Whisper says hello." << std::endl;
@@ -265,29 +277,29 @@ int main(int argc, char **argv) {
                                      constPoolSize, constPool));
     fprintf(stderr, "packedSt local @%p\n", packedSt.stackThing());
 
-/*
+    fprintf(stderr, "STACK SCAN!\n");
     // Scan the root set.
-    HeapGraph heapGraph;
+    HeapGraph graph;
     for (LocalBase *base = thrcx->locals();
          base != nullptr;
          base = base->next())
     {
-        TracedThing *traced = heapGraph.addRoot(base->allocThing());
-        fprintf(stderr, "Added traced %p (allocthing %p - %s gen=%s)\n",
-                traced, traced->ptr, traced->ptr->header().formatString(), traced->ptr->header().genString());
+        StackThing *stackThing = base->stackThing();
+        StackNode *node = graph.addRoot(stackThing);
+        Tracer<StackThing> tracer(node, &graph);
+        GC::ScanStackThing<Tracer<StackThing>>(tracer, stackThing,
+                                               nullptr, nullptr);
     }
 
+    fprintf(stderr, "HEAP SCAN!\n");
     // Process remainings.
-    while (!heapGraph.remaining.empty()) {
-        TracedThing *traced = *heapGraph.remaining.begin();
-        fprintf(stderr, "Processing traced %p (allocthing %p - %s gen=%s)\n",
-                traced, traced->ptr, traced->ptr->header().formatString(), traced->ptr->header().genString());
-        HeapTracer tracer(traced, &heapGraph);
-        ScanAllocThing<HeapTracer>(tracer, traced->ptr, nullptr, nullptr);
-        heapGraph.remaining.erase(traced);
+    while (!graph.remaining.empty()) {
+        HeapNode *node = *graph.remaining.begin();
+        Tracer<HeapThing> tracer(node, &graph);
+        GC::ScanHeapThing<Tracer<HeapThing>>(tracer, node->ptr,
+                                             nullptr, nullptr);
+        graph.remaining.erase(node);
     }
-
-*/
 
     return 0;
 }
