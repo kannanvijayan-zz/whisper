@@ -16,7 +16,7 @@ namespace VM {
 //
 class SourceFile
 {
-    friend struct GC::TraceTraits<SourceFile>;
+    friend struct TraceTraits<SourceFile>;
 
   private:
     HeapField<String *> path_;
@@ -35,13 +35,10 @@ class SourceFile
 
 
 } // namespace VM
-} // namespace Whisper
 
 //
-// GC-Specializations for SourceFile
+// GC Specializations
 //
-namespace Whisper {
-namespace GC {
 
 
 template <>
@@ -50,15 +47,15 @@ struct HeapTraits<VM::SourceFile>
     HeapTraits() = delete;
 
     static constexpr bool Specialized = true;
-    static constexpr AllocFormat Format = AllocFormat::SourceFile;
+    static constexpr HeapFormat Format = HeapFormat::SourceFile;
     static constexpr bool VarSized = false;
 };
 
 
 template <>
-struct AllocFormatTraits<AllocFormat::SourceFile>
+struct HeapFormatTraits<HeapFormat::SourceFile>
 {
-    AllocFormatTraits() = delete;
+    HeapFormatTraits() = delete;
     typedef VM::SourceFile Type;
 };
 
@@ -89,7 +86,6 @@ struct TraceTraits<VM::SourceFile>
 };
 
 
-} // namespace GC
 } // namespace Whisper
 
 

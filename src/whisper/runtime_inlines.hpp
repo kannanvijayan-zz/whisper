@@ -16,18 +16,18 @@ template <typename ObjT, typename... Args>
 inline ObjT *
 AllocationContext::create(Args... args)
 {
-    static_assert(GC::HeapTraits<ObjT>::Specialized,
-                  "GC::HeapTraits not specialized for ObjT.");
-    static_assert(!GC::HeapTraits<ObjT>::VarSized,
+    static_assert(HeapTraits<ObjT>::Specialized,
+                  "HeapTraits not specialized for ObjT.");
+    static_assert(!HeapTraits<ObjT>::VarSized,
                   "Use createSized* methods to allocate varsized objects.");
 
     uint32_t size = sizeof(ObjT);
 
     // Allocate the space for the object.
-    constexpr GC::AllocFormat FMT = GC::HeapTraits<ObjT>::Format;
-    typedef typename GC::AllocFormatTraits<FMT>::Type TRACE_TYPE;
-    constexpr bool TRACED = ! GC::TraceTraits<TRACE_TYPE>::IsLeaf;
-    uint8_t *mem = allocate<TRACED>(size, FMT, 0);
+    constexpr HeapFormat FMT = HeapTraits<ObjT>::Format;
+    typedef typename HeapFormatTraits<FMT>::Type TRACE_TYPE;
+    constexpr bool TRACED = ! TraceTraits<TRACE_TYPE>::IsLeaf;
+    uint8_t *mem = allocate<TRACED>(size, FMT);
     if (!mem)
         return nullptr;
 
@@ -41,18 +41,18 @@ template <typename ObjT, typename... Args>
 inline ObjT *
 AllocationContext::createSized(uint32_t size, Args... args)
 {
-    static_assert(GC::HeapTraits<ObjT>::Specialized,
-                  "GC::HeapTraits not specialized for ObjT.");
-    static_assert(GC::HeapTraits<ObjT>::VarSized,
+    static_assert(HeapTraits<ObjT>::Specialized,
+                  "HeapTraits not specialized for ObjT.");
+    static_assert(HeapTraits<ObjT>::VarSized,
                   "Explicitly sized create called for fixed-size object.");
 
     WH_ASSERT(size >= sizeof(ObjT));
 
     // Allocate the space for the object.
-    constexpr GC::AllocFormat FMT = GC::HeapTraits<ObjT>::Format;
-    typedef typename GC::AllocFormatTraits<FMT>::Type TRACE_TYPE;
-    constexpr bool TRACED = ! GC::TraceTraits<TRACE_TYPE>::IsLeaf;
-    uint8_t *mem = allocate<TRACED>(size, FMT, 0);
+    constexpr HeapFormat FMT = HeapTraits<ObjT>::Format;
+    typedef typename HeapFormatTraits<FMT>::Type TRACE_TYPE;
+    constexpr bool TRACED = ! TraceTraits<TRACE_TYPE>::IsLeaf;
+    uint8_t *mem = allocate<TRACED>(size, FMT);
     if (!mem)
         return nullptr;
 
@@ -64,12 +64,10 @@ AllocationContext::createSized(uint32_t size, Args... args)
 
 template <bool Traced>
 inline uint8_t *
-AllocationContext::allocate(uint32_t size, GC::AllocFormat fmt, uint8_t flags)
+AllocationContext::allocate(uint32_t size, HeapFormat fmt)
 {
-    WH_ASSERT(flags <= GC::AllocHeader::UserDataMax);
-
     uint32_t allocSize = AlignIntUp<uint32_t>(size, Slab::AllocAlign)
-                         + sizeof(GC::AllocHeader);
+                         + sizeof(HeapHeader);
 
     // Allocate the space.
     uint8_t *mem = Traced ? slab_->allocateHead(allocSize)
@@ -87,8 +85,7 @@ AllocationContext::allocate(uint32_t size, GC::AllocFormat fmt, uint8_t flags)
     uint32_t cardNo = slab_->calculateCardNumber(mem);
 
     // Initialize the header.
-    GC::AllocHeader *hdr = new (mem) GC::AllocHeader(fmt, slab_->gen(),
-                                                     cardNo, size);
+    HeapHeader *hdr = new (mem) HeapHeader(fmt, slab_->gen(), cardNo, size);
     return reinterpret_cast<uint8_t *>(hdr->payload());
 }
 

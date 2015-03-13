@@ -11,10 +11,10 @@ Wobject::GetDelegates(RunContext *cx,
                       Handle<Wobject *> obj,
                       MutHandle<Array<Wobject *> *> delegatesOut)
 {
-    GC::AllocThing *allocThing = GC::AllocThing::From(obj.get());
-    if (allocThing->isPlainObject()) {
+    HeapThing *heapThing = HeapThing::From(obj.get());
+    if (heapThing->isPlainObject()) {
         Local<PlainObject *> plainObj(cx,
-            reinterpret_cast<PlainObject *>(allocThing));
+            reinterpret_cast<PlainObject *>(heapThing));
         return PlainObject::GetDelegates(cx, plainObj, delegatesOut);
     }
 
@@ -28,10 +28,10 @@ Wobject::LookupProperty(RunContext *cx,
                         Handle<PropertyName> name,
                         MutHandle<PropertyDescriptor> result)
 {
-    GC::AllocThing *allocThing = GC::AllocThing::From(obj.get());
-    if (allocThing->isPlainObject()) {
+    HeapThing *heapThing = HeapThing::From(obj.get());
+    if (heapThing->isPlainObject()) {
         Local<PlainObject *> plainObj(cx,
-            reinterpret_cast<PlainObject *>(allocThing));
+            reinterpret_cast<PlainObject *>(heapThing));
         return PlainObject::LookupProperty(cx, plainObj, name, result);
     }
 
@@ -45,10 +45,10 @@ Wobject::DefineProperty(RunContext *cx,
                         Handle<PropertyName> name,
                         Handle<PropertyDescriptor> defn)
 {
-    GC::AllocThing *allocThing = GC::AllocThing::From(obj.get());
-    if (allocThing->isPlainObject()) {
+    HeapThing *heapThing = HeapThing::From(obj.get());
+    if (heapThing->isPlainObject()) {
         Local<PlainObject *> plainObj(cx,
-            reinterpret_cast<PlainObject *>(allocThing));
+            reinterpret_cast<PlainObject *>(heapThing));
         return PlainObject::DefineProperty(cx, plainObj, name, defn);
     }
 

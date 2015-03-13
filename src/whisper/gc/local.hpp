@@ -11,28 +11,28 @@ class ThreadContext;
 class RunContext;
 class AllocationContext;
 
-//
-// GC::LocalBase
+// LocalBase
+// ---------
 //
 // Untyped base class for stack-root holders.  This class provides the
 // basic plumbing for all stack-rooted structures: a constructor that
 // registers the instance with a ThreadContext, and a destructor that
 // de-registers it.
-//
-
-namespace GC {
-
 class LocalBase
 {
   protected:
     ThreadContext *threadContext_;
     LocalBase *next_;
-    AllocHeader header_;
+    StackHeader header_;
 
-    inline LocalBase(const LocalBase &other);
-    inline LocalBase(ThreadContext *threadContext, AllocFormat format);
-    inline LocalBase(RunContext *runContext, AllocFormat format);
-    inline LocalBase(AllocationContext &acx, AllocFormat format);
+    inline LocalBase(const LocalBase &other) = delete;
+    inline LocalBase(LocalBase &&other) = delete;
+    inline LocalBase(ThreadContext *threadContext,
+                     StackFormat format, uint32_t size);
+    inline LocalBase(RunContext *runContext,
+                     StackFormat format, uint32_t size);
+    inline LocalBase(const AllocationContext &acx,
+                     StackFormat format, uint32_t size);
     inline ~LocalBase();
 
   public:
@@ -44,15 +44,15 @@ class LocalBase
         return next_;
     }
 
-    inline AllocFormat format() const {
+    inline StackFormat format() const {
         return header_.format();
     }
 
-    const AllocThing *allocThing() const {
-        return reinterpret_cast<const AllocThing *>(dataAfter());
+    const StackThing *stackThing() const {
+        return reinterpret_cast<const StackThing *>(dataAfter());
     }
-    AllocThing *allocThing() {
-        return reinterpret_cast<AllocThing *>(dataAfter());
+    StackThing *stackThing() {
+        return reinterpret_cast<StackThing *>(dataAfter());
     }
 
     template <typename Scanner>
@@ -63,71 +63,75 @@ class LocalBase
 
   private:
     void *dataAfter() {
-        return reinterpret_cast<uint8_t *>(&header_) + sizeof(AllocHeader);
+        return reinterpret_cast<uint8_t *>(&header_) + sizeof(StackHeader);
     }
     const void *dataAfter() const {
         return reinterpret_cast<const uint8_t *>(&header_)
-                + sizeof(AllocHeader);
+                + sizeof(StackHeader);
     }
 };
-
-} // namespace GC
 
 template <typename T> class MutHandle;
 template <typename T> class Handle;
 
 
-//
 // Local
+// -----
 //
 // Checked holder class that refers to a stack-rooted
 // structure.
-//
-
 template <typename T>
-class Local : public GC::LocalBase
+class Local : public LocalBase
 {
-    static_assert(GC::StackTraits<T>::Specialized,
-                  "GC::StackTraits<T> not specialized.");
+    static_assert(alignof(T) <= 8, "Bad alignment for stack-rooted type.");
+    static_assert(StackTraits<T>::Specialized,
+                  "StackTraits<T> not specialized.");
 
-    typedef typename GC::DerefTraits<T>::Type DerefType;
+    typedef typename DerefTraits<T>::Type DerefType;
 
   private:
     T val_;
 
   public:
-    inline Local(const Local<T> &other)
-      : GC::LocalBase(other),
-        val_(other.val_)
-    {}
-    inline Local(Local<T> &&other)
-      : GC::LocalBase(other),
-        val_(std::move(other.val_))
-    {}
+    inline Local(const Local<T> &other) = delete;
+    inline Local(Local<T> &&other) = delete;
 
     inline Local(ThreadContext *threadContext)
-      : GC::LocalBase(threadContext, GC::StackTraits<T>::Format),
+      : LocalBase(threadContext, StackTraits<T>::Format, sizeof(T)),
         val_()
     {}
     inline Local(ThreadContext *threadContext, const T &val)
-      : GC::LocalBase(threadContext, GC::StackTraits<T>::Format),
+      : LocalBase(threadContext, StackTraits<T>::Format, sizeof(T)),
         val_(val)
     {}
     inline Local(ThreadContext *threadContext, T &&val)
-      : GC::LocalBase(threadContext, GC::StackTraits<T>::Format),
+      : LocalBase(threadContext, StackTraits<T>::Format, sizeof(T)),
         val_(std::move(val))
     {}
 
     inline Local(RunContext *runContext)
-      : GC::LocalBase(runContext, GC::StackTraits<T>::Format),
+      : LocalBase(runContext, StackTraits<T>::Format, sizeof(T)),
         val_()
     {}
     inline Local(RunContext *runContext, const T &val)
-      : GC::LocalBase(runContext, GC::StackTraits<T>::Format),
+      : LocalBase(runContext, StackTraits<T>::Format, sizeof(T)),
         val_(val)
     {}
     inline Local(RunContext *runContext, T &&val)
-      : GC::LocalBase(runContext, GC::StackTraits<T>::Format),
+      : LocalBase(runContext, StackTraits<T>::Format, sizeof(T)),
+        val_(std::move(val))
+    {}
+
+    inline Local(const AllocationContext &acx)
+      : LocalBase(acx, StackTraits<T>::Format, sizeof(T)),
+        val_()
+    {}
+    inline Local(const AllocationContext &acx, const T &val)
+      : LocalBase(acx, StackTraits<T>::Format, sizeof(T)),
+        val_(val)
+    {}
+    inline Local(const AllocationContext &acx, T &&val)
+      : LocalBase(acx, StackTraits<T>::Format, sizeof(T)),
         val_(std::move(val))
     {}
 
@@ -142,7 +146,7 @@ class Local : public GC::LocalBase
         val_ = ref;
     }
     inline void set(T &&ref) {
-        val_ = ref;
+        val_ = std::move(ref);
     }
 
     inline const T *address() const {
@@ -150,6 +154,13 @@ class Local : public GC::LocalBase
     }
     inline T *address() {
         return &val_;
+    }
+
+    inline operator const T &() const {
+        return get();
+    }
+    inline operator T &() {
+        return get();
     }
 
     inline const T *operator &() const {
@@ -160,7 +171,7 @@ class Local : public GC::LocalBase
     }
 
     inline const T &operator =(const T &ref) {
-        set(ref);
+        set(std::move(ref));
         return ref;
     }
     inline const T &operator =(T &&ref) {
@@ -169,10 +180,10 @@ class Local : public GC::LocalBase
     }
 
     inline const DerefType *operator ->() const {
-        return GC::DerefTraits<T>::Deref(val_);
+        return DerefTraits<T>::Deref(val_);
     }
     inline DerefType *operator ->() {
-        return GC::DerefTraits<T>::Deref(val_);
+        return DerefTraits<T>::Deref(val_);
     }
 
     inline MutHandle<T> mutHandle();

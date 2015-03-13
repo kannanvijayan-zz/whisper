@@ -12,7 +12,7 @@ namespace VM {
 
 class PropertyDict
 {
-  friend class GC::TraceTraits<PropertyDict>;
+  friend class TraceTraits<PropertyDict>;
   private:
     struct Entry
     {
@@ -64,8 +64,8 @@ class PropertyDict
         if (idx == capacity())
             return false;
 
-        entries_[idx].name.init(this, name);
-        entries_[idx].value.init(this, descr.value());
+        entries_[idx].name.init(name, this);
+        entries_[idx].value.init(descr.value(), this);
         size_++;
         return true;
     }
@@ -73,59 +73,59 @@ class PropertyDict
 
 
 } // namespace VM
-} // namespace Whisper
 
 
-namespace Whisper {
-namespace GC {
+//
+// GC Specializations
+//
 
-    template <>
-    struct HeapTraits<VM::PropertyDict>
+template <>
+struct HeapTraits<VM::PropertyDict>
+{
+    HeapTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr HeapFormat Format = HeapFormat::PropertyDict;
+    static constexpr bool VarSized = true;
+};
+
+template <>
+struct HeapFormatTraits<HeapFormat::PropertyDict>
+{
+    HeapFormatTraits() = delete;
+    typedef VM::PropertyDict Type;
+};
+
+template <>
+struct TraceTraits<VM::PropertyDict>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const VM::PropertyDict &pd,
+                     const void *start, const void *end)
     {
-        HeapTraits() = delete;
-
-        static constexpr bool Specialized = true;
-        static constexpr AllocFormat Format = AllocFormat::PropertyDict;
-        static constexpr bool VarSized = true;
-    };
-
-    template <>
-    struct AllocFormatTraits<AllocFormat::PropertyDict>
-    {
-        AllocFormatTraits() = delete;
-        typedef VM::PropertyDict Type;
-    };
-
-    template <>
-    struct TraceTraits<VM::PropertyDict>
-    {
-        TraceTraits() = delete;
-
-        static constexpr bool Specialized = true;
-        static constexpr bool IsLeaf = false;
-
-        template <typename Scanner>
-        static void Scan(Scanner &scanner, const VM::PropertyDict &pd,
-                         const void *start, const void *end)
-        {
-            for (uint32_t i = 0; i < pd.size_; i++) {
-                pd.entries_[i].name.scan(scanner, start, end);
-                pd.entries_[i].value.scan(scanner, start, end);
-            }
+        for (uint32_t i = 0; i < pd.size_; i++) {
+            pd.entries_[i].name.scan(scanner, start, end);
+            pd.entries_[i].value.scan(scanner, start, end);
         }
+    }
 
-        template <typename Updater>
-        static void Update(Updater &updater, VM::PropertyDict &pd,
-                           const void *start, const void *end)
-        {
-            for (uint32_t i = 0; i < pd.size_; i++) {
-                pd.entries_[i].name.update(updater, start, end);
-                pd.entries_[i].value.update(updater, start, end);
-            }
+    template <typename Updater>
+    static void Update(Updater &updater, VM::PropertyDict &pd,
+                       const void *start, const void *end)
+    {
+        for (uint32_t i = 0; i < pd.size_; i++) {
+            pd.entries_[i].name.update(updater, start, end);
+            pd.entries_[i].value.update(updater, start, end);
         }
-    };
+    }
+};
 
-} // namespace GC
+
 } // namespace Whisper
 
 

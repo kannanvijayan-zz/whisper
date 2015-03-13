@@ -18,7 +18,7 @@ namespace VM {
 //
 class PackedSyntaxTree
 {
-    friend struct GC::TraceTraits<PackedSyntaxTree>;
+    friend struct TraceTraits<PackedSyntaxTree>;
 
   private:
     HeapField<Array<uint32_t> *> data_;
@@ -50,14 +50,11 @@ class PackedSyntaxTree
 
 
 } // namespace VM
-} // namespace Whisper
+
 
 //
 // GC-Specializations for PackedSyntaxTree
 //
-namespace Whisper {
-namespace GC {
-
 
 template <>
 struct HeapTraits<VM::PackedSyntaxTree>
@@ -65,15 +62,15 @@ struct HeapTraits<VM::PackedSyntaxTree>
     HeapTraits() = delete;
 
     static constexpr bool Specialized = true;
-    static constexpr AllocFormat Format = AllocFormat::PackedSyntaxTree;
+    static constexpr HeapFormat Format = HeapFormat::PackedSyntaxTree;
     static constexpr bool VarSized = false;
 };
 
 
 template <>
-struct AllocFormatTraits<AllocFormat::PackedSyntaxTree>
+struct HeapFormatTraits<HeapFormat::PackedSyntaxTree>
 {
-    AllocFormatTraits() = delete;
+    HeapFormatTraits() = delete;
     typedef VM::PackedSyntaxTree Type;
 };
 
@@ -104,7 +101,6 @@ struct TraceTraits<VM::PackedSyntaxTree>
 };
 
 
-} // namespace GC
 } // namespace Whisper
 
 

@@ -4,142 +4,64 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "gc/core.hpp"
+#include "gc/field.hpp"
 
 #include <functional>
 
 namespace Whisper {
-namespace GC {
 
 
 ///////////////////////////////////////////////////////////////////////////////
 ////
-//// Specialization of StackTraits, HeapTraits, FieldTraits and TraceTraits
-//// for primitive types.
+//// FieldTraits and TraceTraits specializations for primitive types.
 ////
 ///////////////////////////////////////////////////////////////////////////////
 
-// Primitive-type specializations for trace traits.
-#define PRIM_TRACE_TRAITS_DEF_(type, fmtName) \
-    template <> \
-    struct StackTraits<type> \
-    { \
-        StackTraits() = delete; \
-        static constexpr bool Specialized = true; \
-        static constexpr AllocFormat Format = AllocFormat::fmtName; \
-    }; \
-    template <> \
-    struct HeapTraits<type> \
-    { \
-        HeapTraits() = delete; \
-        static constexpr bool Specialized = true; \
-        static constexpr AllocFormat Format = AllocFormat::fmtName; \
-        static constexpr bool VarSized  = false; \
-    }; \
-    template <> \
-    struct FieldTraits<type> \
-    { \
+#define DEF_PRIM_TRAITS_(type) \
+    template <> struct FieldTraits<type> { \
         FieldTraits() = delete; \
         static constexpr bool Specialized = true; \
     }; \
-    template <> \
-    struct AllocFormatTraits<AllocFormat::fmtName> \
-    { \
-        AllocFormatTraits() = delete; \
-        static constexpr bool Specialized = true; \
-        typedef type Type; \
-    }; \
-    template <> \
-    struct TraceTraits<type> : public UntracedTraceTraits<type> {};
+    template <> struct TraceTraits<type> \
+        : public UntracedTraceTraits<type> {}
 
-    PRIM_TRACE_TRAITS_DEF_(bool, Bool);
+DEF_PRIM_TRAITS_(bool);
+DEF_PRIM_TRAITS_(uint8_t);
+DEF_PRIM_TRAITS_(uint16_t);
+DEF_PRIM_TRAITS_(uint32_t);
+DEF_PRIM_TRAITS_(uint64_t);
+DEF_PRIM_TRAITS_(int8_t);
+DEF_PRIM_TRAITS_(int16_t);
+DEF_PRIM_TRAITS_(int32_t);
+DEF_PRIM_TRAITS_(int64_t);
+DEF_PRIM_TRAITS_(float);
+DEF_PRIM_TRAITS_(double);
 
-    PRIM_TRACE_TRAITS_DEF_(uint8_t, UInt8);
-    PRIM_TRACE_TRAITS_DEF_(uint16_t, UInt16);
-    PRIM_TRACE_TRAITS_DEF_(uint32_t, UInt32);
-    PRIM_TRACE_TRAITS_DEF_(uint64_t, UInt64);
-
-    PRIM_TRACE_TRAITS_DEF_(int8_t, Int8);
-    PRIM_TRACE_TRAITS_DEF_(int16_t, Int16);
-    PRIM_TRACE_TRAITS_DEF_(int32_t, Int32);
-    PRIM_TRACE_TRAITS_DEF_(int64_t, Int64);
-
-    PRIM_TRACE_TRAITS_DEF_(float, Float);
-    PRIM_TRACE_TRAITS_DEF_(double, Double);
-
-#undef PRIM_TRACE_TRAITS_DEF_
+#undef DEF_PRIM_TRAITS_
 
 
 ///////////////////////////////////////////////////////////////////////////////
 ////
-//// Specialization of StackTraits, HeapTraits, FieldTraits and TraceTraits
+//// Specialization of StackTraits, FieldTraits and TraceTraits
 //// for pointer types.
 ////
 ///////////////////////////////////////////////////////////////////////////////
 
-// Specialize AllocThing pointers specially, since AllocThing does not
-// have a HeapTraits specialization (and it shouldn't).
-template <>
-struct StackTraits<AllocThing *>
-{
-    StackTraits() = delete;
-    static constexpr bool Specialized = true;
-    static constexpr AllocFormat Format = AllocFormat::AllocThingPointer;
-};
-
-template <>
-struct HeapTraits<AllocThing *>
-{
-    HeapTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr AllocFormat Format = AllocFormat::AllocThingPointer;
-    static constexpr bool VarSized = false;
-};
-
-template <>
-struct FieldTraits<AllocThing *>
-{
-    FieldTraits() = delete;
-    static constexpr bool Specialized = true;
-};
-
-// By default pointers are expected to point to structures for which
-// HeapTraits is defined.
-
+// By default pointers are expected to point to HeapThing structures.
 template <typename P>
 struct StackTraits<P *>
 {
-    static_assert(HeapTraits<P>::Specialized ||
-                  AllocThingTraits<P>::Specialized,
-                  "HeapTraits not specialized for underlying type.");
-
+    static_assert(IsHeapThingType<P>(), "P is not a HeapThingType.");
     StackTraits() = delete;
 
     static constexpr bool Specialized = true;
-    static constexpr AllocFormat Format = AllocFormat::AllocThingPointer;
-};
-
-template <typename P>
-struct HeapTraits<P *>
-{
-    static_assert(HeapTraits<P>::Specialized ||
-                  AllocThingTraits<P>::Specialized,
-                  "HeapTraits not specialized for underlying type.");
-
-    HeapTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr AllocFormat Format = AllocFormat::AllocThingPointer;
-    static constexpr bool VarSized = false;
+    static constexpr StackFormat Format = StackFormat::HeapPointer;
 };
 
 template <typename P>
 struct FieldTraits<P *>
 {
-    static_assert(HeapTraits<P>::Specialized ||
-                  AllocThingTraits<P>::Specialized,
-                  "HeapTraits not specialized for underlying type.");
-
+    static_assert(IsHeapThingType<P>(), "P is not a HeapThingType.");
     FieldTraits() = delete;
 
     static constexpr bool Specialized = true;
@@ -148,10 +70,7 @@ struct FieldTraits<P *>
 template <typename P>
 struct DerefTraits<P *>
 {
-    static_assert(HeapTraits<P>::Specialized ||
-                  AllocThingTraits<P>::Specialized,
-                  "HeapTraits not specialized for underlying type.");
-
+    static_assert(IsHeapThingType<P>(), "P is not a HeapThingType.");
     DerefTraits() = delete;
 
     typedef P *T_;
@@ -165,50 +84,32 @@ struct DerefTraits<P *>
     }
 };
 
-template <>
-struct DerefTraits<AllocThing *>
-{
-    DerefTraits() = delete;
-
-    typedef AllocThing *T_;
-    typedef AllocThing  Type;
-
-    static inline const Type *Deref(const T_ &ptr) {
-        return ptr;
-    }
-    static inline Type *Deref(T_ &ptr) {
-        return ptr;
-    }
-};
-
 
 //
-// Specialize AllocFormatTraits for AllocThingPointer.
+// Specialize StackFormatTraits for heap pointers.
 //
-// This just maps AllocThingPointer to the type |AllocThing *| for
+// This just maps HeapPointer to the type |HeapThing *| for
 // tracing.
 //
 template <>
-struct AllocFormatTraits<AllocFormat::AllocThingPointer>
+struct StackFormatTraits<StackFormat::HeapPointer>
 {
-    AllocFormatTraits() = delete;
-
-    typedef AllocThing *Type;
-    static constexpr bool Traced = true;
+    StackFormatTraits() = delete;
+    typedef HeapThing *Type;
 };
 
 //
-// Specialize AllocThing * for TraceTraits
+// Specialize HeapThing * for TraceTraits
 //
 template <>
-struct TraceTraits<AllocThing *>
+struct TraceTraits<HeapThing *>
 {
-    typedef AllocThing * T_;
-
     TraceTraits() = delete;
 
     static constexpr bool Specialized = true;
     static constexpr bool IsLeaf = false;
+
+    typedef HeapThing * T_;
 
     template <typename Scanner>
     static void Scan(Scanner &scanner, const T_ &t,
@@ -221,9 +122,9 @@ struct TraceTraits<AllocThing *>
     static void Update(Updater &updater, T_ &t,
                        const void *start, const void *end)
     {
-        AllocThing *tx = updater(&t, t);
-        if (tx != t)
-            t = tx;
+        HeapThing *ht = updater(&t, t);
+        if (ht != t)
+            t = ht;
     }
 };
 
@@ -235,45 +136,31 @@ template <typename P>
 struct TraceTraits<P *>
 {
     // Traced pointers are assumed to be pointers to heap-things by default.
-    static_assert(HeapTraits<P>::Specialized ||
-                  AllocThingTraits<P>::Specialized,
-                  "HeapTraits or AllocThingTraits not specialized for "
-                  "underlying type.");
-    typedef P * T_;
-
+    static_assert(IsHeapThingType<P>(), "P is not a HeapThing type.");
     TraceTraits() = delete;
 
     static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = false;
+
+    typedef P * T_;
 
     template <typename Scanner>
     static void Scan(Scanner &scanner, const T_ &t,
                      const void *start, const void *end)
     {
-        if (std::less<const void *>()(&t, start))
-            return;
-        if (std::greater_equal<const void *>()(&t, end))
-            return;
-        scanner(&t, reinterpret_cast<AllocThing *>(t));
+        scanner(&t, HeapThing::From(t));
     }
 
     template <typename Updater>
     static void Update(Updater &updater, T_ &t,
                        const void *start, const void *end)
     {
-        if (std::less<const void *>()(&t, start))
-            return;
-        if (std::greater_equal<const void *>()(&t, end))
-            return;
-        AllocThing *tx = updater(&t, reinterpret_cast<AllocThing *>(t));
-        if (reinterpret_cast<P *>(tx) != t)
-            t = reinterpret_cast<P *>(tx);
+        HeapThing *ht = updater(&t, HeapThing::From(t));
+        if (ht->to<P>() != t)
+            t = ht->to<P>();
     }
 };
 
 
-
-} // namespace GC
 } // namespace Whisper
 
 #endif // WHISPER__GC__SPECIALIZATIONS_HPP

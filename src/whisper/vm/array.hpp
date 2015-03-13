@@ -11,7 +11,7 @@ namespace VM {
 
 
 // Template to annotate types which are used as parameters to
-// Array<>, so that we can derive an AllocFormat for the array of
+// Array<>, so that we can derive an HeapFormat for the array of
 // a particular type.
 template <typename T>
 struct ArrayTraits
@@ -21,9 +21,9 @@ struct ArrayTraits
     // Set to true for all specializations.
     static const bool Specialized = false;
 
-    // Give an AllocFormat for an array of type T.
+    // Give an HeapFormat for an array of type T.
     //
-    // static const GC::AllocFormat ArrayFormat;
+    // static const HeapFormat ArrayFormat;
 
     // Give a map-back type T' to map the array format back to
     // VM::Array<T'>
@@ -37,10 +37,10 @@ struct ArrayTraits
 template <typename T>
 class Array
 {
-    friend struct GC::TraceTraits<Array<T>>;
+    friend struct TraceTraits<Array<T>>;
 
     // T must be a field type to be usable.
-    static_assert(GC::FieldTraits<T>::Specialized,
+    static_assert(FieldTraits<T>::Specialized,
                   "Underlying type is not field-specialized.");
     static_assert(ArrayTraits<T>::Specialized,
                   "Underlying type does not have an array specialization.");
@@ -55,17 +55,17 @@ class Array
 
     Array(uint32_t len, const T *vals) {
         for (uint32_t i = 0; i < len; i++)
-            vals_[i].init(this, vals[i]);
+            vals_[i].init(vals[i], this);
     }
 
     Array(uint32_t len, const T &val) {
         for (uint32_t i = 0; i < len; i++)
-            vals_[i].init(this, val);
+            vals_[i].init(val, this);
     }
 
     Array(const Array<T> &other) {
         for (uint32_t i = 0; i < other.length(); i++)
-            vals_[i].init(this, other.vals_[i]);
+            vals_[i].init(other.vals_[i], this);
     }
 
     static Array<T> *Create(AllocationContext acx,
@@ -130,7 +130,7 @@ template <typename T>
 inline uint32_t
 Array<T>::length() const
 {
-    uint32_t size = GC::AllocThing::From(this)->size();
+    uint32_t size = HeapThing::From(this)->size();
     WH_ASSERT(size % sizeof(T) == 0);
     return size / sizeof(T);
 }

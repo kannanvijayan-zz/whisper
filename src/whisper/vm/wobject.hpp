@@ -15,12 +15,10 @@ namespace VM {
 
 class Wobject
 {
-  friend class GC::TraceTraits<Wobject>;
-  private:
-
-  public:
+  protected:
     Wobject() {}
 
+  public:
     static bool GetDelegates(RunContext *cx,
                              Handle<Wobject *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
@@ -37,47 +35,22 @@ class Wobject
 };
 
 
-//
-// Procedures to manipulate objects.
-//
-
-
 } // namespace VM
-} // namespace Whisper
 
 
-namespace Whisper {
-namespace GC {
+//
+// GC Specializations
+//
 
-    template <>
-    struct AllocThingTraits<VM::Wobject>
-    {
-        AllocThingTraits() = delete;
-        static constexpr bool Specialized = true;
-    };
 
-    template <>
-    struct TraceTraits<VM::Wobject>
-    {
-        TraceTraits() = delete;
+template <>
+struct BaseHeapTypeTraits<VM::Wobject>
+{
+    BaseHeapTypeTraits() = delete;
+    static constexpr bool Specialized = true;
+};
 
-        static constexpr bool Specialized = true;
-        static constexpr bool IsLeaf = false;
 
-        template <typename Scanner>
-        static void Scan(Scanner &scanner, const VM::Wobject &wobj,
-                         const void *start, const void *end)
-        {
-        }
-
-        template <typename Updater>
-        static void Update(Updater &updater, VM::Wobject &wobj,
-                           const void *start, const void *end)
-        {
-        }
-    };
-
-} // namespace GC
 } // namespace Whisper
 
 

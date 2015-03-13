@@ -8,12 +8,6 @@
 
 namespace Whisper {
 
-namespace GC {
-
-class AllocThing;
-
-} // namespace GC
-
 
 class SlabContentIterator;
 
@@ -71,7 +65,7 @@ class SlabContentIterator;
 // cardNo it starts on, then a pointer to the object can be mapped back to
 // the Slab as follows:
 //
-//      Slab *PointerToSlab(AllocThing *ptr):
+//      Slab *PointerToSlab(HeapThing *ptr) {
 //          // Get cardNo
 //          unsigned cardNo = ptr->cardNo
 //
@@ -83,6 +77,7 @@ class SlabContentIterator;
 //
 //          // Read slab pointer.
 //          return *((Slab **) card0)
+//      }
 //
 // This is a relatively efficient operation, in machine code it is:
 //      1 memory read (cardNo)
@@ -119,8 +114,8 @@ class Slab
     static uint32_t NumHeaderCardsForDataCards(uint32_t dataCards);
 
     // Allocate/destroy slabs.
-    static Slab *AllocateStandard(GC::Gen gen);
-    static Slab *AllocateSingleton(uint32_t objectSize, GC::Gen gen);
+    static Slab *AllocateStandard(Gen gen);
+    static Slab *AllocateSingleton(uint32_t objectSize, Gen gen);
     static void Destroy(Slab *slab);
 
   private:
@@ -148,11 +143,11 @@ class Slab
     uint32_t dataCards_;
 
     // Slab generation.
-    GC::Gen gen_;
+    Gen gen_;
 
     Slab(void *region, uint32_t regionSize,
          uint32_t headerCards, uint32_t dataCards,
-         GC::Gen gen);
+         Gen gen);
 
     ~Slab() {}
 
@@ -182,7 +177,7 @@ class Slab
         return dataCards_;
     }
 
-    GC::Gen gen() const {
+    Gen gen() const {
         return gen_;
     }
 
@@ -310,13 +305,13 @@ class SlabContentIterator
         cur_ = slab_->tailStartAlloc();
     }
 
-    GC::AllocThing *currentAllocThing() const {
+    HeapThing *currentHeapThing() const {
         WH_ASSERT(isCursorContentValid(cur_));
-        return reinterpret_cast<GC::AllocThing *>(cur_);
+        return reinterpret_cast<HeapThing *>(cur_);
     }
 
-    GC::AllocThing * operator *() const {
-        return currentAllocThing();
+    HeapThing * operator *() const {
+        return currentHeapThing();
     }
 
     bool operator ==(const SlabContentIterator &other) const {
@@ -329,10 +324,10 @@ class SlabContentIterator
         return !(*this == other);
     }
 
-    void nextAllocThing();
+    void nextHeapThing();
 
     SlabContentIterator &operator++() {
-        nextAllocThing();
+        nextHeapThing();
         return *this;
     }
 

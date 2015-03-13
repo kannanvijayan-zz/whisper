@@ -15,18 +15,16 @@
     struct ArrayTraits<type> { \
         ArrayTraits() = delete; \
         static const bool Specialized = true; \
-        static const GC::AllocFormat ArrayFormat = GC::AllocFormat::fmtName; \
+        static const HeapFormat ArrayFormat = HeapFormat::fmtName; \
     }; \
   } \
-  namespace GC { \
-    template <> \
-    struct AllocFormatTraits<AllocFormat::fmtName> { \
-        AllocFormatTraits() = delete; \
-        static const bool Specialized = true; \
-        typedef VM::Array<type> Type; \
-    }; \
-  } \
-  } \
+  template <> \
+  struct HeapFormatTraits<HeapFormat::fmtName> { \
+      HeapFormatTraits() = delete; \
+      static const bool Specialized = true; \
+      typedef VM::Array<type> Type; \
+  }; \
+  }
 
 DEF_PRIM_ARRAY_TRAITS_(uint8_t, UInt8Array);
 DEF_PRIM_ARRAY_TRAITS_(uint16_t, UInt16Array);
@@ -50,26 +48,19 @@ namespace VM {
 // Treat them by default as arrays of pointers-to-alloc-things.
 template <typename P>
 struct ArrayTraits<P *> {
-    static_assert(GC::HeapTraits<P>::Specialized ||
-                  GC::AllocThingTraits<P>::Specialized,
-                  "Underlying type of pointer is not a heap thing or "
-                  "alloc thing.");
+    static_assert(IsHeapThingType<P>(), "P is not a HeapThing type.");
     ArrayTraits() = delete;
     static constexpr bool Specialized = true;
-    static const GC::AllocFormat ArrayFormat =
-        GC::AllocFormat::AllocThingPointerArray;
+    static const HeapFormat ArrayFormat = HeapFormat::HeapPointerArray;
 };
 
 
 } // namespace VM
-} // namespace Whisper
 
 
 //
 // GC-Specializations for Array
 //
-namespace Whisper {
-namespace GC {
 
 
 template <typename T>
@@ -78,16 +69,15 @@ struct HeapTraits<VM::Array<T>>
     HeapTraits() = delete;
 
     static constexpr bool Specialized = true;
-    static constexpr GC::AllocFormat Format =
-        VM::ArrayTraits<T>::ArrayFormat;
+    static constexpr HeapFormat Format = VM::ArrayTraits<T>::ArrayFormat;
     static constexpr bool VarSized = true;
 };
 
 template <>
-struct AllocFormatTraits<AllocFormat::AllocThingPointerArray>
+struct HeapFormatTraits<HeapFormat::HeapPointerArray>
 {
-    AllocFormatTraits() = delete;
-    typedef VM::Array<AllocThing *> Type;
+    HeapFormatTraits() = delete;
+    typedef VM::Array<HeapThing *> Type;
 };
 
 template <typename T>
@@ -96,7 +86,6 @@ struct TraceTraits<VM::Array<T>>
     TraceTraits() = delete;
 
     static constexpr bool Specialized = true;
-
     static constexpr bool IsLeaf = TraceTraits<T>::IsLeaf;
 
     typedef VM::Array<T> Array_;
@@ -105,29 +94,26 @@ struct TraceTraits<VM::Array<T>>
     static void Scan(Scanner &scanner, const Array_ &array,
                      const void *start, const void *end)
     {
-        if (IsLeaf)
-            return;
-
-        // Scan each pointer in the array.
-        for (uint32_t i = 0; i < array.length(); i++)
-            array.vals_[i].scan(scanner, start, end);
+        if (!IsLeaf) {
+            // Scan each pointer in the array.
+            for (uint32_t i = 0; i < array.length(); i++)
+                array.vals_[i].scan(scanner, start, end);
+        }
     }
 
     template <typename Updater>
     static void Update(Updater &updater, Array_ &array,
                        const void *start, const void *end)
     {
-        if (IsLeaf)
-            return;
-
-        // Update each pointer in the array.
-        for (uint32_t i = 0; i < array.length(); i++)
-            array.vals_[i].update(updater, start, end);
+        if (!IsLeaf) {
+            // Update each pointer in the array.
+            for (uint32_t i = 0; i < array.length(); i++)
+                array.vals_[i].update(updater, start, end);
+        }
     }
 };
 
 
-} // namespace GC
 } // namespace Whisper
 
 

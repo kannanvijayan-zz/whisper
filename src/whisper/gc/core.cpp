@@ -18,17 +18,30 @@
 #include "vm/plain_object.hpp"
 
 namespace Whisper {
-namespace GC {
+
 
 const char *
-AllocFormatString(AllocFormat fmt)
+StackFormatString(StackFormat fmt)
 {
     switch (fmt) {
-      case AllocFormat::INVALID: return "INVALID";
-#define CASE_(T) case AllocFormat::T: return #T;
-    WHISPER_DEFN_GC_ALLOC_FORMATS(CASE_)
+      case StackFormat::INVALID: return "INVALID";
+#define CASE_(fmtName) case StackFormat::fmtName: return #fmtName;
+    WHISPER_DEFN_GC_STACK_FORMATS(CASE_)
 #undef CASE_
-      case AllocFormat::LIMIT: return "LIMIT";
+      case StackFormat::LIMIT: return "LIMIT";
+      default: return "UNKNOWN";
+    }
+}
+
+const char *
+HeapFormatString(HeapFormat fmt)
+{
+    switch (fmt) {
+      case HeapFormat::INVALID: return "INVALID";
+#define CASE_(fmtName) case HeapFormat::fmtName: return #fmtName;
+    WHISPER_DEFN_GC_HEAP_FORMATS(CASE_)
+#undef CASE_
+      case HeapFormat::LIMIT: return "LIMIT";
       default: return "UNKNOWN";
     }
 }
@@ -38,8 +51,6 @@ GenString(Gen gen)
 {
     switch (gen) {
       case Gen::None:        return "None";
-      case Gen::OnStack:     return "OnStack";
-      case Gen::LocalHeap:   return "LocalHeap";
       case Gen::Hatchery:    return "Hatchery";
       case Gen::Nursery:     return "Nursery";
       case Gen::Mature:      return "Mature";
@@ -49,71 +60,90 @@ GenString(Gen gen)
     }
 }
 
-template <AllocFormat Format>
+
 void
-ScanAllocThingImpl_(ScannerBox &scanner, const AllocThing *thing,
-                    const void *start, const void *end)
+GC::ScanStackThingImpl(ScannerBox &scanner, const StackThing *thing,
+                       const void *start, const void *end)
 {
-    typedef typename AllocFormatTraits<Format>::Type TraceType;
-    if (!TraceTraits<TraceType>::IsLeaf) {
-        const TraceType &tref = *reinterpret_cast<const TraceType *>(thing);
-        TraceTraits<TraceType>::Scan(scanner, tref, start, end);
+    WH_ASSERT(thing != nullptr);
+    switch (thing->format()) {
+#define SWITCH_(fmtName) \
+    case StackFormat::fmtName: {\
+        typedef StackFormatTraits<StackFormat::fmtName>::Type T; \
+        const T *tptr = reinterpret_cast<const T *>(thing); \
+        TraceTraits<T>::Scan<ScannerBox>(scanner, *tptr, start, end); \
+        break; \
+    }
+      WHISPER_DEFN_GC_STACK_FORMATS(SWITCH_)
+#undef SWITCH_
+      default:
+        WH_ASSERT(!!!"BAD StackFormat");
+        break;
     }
 }
 
-template <AllocFormat Format>
 void
-UpdateAllocThingImpl_(UpdaterBox &updater, AllocThing *thing,
+GC::UpdateStackThingImpl(UpdaterBox &updater, StackThing *thing,
+                         const void *start, const void *end)
+{
+    WH_ASSERT(thing != nullptr);
+    switch (thing->format()) {
+#define SWITCH_(fmtName) \
+    case StackFormat::fmtName: {\
+        typedef StackFormatTraits<StackFormat::fmtName>::Type T; \
+        T *tptr = reinterpret_cast<T *>(thing); \
+        TraceTraits<T>::Update<UpdaterBox>(updater, *tptr, start, end); \
+        break; \
+    }
+      WHISPER_DEFN_GC_STACK_FORMATS(SWITCH_)
+#undef SWITCH_
+      default:
+        WH_ASSERT(!!!"BAD StackFormat");
+        break;
+    }
+}
+
+void
+GC::ScanHeapThingImpl(ScannerBox &scanner, const HeapThing *thing,
                       const void *start, const void *end)
 {
-    typedef typename AllocFormatTraits<Format>::Type TraceType;
-    if (!TraceTraits<TraceType>::IsLeaf) {
-        TraceType &tref = *reinterpret_cast<TraceType *>(thing);
-        TraceTraits<TraceType>::Update(updater, tref, start, end);
-    }
-}
-
-
-void
-ScanAllocThingImpl(ScannerBox &scanner, const AllocThing *thing,
-                   const void *start, const void *end)
-{
     WH_ASSERT(thing != nullptr);
     switch (thing->format()) {
 #define SWITCH_(fmtName) \
-    case AllocFormat::fmtName: {\
-        ScanAllocThingImpl_<AllocFormat::fmtName>(scanner, thing, \
-                                                  start, end); \
+    case HeapFormat::fmtName: {\
+        typedef HeapFormatTraits<HeapFormat::fmtName>::Type T; \
+        const T *tptr = reinterpret_cast<const T *>(thing); \
+        TraceTraits<T>::Scan<ScannerBox>(scanner, *tptr, start, end); \
         break; \
     }
-      WHISPER_DEFN_GC_ALLOC_FORMATS(SWITCH_)
+      WHISPER_DEFN_GC_HEAP_FORMATS(SWITCH_)
 #undef SWITCH_
       default:
-        WH_ASSERT(!!!"BAD AllocFormat");
+        WH_ASSERT(!!!"BAD HeapFormat");
         break;
     }
 }
 
 void
-UpdateAllocThingImpl(UpdaterBox &updater, AllocThing *thing,
-                     const void *start, const void *end)
+GC::UpdateHeapThingImpl(UpdaterBox &updater, HeapThing *thing,
+                        const void *start, const void *end)
 {
     WH_ASSERT(thing != nullptr);
     switch (thing->format()) {
 #define SWITCH_(fmtName) \
-    case AllocFormat::fmtName: {\
-        UpdateAllocThingImpl_<AllocFormat::fmtName>(updater, thing, \
-                                                    start, end); \
+    case HeapFormat::fmtName: {\
+        typedef HeapFormatTraits<HeapFormat::fmtName>::Type T; \
+        T *tptr = reinterpret_cast<T *>(thing); \
+        TraceTraits<T>::Update<UpdaterBox>(updater, *tptr, start, end); \
         break; \
     }
-      WHISPER_DEFN_GC_ALLOC_FORMATS(SWITCH_)
+      WHISPER_DEFN_GC_HEAP_FORMATS(SWITCH_)
 #undef SWITCH_
       default:
-        WH_ASSERT(!!!"BAD AllocFormat");
+        WH_ASSERT(!!!"BAD HeapFormat");
         break;
     }
 }
 
 
-} // namespace GC
 } // namespace Whisper

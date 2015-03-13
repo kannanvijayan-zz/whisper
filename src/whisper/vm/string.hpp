@@ -81,7 +81,7 @@ class String
 
     inline uint32_t byteLength() const
     {
-        uint32_t size = GC::AllocThing::From(this)->size();
+        uint32_t size = HeapThing::From(this)->size();
         WH_ASSERT(size >= sizeof(VM::String));
         return size - sizeof(VM::String);
     }
@@ -113,34 +113,30 @@ class String
 
 
 } // namespace VM
-} // namespace Whisper
 
 
-namespace Whisper {
-namespace GC {
+template <>
+struct HeapTraits<VM::String>
+{
+    HeapTraits() = delete;
 
-    template <>
-    struct HeapTraits<VM::String>
-    {
-        HeapTraits() = delete;
+    static constexpr bool Specialized = true;
+    static constexpr HeapFormat Format = HeapFormat::String;
+    static constexpr bool VarSized = true;
+};
 
-        static constexpr bool Specialized = true;
-        static constexpr AllocFormat Format = AllocFormat::String;
-        static constexpr bool VarSized = true;
-    };
+template <>
+struct HeapFormatTraits<HeapFormat::String>
+{
+    HeapFormatTraits() = delete;
+    typedef VM::String Type;
+};
 
-    template <>
-    struct AllocFormatTraits<AllocFormat::String>
-    {
-        AllocFormatTraits() = delete;
-        typedef VM::String Type;
-    };
+template <>
+struct TraceTraits<VM::String> : public UntracedTraceTraits<VM::String>
+{};
 
-    template <>
-    struct TraceTraits<VM::String> : public UntracedTraceTraits<VM::String>
-    {};
 
-} // namespace GC
 } // namespace Whisper
 
 

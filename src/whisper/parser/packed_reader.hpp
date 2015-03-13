@@ -349,7 +349,7 @@ class PrintingPackedVisitor : public PackedVisitor
     {
         VM::Box box = reader.constant(idx);
         WH_ASSERT(box.isPointer());
-        WH_ASSERT(box.pointer<GC::AllocThing>()->isString());
+        WH_ASSERT(box.pointer<HeapThing>()->isString());
         VM::String *string = box.pointer<VM::String>();
         for (uint32_t i = 0; i < string->byteLength(); i++) {
             char cs[2];

@@ -9,6 +9,7 @@
 
 namespace Whisper {
 
+
 static uint32_t CachedSystemPageSize = 0;
 static uint32_t CachedStandardSlabCards = 0;
 static uint32_t CachedStandardSlabHeaderCards = 0;
@@ -141,7 +142,7 @@ Slab::NumHeaderCardsForDataCards(uint32_t dataCards)
 }
 
 /*static*/ Slab *
-Slab::AllocateStandard(GC::Gen gen)
+Slab::AllocateStandard(Gen gen)
 {
     size_t size = AlignIntUp<size_t>(StandardSlabCards() * CardSize,
                                      PageSize());
@@ -159,7 +160,7 @@ Slab::AllocateStandard(GC::Gen gen)
 }
 
 /*static*/ Slab *
-Slab::AllocateSingleton(uint32_t objectSize, GC::Gen gen)
+Slab::AllocateSingleton(uint32_t objectSize, Gen gen)
 {
     uint32_t dataCards = NumDataCardsForObjectSize(objectSize);
     uint32_t headerCards = NumHeaderCardsForDataCards(dataCards);
@@ -190,7 +191,7 @@ Slab::Destroy(Slab *slab)
 
 Slab::Slab(void *region, uint32_t regionSize,
            uint32_t headerCards, uint32_t dataCards,
-           GC::Gen gen)
+           Gen gen)
   : region_(region), regionSize_(regionSize),
     headerCards_(headerCards), dataCards_(dataCards),
     gen_(gen)
@@ -217,28 +218,28 @@ Slab::debugDump(const char *tag)
     auto tailEnd = SlabContentIterator::TailEnd(this);
 
     for(auto iter = headStart; iter != headEnd; ++iter) {
-        GC::AllocThing *allocThing = *iter;
-        uint8_t *allocThingBytes = reinterpret_cast<uint8_t *>(allocThing);
+        HeapThing *heapThing = *iter;
+        uint8_t *heapThingBytes = reinterpret_cast<uint8_t *>(heapThing);
         SpewSlabNote("%s - @%u - HEAD - %s",
-                     tag, allocThingBytes - headStartAlloc(),
-                     AllocFormatString(allocThing->format()));
+                     tag, heapThingBytes - headStartAlloc(),
+                     HeapFormatString(heapThing->format()));
     }
 
     for(auto iter = tailStart; iter != tailEnd; ++iter) {
-        GC::AllocThing *allocThing = *iter;
-        uint8_t *allocThingBytes = reinterpret_cast<uint8_t *>(allocThing);
+        HeapThing *heapThing = *iter;
+        uint8_t *heapThingBytes = reinterpret_cast<uint8_t *>(heapThing);
         SpewSlabNote("%s - @%u - TAIL - %s",
-                     tag, allocThingBytes - tailEndAlloc(),
-                     AllocFormatString(allocThing->format()));
+                     tag, heapThingBytes - tailEndAlloc(),
+                     HeapFormatString(heapThing->format()));
     }
 }
 #endif // defined(ENABLE_DEBUG)
 
-void SlabContentIterator::nextAllocThing()
+void SlabContentIterator::nextHeapThing()
 {
     WH_ASSERT(isCursorContentValid(cur_));
 
-    GC::AllocThing *curThing = currentAllocThing();
+    HeapThing *curThing = currentHeapThing();
     cur_ = AlignPtrUp(reinterpret_cast<uint8_t *>(curThing), Slab::AllocAlign);
 
     // If within head or tail, no adjustments needed.

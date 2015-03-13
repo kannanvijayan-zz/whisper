@@ -16,9 +16,9 @@ namespace Whisper {
 template <typename T>
 class MutHandle
 {
-    static_assert(GC::StackTraits<T>::Specialized,
-                  "GC::StackTraits<T> not specialized.");
-    typedef typename GC::DerefTraits<T>::Type DerefType;
+    static_assert(StackTraits<T>::Specialized,
+                  "StackTraits<T> not specialized.");
+    typedef typename DerefTraits<T>::Type DerefType;
 
   private:
     T * const valAddr_;
@@ -67,7 +67,7 @@ class MutHandle
     }
 
     inline DerefType *operator ->() const {
-        return GC::DerefTraits<T>::Deref(*valAddr_);
+        return DerefTraits<T>::Deref(*valAddr_);
     }
 
     const T &operator =(const T &other) {
@@ -86,10 +86,10 @@ class MutHandle
 template <typename T>
 class Handle
 {
-    static_assert(GC::StackTraits<T>::Specialized,
-                  "GC::StackTraits<T> not specialized.");
+    static_assert(StackTraits<T>::Specialized,
+                  "StackTraits<T> not specialized.");
 
-    typedef typename GC::DerefTraits<T>::Type DerefType;
+    typedef typename DerefTraits<T>::Type DerefType;
 
   private:
     T * const valAddr_;
@@ -129,7 +129,7 @@ class Handle
     }
 
     inline DerefType *operator ->() const {
-        return GC::DerefTraits<T>::Deref(*valAddr_);
+        return DerefTraits<T>::Deref(*valAddr_);
     }
 
     const Handle<T> &operator =(const Handle<T> &other) = delete;

@@ -13,7 +13,7 @@ namespace VM {
 
 class PlainObject : public Wobject
 {
-  friend class GC::TraceTraits<PlainObject>;
+  friend class TraceTraits<PlainObject>;
   private:
     HeapField<Array<Wobject *> *> delegates_;
     HeapField<PropertyDict *> dict_;
@@ -55,57 +55,55 @@ class PlainObject : public Wobject
 
 
 } // namespace VM
-} // namespace Whisper
 
 
-namespace Whisper {
-namespace GC {
+//
+// GC Specializations
+//
 
-    template <>
-    struct HeapTraits<VM::PlainObject>
+template <>
+struct HeapTraits<VM::PlainObject>
+{
+    HeapTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr HeapFormat Format = HeapFormat::PlainObject;
+    static constexpr bool VarSized = false;
+};
+
+template <>
+struct HeapFormatTraits<HeapFormat::PlainObject>
+{
+    HeapFormatTraits() = delete;
+    typedef VM::PlainObject Type;
+};
+
+template <>
+struct TraceTraits<VM::PlainObject>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const VM::PlainObject &obj,
+                     const void *start, const void *end)
     {
-        HeapTraits() = delete;
+        obj.delegates_.scan(scanner, start, end);
+        obj.dict_.scan(scanner, start, end);
+    }
 
-        static constexpr bool Specialized = true;
-        static constexpr AllocFormat Format = AllocFormat::PlainObject;
-        static constexpr bool VarSized = false;
-    };
-
-    template <>
-    struct AllocFormatTraits<AllocFormat::PlainObject>
+    template <typename Updater>
+    static void Update(Updater &updater, VM::PlainObject &obj,
+                       const void *start, const void *end)
     {
-        AllocFormatTraits() = delete;
-        typedef VM::PlainObject Type;
-    };
+        obj.delegates_.update(updater, start, end);
+        obj.dict_.update(updater, start, end);
+    }
+};
 
-    template <>
-    struct TraceTraits<VM::PlainObject>
-    {
-        TraceTraits() = delete;
 
-        static constexpr bool Specialized = true;
-        static constexpr bool IsLeaf = false;
-
-        template <typename Scanner>
-        static void Scan(Scanner &scanner, const VM::PlainObject &obj,
-                         const void *start, const void *end)
-        {
-            TraceTraits<VM::Wobject>::Scan(scanner, obj, start, end);
-            obj.delegates_.scan(scanner, start, end);
-            obj.dict_.scan(scanner, start, end);
-        }
-
-        template <typename Updater>
-        static void Update(Updater &updater, VM::PlainObject &obj,
-                           const void *start, const void *end)
-        {
-            TraceTraits<VM::Wobject>::Update(updater, obj, start, end);
-            obj.delegates_.update(updater, start, end);
-            obj.dict_.update(updater, start, end);
-        }
-    };
-
-} // namespace GC
 } // namespace Whisper
 
 

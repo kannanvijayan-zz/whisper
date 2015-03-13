@@ -5,24 +5,68 @@
 #include "debug.hpp"
 #include "gc/core.hpp"
 
+//
+// FIELD STRUCTURES
+// ================
+//
+// It is useful to be able to embed within traced objects
+// types whose instances may hold references to heap objects.
+//
+// These fields instances must allow for their references to be
+// scanned and updated, since they are embedded within
+// heap and stack allocated structures.
+//
+// Since fields are embedded in their containing structure, the
+// static type of the containing structure captures the static
+// type of the field structure.  The GC will dynamically infer the
+// static type of the containing structure (which is either on stack
+// or on heap), and thus implicitly infer the static type of the field.
+//
+// Fields on stack structures behave differently from fields on heap
+// structures.  For example, mutations of fields on stack-allocated
+// objects require no additional bookkeeping, but mutations of fields
+// on heap-allocated objects may trigger write barriers.
+//
+// To support these two designs, there are two field wrapper templates:
+// StackField<T> and HeapField<T>.  StackField<T>s are meant to be contained
+// within stack-allocated values, and HeapField<T>s are meant to be contained
+// within heap-allocated values.
+//
+// To be able to be wrapped by StackField or HeapField, a type T must
+// specialize FieldTraits<T>, and addictionally TraceTraits<T>.  See
+// the TRACING section for more details.
+//
+
 namespace Whisper {
 
 
+// FieldTraits
+// -----------
 //
-// GC::BaseField
+//  FieldTraits contains the following definitions:
+//
+//      // Must be set true by all FieldTraits specializations.
+//      static constexpr bool Specialized = true;
+template <typename T>
+struct FieldTraits
+{
+    FieldTraits() = delete;
+
+    static constexpr bool Specialized = false;
+};
+
+
+// BaseField
+// ---------
 //
 // Base helper class for HeapField and StackField.
 //
-namespace GC {
-
-class AllocThing;
-
 template <typename T>
 class BaseField
 {
     static_assert(TraceTraits<T>::Specialized,
                   "TraceTraits has not been specialized for type.");
-    typedef typename GC::DerefTraits<T>::Type DerefType;
+    typedef typename DerefTraits<T>::Type DerefType;
 
   protected:
     T val_;
@@ -57,10 +101,10 @@ class BaseField
     }
 
     inline const DerefType *operator ->() const {
-        return GC::DerefTraits<T>::Deref(val_);
+        return DerefTraits<T>::Deref(val_);
     }
     inline DerefType *operator ->() {
-        return GC::DerefTraits<T>::Deref(val_);
+        return DerefTraits<T>::Deref(val_);
     }
 
     T &operator =(const BaseField<T> &other) = delete;
@@ -78,63 +122,70 @@ class BaseField
     }
 };
 
-} // namespace GC
 
-
-//
 // HeapField
+// ---------
 //
 // Holder for a traced object stored in a field on a heap object.
 // The
 //
 
 template <typename T>
-class HeapField : public GC::BaseField<T>
+class HeapField : public BaseField<T>
 {
   public:
     inline HeapField()
-      : GC::BaseField<T>()
+      : BaseField<T>()
     {}
     explicit inline HeapField(const T &val)
-      : GC::BaseField<T>(val)
+      : BaseField<T>(val)
     {}
     explicit inline HeapField(T &&val)
-      : GC::BaseField<T>(std::move(val))
+      : BaseField<T>(std::move(val))
     {}
 
-    inline void notifySetPre(GC::AllocThing *container) {
+    template <typename HeapT>
+    inline void notifySetPre(HeapT *container) {
         // TODO: Use TraceTraits to scan val_, and register any
         // existing pointers.
     }
-    inline void notifySetPost(GC::AllocThing *container) {
+
+    template <typename HeapT>
+    inline void notifySetPost(HeapT *container) {
         // TODO: Use TraceTraits to scan val_, and register any
         // new pointers.
     }
 
-    template <typename AllocThingT>
-    inline void set(const T &ref, AllocThingT *container) {
-        notifySetPre(GC::AllocThing::From(container));
+    template <typename HeapT>
+    inline void set(const T &ref, HeapT *container) {
+        notifySetPre(container);
         this->val_ = ref;
-        notifySetPost(GC::AllocThing::From(container));
+        notifySetPost(container);
     }
 
-    template <typename AllocThingT>
-    inline void set(T &&ref, AllocThingT *container) {
-        notifySetPre(GC::AllocThing::From(container));
+    template <typename HeapT>
+    inline void set(T &&ref, HeapT *container) {
+        notifySetPre(container);
         this->val_ = ref;
-        notifySetPost(GC::AllocThing::From(container));
+        notifySetPost(container);
     }
 
-    template <typename AllocThingT, typename... Args>
-    inline void init(AllocThingT *container, Args... args) {
+    template <typename HeapT>
+    inline void init(const T &val, HeapT *container) {
         // Pre-notification not required as value is not initialized.
-        new (&this->val_) T(std::forward<Args>(args)...);
-        notifySetPost(GC::AllocThing::From(container));
+        new (&this->val_) T(val);
+        notifySetPost(container);
+    }
+    template <typename HeapT>
+    inline void init(const T &&val, HeapT *container) {
+        // Pre-notification not required as value is not initialized.
+        new (&this->val_) T(std::move(val));
+        notifySetPost(container);
     }
 
-    template <typename AllocThingT>
-    inline void destroy(AllocThingT *container) {
-        notifySetPre(GC::AllocThing::From(container));
+    template <typename HeapT>
+    inline void destroy(HeapT *container) {
+        notifySetPre(container);
         this->val_.~T();
         // Post-notification not required as value is destroyed.
     }
@@ -143,47 +194,41 @@ class HeapField : public GC::BaseField<T>
 };
 
 
-//
 // StackField
+// ----------
 //
 // Holder for a traced object stored in a field on a stack object.
 //
-
 template <typename T>
-class StackField : public GC::BaseField<T>
+class StackField : public BaseField<T>
 {
   public:
     inline StackField()
-      : GC::BaseField<T>()
+      : BaseField<T>()
     {}
     explicit inline StackField(const T &val)
-      : GC::BaseField<T>(val)
+      : BaseField<T>(val)
     {}
     explicit inline StackField(T &&val)
-      : GC::BaseField<T>(std::move(val))
+      : BaseField<T>(std::move(val))
     {}
 
-    template <typename AllocThingT>
-    inline void set(const T &ref, AllocThingT *container) {
-        GC::AllocThing::From(container);
+    inline void set(const T &ref) {
         this->val_ = ref;
     }
 
-    template <typename AllocThingT>
-    inline void set(T &&ref, AllocThingT *container) {
-        GC::AllocThing::From(container);
+    inline void set(T &&ref) {
         this->val_ = ref;
     }
 
-    template <typename AllocThingT, typename... Args>
-    inline void init(AllocThingT *container, Args... args) {
-        GC::AllocThing::From(container);
-        new (&this->val_) T(std::forward<Args>(args)...);
+    inline void init(const T &ref) {
+        new (&this->val_) T(ref);
+    }
+    inline void init(T &&ref) {
+        new (&this->val_) T(std::move(ref));
     }
 
-    template <typename AllocThingT>
-    inline void destroy(AllocThingT *container) {
-        GC::AllocThing::From(container);
+    inline void destroy() {
         this->val_.~T();
     }
 
@@ -191,38 +236,14 @@ class StackField : public GC::BaseField<T>
         this->val_ = other.val_;
         return this->val_;
     }
-};
-
-
-//
-// ChooseField<Type>
-//
-// Helper template that lets you choose based on a FieldType enum value
-// between StackField and HeapField.
-//
-
-enum class FieldType { Stack, Heap };
-
-template <FieldType T, typename T>
-class ChooseField
-{
-    ChooseField() = delete;
-};
-
-template <typename T>
-class ChooseField<FieldType::Stack, T>
-{
-    ChooseField() = delete;
-
-    typedef StackField<T> Type;
-};
-
-template <typename T>
-class ChooseField<FieldType::Heap, T>
-{
-    ChooseField() = delete;
-
-    typedef HeapField<T> Type;
+    T &operator =(const T &other) {
+        this->val_ = other.val_;
+        return this->val_;
+    }
+    T &operator =(T &&other) {
+        this->val_ = std::move(other.val_);
+        return this->val_;
+    }
 };
 
 

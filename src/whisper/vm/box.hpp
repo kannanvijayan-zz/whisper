@@ -15,7 +15,7 @@ namespace VM {
 //
 class Box
 {
-    friend class GC::TraceTraits<Box>;
+    friend class TraceTraits<Box>;
   private:
     word_t value_;
 
@@ -27,9 +27,7 @@ class Box
 
     template <typename T>
     Box(T *ptr) {
-        static_assert(GC::HeapTraits<T>::Specialized ||
-                      GC::AllocThingTraits<T>::Specialized,
-                      "Box constructed with non-AllocThing pointer.");
+        static_assert(IsHeapThingType<T>(), "T is not a HeapThing type.");
         WH_ASSERT(ptr != nullptr);
         WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
         value_ = reinterpret_cast<word_t>(ptr);
@@ -40,16 +38,15 @@ class Box
     }
     template <typename T>
     T *pointer() const {
-        static_assert(GC::HeapTraits<T>::Specialized ||
-                      GC::AllocThingTraits<T>::Specialized,
-                      "Retreiving non-AllocThing pointer from box.");
+        static_assert(IsHeapThingType<T>(), "T is not a HeapThing type.");
         WH_ASSERT(isPointer());
+        WH_ASSERT(reinterpret_cast<T *>(value_) != nullptr);
         return reinterpret_cast<T *>(value_);
     }
 
     void snprint(char *buf, size_t n) const {
         if (isPointer()) {
-            snprintf(buf, n, "ptr(%p)", pointer<GC::AllocThing>());
+            snprintf(buf, n, "ptr(%p)", pointer<HeapThing>());
             return;
         }
         WH_UNREACHABLE("Unknown box kind.");
@@ -58,9 +55,7 @@ class Box
   private:
     template <typename T>
     void setPointer(T *ptr) {
-        static_assert(GC::HeapTraits<T>::Specialized ||
-                      GC::AllocThingTraits<T>::Specialized,
-                      "Box assigned non-AllocThing pointer.");
+        static_assert(IsHeapThingType<T>(), "T is not a HeapThing type.");
         WH_ASSERT(ptr != nullptr);
         WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
         value_ = reinterpret_cast<word_t>(ptr);
@@ -73,94 +68,76 @@ struct ArrayTraits<Box>
     ArrayTraits() = delete;
 
     static const bool Specialized = true;
-    static const GC::AllocFormat ArrayFormat = GC::AllocFormat::BoxArray;
+    static const HeapFormat ArrayFormat = HeapFormat::BoxArray;
 };
 
 
 } // namespace VM
-} // namespace Whisper
 
 
-namespace Whisper {
-namespace GC {
+template <>
+struct StackTraits<VM::Box>
+{
+    StackTraits() = delete;
+    static constexpr bool Specialized = true;
+    static constexpr StackFormat Format = StackFormat::Box;
+};
 
-    template <>
-    struct HeapTraits<VM::Box>
+template <>
+struct FieldTraits<VM::Box>
+{
+    FieldTraits() = delete;
+    static constexpr bool Specialized = true;
+};
+
+template <>
+struct StackFormatTraits<StackFormat::Box>
+{
+    StackFormatTraits() = delete;
+    typedef VM::Box Type;
+};
+
+template <>
+struct HeapFormatTraits<HeapFormat::BoxArray>
+{
+    HeapFormatTraits() = delete;
+    typedef VM::Array<VM::Box> Type;
+};
+
+template <>
+struct TraceTraits<VM::Box>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const VM::Box &box,
+                     const void *start, const void *end)
     {
-        HeapTraits() = delete;
+        if (!box.isPointer())
+            return;
+        HeapThing *heapThing = box.pointer<HeapThing>();
+        WH_ASSERT(heapThing != nullptr);
+        scanner(&(box.value_), heapThing);
+    }
 
-        static constexpr bool Specialized = true;
-        static constexpr AllocFormat Format = AllocFormat::Box;
-        static constexpr bool VarSized = false;
-    };
-
-    template <>
-    struct StackTraits<VM::Box>
+    template <typename Updater>
+    static void Update(Updater &updater, VM::Box &box,
+                       const void *start, const void *end)
     {
-        StackTraits() = delete;
+        if (!box.isPointer())
+            return;
+        HeapThing *heapThing = box.pointer<HeapThing>();
+        WH_ASSERT(heapThing != nullptr);
+        HeapThing *updated = updater(&(box.value_), heapThing);
+        if (updated != heapThing)
+            box.setPointer(updated);
+    }
+};
 
-        static constexpr bool Specialized = true;
-        static constexpr AllocFormat Format = AllocFormat::Box;
-    };
 
-    template <>
-    struct FieldTraits<VM::Box>
-    {
-        FieldTraits() = delete;
-
-        static constexpr bool Specialized = true;
-    };
-
-    template <>
-    struct AllocFormatTraits<AllocFormat::Box>
-    {
-        AllocFormatTraits() = delete;
-        typedef VM::Box Type;
-    };
-
-    template <>
-    struct AllocFormatTraits<AllocFormat::BoxArray>
-    {
-        AllocFormatTraits() = delete;
-        typedef VM::Array<VM::Box> Type;
-    };
-
-    template <>
-    struct TraceTraits<VM::Box>
-    {
-        TraceTraits() = delete;
-
-        static constexpr bool Specialized = true;
-        static constexpr bool IsLeaf = false;
-
-        template <typename Scanner>
-        static void Scan(Scanner &scanner, const VM::Box &box,
-                         const void *start, const void *end)
-        {
-            if (!box.isPointer())
-                return;
-            GC::AllocThing *allocThing = box.pointer<GC::AllocThing>();
-            WH_ASSERT(allocThing != nullptr);
-            scanner(reinterpret_cast<const void *>(&(box.value_)), allocThing);
-        }
-
-        template <typename Updater>
-        static void Update(Updater &updater, VM::Box &box,
-                           const void *start, const void *end)
-        {
-            if (!box.isPointer())
-                return;
-            GC::AllocThing *allocThing = box.pointer<GC::AllocThing>();
-            WH_ASSERT(allocThing != nullptr);
-            GC::AllocThing *updated = updater(
-                reinterpret_cast<void *>(&(box.value_)),
-                allocThing);
-            if (updated != allocThing)
-                box.setPointer(updated);
-        }
-    };
-
-} // namespace GC
 } // namespace Whisper
 
 

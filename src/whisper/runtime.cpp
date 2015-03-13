@@ -43,13 +43,13 @@ Runtime::registerThread()
     WH_ASSERT(pthread_getspecific(threadKey_) == nullptr);
 
     // Create a new nursery slab.
-    Slab *hatchery = Slab::AllocateStandard(GC::Gen::Hatchery);
+    Slab *hatchery = Slab::AllocateStandard(Gen::Hatchery);
     if (!hatchery)
         return "Could not allocate hatchery slab.";
     AutoDestroySlab _cleanupHatchery(hatchery);
 
     // Create initial tenured space slab.
-    Slab *tenured = Slab::AllocateStandard(GC::Gen::Tenured);
+    Slab *tenured = Slab::AllocateStandard(Gen::Tenured);
     if (!tenured)
         return "Could not allocate tenured slab.";
     AutoDestroySlab _cleanupTenured(tenured);

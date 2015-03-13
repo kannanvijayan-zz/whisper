@@ -9,31 +9,28 @@
 #include "gc/specializations.hpp"
 
 namespace Whisper {
-namespace GC {
 
 
 inline
-LocalBase::LocalBase(const LocalBase &other)
-  : LocalBase(other.threadContext_, other.header_.format())
-{}
-
-inline
-LocalBase::LocalBase(ThreadContext *threadContext, AllocFormat format)
+LocalBase::LocalBase(ThreadContext *threadContext,
+                     StackFormat format, uint32_t size)
   : threadContext_(threadContext),
     next_(threadContext_->locals()),
-    header_(format, GC::Gen::OnStack, 0, 0)
+    header_(format, size)
 {
     threadContext_->locals_ = this;
 }
 
 inline
-LocalBase::LocalBase(RunContext *runContext, AllocFormat format)
-  : LocalBase(runContext->threadContext(), format)
+LocalBase::LocalBase(RunContext *runContext,
+                     StackFormat format, uint32_t size)
+  : LocalBase(runContext->threadContext(), format, size)
 {}
 
 inline
-LocalBase::LocalBase(AllocationContext &acx, AllocFormat format)
-  : LocalBase(acx.threadContext(), format)
+LocalBase::LocalBase(const AllocationContext &acx,
+                     StackFormat format, uint32_t size)
+  : LocalBase(acx.threadContext(), format, size)
 {}
 
 inline 
@@ -47,22 +44,15 @@ template <typename Scanner>
 void
 LocalBase::scan(Scanner &scanner, void *start, void *end) const
 {
-    GcScanAllocFormat(format(), dataAfter(), scanner, start, end);
+    GC::ScanStackThing(format(), stackThing(), scanner, start, end);
 }
 
 template <typename Updater>
 void
 LocalBase::update(Updater &updater, void *start, void *end)
 {
-    GcUpdateAllocFormat(format(), dataAfter(), updater, start, end);
+    GC::UpdateStackThing(format(), stackThing(), updater, start, end);
 }
-
-
-} // namespace GC
-} // namespace Whisper
-
-
-namespace Whisper {
 
 
 template <typename T>

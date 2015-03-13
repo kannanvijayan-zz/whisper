@@ -13,7 +13,7 @@ namespace VM {
 
 class PropertyName
 {
-  friend class GC::TraceTraits<PropertyName>;
+  friend class TraceTraits<PropertyName>;
   private:
     // Low bits of pointer determine whether 
     uintptr_t val_;
@@ -81,7 +81,7 @@ class PropertyName
 
 class PropertyDescriptor
 {
-  friend class GC::TraceTraits<PropertyDescriptor>;
+  friend class TraceTraits<PropertyDescriptor>;
   private:
     StackField<Box> value_;
 
@@ -97,99 +97,99 @@ class PropertyDescriptor
 
 
 } // namespace VM
-} // namespace Whisper
 
 
-namespace Whisper {
-namespace GC {
+//
+// GC Specializations
+//
 
-    template <>
-    struct StackTraits<VM::PropertyName>
+template <>
+struct StackTraits<VM::PropertyName>
+{
+    StackTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr StackFormat Format = StackFormat::PropertyName;
+};
+template <>
+struct StackTraits<VM::PropertyDescriptor>
+{
+    StackTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr StackFormat Format = StackFormat::PropertyDescriptor;
+};
+
+template <>
+struct StackFormatTraits<StackFormat::PropertyName>
+{
+    StackFormatTraits() = delete;
+    typedef VM::PropertyName Type;
+};
+template <>
+struct StackFormatTraits<StackFormat::PropertyDescriptor>
+{
+    StackFormatTraits() = delete;
+    typedef VM::PropertyDescriptor Type;
+};
+
+template <>
+struct TraceTraits<VM::PropertyName>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const VM::PropertyName &propName,
+                     const void *start, const void *end)
     {
-        StackTraits() = delete;
+        if (!propName.isVMString())
+            return;
+        scanner(&propName.val_, HeapThing::From(propName.vmString()));
+    }
 
-        static constexpr bool Specialized = true;
-        static constexpr AllocFormat Format = AllocFormat::PropertyName;
-    };
-    template <>
-    struct StackTraits<VM::PropertyDescriptor>
+    template <typename Updater>
+    static void Update(Updater &updater, VM::PropertyName &propName,
+                       const void *start, const void *end)
     {
-        StackTraits() = delete;
-
-        static constexpr bool Specialized = true;
-        static constexpr AllocFormat Format = AllocFormat::PropertyDescriptor;
-    };
-
-    template <>
-    struct AllocFormatTraits<AllocFormat::PropertyName>
-    {
-        AllocFormatTraits() = delete;
-        typedef VM::PropertyName Type;
-    };
-    template <>
-    struct AllocFormatTraits<AllocFormat::PropertyDescriptor>
-    {
-        AllocFormatTraits() = delete;
-        typedef VM::PropertyDescriptor Type;
-    };
-
-    template <>
-    struct TraceTraits<VM::PropertyName>
-    {
-        TraceTraits() = delete;
-
-        static constexpr bool Specialized = true;
-        static constexpr bool IsLeaf = false;
-
-        template <typename Scanner>
-        static void Scan(Scanner &scanner, const VM::PropertyName &propName,
-                         const void *start, const void *end)
-        {
-            if (!propName.isVMString())
-                return;
-            scanner(&propName.val_, AllocThing::From(propName.vmString()));
+        if (!propName.isVMString())
+            return;
+        HeapThing *old = HeapThing::From(propName.vmString());
+        HeapThing *repl = updater(&propName.val_, old);
+        if (repl != old) {
+            VM::String *replStr = reinterpret_cast<VM::String *>(repl);
+            propName.gcUpdateVMString(replStr);
         }
+    }
+};
+template <>
+struct TraceTraits<VM::PropertyDescriptor>
+{
+    TraceTraits() = delete;
 
-        template <typename Updater>
-        static void Update(Updater &updater, VM::PropertyName &propName,
-                           const void *start, const void *end)
-        {
-            if (!propName.isVMString())
-                return;
-            AllocThing *old = AllocThing::From(propName.vmString());
-            AllocThing *repl = updater(&propName.val_, old);
-            if (repl != old) {
-                VM::String *replStr = reinterpret_cast<VM::String *>(repl);
-                propName.gcUpdateVMString(replStr);
-            }
-        }
-    };
-    template <>
-    struct TraceTraits<VM::PropertyDescriptor>
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner,
+                     const VM::PropertyDescriptor &propDesc,
+                     const void *start, const void *end)
     {
-        TraceTraits() = delete;
+        propDesc.value_.scan(scanner, start, end);
+    }
 
-        static constexpr bool Specialized = true;
-        static constexpr bool IsLeaf = false;
+    template <typename Updater>
+    static void Update(Updater &updater,
+                       VM::PropertyDescriptor &propDesc,
+                       const void *start, const void *end)
+    {
+        propDesc.value_.update(updater, start, end);
+    }
+};
 
-        template <typename Scanner>
-        static void Scan(Scanner &scanner,
-                         const VM::PropertyDescriptor &propDesc,
-                         const void *start, const void *end)
-        {
-            propDesc.value_.scan(scanner, start, end);
-        }
 
-        template <typename Updater>
-        static void Update(Updater &updater,
-                           VM::PropertyDescriptor &propDesc,
-                           const void *start, const void *end)
-        {
-            propDesc.value_.update(updater, start, end);
-        }
-    };
-
-} // namespace GC
 } // namespace Whisper
 
 
