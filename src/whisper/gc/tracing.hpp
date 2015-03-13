@@ -1,5 +1,5 @@
-#ifndef WHISPER__GC__CORE_HPP
-#define WHISPER__GC__CORE_HPP
+#ifndef WHISPER__GC__TRACING_HPP
+#define WHISPER__GC__TRACING_HPP
 
 #include <type_traits>
 
@@ -374,4 +374,4 @@ UpdateHeapThing(Updater &updater, HeapThing *thing,
 } // namespace GC
 } // namespace Whisper
 
-#endif // WHISPER__GC__CORE_HPP
+#endif // WHISPER__GC__TRACING_HPP

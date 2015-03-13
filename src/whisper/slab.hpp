@@ -4,7 +4,7 @@
 #include "common.hpp"
 #include "helpers.hpp"
 #include "debug.hpp"
-#include "gc/core.hpp"
+#include "gc/tracing.hpp"
 
 namespace Whisper {
 

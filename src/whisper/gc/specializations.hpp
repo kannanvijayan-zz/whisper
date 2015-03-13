@@ -3,7 +3,7 @@
 
 #include "common.hpp"
 #include "debug.hpp"
-#include "gc/core.hpp"
+#include "gc/tracing.hpp"
 #include "gc/field.hpp"
 
 #include <functional>

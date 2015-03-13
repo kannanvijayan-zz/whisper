@@ -5,7 +5,6 @@
 #include "spew.hpp"
 #include "memalloc.hpp"
 #include "slab.hpp"
-#include "gc/core.hpp"
 
 namespace Whisper {
 
