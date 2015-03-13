@@ -1,5 +1,5 @@
-#ifndef WHISPER__GC__STACK_HPP
-#define WHISPER__GC__STACK_HPP
+#ifndef WHISPER__GC__STACK_THINGS_HPP
+#define WHISPER__GC__STACK_THINGS_HPP
 
 #include "common.hpp"
 #include "debug.hpp"
@@ -281,4 +281,4 @@ class StackThing
 
 } // namespace Whisper
 
-#endif // WHISPER__GC__STACK_HPP
+#endif // WHISPER__GC__STACK_THINGS_HPP

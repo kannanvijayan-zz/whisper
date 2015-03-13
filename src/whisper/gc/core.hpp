@@ -8,8 +8,8 @@
 #include "helpers.hpp"
 
 #include "gc/formats.hpp"
-#include "gc/heap.hpp"
-#include "gc/stack.hpp"
+#include "gc/stack_things.hpp"
+#include "gc/heap_things.hpp"
 
 //
 //

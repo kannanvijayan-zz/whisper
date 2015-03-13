@@ -1,5 +1,5 @@
-#ifndef WHISPER__GC__HEAP_HPP
-#define WHISPER__GC__HEAP_HPP
+#ifndef WHISPER__GC__HEAP_THINGS_HPP
+#define WHISPER__GC__HEAP_THINGS_HPP
 
 #include "common.hpp"
 #include "debug.hpp"
@@ -386,4 +386,4 @@ class HeapThing
 
 } // namespace Whisper
 
-#endif // WHISPER__GC__HEAP_HPP
+#endif // WHISPER__GC__HEAP_THINGS_HPP
