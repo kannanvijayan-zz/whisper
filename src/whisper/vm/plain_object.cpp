@@ -1,9 +1,24 @@
 
+#include "runtime_inlines.hpp"
 #include "vm/plain_object.hpp"
 
 namespace Whisper {
 namespace VM {
 
+
+/* static */ PlainObject *
+PlainObject::Create(AllocationContext acx,
+                    Array<Wobject *> *delegates)
+{
+    ThreadContext *thrcx = acx.threadContext();
+    // Allocate a dictionary.
+    Local<PropertyDict *> props(thrcx,
+        PropertyDict::Create(acx, InitialPropertyCapacity));
+    if (props.get() == nullptr)
+        return nullptr;
+
+    return acx.create<PlainObject>(delegates, props.get());
+}
 
 /* static */ bool
 PlainObject::GetDelegates(RunContext *cx,

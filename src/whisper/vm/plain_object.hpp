@@ -18,12 +18,21 @@ class PlainObject : public Wobject
     HeapField<Array<Wobject *> *> delegates_;
     HeapField<PropertyDict *> dict_;
 
+    // Initial dictionary size is 8.
+    static constexpr uint32_t InitialPropertyCapacity = 8;
+
   public:
     PlainObject(Array<Wobject *> *delegates, PropertyDict *dict)
       : Wobject(),
         delegates_(delegates),
         dict_(dict)
-    {}
+    {
+        WH_ASSERT(delegates_ != nullptr);
+        WH_ASSERT(dict_ != nullptr);
+    }
+
+    static PlainObject *Create(AllocationContext acx,
+                               Array<Wobject *> *delegates);
 
     static bool GetDelegates(RunContext *cx,
                              Handle<PlainObject *> obj,
