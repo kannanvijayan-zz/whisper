@@ -4,9 +4,6 @@
 
 #include "vm/core.hpp"
 
-#include <new>
-#include <cstring>
-
 namespace Whisper {
 namespace VM {
 
@@ -90,14 +87,8 @@ class String
         return data_;
     }
 
-    bool equals(const String *other) const {
-        return (byteLength() == other->byteLength()) &&
-               (memcmp(bytes(), other->bytes(), byteLength()) == 0);
-    }
-    bool equals(const char *str, uint32_t length) const {
-        return (byteLength() == length) &&
-               (memcmp(bytes(), str, length) == 0);
-    }
+    bool equals(const String *other) const;
+    bool equals(const char *str, uint32_t length) const;
 
     Cursor begin() const {
         return Cursor(0);

@@ -7,8 +7,6 @@
 #include "vm/array.hpp"
 #include "vm/box.hpp"
 
-#include <new>
-
 namespace Whisper {
 namespace VM {
 

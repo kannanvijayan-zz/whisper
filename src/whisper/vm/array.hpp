@@ -4,8 +4,6 @@
 
 #include "vm/core.hpp"
 
-#include <new>
-
 namespace Whisper {
 namespace VM {
 

@@ -21,6 +21,7 @@ whisper_SOURCES = \
     parser/packed_reader.cpp \
     gc/tracing.cpp \
     vm/string.cpp \
+    vm/source_file.cpp \
     vm/wobject.cpp \
     vm/plain_object.cpp \
     vm/packed_syntax_tree.cpp \

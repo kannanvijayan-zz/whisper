@@ -4,8 +4,6 @@
 
 #include "vm/core.hpp"
 
-#include <new>
-
 
 // Specialize arrays for primitive types.
 #define DEF_PRIM_ARRAY_TRAITS_(type, fmtName) \

@@ -102,6 +102,20 @@ String::Create(AllocationContext acx, const String *other)
     return Create(acx, other->byteLength(), other->bytes());
 }
 
+bool
+String::equals(const String *other) const
+{
+    return (byteLength() == other->byteLength()) &&
+           (memcmp(bytes(), other->bytes(), byteLength()) == 0);
+}
+
+bool
+String::equals(const char *str, uint32_t length) const
+{
+    return (byteLength() == length) &&
+           (memcmp(bytes(), str, length) == 0);
+}
+
 void
 String::advance(Cursor &cursor) const
 {

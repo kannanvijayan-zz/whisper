@@ -5,8 +5,6 @@
 #include "vm/core.hpp"
 #include "vm/string.hpp"
 
-#include <new>
-
 namespace Whisper {
 namespace VM {
 
@@ -27,6 +25,8 @@ class SourceFile
     {
         WH_ASSERT(path != nullptr);
     }
+
+    static SourceFile *Create(AllocationContext acx, Handle<String *> path);
 
     String *path() const {
         return path_;

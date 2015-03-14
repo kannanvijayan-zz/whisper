@@ -32,7 +32,7 @@ class PlainObject : public Wobject
     }
 
     static PlainObject *Create(AllocationContext acx,
-                               Array<Wobject *> *delegates);
+                               Handle<Array<Wobject *> *> delegates);
 
     static bool GetDelegates(RunContext *cx,
                              Handle<PlainObject *> obj,

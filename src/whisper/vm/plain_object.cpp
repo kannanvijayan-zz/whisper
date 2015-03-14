@@ -8,11 +8,10 @@ namespace VM {
 
 /* static */ PlainObject *
 PlainObject::Create(AllocationContext acx,
-                    Array<Wobject *> *delegates)
+                    Handle<Array<Wobject *> *> delegates)
 {
-    ThreadContext *thrcx = acx.threadContext();
     // Allocate a dictionary.
-    Local<PropertyDict *> props(thrcx,
+    Local<PropertyDict *> props(acx,
         PropertyDict::Create(acx, InitialPropertyCapacity));
     if (props.get() == nullptr)
         return nullptr;
