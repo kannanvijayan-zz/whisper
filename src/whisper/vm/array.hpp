@@ -68,23 +68,18 @@ class Array
             vals_[i].init(other.vals_[i], this);
     }
 
-    static Array<T> *Create(AllocationContext acx,
-                            uint32_t length,
-                            const T *vals)
-    {
-        return acx.createSized<Array<T>>(CalculateSize(length), length, vals);
+    static Array<T> *Create(AllocationContext acx, ArrayHandle<T> arr) {
+        uint32_t len = arr.length();
+        return acx.createSized<Array<T>>(CalculateSize(len), len, arr.ptr());
     }
     static Array<T> *Create(AllocationContext acx,
                             uint32_t length,
-                            const T &val)
+                            Handle<T> val)
     {
         return acx.createSized<Array<T>>(CalculateSize(length), length, val);
     }
-    static Array<T> *Create(AllocationContext acx, const Array<T> &other) {
-        return acx.createSized<Array<T>>(
-            CalculateSize(other.length()),
-            other.length(),
-            reinterpret_cast<const T *>(other.vals_));
+    static Array<T> *Create(AllocationContext acx, Handle<Array<T> *> other) {
+        return Create(acx, other->arrayHandle());
     }
 
     inline uint32_t length() const;
@@ -93,10 +88,13 @@ class Array
         WH_ASSERT(idx < length());
         return vals_[idx];
     }
-
     T &getRaw(uint32_t idx) {
         WH_ASSERT(idx < length());
         return vals_[idx];
+    }
+
+    ArrayHandle<T> arrayHandle() const {
+        return ArrayHandle<T>(&getRaw(0), length());
     }
 
     T get(uint32_t idx) const {

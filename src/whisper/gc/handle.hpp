@@ -29,7 +29,7 @@ class MutHandle
       : valAddr_(stackVal.address())
     {}
 
-    inline static MutHandle FromTrackedPointer(T *valAddr)
+    inline static MutHandle FromTrackedLocation(T *valAddr)
     {
         return MutHandle(valAddr);
     }
@@ -82,8 +82,6 @@ class MutHandle
 template <typename T>
 class MutArrayHandle
 {
-    typedef typename DerefTraits<T>::Type DerefType;
-
   private:
     T * const valAddr_;
     uint32_t length_;
@@ -98,26 +96,30 @@ class MutArrayHandle
       : MutArrayHandle(stackVal.address(), 1)
     {}
 
-    inline static MutArrayHandle<T> FromTrackedPointer(T *valAddr,
-                                                       uint32_t length)
+    inline static MutArrayHandle<T> FromTrackedLocation(T *valAddr,
+                                                        uint32_t length)
     {
         return MutArrayHandle<T>(valAddr, length);
     }
 
-    inline const T &get(uint32_t i) const {
-        WH_ASSERT(i < length_);
-        return valAddr_[i];
+    inline uint32_t length() const {
+        return length_;
     }
-    inline T &get(uint32_t i) {
+
+    inline T *ptr() const {
+        return valAddr_;
+    }
+
+    inline T &get(uint32_t i) const {
         WH_ASSERT(i < length_);
         return valAddr_[i];
     }
 
-    inline void set(uint32_t i, const T &other) {
+    inline void set(uint32_t i, const T &other) const {
         WH_ASSERT(i < length_);
         valAddr_[i] = other;
     }
-    inline void set(uint32_t i, T &&other) {
+    inline void set(uint32_t i, T &&other) const {
         WH_ASSERT(i < length_);
         valAddr_[i] = other;
     }
@@ -139,11 +141,12 @@ template <typename T>
 class Handle
 {
     typedef typename DerefTraits<T>::Type DerefType;
+    typedef typename DerefTraits<T>::ConstType ConstDerefType;
 
   private:
-    T * const valAddr_;
+    const T * const valAddr_;
 
-    inline Handle(T *valAddr)
+    inline Handle(const T *valAddr)
       : valAddr_(valAddr)
     {}
 
@@ -156,7 +159,7 @@ class Handle
       : valAddr_(mutHandle.address())
     {}
 
-    inline static Handle FromTrackedPointer(const T *valAddr)
+    inline static Handle FromTrackedLocation(const T *valAddr)
     {
         return Handle(valAddr);
     }
@@ -177,7 +180,7 @@ class Handle
         return address();
     }
 
-    inline DerefType *operator ->() const {
+    inline const ConstDerefType *operator ->() const {
         return DerefTraits<T>::Deref(*valAddr_);
     }
 
@@ -187,13 +190,11 @@ class Handle
 template <typename T>
 class ArrayHandle
 {
-    typedef typename DerefTraits<T>::Type DerefType;
-
   private:
-    T * const valAddr_;
+    const T * const valAddr_;
     uint32_t length_;
 
-    inline ArrayHandle(T *valAddr, uint32_t length)
+    inline ArrayHandle(const T *valAddr, uint32_t length)
       : valAddr_(valAddr),
         length_(length)
     {}
@@ -207,25 +208,26 @@ class ArrayHandle
       : ArrayHandle(mutHandle.valAddr_, mutHandle.length)
     {}
 
-    inline static ArrayHandle<T> FromTrackedPointer(T *valAddr,
-                                                    uint32_t length)
+    inline static ArrayHandle<T> FromTrackedLocation(const T *valAddr,
+                                                     uint32_t length)
     {
         return ArrayHandle<T>(valAddr, length);
+    }
+
+    inline const T *ptr() const {
+        return valAddr_;
+    }
+
+    inline uint32_t length() const {
+        return length_;
     }
 
     inline const T &get(uint32_t i) const {
         WH_ASSERT(i < length_);
         return valAddr_[i];
     }
-    inline T get(uint32_t i) {
-        WH_ASSERT(i < length_);
-        return valAddr_[i];
-    }
 
     inline const T &operator [](uint32_t idx) const {
-        return get(idx);
-    }
-    inline T operator [](uint32_t idx) {
         return get(idx);
     }
 };

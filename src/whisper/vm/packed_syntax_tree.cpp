@@ -9,27 +9,22 @@ namespace VM {
 
 /* static */ PackedSyntaxTree *
 PackedSyntaxTree::Create(AllocationContext acx,
-                         uint32_t dataSize,
-                         const uint32_t *data,
-                         uint32_t constPoolSize,
-                         const Box *constPool)
+                         ArrayHandle<uint32_t> data,
+                         ArrayHandle<Box> constPool)
 {
-    ThreadContext *cx = acx.threadContext();
-
     // Allocate data array.
-    Local<Array<uint32_t> *> dataArray(cx,
-        Array<uint32_t>::Create(acx, dataSize, data));
+    Local<Array<uint32_t> *> dataArray(acx,
+        Array<uint32_t>::Create(acx, data));
     if (!dataArray.get())
         return nullptr;
 
     // Allocate data array.
-    Local<Array<Box> *> constPoolArray(cx,
-        Array<Box>::Create(acx, constPoolSize, constPool));
+    Local<Array<Box> *> constPoolArray(acx,
+        Array<Box>::Create(acx, constPool));
     if (!constPoolArray.get())
         return nullptr;
 
-    return acx.create<PackedSyntaxTree>(dataArray.get(),
-                                        constPoolArray.get());
+    return acx.create<PackedSyntaxTree>(dataArray.get(), constPoolArray.get());
 }
 
 

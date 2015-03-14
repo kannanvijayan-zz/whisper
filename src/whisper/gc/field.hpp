@@ -67,6 +67,7 @@ class BaseField
     static_assert(TraceTraits<T>::Specialized,
                   "TraceTraits has not been specialized for type.");
     typedef typename DerefTraits<T>::Type DerefType;
+    typedef typename DerefTraits<T>::ConstType ConstDerefType;
 
   protected:
     T val_;
@@ -100,7 +101,7 @@ class BaseField
         return address();
     }
 
-    inline const DerefType *operator ->() const {
+    inline ConstDerefType *operator ->() const {
         return DerefTraits<T>::Deref(val_);
     }
     inline DerefType *operator ->() {

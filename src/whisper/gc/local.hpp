@@ -88,6 +88,7 @@ class Local : public LocalBase
                   "StackTraits<T> not specialized.");
 
     typedef typename DerefTraits<T>::Type DerefType;
+    typedef typename DerefTraits<T>::ConstType ConstDerefType;
 
   private:
     T val_;
@@ -179,7 +180,7 @@ class Local : public LocalBase
         return ref;
     }
 
-    inline const DerefType *operator ->() const {
+    inline ConstDerefType *operator ->() const {
         return DerefTraits<T>::Deref(val_);
     }
     inline DerefType *operator ->() {

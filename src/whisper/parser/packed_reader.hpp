@@ -47,14 +47,12 @@ class PackedReader
     uint32_t constPoolSize_;
 
   public:
-    PackedReader(const uint32_t *buffer,
-                 uint32_t bufferSize,
-                 const VM::Box *constPool,
-                 uint32_t constPoolSize)
-      : buffer_(buffer),
-        bufferSize_(bufferSize),
-        constPool_(constPool),
-        constPoolSize_(constPoolSize)
+    PackedReader(ArrayHandle<uint32_t> buffer,
+                 ArrayHandle<VM::Box> constPool)
+      : buffer_(buffer.ptr()),
+        bufferSize_(buffer.length()),
+        constPool_(constPool.ptr()),
+        constPoolSize_(constPool.length())
     {}
 
     const uint32_t *buffer() const {

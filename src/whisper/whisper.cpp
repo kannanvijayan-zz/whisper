@@ -228,18 +228,17 @@ int main(int argc, char **argv) {
 
     fprintf(stderr, "PackedWriter local @%p\n", packedWriter.stackThing());
 
-    const uint32_t *buffer = packedWriter->buffer();
-    uint32_t bufferSize = packedWriter->bufferSize();
+    ArrayHandle<uint32_t> buffer = packedWriter->buffer();
     fprintf(stderr, "Packed Syntax Tree:\n");
-    for (uint32_t bufi = 0; bufi < bufferSize; bufi += 4) {
-        if (bufferSize - bufi >= 4) {
+    for (uint32_t bufi = 0; bufi < buffer.length(); bufi += 4) {
+        if (buffer.length() - bufi >= 4) {
             fprintf(stderr, "[%04d]  %08x %08x %08x %08x\n", bufi,
                     buffer[bufi], buffer[bufi+1],
                     buffer[bufi+2], buffer[bufi+3]);
-        } else if (bufferSize - bufi == 3) {
+        } else if (buffer.length() - bufi == 3) {
             fprintf(stderr, "[%04d]  %08x %08x %08x\n", bufi,
                     buffer[bufi], buffer[bufi+1], buffer[bufi+2]);
-        } else if (bufferSize - bufi == 2) {
+        } else if (buffer.length() - bufi == 2) {
             fprintf(stderr, "[%04d]  %08x %08x\n", bufi,
                     buffer[bufi], buffer[bufi+1]);
         } else {
@@ -248,11 +247,10 @@ int main(int argc, char **argv) {
         }
     }
 
-    VM::Box *constPool = packedWriter->constPool();
-    uint32_t constPoolSize = packedWriter->constPoolSize();
+    ArrayHandle<VM::Box> constPool = packedWriter->constPool();
     fprintf(stderr, "Constant Pool:\n");
-    for (uint32_t i = 0; i < constPoolSize; i++) {
-        VM::Box &box = constPool[i];
+    for (uint32_t i = 0; i < constPool.length(); i++) {
+        VM::Box box = constPool[i];
         char buf[50];
         box.snprint(buf, 50);
         fprintf(stderr, "[%04d]  %p\n", i, buf);
@@ -268,13 +266,11 @@ int main(int argc, char **argv) {
     AST::PrintingPackedVisitor<Printer> packedVisitor(pr2);
 
     fprintf(stderr, "Visited syntax tree:\n");
-    AST::PackedReader packedReader(buffer, bufferSize,
-                                   constPool, constPoolSize);
+    AST::PackedReader packedReader(buffer, constPool);
     packedReader.visit(&packedVisitor);
 
     Local<VM::PackedSyntaxTree *> packedSt(cx,
-        VM::PackedSyntaxTree::Create(acx, bufferSize, buffer,
-                                     constPoolSize, constPool));
+        VM::PackedSyntaxTree::Create(acx, buffer, constPool));
     fprintf(stderr, "packedSt local @%p\n", packedSt.stackThing());
 
     fprintf(stderr, "STACK SCAN!\n");

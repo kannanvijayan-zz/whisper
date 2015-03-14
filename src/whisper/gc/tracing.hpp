@@ -235,9 +235,10 @@ struct DerefTraits
     DerefTraits() = delete;
 
     typedef T Type;
+    typedef const T ConstType;
 
     // Given an reference to T, return a pointer to Type.
-    static inline const Type *Deref(const T &t) {
+    static inline ConstType *Deref(const T &t) {
         return &t;
     }
     static inline Type *Deref(T &t) {

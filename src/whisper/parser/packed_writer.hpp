@@ -131,15 +131,17 @@ class PackedWriter
     uint32_t bufferSize() const {
         return (cursor_ - start_);
     }
-    const uint32_t *buffer() const {
-        return start_;
+    ArrayHandle<uint32_t> buffer() const {
+        return ArrayHandle<uint32_t>::FromTrackedLocation(start_,
+                                                          bufferSize());
     }
 
     uint32_t constPoolSize() const {
         return constPoolSize_;
     }
-    VM::Box *constPool() const {
-        return constPool_;
+    ArrayHandle<VM::Box> constPool() const {
+        return ArrayHandle<VM::Box>::FromTrackedLocation(constPool_,
+                                                         constPoolSize_);
     }
   private:
     void write(uint32_t word) {

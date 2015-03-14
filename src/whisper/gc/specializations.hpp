@@ -74,9 +74,14 @@ struct DerefTraits<P *>
     DerefTraits() = delete;
 
     typedef P *T_;
-    typedef P  Type;
 
-    static inline const Type *Deref(const T_ &ptr) {
+    // Regardless of whether pointer value itself is const,
+    // the deref type is underlying pointed-to-type without
+    // any const modifiers.
+    typedef P  Type;
+    typedef P  ConstType;
+
+    static inline ConstType *Deref(const T_ &ptr) {
         return ptr;
     }
     static inline Type *Deref(T_ &ptr) {
