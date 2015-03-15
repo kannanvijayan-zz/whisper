@@ -26,37 +26,6 @@
 
 using namespace Whisper;
 
-void PrintTokens(CodeSource &code, Tokenizer &tokenizer)
-{
-    // Read and print tokens.
-    for (;;) {
-        Token tok = tokenizer.readToken();
-        char buf[20];
-        if (tok.isLineTerminatorSequence() || tok.isWhitespace() ||
-            tok.isEnd())
-        {
-            std::cerr << "Token " << tok.typeString() << std::endl;
-
-        }
-        else
-        {
-            int len = tok.length() < 19 ? tok.length()+1 : 20;
-            snprintf(buf, len, "%s", tok.text(code));
-            if (tok.length() >= 19) {
-                buf[16] = '.';
-                buf[17] = '.';
-                buf[18] = '.';
-            }
-
-            std::cerr << "Token " << tok.typeString() << ":" << buf
-                      << std::endl;
-        }
-
-        if (tok.isEnd())
-            break;
-    }
-}
-
 struct Printer {
     void operator ()(const char *s) {
         std::cerr << s;
@@ -178,8 +147,6 @@ int main(int argc, char **argv) {
         exit(1);
     }
     Tokenizer tokenizer(inputFile);
-
-    // PrintTokens(inputFile, tokenizer);
 
     BumpAllocator allocator;
     STLBumpAllocator<uint8_t> wrappedAllocator(allocator);

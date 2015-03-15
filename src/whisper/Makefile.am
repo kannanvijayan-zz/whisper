@@ -1,13 +1,14 @@
 
-bin_PROGRAMS = whisper
-whisper_CXXFLAGS = -Wall -std=c++14
+bin_PROGRAMS = whisper tokenizer
+AM_CXXFLAGS = -Wall -std=c++14
 if DEBUG
-  whisper_CXXFLAGS += -g -O0 -gdwarf-4
+  AM_CXXFLAGS += -g -O0 -gdwarf-4
 endif
 if WARNERR
-  whisper_CXXFLAGS += -Werror
+  AM_CXXFLAGS += -Werror
 endif
-whisper_SOURCES = \
+
+shared_cpp = \
     debug.cpp \
     spew.cpp \
     memalloc.cpp \
@@ -25,5 +26,12 @@ whisper_SOURCES = \
     vm/wobject.cpp \
     vm/plain_object.cpp \
     vm/packed_syntax_tree.cpp \
-    vm/property_dict.cpp \
+    vm/property_dict.cpp
+
+whisper_SOURCES = \
+    $(shared_cpp) \
     shell/shell.cpp
+
+tokenizer_SOURCES = \
+    $(shared_cpp) \
+    shell/shell_tokenizer.cpp
