@@ -30,7 +30,8 @@ shared_cpp = \
 
 whisper_SOURCES = \
     $(shared_cpp) \
-    shell/shell.cpp
+    shell/shell.cpp \
+    shell/shell_tracer.cpp
 
 parsetest_SOURCES = \
     $(shared_cpp) \

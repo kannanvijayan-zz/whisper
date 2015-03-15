@@ -24,92 +24,35 @@
 #include "vm/source_file.hpp"
 #include "vm/packed_syntax_tree.hpp"
 
+#include "shell/shell_tracer.hpp"
+
 using namespace Whisper;
 
 
-template <typename T> struct Node;
-typedef Node<HeapThing> HeapNode;
-typedef Node<StackThing> StackNode;
-
-template <typename T>
-struct Node {
-    T *ptr;
-    typedef std::vector<HeapNode *> ChildList;
-    ChildList children;
-
-    Node(T *ptr) : ptr(ptr), children() {}
-
-    void addChild(HeapNode *child) {
-        children.push_back(child);
-    }
-};
-
-
 // HeapTracer calculates the rooted object graph.
-struct HeapGraph {
-    // Mapping from heapthings to graph nodes.
-    typedef std::map<HeapThing *, HeapNode *> HeapToNodeMap;
-    HeapToNodeMap heapToNode;
-
-    // Set of things remaining to be scanned.
-    typedef std::set<HeapNode *> RemainingSet;
-    RemainingSet remaining;
-
-    // List of root stack things.
-    typedef std::vector<StackNode *> RootList;
-    RootList rootList;
-
-    HeapGraph() : heapToNode(), remaining(), rootList() {}
-
-    StackNode *addRoot(StackThing *rootPtr) {
-        StackNode *rootNode = new StackNode(rootPtr);
-        rootList.push_back(rootNode);
-        fprintf(stderr, "Add Root %p(%s)\n", rootPtr,
-                StackFormatString(rootPtr->format()));
-        return rootNode;
-    }
-
-    HeapNode *addChild(HeapNode *parentNode, HeapThing *child) {
-        HeapNode *childNode = getOrAddHeapThing(child);
-        parentNode->addChild(childNode);
-        fprintf(stderr, "Add Heap %p(%s) --> %p(%s)\n",
-                parentNode->ptr, HeapFormatString(parentNode->ptr->format()),
-                child, HeapFormatString(child->format()));
-        return childNode;
-    }
-
-    HeapNode *addChild(StackNode *stackNode, HeapThing *child) {
-        HeapNode *childNode = getOrAddHeapThing(child);
-        stackNode->addChild(childNode);
-        fprintf(stderr, "Add Stack %p(%s) --> %p(%s)\n",
-                stackNode->ptr, StackFormatString(stackNode->ptr->format()),
-                child, HeapFormatString(child->format()));
-        return childNode;
-    }
-
-    HeapNode *getOrAddHeapThing(HeapThing *heapThing) {
-        HeapToNodeMap::const_iterator iter = heapToNode.find(heapThing);
-        if (iter != heapToNode.end())
-            return iter->second;
-        HeapNode *node = new HeapNode(heapThing);
-        heapToNode.insert(HeapToNodeMap::value_type(heapThing, node));
-        remaining.insert(node);
-        return node;
-    }
-};
-
-template <typename T>
-struct Tracer
+struct HeapPrintVisitor : public TracerVisitor
 {
-    Node<T> *node;
-    HeapGraph *graph;
-
-    Tracer(Node<T> *node, HeapGraph *graph)
-      : node(node), graph(graph)
-    {}
-
-    inline void operator () (const void *addr, HeapThing *ptr) {
-        graph->addChild(node, ptr);
+    virtual void visitStackRoot(StackThing *rootPtr) override {
+        fprintf(stderr, "  Stack root %p(%s)\n",
+                rootPtr, StackFormatString(rootPtr->format()));
+    }
+    virtual void visitStackChild(StackThing *rootPtr, HeapThing *child)
+        override
+    {
+        fprintf(stderr, "    child %p(%s) --> %p(%s)\n",
+                rootPtr, StackFormatString(rootPtr->format()),
+                child, HeapFormatString(child->format()));
+    }
+    virtual void visitHeapThing(HeapThing *heapThing) override {
+        fprintf(stderr, "  Heap thing %p(%s)\n",
+                heapThing, HeapFormatString(heapThing->format()));
+    }
+    virtual void visitHeapChild(HeapThing *parent, HeapThing *child)
+        override
+    {
+        fprintf(stderr, "    child %p(%s) --> %p(%s)\n",
+                parent, HeapFormatString(parent->format()),
+                child, HeapFormatString(child->format()));
     }
 };
 
@@ -188,28 +131,8 @@ int main(int argc, char **argv) {
     fprintf(stderr, "packedSt local @%p\n", packedSt.stackThing());
 
     fprintf(stderr, "STACK SCAN!\n");
-    // Scan the root set.
-    HeapGraph graph;
-    for (LocalBase *base = thrcx->locals();
-         base != nullptr;
-         base = base->next())
-    {
-        StackThing *stackThing = base->stackThing();
-        StackNode *node = graph.addRoot(stackThing);
-        Tracer<StackThing> tracer(node, &graph);
-        GC::ScanStackThing<Tracer<StackThing>>(tracer, stackThing,
-                                               nullptr, nullptr);
-    }
-
-    fprintf(stderr, "HEAP SCAN!\n");
-    // Process remainings.
-    while (!graph.remaining.empty()) {
-        HeapNode *node = *graph.remaining.begin();
-        Tracer<HeapThing> tracer(node, &graph);
-        GC::ScanHeapThing<Tracer<HeapThing>>(tracer, node->ptr,
-                                             nullptr, nullptr);
-        graph.remaining.erase(node);
-    }
+    HeapPrintVisitor visitor;
+    trace_heap(thrcx, &visitor);
 
     return 0;
 }
