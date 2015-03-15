@@ -1,5 +1,5 @@
 
-bin_PROGRAMS = whisper tokenizer
+bin_PROGRAMS = whisper parsetest
 AM_CXXFLAGS = -Wall -std=c++14
 if DEBUG
   AM_CXXFLAGS += -g -O0 -gdwarf-4
@@ -32,6 +32,6 @@ whisper_SOURCES = \
     $(shared_cpp) \
     shell/shell.cpp
 
-tokenizer_SOURCES = \
+parsetest_SOURCES = \
     $(shared_cpp) \
-    shell/shell_tokenizer.cpp
+    shell/shell_parsetest.cpp

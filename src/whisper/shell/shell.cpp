@@ -26,16 +26,6 @@
 
 using namespace Whisper;
 
-struct Printer {
-    void operator ()(const char *s) {
-        std::cerr << s;
-    }
-    void operator ()(const uint8_t *s, uint32_t len) {
-        for (size_t i = 0; i < len; i++)
-            std::cerr << static_cast<char>(s[i]);
-    }
-};
-
 
 template <typename T> struct Node;
 typedef Node<HeapThing> HeapNode;
@@ -159,9 +149,6 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    Printer pr;
-    PrintNode(tokenizer.sourceReader(), fileNode, pr, 0);
-
     // Initialize a runtime.
     Runtime runtime;
     if (!runtime.initialize()) {
@@ -193,48 +180,8 @@ int main(int argc, char **argv) {
             acx));
     packedWriter->writeNode(fileNode);
 
-    fprintf(stderr, "PackedWriter local @%p\n", packedWriter.stackThing());
-
     ArrayHandle<uint32_t> buffer = packedWriter->buffer();
-    fprintf(stderr, "Packed Syntax Tree:\n");
-    for (uint32_t bufi = 0; bufi < buffer.length(); bufi += 4) {
-        if (buffer.length() - bufi >= 4) {
-            fprintf(stderr, "[%04d]  %08x %08x %08x %08x\n", bufi,
-                    buffer[bufi], buffer[bufi+1],
-                    buffer[bufi+2], buffer[bufi+3]);
-        } else if (buffer.length() - bufi == 3) {
-            fprintf(stderr, "[%04d]  %08x %08x %08x\n", bufi,
-                    buffer[bufi], buffer[bufi+1], buffer[bufi+2]);
-        } else if (buffer.length() - bufi == 2) {
-            fprintf(stderr, "[%04d]  %08x %08x\n", bufi,
-                    buffer[bufi], buffer[bufi+1]);
-        } else {
-            fprintf(stderr, "[%04d]  %08x\n", bufi,
-                    buffer[bufi]);
-        }
-    }
-
     ArrayHandle<VM::Box> constPool = packedWriter->constPool();
-    fprintf(stderr, "Constant Pool:\n");
-    for (uint32_t i = 0; i < constPool.length(); i++) {
-        VM::Box box = constPool[i];
-        char buf[50];
-        box.snprint(buf, 50);
-        fprintf(stderr, "[%04d]  %p\n", i, buf);
-        if (box.isPointer()) {
-            HeapThing *thing = box.pointer<HeapThing>();
-            fprintf(stderr, "    Ptr to %s (size=%d)\n",
-                    thing->header().formatString(),
-                    thing->header().size());
-        }
-    }
-
-    Printer pr2;
-    AST::PrintingPackedVisitor<Printer> packedVisitor(pr2);
-
-    fprintf(stderr, "Visited syntax tree:\n");
-    AST::PackedReader packedReader(buffer, constPool);
-    packedReader.visit(&packedVisitor);
 
     Local<VM::PackedSyntaxTree *> packedSt(cx,
         VM::PackedSyntaxTree::Create(acx, buffer, constPool));
