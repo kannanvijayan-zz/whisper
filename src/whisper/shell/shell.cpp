@@ -69,9 +69,6 @@ int main(int argc, char **argv) {
     InitializeSpew();
     InitializeTokenizer();
 
-    // FIXME: re-enable
-    //  Interp::InitializeOpcodeInfo();
-
     // Open input file.
     if (argc <= 1) {
         std::cerr << "No input file provided!" << std::endl;
