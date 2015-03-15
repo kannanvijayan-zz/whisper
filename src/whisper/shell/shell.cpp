@@ -32,27 +32,33 @@ using namespace Whisper;
 // HeapTracer calculates the rooted object graph.
 struct HeapPrintVisitor : public TracerVisitor
 {
+    StackThing *lastRoot;
+
+    HeapPrintVisitor() : lastRoot(nullptr) {}
+
     virtual void visitStackRoot(StackThing *rootPtr) override {
-        fprintf(stderr, "  Stack root %p(%s)\n",
-                rootPtr, StackFormatString(rootPtr->format()));
+        fprintf(stderr, "stack_%p [label=\"%s\\n@%p\"; shape=box];\n",
+                rootPtr, StackFormatString(rootPtr->format()), rootPtr);
+        if (lastRoot) {
+            fprintf(stderr, "stack_%p -> stack_%p [style=dotted];\n",
+                    lastRoot, rootPtr);
+        }
+        lastRoot = rootPtr;
     }
     virtual void visitStackChild(StackThing *rootPtr, HeapThing *child)
         override
     {
-        fprintf(stderr, "    child %p(%s) --> %p(%s)\n",
-                rootPtr, StackFormatString(rootPtr->format()),
-                child, HeapFormatString(child->format()));
+        fprintf(stderr, "stack_%p -> heap_%p;\n", rootPtr, child);
     }
+
     virtual void visitHeapThing(HeapThing *heapThing) override {
-        fprintf(stderr, "  Heap thing %p(%s)\n",
-                heapThing, HeapFormatString(heapThing->format()));
+        fprintf(stderr, "heap_%p [label=\"%s\\n@%p\"];\n",
+                heapThing, HeapFormatString(heapThing->format()), heapThing);
     }
     virtual void visitHeapChild(HeapThing *parent, HeapThing *child)
         override
     {
-        fprintf(stderr, "    child %p(%s) --> %p(%s)\n",
-                parent, HeapFormatString(parent->format()),
-                child, HeapFormatString(child->format()));
+        fprintf(stderr, "heap_%p -> heap_%p;\n", parent, child);
     }
 };
 
@@ -131,8 +137,10 @@ int main(int argc, char **argv) {
     fprintf(stderr, "packedSt local @%p\n", packedSt.stackThing());
 
     fprintf(stderr, "STACK SCAN!\n");
+    fprintf(stderr, "digraph G {\n");
     HeapPrintVisitor visitor;
     trace_heap(thrcx, &visitor);
+    fprintf(stderr, "}\n");
 
     return 0;
 }
