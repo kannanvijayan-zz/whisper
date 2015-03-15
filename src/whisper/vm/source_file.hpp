@@ -4,6 +4,7 @@
 
 #include "vm/core.hpp"
 #include "vm/string.hpp"
+#include "vm/packed_syntax_tree.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -18,10 +19,12 @@ class SourceFile
 
   private:
     HeapField<String *> path_;
+    HeapField<PackedSyntaxTree *> syntaxTree_;
 
   public:
     SourceFile(String *path)
-      : path_(path)
+      : path_(path),
+        syntaxTree_(nullptr)
     {
         WH_ASSERT(path != nullptr);
     }
@@ -30,6 +33,14 @@ class SourceFile
 
     String *path() const {
         return path_;
+    }
+
+    bool hasSyntaxTree() const {
+        return syntaxTree_.get() != nullptr;
+    }
+    PackedSyntaxTree *syntaxTree() const {
+        WH_ASSERT(hasSyntaxTree());
+        return syntaxTree_;
     }
 };
 
