@@ -26,4 +26,4 @@ whisper_SOURCES = \
     vm/plain_object.cpp \
     vm/packed_syntax_tree.cpp \
     vm/property_dict.cpp \
-    whisper.cpp
+    shell/shell.cpp
