@@ -4,10 +4,22 @@
 #include <stdlib.h>
 
 #include "slab.hpp"
+#include "spew.hpp"
+#include "parser/tokenizer.hpp"
+#include "parser/parser.hpp"
 #include "runtime.hpp"
 #include "runtime_inlines.hpp"
 
 namespace Whisper {
+
+
+void
+InitializeRuntime()
+{
+    InitializeSpew();
+    InitializeTokenizer();
+}
+
 
 //
 // Runtime

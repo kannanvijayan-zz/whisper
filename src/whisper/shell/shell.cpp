@@ -66,8 +66,7 @@ int main(int argc, char **argv) {
     std::cout << "Whisper says hello." << std::endl;
 
     // Initialize static tables.
-    InitializeSpew();
-    InitializeTokenizer();
+    InitializeRuntime();
 
     // Open input file.
     if (argc <= 1) {

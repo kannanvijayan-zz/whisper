@@ -17,6 +17,13 @@ class RunContext;
 class RunActivationHelper;
 
 //
+// InitializeRuntime
+//
+// Set up the runtime for execution.
+//
+void InitializeRuntime();
+
+//
 // Runtime
 //
 // A runtime represents one instance of the engine.
