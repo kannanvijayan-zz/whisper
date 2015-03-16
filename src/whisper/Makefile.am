@@ -26,7 +26,8 @@ shared_cpp = \
     vm/wobject.cpp \
     vm/plain_object.cpp \
     vm/packed_syntax_tree.cpp \
-    vm/property_dict.cpp
+    vm/property_dict.cpp \
+    vm/lookup_state.cpp
 
 whisper_SOURCES = \
     $(shared_cpp) \

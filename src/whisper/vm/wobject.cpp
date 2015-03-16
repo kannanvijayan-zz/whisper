@@ -7,7 +7,7 @@ namespace VM {
 
 
 /* static */ bool
-Wobject::GetDelegates(RunContext *cx,
+Wobject::GetDelegates(ThreadContext *cx,
                       Handle<Wobject *> obj,
                       MutHandle<Array<Wobject *> *> delegatesOut)
 {
@@ -23,7 +23,7 @@ Wobject::GetDelegates(RunContext *cx,
 }
 
 /* static */ bool
-Wobject::LookupProperty(RunContext *cx,
+Wobject::LookupProperty(ThreadContext *cx,
                         Handle<Wobject *> obj,
                         Handle<PropertyName> name,
                         MutHandle<PropertyDescriptor> result)
@@ -40,7 +40,7 @@ Wobject::LookupProperty(RunContext *cx,
 }
 
 /* static */ bool
-Wobject::DefineProperty(RunContext *cx,
+Wobject::DefineProperty(ThreadContext *cx,
                         Handle<Wobject *> obj,
                         Handle<PropertyName> name,
                         Handle<PropertyDescriptor> defn)

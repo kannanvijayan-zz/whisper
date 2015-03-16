@@ -20,7 +20,7 @@ PlainObject::Create(AllocationContext acx,
 }
 
 /* static */ bool
-PlainObject::GetDelegates(RunContext *cx,
+PlainObject::GetDelegates(ThreadContext *cx,
                           Handle<PlainObject *> obj,
                           MutHandle<Array<Wobject *> *> delegatesOut)
 {
@@ -44,7 +44,7 @@ PlainObject::LookupPropertyIndex(Handle<PlainObject *> obj,
 }
 
 /* static */ bool
-PlainObject::LookupProperty(RunContext *cx,
+PlainObject::LookupProperty(ThreadContext *cx,
                             Handle<PlainObject *> obj,
                             Handle<PropertyName> name,
                             MutHandle<PropertyDescriptor> result)
@@ -58,7 +58,7 @@ PlainObject::LookupProperty(RunContext *cx,
 }
 
 /* static */ bool
-PlainObject::DefineProperty(RunContext *cx,
+PlainObject::DefineProperty(ThreadContext *cx,
                             Handle<PlainObject *> obj,
                             Handle<PropertyName> name,
                             Handle<PropertyDescriptor> defn)

@@ -27,7 +27,9 @@
     _(HeapPointerArray)         \
     _(SourceFile)               \
     _(PropertyDict)             \
-    _(PlainObject)
+    _(PlainObject)              \
+    _(LookupNode)               \
+    _(LookupState)
 
 
 #endif // WHISPER__GC__FORMATS_HPP

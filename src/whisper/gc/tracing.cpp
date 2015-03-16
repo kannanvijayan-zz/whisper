@@ -16,6 +16,7 @@
 #include "vm/property_dict.hpp"
 #include "vm/wobject.hpp"
 #include "vm/plain_object.hpp"
+#include "vm/lookup_state.hpp"
 
 namespace Whisper {
 

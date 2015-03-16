@@ -34,7 +34,7 @@ class PlainObject : public Wobject
     static PlainObject *Create(AllocationContext acx,
                                Handle<Array<Wobject *> *> delegates);
 
-    static bool GetDelegates(RunContext *cx,
+    static bool GetDelegates(ThreadContext *cx,
                              Handle<PlainObject *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
 
@@ -42,12 +42,12 @@ class PlainObject : public Wobject
                                     Handle<PropertyName> name,
                                     uint32_t *indexOut);
 
-    static bool LookupProperty(RunContext *cx,
+    static bool LookupProperty(ThreadContext *cx,
                                Handle<PlainObject *> obj,
                                Handle<PropertyName> name,
                                MutHandle<PropertyDescriptor> result);
 
-    static bool DefineProperty(RunContext *cx,
+    static bool DefineProperty(ThreadContext *cx,
                                Handle<PlainObject *> obj,
                                Handle<PropertyName> name,
                                Handle<PropertyDescriptor> defn);
