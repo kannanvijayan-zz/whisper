@@ -28,6 +28,7 @@
     _(SourceFile)               \
     _(PropertyDict)             \
     _(PlainObject)              \
+    _(LookupSeenObjects)        \
     _(LookupNode)               \
     _(LookupState)
 

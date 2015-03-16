@@ -14,11 +14,21 @@
 namespace Whisper {
 namespace VM {
 
+class LookupSeenObjects;
 class LookupNode;
 class LookupState;
 
 } // namespace VM
 
+
+template <>
+struct HeapTraits<VM::LookupSeenObjects>
+{
+    HeapTraits() = delete;
+    static constexpr bool Specialized = true;
+    static constexpr HeapFormat Format = HeapFormat::LookupSeenObjects;
+    static constexpr bool VarSized = true;
+};
 
 template <>
 struct HeapTraits<VM::LookupNode>
@@ -43,6 +53,48 @@ struct HeapTraits<VM::LookupState>
 namespace VM {
 
 
+class LookupSeenObjects
+{
+    friend class TraceTraits<LookupSeenObjects>;
+  private:
+    uint32_t size_;
+    uint32_t filled_;
+    HeapField<Wobject *> seen_[0];
+
+    static constexpr float MaxFillRatio = 0.75;
+
+  public:
+    LookupSeenObjects(uint32_t size)
+      : size_(size),
+        filled_(0)
+    {
+        for (uint32_t i = 0; i < size_; i++)
+            seen_[i].init(nullptr, this);
+    }
+
+    static uint32_t CalculateSize(uint32_t size) {
+        return sizeof(LookupSeenObjects) + (sizeof(Wobject *) * size);
+    }
+
+    static LookupSeenObjects *Create(AllocationContext acx, uint32_t size);
+    static LookupSeenObjects *Create(AllocationContext acx, uint32_t size,
+                                     Handle<LookupSeenObjects *> other);
+
+    uint32_t size() const {
+        return size_;
+    }
+    uint32_t filled() const {
+        return filled_;
+    }
+    bool contains(Wobject *obj) const;
+
+    bool canAdd() const {
+        return filled_ < (size_ * MaxFillRatio);
+    }
+    void add(Wobject *obj);
+};
+
+
 class LookupNode
 {
     friend class TraceTraits<LookupNode>;
@@ -59,19 +111,19 @@ class LookupNode
                uint32_t index)
       : parent_(parent),
         object_(object),
-        delegates_(delegates),
-        index_(index)
+        delegates_(nullptr),
+        index_(0)
     {
         WH_ASSERT(parent != nullptr);
         WH_ASSERT(object != nullptr);
-        WH_ASSERT(delegates != nullptr);
     }
 
-    LookupNode *Create(AllocationContext acx,
-                       Handle<LookupNode *> parent,
-                       Handle<Wobject *> object,
-                       Handle<Array<Wobject *> *> delegates,
-                       uint32_t index);
+    static LookupNode *Create(AllocationContext acx,
+                              Handle<Wobject *> object);
+
+    static LookupNode *Create(AllocationContext acx,
+                              Handle<LookupNode *> parent,
+                              Handle<Wobject *> object);
 
     LookupNode *parent() const {
         return parent_;
@@ -102,23 +154,26 @@ class LookupState
   private:
     HeapField<Wobject *> receiver_;
     HeapField<String *> name_;
+    HeapField<LookupSeenObjects *> seen_;
     HeapField<LookupNode *> node_;
 
   public:
-    LookupState(Wobject *receiver, String *name, LookupNode *node)
+    LookupState(Wobject *receiver, String *name, LookupSeenObjects *seen,
+                LookupNode *node)
       : receiver_(receiver),
         name_(name),
+        seen_(seen),
         node_(node)
     {
         WH_ASSERT(receiver != nullptr);
         WH_ASSERT(name != nullptr);
+        WH_ASSERT(seen != nullptr);
         WH_ASSERT(node != nullptr);
     }
 
-    LookupState *Create(AllocationContext acx,
-                        Handle<Wobject *> receiver,
-                        Handle<String *> name,
-                        Handle<LookupNode *> node);
+    static LookupState *Create(AllocationContext acx,
+                               Handle<Wobject *> receiver,
+                               Handle<String *> name);
 
     Wobject *receiver() const {
         return receiver_;
@@ -126,9 +181,24 @@ class LookupState
     String *name() const {
         return name_;
     }
+    LookupSeenObjects *seen() const {
+        return seen_;
+    }
     LookupNode *node() const {
         return node_;
     }
+
+    bool nextNode(AllocationContext acx, MutHandle<LookupNode *> nodeOut);
+    bool linkNextNode(AllocationContext acx,
+                      Handle<LookupNode *> parent,
+                      uint32_t index,
+                      MutHandle<LookupNode *> nodeOut);
+
+  private:
+    bool wasSeen(Wobject *obj) const {
+        return seen_->contains(obj);
+    }
+    bool addToSeen(AllocationContext acx, Handle<Wobject *> obj);
 };
 
 
@@ -138,6 +208,44 @@ class LookupState
 //
 // GC Specializations
 //
+
+
+template <>
+struct HeapFormatTraits<HeapFormat::LookupSeenObjects>
+{
+    HeapFormatTraits() = delete;
+    static constexpr bool Specialized = true;
+    typedef VM::LookupSeenObjects Type;
+};
+template <>
+struct TraceTraits<VM::LookupSeenObjects>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    inline static void Scan(Scanner &scanner,
+                            const VM::LookupSeenObjects &lookupSeenObjects,
+                            const void *start, const void *end)
+    {
+        for (uint32_t i = 0; i < lookupSeenObjects.size_; i++) {
+            if (lookupSeenObjects.seen_[i].get() != nullptr)
+                lookupSeenObjects.seen_[i].scan(scanner, start, end);
+        }
+    }
+
+    template <typename Updater>
+    inline static void Update(Updater &updater,
+                              VM::LookupSeenObjects &lookupSeenObjects,
+                              const void *start, const void *end)
+    {
+        for (uint32_t i = 0; i < lookupSeenObjects.size_; i++)
+            if (lookupSeenObjects.seen_[i].get() != nullptr)
+                lookupSeenObjects.seen_[i].update(updater, start, end);
+    }
+};
 
 
 template <>
@@ -199,6 +307,7 @@ struct TraceTraits<VM::LookupState>
     {
         lookupState.receiver_.scan(scanner, start, end);
         lookupState.name_.scan(scanner, start, end);
+        lookupState.seen_.scan(scanner, start, end);
         lookupState.node_.scan(scanner, start, end);
     }
 
@@ -209,6 +318,7 @@ struct TraceTraits<VM::LookupState>
     {
         lookupState.receiver_.update(updater, start, end);
         lookupState.name_.update(updater, start, end);
+        lookupState.seen_.update(updater, start, end);
         lookupState.node_.update(updater, start, end);
     }
 };

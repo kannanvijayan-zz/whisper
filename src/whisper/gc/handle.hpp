@@ -180,7 +180,7 @@ class Handle
         return address();
     }
 
-    inline const ConstDerefType *operator ->() const {
+    inline ConstDerefType *operator ->() const {
         return DerefTraits<T>::Deref(*valAddr_);
     }
 
