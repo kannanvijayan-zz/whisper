@@ -16,7 +16,7 @@ PlainObject::Create(AllocationContext acx,
     if (props.get() == nullptr)
         return nullptr;
 
-    return acx.create<PlainObject>(delegates, props.get());
+    return acx.create<PlainObject>(delegates, props.handle());
 }
 
 /* static */ bool

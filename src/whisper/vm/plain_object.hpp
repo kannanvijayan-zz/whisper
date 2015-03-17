@@ -22,7 +22,8 @@ class PlainObject : public Wobject
     static constexpr uint32_t InitialPropertyCapacity = 8;
 
   public:
-    PlainObject(Array<Wobject *> *delegates, PropertyDict *dict)
+    PlainObject(Handle<Array<Wobject *> *> delegates,
+                Handle<PropertyDict *> dict)
       : Wobject(),
         delegates_(delegates),
         dict_(dict)
