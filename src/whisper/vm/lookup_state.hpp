@@ -196,17 +196,24 @@ class LookupState
         return node_;
     }
 
-    bool nextNode(AllocationContext acx, MutHandle<LookupNode *> nodeOut);
-    bool linkNextNode(AllocationContext acx,
-                      Handle<LookupNode *> parent,
-                      uint32_t index,
-                      MutHandle<LookupNode *> nodeOut);
+    static bool NextNode(AllocationContext acx,
+                         Handle<LookupState *> lookupState,
+                         MutHandle<LookupNode *> nodeOut);
+
+    static bool LinkNextNode(AllocationContext acx,
+                             Handle<LookupState *> lookupState,
+                             Handle<LookupNode *> parent,
+                             uint32_t index,
+                             MutHandle<LookupNode *> nodeOut);
 
   private:
     bool wasSeen(Wobject *obj) const {
         return seen_->contains(obj);
     }
-    bool addToSeen(AllocationContext acx, Handle<Wobject *> obj);
+
+    static bool AddToSeen(AllocationContext acx,
+                          Handle<LookupState *> lookupState,
+                          Handle<Wobject *> obj);
 };
 
 

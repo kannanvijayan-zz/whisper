@@ -119,17 +119,19 @@ LookupState::Create(AllocationContext acx,
                                    seen.handle(), node.handle());
 }
 
-bool
-LookupState::nextNode(AllocationContext acx, MutHandle<LookupNode *> nodeOut)
+/* static */ bool
+LookupState::NextNode(AllocationContext acx,
+                      Handle<LookupState *> lookupState,
+                      MutHandle<LookupNode *> nodeOut)
 {
     ThreadContext *cx = acx.threadContext();
 
     // node_ refers to a leaf-level node whose |delegates| field is null.
-    Local<LookupNode *> cur(acx, node_);
+    Local<LookupNode *> cur(acx, lookupState->node_);
     WH_ASSERT(cur->delegates() == nullptr);
 
     // Check if current object has any unseen delegates.
-    Local<Wobject *> obj(acx, node_->object());
+    Local<Wobject *> obj(acx, cur->object());
     Local<Array<Wobject *> *> delgs(acx, nullptr);
     if (!Wobject::GetDelegates(cx, obj, delgs.mutHandle()))
         return false;
@@ -137,10 +139,10 @@ LookupState::nextNode(AllocationContext acx, MutHandle<LookupNode *> nodeOut)
     if (delgs->length() > 0) {
         // This object has delegates.  Find the first unseen delegate.
         for (uint32_t i = 0; i < delgs->length(); i++) {
-            if (wasSeen(delgs->get(i)))
+            if (lookupState->wasSeen(delgs->get(i)))
                 continue;
             cur->setDelegates(delgs);
-            return linkNextNode(acx, cur, i, nodeOut);
+            return LinkNextNode(acx, lookupState, cur, i, nodeOut);
         }
         // If we got here, it means that all the delegates were seen,
         // or the objet had no delegates.
@@ -158,20 +160,21 @@ LookupState::nextNode(AllocationContext acx, MutHandle<LookupNode *> nodeOut)
 
         // Search on from index.
         for (uint32_t i = cur->index(); i < cur->delegates()->length(); i++) {
-            if (wasSeen(cur->delegates()->get(i)))
+            if (lookupState->wasSeen(cur->delegates()->get(i)))
                 continue;
-            return linkNextNode(acx, cur, i, nodeOut);
+            return LinkNextNode(acx, lookupState, cur, i, nodeOut);
         }
     }
 
     // Walk up chain ended.
-    node_.set(nullptr, this);
+    lookupState->node_.set(nullptr, lookupState.get());
     nodeOut.set(nullptr);
     return true;
 }
 
 bool
-LookupState::linkNextNode(AllocationContext acx,
+LookupState::LinkNextNode(AllocationContext acx,
+                          Handle<LookupState *> lookupState,
                           Handle<LookupNode *> parent,
                           uint32_t index,
                           MutHandle<LookupNode *> nodeOut)
@@ -182,25 +185,27 @@ LookupState::linkNextNode(AllocationContext acx,
     if (!newNode.get())
         return false;
 
-    if (!addToSeen(acx, obj))
+    if (!AddToSeen(acx, lookupState, obj))
         return false;
 
     parent->setIndex(index);
 
-    node_.set(newNode, this);
+    lookupState->node_.set(newNode, lookupState.get());
     nodeOut = newNode.get();
     return true;
 }
 
 bool
-LookupState::addToSeen(AllocationContext acx, Handle<Wobject *> obj)
+LookupState::AddToSeen(AllocationContext acx,
+                       Handle<LookupState *> lookupState,
+                       Handle<Wobject *> obj)
 {
-    WH_ASSERT(!seen_->contains(obj));
-    if (seen_->canAdd()) {
-        seen_->add(obj);
+    WH_ASSERT(!lookupState->seen_->contains(obj));
+    if (lookupState->seen_->canAdd()) {
+        lookupState->seen_->add(obj);
         return true;
     }
-    Local<LookupSeenObjects *> oldSeen(acx, seen_);
+    Local<LookupSeenObjects *> oldSeen(acx, lookupState->seen_);
 
     // Replace seen_ with a new larger-sized set.
     Local<LookupSeenObjects *> newSeen(acx,
@@ -209,9 +214,9 @@ LookupState::addToSeen(AllocationContext acx, Handle<Wobject *> obj)
         return false;
 
     WH_ASSERT(newSeen->canAdd());
-    seen_.set(newSeen, this);
+    lookupState->seen_.set(newSeen, lookupState.get());
 
-    seen_->add(obj);
+    lookupState->seen_->add(obj);
     return true;
 }
 
