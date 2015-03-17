@@ -91,7 +91,7 @@ LookupSeenObjects::add(Wobject *obj)
 LookupNode::Create(AllocationContext acx,
                    Handle<Wobject *> object)
 {
-    return acx.create<LookupNode>(nullptr, object.get(), nullptr, 0);
+    return acx.create<LookupNode>(object);
 }
 
 /* static */ LookupNode *
@@ -99,7 +99,7 @@ LookupNode::Create(AllocationContext acx,
                    Handle<LookupNode *> parent,
                    Handle<Wobject *> object)
 {
-    return acx.create<LookupNode>(parent.get(), object.get(), nullptr, 0);
+    return acx.create<LookupNode>(parent, object);
 }
 
 /* static */ LookupState *
@@ -115,8 +115,8 @@ LookupState::Create(AllocationContext acx,
     if (!node.get())
         return nullptr;
 
-    return acx.create<LookupState>(receiver.get(), name.get(), seen.get(),
-                                   node.get());
+    return acx.create<LookupState>(receiver, name,
+                                   seen.handle(), node.handle());
 }
 
 bool
