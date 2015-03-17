@@ -52,33 +52,48 @@ class Array
     }
 
     Array(uint32_t len, const T *vals) {
+        // T should NOT be heap-allocated.
+        static_assert(!HeapTraits<T>::Specialized,
+                      "Heap-allocated objects must use ArrayHandle-based "
+                      "constructor");
         for (uint32_t i = 0; i < len; i++)
             vals_[i].init(vals[i], this);
     }
 
     Array(uint32_t len, const T &val) {
+        static_assert(!HeapTraits<T>::Specialized,
+                      "Heap-allocated objects must use Handle-based "
+                      "constructor");
         for (uint32_t i = 0; i < len; i++)
             vals_[i].init(val, this);
     }
 
-    Array(const Array<T> &other) {
-        for (uint32_t i = 0; i < other.length(); i++)
-            vals_[i].init(other.vals_[i], this);
+    Array(ArrayHandle<T> vals) {
+        WH_ASSERT(length() == vals.length());
+        for (uint32_t i = 0; i < vals.length(); i++)
+            vals_[i].init(vals[i], this);
     }
 
-    static Array<T> *Create(AllocationContext acx, ArrayHandle<T> arr) {
-        uint32_t len = arr.length();
-        return acx.createSized<Array<T>>(CalculateSize(len), len, arr.ptr());
+    Array(uint32_t len, Handle<T> val) {
+        for (uint32_t i = 0; i < len; i++)
+            vals_[i].init(val, this);
     }
-    static Array<T> *Create(AllocationContext acx,
-                            uint32_t length,
-                            Handle<T> val)
-    {
-        return acx.createSized<Array<T>>(CalculateSize(length), length, val);
+
+    Array(Handle<Array<T> *> arr) {
+        WH_ASSERT(length() == arr->length());
+        for (uint32_t i = 0; i < arr->length(); i++)
+            vals_[i].init(arr->vals_[i], this);
     }
-    static Array<T> *Create(AllocationContext acx, Handle<Array<T> *> other) {
-        return Create(acx, other->arrayHandle());
-    }
+
+    static inline Array<T> *Create(AllocationContext acx, uint32_t length,
+                                   const T *vals);
+    static inline Array<T> *Create(AllocationContext acx, uint32_t length,
+                                   const T &val);
+    static inline Array<T> *Create(AllocationContext acx, ArrayHandle<T> arr);
+    static inline Array<T> *Create(AllocationContext acx, uint32_t length,
+                                   Handle<T> val);
+    static inline Array<T> *Create(AllocationContext acx,
+                                   Handle<Array<T> *> other);
 
     inline uint32_t length() const;
 
@@ -89,10 +104,6 @@ class Array
     T &getRaw(uint32_t idx) {
         WH_ASSERT(idx < length());
         return vals_[idx];
-    }
-
-    ArrayHandle<T> arrayHandle() const {
-        return ArrayHandle<T>(&getRaw(0), length());
     }
 
     T get(uint32_t idx) const {
@@ -131,23 +142,42 @@ Array<T>::length() const
     return size / sizeof(T);
 }
 
-/*
 template <typename T>
-inline void
-Array<T>::set(uint32_t idx, const T &val)
+/* static */ inline Array<T> *
+Array<T>::Create(AllocationContext acx, uint32_t len, const T *vals)
 {
-    WH_ASSERT(idx < length());
-    vals_[idx].set(val, this);
+    return acx.createSized<Array<T>>(CalculateSize(len), len, vals);
 }
 
 template <typename T>
-inline void
-Array<T>::set(uint32_t idx, T &&val)
+/* static */ inline Array<T> *
+Array<T>::Create(AllocationContext acx, uint32_t len, const T &val)
 {
-    WH_ASSERT(idx < length());
-    vals_[idx].set(val, this);
+    return acx.createSized<Array<T>>(CalculateSize(len), len, val);
 }
-*/
+
+template <typename T>
+/* static */ inline Array<T> *
+Array<T>::Create(AllocationContext acx, ArrayHandle<T> arr)
+{
+    uint32_t len = arr.length();
+    return acx.createSized<Array<T>>(CalculateSize(len), arr);
+}
+
+template <typename T>
+/* static */ inline Array<T> *
+Array<T>::Create(AllocationContext acx, uint32_t length, Handle<T> val)
+{
+    return acx.createSized<Array<T>>(CalculateSize(length), length, val);
+}
+
+template <typename T>
+/* static */ inline Array<T> *
+Array<T>::Create(AllocationContext acx, Handle<Array<T> *> other)
+{
+    uint32_t len = other->length();
+    return acx.createSized<Array<T>>(CalculateSize(len), other);
+}
 
 
 } // namespace VM
