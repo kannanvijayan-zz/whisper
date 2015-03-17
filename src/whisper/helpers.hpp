@@ -281,85 +281,152 @@ class Maybe
 };
 
 // Either class.
-template <typename T, typename U>
-class Either
+template <typename V, typename E>
+class Result
 {
   private:
-    static constexpr unsigned Size = Max(sizeof(T), sizeof(U));
-    alignas(Max(alignof(T), alignof(U))) char data_[Size];
-    bool hasFirst_;
+    static constexpr unsigned Size = Max(sizeof(V), sizeof(E));
+    static constexpr unsigned Align = Max(alignof(V), alignof(E));
+    alignas(Align) char data_[Size];
+    bool isValue_;
 
-    T *firstPtr() {
-        return reinterpret_cast<T *>(&data_[0]);
+    V *valuePtr() {
+        return reinterpret_cast<V *>(&data_[0]);
     }
-    const T *firstPtr() const {
-        return reinterpret_cast<const T *>(&data_[0]);
+    const V *valuePtr() const {
+        return reinterpret_cast<const V *>(&data_[0]);
     }
 
-    T *secondPtr() {
-        return reinterpret_cast<T *>(&data_[0]);
+    V *errorPtr() {
+        return reinterpret_cast<V *>(&data_[0]);
     }
-    const T *secondPtr() const {
-        return reinterpret_cast<const T *>(&data_[0]);
+    const V *errorPtr() const {
+        return reinterpret_cast<const V *>(&data_[0]);
+    }
+
+    struct ValueInit {
+        constexpr ValueInit() {}
+    };
+    struct ErrorInit {
+        constexpr ErrorInit() {}
+    };
+    static constexpr ValueInit V_ = ValueInit();
+    static constexpr ErrorInit E_ = ErrorInit();
+
+    Result(ValueInit, const V &v)
+      : isValue_(true)
+    {
+        new (valuePtr()) V(v);
+    }
+    Result(ValueInit, V &&v)
+      : isValue_(true)
+    {
+        new (valuePtr()) V(std::move(v));
+    }
+
+    Result(ErrorInit, const E &e)
+      : isValue_(false)
+    {
+        new (errorPtr()) E(e);
+    }
+    Result(ErrorInit, E &&e)
+      : isValue_(false)
+    {
+        new (errorPtr()) E(std::move(e));
     }
 
   public:
-    Either(const T &t)
-      : hasFirst_(true)
-    {
-        new (firstPtr()) T(t);
+    static Result<V, E> Value(const V &v) {
+        return Result<V, E>(V_, v);
+    }
+    static Result<V, E> Value(V &&v) {
+        return Result<V, E>(V_, std::move(v));
     }
 
-    Either(const U &u)
-      : hasFirst_(false)
-    {
-        new (secondPtr()) U(u);
+    static Result<V, E> Error(const E &e) {
+        return Result<V, E>(E_, e);
+    }
+    static Result<V, E> Error(E &&e) {
+        return Result<V, E>(E_, std::move(e));
     }
 
-    bool hasFirst() const {
-        return hasFirst_;
-    }
-    bool hasSecond() const {
-        return !hasFirst_;
-    }
-
-    const T &firstValue() const {
-        WH_ASSERT(hasFirst());
-        return *(firstPtr());
-    }
-    T &firstValue() {
-        WH_ASSERT(hasFirst());
-        return *(firstPtr());
+    ~Result() {
+        if (isValue())
+            valuePtr()->~V();
+        else
+            errorPtr()->~E();
     }
 
-    const T &secondValue() const {
-        WH_ASSERT(hasSecond());
-        return *(secondPtr());
+    bool isValue() const {
+        return isValue_;
     }
-    T &secondValue() {
-        WH_ASSERT(hasSecond());
-        return *(secondPtr());
+    bool isError() const {
+        return !isValue_;
     }
 
-    const T &operator =(const T &val) {
-        // Destroy existing second value of necessary.
-        if (!hasFirst_) {
-            secondPtr()->~U();
-            hasFirst_ = true;
+    const V &value() const {
+        WH_ASSERT(isValue());
+        return *(valuePtr());
+    }
+    V &value() {
+        WH_ASSERT(isValue());
+        return *(valuePtr());
+    }
+    void setValue(const V &val) {
+        if (isValue()) {
+            *(valuePtr()) = val;
+        } else {
+            errorPtr()->~E();
+            new (valuePtr()) V(val);
         }
-            
-        *firstPtr() = val;
-        return val;
+    }
+    void setValue(V &&val) {
+        if (isValue()) {
+            *(valuePtr()) = std::move(val);
+        } else {
+            errorPtr()->~E();
+            new (valuePtr()) V(std::move(val));
+        }
     }
 
-    const U &operator =(const U &val) {
-        // Destroy existing first value of necessary.
-        if (hasFirst_) {
-            firstPtr()->~T();
-            hasFirst_ = false;
+    const E &error() const {
+        WH_ASSERT(isError());
+        return *(errorPtr());
+    }
+    E &error() {
+        WH_ASSERT(isError());
+        return *(errorPtr());
+    }
+    void setError(const E &err) {
+        if (isError()) {
+            *(errorPtr()) = err;
+        } else {
+            valuePtr()->~V();
+            new (errorPtr()) E(err);
         }
+    }
+    void setError(E &&err) {
+        if (isError()) {
+            *(errorPtr()) = std::move(err);
+        } else {
+            valuePtr()->~V();
+            new (errorPtr()) E(std::move(err));
+        }
+    }
 
-        *secondPtr() = val;
+    Result<V, E> &operator =(const Result<V, E> &other) {
+        if (other->isValue())
+            setValue(other->value());
+        else
+            setError(other->error());
+        return *this;
+    }
+    Result<V, E> &operator =(Result<V, E> &&other) {
+        if (other->isValue())
+            setValue(std::move(other->value()));
+        else
+            setError(std::move(other->error()));
+        return *this;
     }
 };
 
