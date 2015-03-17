@@ -151,7 +151,7 @@ class Handle
     {}
 
   public:
-    inline Handle(Local<T> &stackVal)
+    inline Handle(const Local<T> &stackVal)
       : valAddr_(stackVal.address())
     {}
 

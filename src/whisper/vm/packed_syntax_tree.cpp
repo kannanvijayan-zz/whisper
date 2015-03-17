@@ -24,7 +24,8 @@ PackedSyntaxTree::Create(AllocationContext acx,
     if (!constPoolArray.get())
         return nullptr;
 
-    return acx.create<PackedSyntaxTree>(dataArray.get(), constPoolArray.get());
+    return acx.create<PackedSyntaxTree>(dataArray.handle(),
+                                        constPoolArray.handle());
 }
 
 

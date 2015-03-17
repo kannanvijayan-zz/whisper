@@ -23,12 +23,13 @@ class PackedSyntaxTree
     HeapField<Array<Box> *> constants_;
 
   public:
-    PackedSyntaxTree(Array<uint32_t> *data, Array<Box> *constants)
+    PackedSyntaxTree(Handle<Array<uint32_t> *> data,
+                     Handle<Array<Box> *> constants)
       : data_(data),
         constants_(constants)
     {
-        WH_ASSERT(data != nullptr);
-        WH_ASSERT(constants != nullptr);
+        WH_ASSERT(data.get() != nullptr);
+        WH_ASSERT(constants.get() != nullptr);
     }
 
     static PackedSyntaxTree *Create(AllocationContext acx,
