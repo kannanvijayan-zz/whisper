@@ -22,7 +22,7 @@ class SourceFile
     HeapField<PackedSyntaxTree *> syntaxTree_;
 
   public:
-    SourceFile(String *path)
+    SourceFile(Handle<String *> path)
       : path_(path),
         syntaxTree_(nullptr)
     {

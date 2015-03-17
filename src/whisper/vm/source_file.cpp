@@ -9,7 +9,7 @@ namespace VM {
 /* static */ SourceFile *
 SourceFile::Create(AllocationContext acx, Handle<String *> path)
 {
-    return acx.create<SourceFile>(path.get());
+    return acx.create<SourceFile>(path);
 }
 
 
