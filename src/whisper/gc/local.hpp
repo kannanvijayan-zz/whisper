@@ -8,7 +8,6 @@
 namespace Whisper {
 
 class ThreadContext;
-class RunContext;
 class AllocationContext;
 
 // LocalBase
@@ -28,8 +27,6 @@ class LocalBase
     inline LocalBase(const LocalBase &other) = delete;
     inline LocalBase(LocalBase &&other) = delete;
     inline LocalBase(ThreadContext *threadContext,
-                     StackFormat format, uint32_t size);
-    inline LocalBase(RunContext *runContext,
                      StackFormat format, uint32_t size);
     inline LocalBase(const AllocationContext &acx,
                      StackFormat format, uint32_t size);
@@ -107,19 +104,6 @@ class Local : public LocalBase
     {}
     inline Local(ThreadContext *threadContext, T &&val)
       : LocalBase(threadContext, StackTraits<T>::Format, sizeof(T)),
-        val_(std::move(val))
-    {}
-
-    inline Local(RunContext *runContext)
-      : LocalBase(runContext, StackTraits<T>::Format, sizeof(T)),
-        val_()
-    {}
-    inline Local(RunContext *runContext, const T &val)
-      : LocalBase(runContext, StackTraits<T>::Format, sizeof(T)),
-        val_(val)
-    {}
-    inline Local(RunContext *runContext, T &&val)
-      : LocalBase(runContext, StackTraits<T>::Format, sizeof(T)),
         val_(std::move(val))
     {}
 

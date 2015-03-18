@@ -14,7 +14,6 @@
 namespace Whisper {
 
 class ThreadContext;
-class RunContext;
 class RunActivationHelper;
 
 //
@@ -39,7 +38,6 @@ void InitializeRuntime();
 class Runtime
 {
   friend class ThreadContext;
-  friend class RunContext;
   private:
     // Every running thread uses a thread context.
     std::vector<ThreadContext *> threadContexts_;
@@ -110,14 +108,10 @@ class AllocationContext
 // ThreadContext
 //
 // Holds all relevant information for a thread to interact with a runtime.
-// A thread context is typically not used directly within the engine.
-// Instead, a sub-construct, the RunContext, is used.
 //
-
 class ThreadContext
 {
   friend class Runtime;
-  friend class RunContext;
   friend class LocalBase;
   friend class RunActivationHelper;
   private:
@@ -126,8 +120,6 @@ class ThreadContext
     Slab *nursery_;
     Slab *tenured_;
     SlabList tenuredList_;
-    RunContext *activeRunContext_;
-    RunContext *runContextList_;
     LocalBase *locals_;
     bool suppressGC_;
 
@@ -163,10 +155,6 @@ class ThreadContext
         return tenuredList_;
     }
 
-    inline RunContext *activeRunContext() const {
-        return activeRunContext_;
-    }
-
     inline LocalBase *locals() const {
         return locals_;
     }
@@ -175,82 +163,12 @@ class ThreadContext
         return suppressGC_;
     }
 
-    void addRunContext(RunContext *cx);
-    void removeRunContext(RunContext *cx);
-
-    void activate(RunContext *cx);
-    void deactivateCurrentRunContext();
-
     AllocationContext inHatchery();
     AllocationContext inTenured();
 
     int randInt();
 
     uint32_t spoiler() const;
-};
-
-
-//
-// RunContext
-//
-// Holds the actual execution context for some active piece of code.
-// While idle RunContexts may exist, at any point in time there's
-// at most one active RunContext for a given ThreadContext.
-//
-// This RunContext carries state relevant to activation, as well as
-// the privilege levels of executing code.  It also holds copies of
-// the hatchery Slab pointer from the ThreadContext, for quick
-// access without an extra indirection.
-//
-// All RunContexts for a given thread are linked together with an
-// embedded singly linked list.
-//
-
-class RunContext
-{
-  friend class Runtime;
-  friend class ThreadContext;
-
-  private:
-    ThreadContext *threadContext_;
-    RunContext *next_;
-    Slab *hatchery_;
-    bool suppressGC_;
-
-  public:
-    RunContext(ThreadContext *threadContext);
-
-    ThreadContext *threadContext() const;
-    Runtime *runtime() const;
-    Slab *hatchery() const;
-    bool suppressGC() const;
-
-    AllocationContext inHatchery();
-    AllocationContext inTenured();
-};
-
-
-//
-// RunActivationHelper
-//
-// An RAII helper class that makes a run context active on construction,
-// and deactivates it on destruction.
-//
-// Asserts constraints during each phase.
-//
-
-class RunActivationHelper
-{
-  private:
-    ThreadContext *threadCx_;
-    RunContext *oldRunCx_;
-#if defined(ENABLE_DEBUG)
-    RunContext *runCx_;
-#endif
-
-  public:
-    RunActivationHelper(RunContext &cx);
-    ~RunActivationHelper();
 };
 
 

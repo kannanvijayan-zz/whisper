@@ -150,8 +150,6 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
     nursery_(nullptr),
     tenured_(tenured),
     tenuredList_(),
-    activeRunContext_(nullptr),
-    runContextList_(nullptr),
     locals_(nullptr),
     suppressGC_(false),
     randSeed_(NewRandSeed()),
@@ -163,64 +161,6 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
 
     tenuredList_.addSlab(tenured);
 }
-
-void
-ThreadContext::addRunContext(RunContext *runcx)
-{
-    WH_ASSERT(runcx->threadContext() == this);
-    WH_ASSERT(runcx->next_ == nullptr);
-    runcx->next_ = runContextList_;
-    runContextList_ = runcx;
-}
-
-void
-ThreadContext::removeRunContext(RunContext *runcx)
-{
-    WH_ASSERT(runcx->threadContext() == this);
-    WH_ASSERT(runcx->next_ == nullptr);
-    bool found = false;
-    RunContext *prevCx = nullptr;
-    for (RunContext *cx = runContextList_; cx != nullptr; cx = cx->next_) {
-        if (cx == runcx) {
-            found = true;
-            if (prevCx) {
-                WH_ASSERT(prevCx->next_ == cx);
-                prevCx->next_ = cx->next_;
-                cx->next_ = nullptr;
-
-            } else {
-                runContextList_ = cx->next_;
-                cx->next_ = nullptr;
-            }
-
-            break;
-        }
-    }
-    WH_ASSERT(found);
-}
-
-void
-ThreadContext::activate(RunContext *cx)
-{
-    WH_ASSERT(cx);
-    WH_ASSERT_IF(activeRunContext_ == cx, hatchery_ == cx->hatchery_);
-    if (activeRunContext_ != cx) {
-        activeRunContext_ = cx;
-
-        // Sync hatchery and suppressGC state.
-        cx->hatchery_ = hatchery_;
-        cx->suppressGC_ = suppressGC_;
-    }
-}
-
-void
-ThreadContext::deactivateCurrentRunContext()
-{
-    WH_ASSERT(activeRunContext_);
-    activeRunContext_->hatchery_ = nullptr;
-    activeRunContext_ = nullptr;
-}
-
 
 AllocationContext
 ThreadContext::inHatchery()
@@ -245,83 +185,6 @@ uint32_t
 ThreadContext::spoiler() const
 {
     return spoiler_;
-}
-
-
-//
-// RunContext
-//
-
-RunContext::RunContext(ThreadContext *threadContext)
-  : threadContext_(threadContext),
-    next_(nullptr),
-    hatchery_(threadContext_->hatchery()),
-    suppressGC_(threadContext_->suppressGC())
-{
-    threadContext_->addRunContext(this);
-}
-
-ThreadContext *
-RunContext::threadContext() const
-{
-    return threadContext_;
-}
-
-Runtime *
-RunContext::runtime() const
-{
-    return threadContext_->runtime();
-}
-
-Slab *
-RunContext::hatchery() const
-{
-    WH_ASSERT(hatchery_ == threadContext_->hatchery());
-    return hatchery_;
-}
-
-bool
-RunContext::suppressGC() const
-{
-    return suppressGC_;
-}
-
-AllocationContext
-RunContext::inHatchery()
-{
-    return AllocationContext(threadContext_, hatchery_);
-}
-
-AllocationContext
-RunContext::inTenured()
-{
-    return AllocationContext(threadContext_, threadContext_->tenured());
-}
-
-//
-// RunActivationHelper
-//
-
-RunActivationHelper::RunActivationHelper(RunContext &cx)
-  : threadCx_(cx.threadContext()),
-    oldRunCx_(cx.threadContext()->activeRunContext())
-#if defined(ENABLE_DEBUG)
-    ,
-    runCx_(&cx)
-#endif
-{
-    cx.threadContext()->activate(&cx);
-}
-
-RunActivationHelper::~RunActivationHelper()
-{
-#if defined(ENABLE_DEBUG)
-    WH_ASSERT(threadCx_->activeRunContext() == runCx_);
-#endif
-    if (oldRunCx_)
-        threadCx_->activate(oldRunCx_);
-    else
-        threadCx_->deactivateCurrentRunContext();
 }
 
 

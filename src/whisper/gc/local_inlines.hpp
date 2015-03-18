@@ -22,12 +22,6 @@ LocalBase::LocalBase(ThreadContext *threadContext,
 }
 
 inline
-LocalBase::LocalBase(RunContext *runContext,
-                     StackFormat format, uint32_t size)
-  : LocalBase(runContext->threadContext(), format, size)
-{}
-
-inline
 LocalBase::LocalBase(const AllocationContext &acx,
                      StackFormat format, uint32_t size)
   : LocalBase(acx.threadContext(), format, size)

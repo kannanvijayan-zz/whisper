@@ -108,13 +108,7 @@ int main(int argc, char **argv) {
         std::cerr << "ThreadContext error: " << err << std::endl;
         return 1;
     }
-    ThreadContext *thrcx = runtime.threadContext();
-
-    // Create a run context for execution.
-    RunContext runcx(thrcx);
-    RunActivationHelper _rah(runcx);
-
-    RunContext *cx = &runcx;
+    ThreadContext *cx = runtime.threadContext();
     AllocationContext acx(cx->inTenured());
 
     // Write out the syntax tree in packed format.
@@ -135,7 +129,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "STACK SCAN!\n");
     fprintf(stderr, "digraph G {\n");
     HeapPrintVisitor visitor;
-    trace_heap(thrcx, &visitor);
+    trace_heap(cx, &visitor);
     fprintf(stderr, "}\n");
 
     return 0;
