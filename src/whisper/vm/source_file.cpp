@@ -6,7 +6,7 @@ namespace Whisper {
 namespace VM {
 
 
-/* static */ SourceFile *
+/* static */ Result<SourceFile *>
 SourceFile::Create(AllocationContext acx, Handle<String *> path)
 {
     return acx.create<SourceFile>(path);

@@ -6,26 +6,26 @@ namespace Whisper {
 namespace VM {
 
 
-/* static */ PlainObject *
+/* static */ Result<PlainObject *>
 PlainObject::Create(AllocationContext acx,
                     Handle<Array<Wobject *> *> delegates)
 {
     // Allocate a dictionary.
-    Local<PropertyDict *> props(acx,
-        PropertyDict::Create(acx, InitialPropertyCapacity));
-    if (props.get() == nullptr)
-        return nullptr;
+    Result<PropertyDict *> mbProps = 
+        PropertyDict::Create(acx, InitialPropertyCapacity);
+    if (!mbProps)
+        return Result<PlainObject *>::Error();
 
+    Local<PropertyDict *> props(acx, mbProps.value());
     return acx.create<PlainObject>(delegates, props.handle());
 }
 
-/* static */ bool
+/* static */ void
 PlainObject::GetDelegates(ThreadContext *cx,
                           Handle<PlainObject *> obj,
                           MutHandle<Array<Wobject *> *> delegatesOut)
 {
     delegatesOut = obj->delegates_;
-    return true;
 }
 
 /* static */ bool
@@ -57,7 +57,7 @@ PlainObject::LookupProperty(ThreadContext *cx,
     return true;
 }
 
-/* static */ bool
+/* static */ OkResult
 PlainObject::DefineProperty(ThreadContext *cx,
                             Handle<PlainObject *> obj,
                             Handle<PropertyName> name,
@@ -68,20 +68,22 @@ PlainObject::DefineProperty(ThreadContext *cx,
         // Override existing definition.
         WH_ASSERT(name->equals(obj->dict_->name(idx)));
         obj->dict_->setValue(idx, defn);
-        return true;
+        return OkResult::Ok();
     }
 
     // Entry needs to be added.  Either define a string
     // or use existing one.
-    Local<String *> nameString(cx, name->createString(cx->inHatchery()));
-    if (!nameString.get())
-        return false;
+    Result<String *> maybeNameString = name->createString(cx->inHatchery());
+    if (!maybeNameString)
+        return OkResult::Error();
+    Local<String *> nameString(cx, maybeNameString.value());
 
     // Property not found.  Add an entry.
     if (obj->dict_->addEntry(nameString.get(), defn))
-        return true;
+        return OkResult::Ok();
 
-    return false;
+    // TODO: Try to enlarge dict and add.
+    return OkResult::Error();
 }
 
 

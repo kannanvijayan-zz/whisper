@@ -76,9 +76,13 @@ class LookupSeenObjects
         return sizeof(LookupSeenObjects) + (sizeof(Wobject *) * size);
     }
 
-    static LookupSeenObjects *Create(AllocationContext acx, uint32_t size);
-    static LookupSeenObjects *Create(AllocationContext acx, uint32_t size,
-                                     Handle<LookupSeenObjects *> other);
+    static Result<LookupSeenObjects *> Create(
+        AllocationContext acx, uint32_t size);
+
+    static Result<LookupSeenObjects *> Create(
+        AllocationContext acx,
+        uint32_t size,
+        Handle<LookupSeenObjects *> other);
 
     uint32_t size() const {
         return size_;
@@ -124,12 +128,12 @@ class LookupNode
         WH_ASSERT(object.get() != nullptr);
     }
 
-    static LookupNode *Create(AllocationContext acx,
-                              Handle<Wobject *> object);
+    static Result<LookupNode *> Create(AllocationContext acx,
+                                       Handle<Wobject *> object);
 
-    static LookupNode *Create(AllocationContext acx,
-                              Handle<LookupNode *> parent,
-                              Handle<Wobject *> object);
+    static Result<LookupNode *> Create(AllocationContext acx,
+                                       Handle<LookupNode *> parent,
+                                       Handle<Wobject *> object);
 
     LookupNode *parent() const {
         return parent_;
@@ -179,9 +183,9 @@ class LookupState
         WH_ASSERT(node != nullptr);
     }
 
-    static LookupState *Create(AllocationContext acx,
-                               Handle<Wobject *> receiver,
-                               Handle<String *> name);
+    static Result<LookupState *> Create(AllocationContext acx,
+                                        Handle<Wobject *> receiver,
+                                        Handle<String *> name);
 
     Wobject *receiver() const {
         return receiver_;
@@ -196,24 +200,24 @@ class LookupState
         return node_;
     }
 
-    static bool NextNode(AllocationContext acx,
-                         Handle<LookupState *> lookupState,
-                         MutHandle<LookupNode *> nodeOut);
-
-    static bool LinkNextNode(AllocationContext acx,
+    static OkResult NextNode(AllocationContext acx,
                              Handle<LookupState *> lookupState,
-                             Handle<LookupNode *> parent,
-                             uint32_t index,
                              MutHandle<LookupNode *> nodeOut);
+
+    static OkResult LinkNextNode(AllocationContext acx,
+                                 Handle<LookupState *> lookupState,
+                                 Handle<LookupNode *> parent,
+                                 uint32_t index,
+                                 MutHandle<LookupNode *> nodeOut);
 
   private:
     bool wasSeen(Wobject *obj) const {
         return seen_->contains(obj);
     }
 
-    static bool AddToSeen(AllocationContext acx,
-                          Handle<LookupState *> lookupState,
-                          Handle<Wobject *> obj);
+    static OkResult AddToSeen(AllocationContext acx,
+                              Handle<LookupState *> lookupState,
+                              Handle<Wobject *> obj);
 };
 
 

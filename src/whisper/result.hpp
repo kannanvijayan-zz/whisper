@@ -148,6 +148,9 @@ class Result<P *>
         return ptr_ == nullptr;
     }
 
+    explicit operator bool() const {
+        return isValue();
+    }
     P *value() const {
         WH_ASSERT(isValue());
         return ptr_;
@@ -160,6 +163,32 @@ class Result<P *>
 
     void setError() {
         ptr_ = nullptr;
+    }
+};
+
+class OkResult
+{
+  private:
+    bool ok_;
+
+    OkResult(bool ok) : ok_(ok) {}
+
+  public:
+    static OkResult Ok() {
+        return OkResult(true);
+    }
+    static OkResult Error() {
+        return OkResult(false);
+    }
+
+    explicit operator bool() const {
+        return ok_;
+    }
+    bool isOk() const {
+        return ok_;
+    }
+    bool isError() const {
+        return !ok_;
     }
 };
 

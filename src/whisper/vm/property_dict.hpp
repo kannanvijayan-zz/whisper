@@ -34,7 +34,8 @@ class PropertyDict
         return sizeof(PropertyDict) + (sizeof(Entry) * capacity);
     }
 
-    static PropertyDict *Create(AllocationContext acx, uint32_t capacity);
+    static Result<PropertyDict *> Create(AllocationContext acx,
+                                         uint32_t capacity);
 
     uint32_t capacity() const {
         return capacity_;

@@ -68,12 +68,13 @@ PackedWriter::addIdentifier(const IdentifierToken &ident)
     if (iter != identifierMap_.end())
         return iter->second;
 
-    VM::String *str = VM::String::Create(acx_, bytes, ident.text(src_));
-    if (!str)
+    Result<VM::String *> str =
+        VM::String::Create(acx_, bytes, ident.text(src_));
+    if (str.isError())
         emitError("Could not allocate identifier.");
 
     WH_ASSERT(constPoolSize_ < constPoolCapacity_);
-    uint32_t idx = addToConstPool(VM::Box(str));
+    uint32_t idx = addToConstPool(VM::Box(str.value()));
     identifierMap_.insert(IdentifierMap::value_type(key, idx));
     return idx;
 }

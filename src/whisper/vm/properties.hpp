@@ -66,9 +66,9 @@ class PropertyName
         return str->equals(cString(), length());
     }
 
-    String *createString(AllocationContext acx) const {
+    Result<String *> createString(AllocationContext acx) const {
         if (isVMString())
-            return vmString();
+            return Result<String *>::Value(vmString());
         return String::Create(acx, length(), cString());
     }
 

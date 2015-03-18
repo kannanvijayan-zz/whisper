@@ -6,7 +6,7 @@ namespace Whisper {
 namespace VM {
 
 
-/* static */ bool
+/* static */ OkResult
 Wobject::GetDelegates(ThreadContext *cx,
                       Handle<Wobject *> obj,
                       MutHandle<Array<Wobject *> *> delegatesOut)
@@ -15,14 +15,15 @@ Wobject::GetDelegates(ThreadContext *cx,
     if (heapThing->isPlainObject()) {
         Local<PlainObject *> plainObj(cx,
             reinterpret_cast<PlainObject *>(heapThing));
-        return PlainObject::GetDelegates(cx, plainObj, delegatesOut);
+        PlainObject::GetDelegates(cx, plainObj, delegatesOut);
+        return OkResult::Ok();
     }
 
     WH_UNREACHABLE("Unknown object kind");
-    return false;
+    return OkResult::Error();
 }
 
-/* static */ bool
+/* static */ Result<bool>
 Wobject::LookupProperty(ThreadContext *cx,
                         Handle<Wobject *> obj,
                         Handle<PropertyName> name,
@@ -32,14 +33,15 @@ Wobject::LookupProperty(ThreadContext *cx,
     if (heapThing->isPlainObject()) {
         Local<PlainObject *> plainObj(cx,
             reinterpret_cast<PlainObject *>(heapThing));
-        return PlainObject::LookupProperty(cx, plainObj, name, result);
+        bool got = PlainObject::LookupProperty(cx, plainObj, name, result);
+        return Result<bool>::Value(got);
     }
 
     WH_UNREACHABLE("Unknown object kind");
-    return false;
+    return Result<bool>::Error();
 }
 
-/* static */ bool
+/* static */ OkResult
 Wobject::DefineProperty(ThreadContext *cx,
                         Handle<Wobject *> obj,
                         Handle<PropertyName> name,
@@ -53,7 +55,7 @@ Wobject::DefineProperty(ThreadContext *cx,
     }
 
     WH_UNREACHABLE("Unknown object kind");
-    return false;
+    return OkResult::Error();
 }
 
 

@@ -85,15 +85,19 @@ class Array
             vals_[i].init(arr->vals_[i], this);
     }
 
-    static inline Array<T> *Create(AllocationContext acx, uint32_t length,
-                                   const T *vals);
-    static inline Array<T> *Create(AllocationContext acx, uint32_t length,
-                                   const T &val);
-    static inline Array<T> *Create(AllocationContext acx, ArrayHandle<T> arr);
-    static inline Array<T> *Create(AllocationContext acx, uint32_t length,
-                                   Handle<T> val);
-    static inline Array<T> *Create(AllocationContext acx,
-                                   Handle<Array<T> *> other);
+    static inline Result<Array<T> *> Create(AllocationContext acx,
+                                             uint32_t length,
+                                             const T *vals);
+    static inline Result<Array<T> *> Create(AllocationContext acx,
+                                            uint32_t length,
+                                            const T &val);
+    static inline Result<Array<T> *> Create(AllocationContext acx,
+                                            ArrayHandle<T> arr);
+    static inline Result<Array<T> *> Create(AllocationContext acx,
+                                            uint32_t length,
+                                            Handle<T> val);
+    static inline Result<Array<T> *> Create(AllocationContext acx,
+                                            Handle<Array<T> *> other);
 
     inline uint32_t length() const;
 
@@ -143,21 +147,21 @@ Array<T>::length() const
 }
 
 template <typename T>
-/* static */ inline Array<T> *
+/* static */ inline Result<Array<T> *>
 Array<T>::Create(AllocationContext acx, uint32_t len, const T *vals)
 {
     return acx.createSized<Array<T>>(CalculateSize(len), len, vals);
 }
 
 template <typename T>
-/* static */ inline Array<T> *
+/* static */ inline Result<Array<T> *>
 Array<T>::Create(AllocationContext acx, uint32_t len, const T &val)
 {
     return acx.createSized<Array<T>>(CalculateSize(len), len, val);
 }
 
 template <typename T>
-/* static */ inline Array<T> *
+/* static */ inline Result<Array<T> *>
 Array<T>::Create(AllocationContext acx, ArrayHandle<T> arr)
 {
     uint32_t len = arr.length();
@@ -165,14 +169,14 @@ Array<T>::Create(AllocationContext acx, ArrayHandle<T> arr)
 }
 
 template <typename T>
-/* static */ inline Array<T> *
+/* static */ inline Result<Array<T> *>
 Array<T>::Create(AllocationContext acx, uint32_t length, Handle<T> val)
 {
     return acx.createSized<Array<T>>(CalculateSize(length), length, val);
 }
 
 template <typename T>
-/* static */ inline Array<T> *
+/* static */ inline Result<Array<T> *>
 Array<T>::Create(AllocationContext acx, Handle<Array<T> *> other)
 {
     uint32_t len = other->length();

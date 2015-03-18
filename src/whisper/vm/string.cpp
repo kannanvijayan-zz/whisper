@@ -77,26 +77,26 @@ String::String(uint32_t byteLength, const uint8_t *data)
         length_++;
 }
 
-/* static */ String *
+/* static */ Result<String *>
 String::Create(AllocationContext acx, uint32_t byteLength, const uint8_t *data)
 {
     return acx.createSized<String>(CalculateSize(byteLength),
                                    byteLength, data);
 }
 
-/* static */ String *
+/* static */ Result<String *>
 String::Create(AllocationContext acx, uint32_t byteLength, const char *data)
 {
     return Create(acx, byteLength, reinterpret_cast<const uint8_t *>(data));
 }
 
-/* static */ String *
+/* static */ Result<String *>
 String::Create(AllocationContext acx, const char *data)
 {
     return Create(acx, strlen(data), data);
 }
 
-/* static */ String *
+/* static */ Result<String *>
 String::Create(AllocationContext acx, const String *other)
 {
     return Create(acx, other->byteLength(), other->bytes());

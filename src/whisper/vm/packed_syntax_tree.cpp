@@ -7,22 +7,26 @@ namespace Whisper {
 namespace VM {
 
 
-/* static */ PackedSyntaxTree *
+/* static */ Result<PackedSyntaxTree *>
 PackedSyntaxTree::Create(AllocationContext acx,
                          ArrayHandle<uint32_t> data,
                          ArrayHandle<Box> constPool)
 {
     // Allocate data array.
-    Local<Array<uint32_t> *> dataArray(acx,
-        Array<uint32_t>::Create(acx, data));
-    if (!dataArray.get())
-        return nullptr;
+    Result<Array<uint32_t> *> maybeDataArray =
+        Array<uint32_t>::Create(acx, data);
+    if (!maybeDataArray)
+        return Result<PackedSyntaxTree *>::Error();
+
+    Local<Array<uint32_t> *> dataArray(acx, maybeDataArray.value());
 
     // Allocate data array.
-    Local<Array<Box> *> constPoolArray(acx,
-        Array<Box>::Create(acx, constPool));
-    if (!constPoolArray.get())
-        return nullptr;
+    Result<Array<Box> *> maybeConstPoolArray =
+        Array<Box>::Create(acx, constPool);
+    if (!maybeConstPoolArray)
+        return Result<PackedSyntaxTree *>::Error();
+        
+    Local<Array<Box> *> constPoolArray(acx, maybeConstPoolArray.value());
 
     return acx.create<PackedSyntaxTree>(dataArray.handle(),
                                         constPoolArray.handle());

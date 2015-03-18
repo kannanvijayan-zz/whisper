@@ -59,14 +59,16 @@ class String
   public:
     String(uint32_t byteLength, const uint8_t *data);
 
-    static String *Create(AllocationContext acx,
-                          uint32_t byteLength,
-                          const uint8_t *data);
-    static String *Create(AllocationContext acx,
-                          uint32_t byteLength,
-                          const char *data);
-    static String *Create(AllocationContext acx, const char *data);
-    static String *Create(AllocationContext acx, const String *other);
+    static Result<String *> Create(AllocationContext acx,
+                                   uint32_t byteLength,
+                                   const uint8_t *data);
+    static Result<String *> Create(AllocationContext acx,
+                                   uint32_t byteLength,
+                                   const char *data);
+    static Result<String *> Create(AllocationContext acx,
+                                   const char *data);
+    static Result<String *> Create(AllocationContext acx,
+                                   const String *other);
 
     static uint32_t CalculateSize(uint32_t byteLength) {
         return sizeof(String) + byteLength;

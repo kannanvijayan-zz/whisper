@@ -32,9 +32,9 @@ class PackedSyntaxTree
         WH_ASSERT(constants.get() != nullptr);
     }
 
-    static PackedSyntaxTree *Create(AllocationContext acx,
-                                    ArrayHandle<uint32_t> data,
-                                    ArrayHandle<Box> constPool);
+    static Result<PackedSyntaxTree *> Create(AllocationContext acx,
+                                             ArrayHandle<uint32_t> data,
+                                             ArrayHandle<Box> constPool);
 
     Array<uint32_t> *data() const {
         return data_;

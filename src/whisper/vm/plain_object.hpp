@@ -32,10 +32,10 @@ class PlainObject : public Wobject
         WH_ASSERT(dict_ != nullptr);
     }
 
-    static PlainObject *Create(AllocationContext acx,
-                               Handle<Array<Wobject *> *> delegates);
+    static Result<PlainObject *> Create(AllocationContext acx,
+                                        Handle<Array<Wobject *> *> delegates);
 
-    static bool GetDelegates(ThreadContext *cx,
+    static void GetDelegates(ThreadContext *cx,
                              Handle<PlainObject *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
 
@@ -48,10 +48,10 @@ class PlainObject : public Wobject
                                Handle<PropertyName> name,
                                MutHandle<PropertyDescriptor> result);
 
-    static bool DefineProperty(ThreadContext *cx,
-                               Handle<PlainObject *> obj,
-                               Handle<PropertyName> name,
-                               Handle<PropertyDescriptor> defn);
+    static OkResult DefineProperty(ThreadContext *cx,
+                                   Handle<PlainObject *> obj,
+                                   Handle<PropertyName> name,
+                                   Handle<PropertyDescriptor> defn);
 };
 
 

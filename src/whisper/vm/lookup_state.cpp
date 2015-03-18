@@ -8,22 +8,24 @@ namespace Whisper {
 namespace VM {
 
 
-/* static */ LookupSeenObjects *
+/* static */ Result<LookupSeenObjects *>
 LookupSeenObjects::Create(AllocationContext acx, uint32_t size)
 {
     return acx.createSized<LookupSeenObjects>(CalculateSize(size), size);
 }
 
-/* static */ LookupSeenObjects *
+/* static */ Result<LookupSeenObjects *>
 LookupSeenObjects::Create(AllocationContext acx, uint32_t size,
                           Handle<LookupSeenObjects *> other)
 {
     // The given size should be enough to fit the other's pointers.
     WH_ASSERT(other->filled_ < (size * MaxFillRatio));
 
-    Local<LookupSeenObjects *> newSeen(acx, Create(acx, size));
-    if (!newSeen.get())
-        return nullptr;
+    Result<LookupSeenObjects *> maybeNewSeen = Create(acx, size);
+    if (!maybeNewSeen)
+        return Result<LookupSeenObjects *>::Error();
+
+    Local<LookupSeenObjects *> newSeen(acx, maybeNewSeen.value());
 
     // Add old entries to new.
     for (uint32_t i = 0; i < other->size_; i++) {
@@ -35,7 +37,7 @@ LookupSeenObjects::Create(AllocationContext acx, uint32_t size,
         }
     }
 
-    return newSeen.get();
+    return Result<LookupSeenObjects *>::Value(newSeen.get());
 }
 
 bool
@@ -87,14 +89,14 @@ LookupSeenObjects::add(Wobject *obj)
     }
 }
 
-/* static */ LookupNode *
+/* static */ Result<LookupNode *>
 LookupNode::Create(AllocationContext acx,
                    Handle<Wobject *> object)
 {
     return acx.create<LookupNode>(object);
 }
 
-/* static */ LookupNode *
+/* static */ Result<LookupNode *>
 LookupNode::Create(AllocationContext acx,
                    Handle<LookupNode *> parent,
                    Handle<Wobject *> object)
@@ -102,24 +104,26 @@ LookupNode::Create(AllocationContext acx,
     return acx.create<LookupNode>(parent, object);
 }
 
-/* static */ LookupState *
+/* static */ Result<LookupState *>
 LookupState::Create(AllocationContext acx,
                     Handle<Wobject *> receiver,
                     Handle<String *> name)
 {
-    Local<LookupSeenObjects *> seen(acx, LookupSeenObjects::Create(acx, 10));
-    if (!seen.get())
-        return nullptr;
+    Result<LookupSeenObjects *> maybeSeen = LookupSeenObjects::Create(acx, 10);
+    if (!maybeSeen)
+        return Result<LookupState *>::Error();
+    Local<LookupSeenObjects *> seen(acx, maybeSeen.value());
 
-    Local<LookupNode *> node(acx, LookupNode::Create(acx, receiver));
-    if (!node.get())
-        return nullptr;
+    Result<LookupNode *> maybeNode = LookupNode::Create(acx, receiver);
+    if (!maybeNode)
+        return Result<LookupState *>::Error();
+    Local<LookupNode *> node(acx, maybeNode.value());
 
     return acx.create<LookupState>(receiver, name,
                                    seen.handle(), node.handle());
 }
 
-/* static */ bool
+/* static */ OkResult
 LookupState::NextNode(AllocationContext acx,
                       Handle<LookupState *> lookupState,
                       MutHandle<LookupNode *> nodeOut)
@@ -134,7 +138,7 @@ LookupState::NextNode(AllocationContext acx,
     Local<Wobject *> obj(acx, cur->object());
     Local<Array<Wobject *> *> delgs(acx, nullptr);
     if (!Wobject::GetDelegates(cx, obj, delgs.mutHandle()))
-        return false;
+        return OkResult::Error();
 
     if (delgs->length() > 0) {
         // This object has delegates.  Find the first unseen delegate.
@@ -155,7 +159,7 @@ LookupState::NextNode(AllocationContext acx,
         cur = cur->parent();
         if (cur.get() == nullptr) {
             nodeOut = nullptr;
-            return true;
+            return OkResult::Ok();
         }
 
         // Search on from index.
@@ -169,10 +173,10 @@ LookupState::NextNode(AllocationContext acx,
     // Walk up chain ended.
     lookupState->node_.set(nullptr, lookupState.get());
     nodeOut.set(nullptr);
-    return true;
+    return OkResult::Ok();
 }
 
-bool
+OkResult
 LookupState::LinkNextNode(AllocationContext acx,
                           Handle<LookupState *> lookupState,
                           Handle<LookupNode *> parent,
@@ -181,21 +185,23 @@ LookupState::LinkNextNode(AllocationContext acx,
 {
     Local<Wobject *> obj(acx, parent->delegates()->get(index));
 
-    Local<LookupNode *> newNode(acx, LookupNode::Create(acx, parent, obj));
-    if (!newNode.get())
-        return false;
+    Result<LookupNode *> maybeNewNode = LookupNode::Create(acx, parent, obj);
+    if (!maybeNewNode)
+        return OkResult::Error();
+
+    Local<LookupNode *> newNode(acx, maybeNewNode.value());
 
     if (!AddToSeen(acx, lookupState, obj))
-        return false;
+        return OkResult::Error();
 
     parent->setIndex(index);
 
     lookupState->node_.set(newNode, lookupState.get());
     nodeOut = newNode.get();
-    return true;
+    return OkResult::Ok();
 }
 
-bool
+OkResult
 LookupState::AddToSeen(AllocationContext acx,
                        Handle<LookupState *> lookupState,
                        Handle<Wobject *> obj)
@@ -203,21 +209,22 @@ LookupState::AddToSeen(AllocationContext acx,
     WH_ASSERT(!lookupState->seen_->contains(obj));
     if (lookupState->seen_->canAdd()) {
         lookupState->seen_->add(obj);
-        return true;
+        return OkResult::Ok();
     }
     Local<LookupSeenObjects *> oldSeen(acx, lookupState->seen_);
 
     // Replace seen_ with a new larger-sized set.
-    Local<LookupSeenObjects *> newSeen(acx,
-        LookupSeenObjects::Create(acx, oldSeen->size() * 2, oldSeen));
-    if (!newSeen.get())
-        return false;
+    Result<LookupSeenObjects *> maybeNewSeen =
+        LookupSeenObjects::Create(acx, oldSeen->size() * 2, oldSeen);
+    if (!maybeNewSeen)
+        return OkResult::Error();
+    Local<LookupSeenObjects *> newSeen(acx, maybeNewSeen.value());
 
     WH_ASSERT(newSeen->canAdd());
     lookupState->seen_.set(newSeen, lookupState.get());
 
     lookupState->seen_->add(obj);
-    return true;
+    return OkResult::Ok();
 }
 
 

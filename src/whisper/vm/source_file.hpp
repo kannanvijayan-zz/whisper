@@ -29,7 +29,8 @@ class SourceFile
         WH_ASSERT(path != nullptr);
     }
 
-    static SourceFile *Create(AllocationContext acx, Handle<String *> path);
+    static Result<SourceFile *>Create(AllocationContext acx,
+                                      Handle<String *> path);
 
     String *path() const {
         return path_;

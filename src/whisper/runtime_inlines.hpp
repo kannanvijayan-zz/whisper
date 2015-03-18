@@ -13,7 +13,7 @@ namespace Whisper {
 //
 
 template <typename ObjT, typename... Args>
-inline ObjT *
+inline Result<ObjT *>
 AllocationContext::create(Args... args)
 {
     static_assert(HeapTraits<ObjT>::Specialized,
@@ -29,16 +29,16 @@ AllocationContext::create(Args... args)
     constexpr bool TRACED = ! TraceTraits<TRACE_TYPE>::IsLeaf;
     uint8_t *mem = allocate<TRACED>(size, FMT);
     if (!mem)
-        return nullptr;
+        return Result<ObjT *>::Error();
 
     // Construct object in memory.
     new (mem) ObjT(std::forward<Args>(args)...);
 
-    return reinterpret_cast<ObjT *>(mem);
+    return Result<ObjT *>::Value(reinterpret_cast<ObjT *>(mem));
 }
 
 template <typename ObjT, typename... Args>
-inline ObjT *
+inline Result<ObjT *>
 AllocationContext::createSized(uint32_t size, Args... args)
 {
     static_assert(HeapTraits<ObjT>::Specialized,
@@ -54,12 +54,12 @@ AllocationContext::createSized(uint32_t size, Args... args)
     constexpr bool TRACED = ! TraceTraits<TRACE_TYPE>::IsLeaf;
     uint8_t *mem = allocate<TRACED>(size, FMT);
     if (!mem)
-        return nullptr;
+        return Result<ObjT *>::Error();
 
     // Construct object in memory.
     new (mem) ObjT(std::forward<Args>(args)...);
 
-    return reinterpret_cast<ObjT *>(mem);
+    return Result<ObjT *>::Value(reinterpret_cast<ObjT *>(mem));
 }
 
 template <bool Traced>

@@ -122,8 +122,9 @@ int main(int argc, char **argv) {
     ArrayHandle<uint32_t> buffer = packedWriter->buffer();
     ArrayHandle<VM::Box> constPool = packedWriter->constPool();
 
-    Local<VM::PackedSyntaxTree *> packedSt(cx,
-        VM::PackedSyntaxTree::Create(acx, buffer, constPool));
+    Result<VM::PackedSyntaxTree *> maybePackedSt =
+        VM::PackedSyntaxTree::Create(acx, buffer, constPool);
+    Local<VM::PackedSyntaxTree *> packedSt(cx, maybePackedSt.value());
     fprintf(stderr, "packedSt local @%p\n", packedSt.stackThing());
 
     fprintf(stderr, "STACK SCAN!\n");
