@@ -117,6 +117,52 @@ class Result
     }
 };
 
+template <typename P>
+class Result<P *>
+{
+  private:
+    P *ptr_;
+
+    Result(P *ptr)
+      : ptr_(ptr)
+    {
+        WH_ASSERT(ptr != nullptr);
+    }
+    Result()
+      : ptr_(nullptr)
+    {}
+
+  public:
+    static Result<P *> Value(P *ptr) {
+        return Result<P *>(ptr);
+    }
+
+    static Result<P *> Error() {
+        return Result<P *>();
+    }
+
+    bool isValue() const {
+        return ptr_ != nullptr;
+    }
+    bool isError() const {
+        return ptr_ == nullptr;
+    }
+
+    P *value() const {
+        WH_ASSERT(isValue());
+        return ptr_;
+    }
+    void setValue(P *ptr) {
+        WH_ASSERT(ptr != nullptr);
+        ptr_ = ptr;
+    }
+
+
+    void setError() {
+        ptr_ = nullptr;
+    }
+};
+
 
 } // namespace Whisper
 
