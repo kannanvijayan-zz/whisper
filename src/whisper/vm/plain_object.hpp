@@ -2,6 +2,7 @@
 #define WHISPER__VM__PLAIN_OBJECT_HPP
 
 #include "vm/core.hpp"
+#include "vm/predeclare.hpp"
 #include "vm/box.hpp"
 #include "vm/wobject.hpp"
 #include "vm/property_dict.hpp"
@@ -61,16 +62,6 @@ class PlainObject : public Wobject
 //
 // GC Specializations
 //
-
-template <>
-struct HeapTraits<VM::PlainObject>
-{
-    HeapTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr HeapFormat Format = HeapFormat::PlainObject;
-    static constexpr bool VarSized = false;
-};
 
 template <>
 struct HeapFormatTraits<HeapFormat::PlainObject>

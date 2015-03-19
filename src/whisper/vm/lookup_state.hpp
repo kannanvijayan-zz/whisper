@@ -2,6 +2,7 @@
 #define WHISPER__VM__LOOKUP_STATE_HPP
 
 #include "vm/core.hpp"
+#include "vm/predeclare.hpp"
 #include "vm/properties.hpp"
 #include "vm/array.hpp"
 #include "vm/wobject.hpp"
@@ -12,44 +13,6 @@
  */
 
 namespace Whisper {
-namespace VM {
-
-class LookupSeenObjects;
-class LookupNode;
-class LookupState;
-
-} // namespace VM
-
-
-template <>
-struct HeapTraits<VM::LookupSeenObjects>
-{
-    HeapTraits() = delete;
-    static constexpr bool Specialized = true;
-    static constexpr HeapFormat Format = HeapFormat::LookupSeenObjects;
-    static constexpr bool VarSized = true;
-};
-
-template <>
-struct HeapTraits<VM::LookupNode>
-{
-    HeapTraits() = delete;
-    static constexpr bool Specialized = true;
-    static constexpr HeapFormat Format = HeapFormat::LookupNode;
-    static constexpr bool VarSized = false;
-};
-
-
-template <>
-struct HeapTraits<VM::LookupState>
-{
-    HeapTraits() = delete;
-    static constexpr bool Specialized = true;
-    static constexpr HeapFormat Format = HeapFormat::LookupState;
-    static constexpr bool VarSized = false;
-};
-
-
 namespace VM {
 
 

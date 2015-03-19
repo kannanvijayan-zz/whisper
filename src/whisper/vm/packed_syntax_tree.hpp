@@ -1,8 +1,8 @@
 #ifndef WHISPER__VM__PACKED_SYNTAX_TREE_HPP
 #define WHISPER__VM__PACKED_SYNTAX_TREE_HPP
 
-
 #include "vm/core.hpp"
+#include "vm/predeclare.hpp"
 #include "vm/string.hpp"
 #include "vm/array.hpp"
 #include "vm/box.hpp"
@@ -52,17 +52,6 @@ class PackedSyntaxTree
 //
 // GC-Specializations for PackedSyntaxTree
 //
-
-template <>
-struct HeapTraits<VM::PackedSyntaxTree>
-{
-    HeapTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr HeapFormat Format = HeapFormat::PackedSyntaxTree;
-    static constexpr bool VarSized = false;
-};
-
 
 template <>
 struct HeapFormatTraits<HeapFormat::PackedSyntaxTree>

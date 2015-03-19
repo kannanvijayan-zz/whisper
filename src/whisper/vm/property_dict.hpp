@@ -2,6 +2,7 @@
 #define WHISPER__VM__PROPERTY_DICT_HPP
 
 #include "vm/core.hpp"
+#include "vm/predeclare.hpp"
 #include "vm/box.hpp"
 #include "vm/string.hpp"
 #include "vm/properties.hpp"
@@ -79,16 +80,6 @@ class PropertyDict
 //
 // GC Specializations
 //
-
-template <>
-struct HeapTraits<VM::PropertyDict>
-{
-    HeapTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr HeapFormat Format = HeapFormat::PropertyDict;
-    static constexpr bool VarSized = true;
-};
 
 template <>
 struct HeapFormatTraits<HeapFormat::PropertyDict>

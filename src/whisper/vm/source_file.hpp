@@ -3,6 +3,7 @@
 
 
 #include "vm/core.hpp"
+#include "vm/predeclare.hpp"
 #include "vm/string.hpp"
 #include "vm/packed_syntax_tree.hpp"
 
@@ -51,18 +52,6 @@ class SourceFile
 //
 // GC Specializations
 //
-
-
-template <>
-struct HeapTraits<VM::SourceFile>
-{
-    HeapTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr HeapFormat Format = HeapFormat::SourceFile;
-    static constexpr bool VarSized = false;
-};
-
 
 template <>
 struct HeapFormatTraits<HeapFormat::SourceFile>

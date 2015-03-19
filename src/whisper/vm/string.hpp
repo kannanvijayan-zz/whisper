@@ -3,6 +3,7 @@
 
 
 #include "vm/core.hpp"
+#include "vm/predeclare.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -107,16 +108,6 @@ class String
 
 } // namespace VM
 
-
-template <>
-struct HeapTraits<VM::String>
-{
-    HeapTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr HeapFormat Format = HeapFormat::String;
-    static constexpr bool VarSized = true;
-};
 
 template <>
 struct HeapFormatTraits<HeapFormat::String>
