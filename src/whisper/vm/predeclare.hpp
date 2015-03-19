@@ -27,4 +27,21 @@ PREDECLARE_HEAP_OBJ_(String, String, true);
 
 #undef PREDECLARE_HEAP_OBJ_
 
+namespace Whisper {
+namespace VM {
+
+class Wobject;
+
+} // namespace VM
+
+template <>
+struct BaseHeapTypeTraits<VM::Wobject>
+{
+    BaseHeapTypeTraits() = delete;
+    static constexpr bool Specialized = true;
+};
+
+} // namespace Whisper
+
+
 #endif // WHISPER__VM__PREDECLARE_HPP

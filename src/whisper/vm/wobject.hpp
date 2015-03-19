@@ -2,6 +2,7 @@
 #define WHISPER__VM__WOBJECT_HPP
 
 #include "vm/core.hpp"
+#include "vm/predeclare.hpp"
 #include "vm/properties.hpp"
 #include "vm/array.hpp"
 
@@ -36,21 +37,6 @@ class Wobject
 
 
 } // namespace VM
-
-
-//
-// GC Specializations
-//
-
-
-template <>
-struct BaseHeapTypeTraits<VM::Wobject>
-{
-    BaseHeapTypeTraits() = delete;
-    static constexpr bool Specialized = true;
-};
-
-
 } // namespace Whisper
 
 
