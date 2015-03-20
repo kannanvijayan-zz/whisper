@@ -53,6 +53,12 @@ class MutHandle
     inline void set(T &&other) {
         *valAddr_ = std::move(other);
     }
+    OkResult setResult(const Result<T> &result) {
+        if (result.isError())
+            return OkResult::Error();
+        *valAddr_ = result.value();
+        return OkResult::Ok();
+    }
 
     inline T *address() const {
         return valAddr_;

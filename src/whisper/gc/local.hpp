@@ -133,6 +133,12 @@ class Local : public LocalBase
     inline void set(T &&ref) {
         val_ = std::move(ref);
     }
+    OkResult setResult(const Result<T> &result) {
+        if (result.isError())
+            return OkResult::Error();
+        val_ = result.value();
+        return OkResult::Ok();
+    }
 
     inline const T *address() const {
         return &val_;
