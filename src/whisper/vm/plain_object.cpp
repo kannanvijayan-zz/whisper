@@ -11,12 +11,10 @@ PlainObject::Create(AllocationContext acx,
                     Handle<Array<Wobject *> *> delegates)
 {
     // Allocate a dictionary.
-    Result<PropertyDict *> mbProps = 
-        PropertyDict::Create(acx, InitialPropertyCapacity);
-    if (!mbProps)
+    Local<PropertyDict *> props(acx);
+    if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
         return Result<PlainObject *>::Error();
 
-    Local<PropertyDict *> props(acx, mbProps.value());
     return acx.create<PlainObject>(delegates, props.handle());
 }
 

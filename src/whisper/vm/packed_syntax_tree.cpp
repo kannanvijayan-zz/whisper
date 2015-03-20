@@ -13,20 +13,14 @@ PackedSyntaxTree::Create(AllocationContext acx,
                          ArrayHandle<Box> constPool)
 {
     // Allocate data array.
-    Result<Array<uint32_t> *> maybeDataArray =
-        Array<uint32_t>::Create(acx, data);
-    if (!maybeDataArray)
+    Local<Array<uint32_t> *> dataArray(acx);
+    if (!dataArray.setResult(Array<uint32_t>::Create(acx, data)))
         return Result<PackedSyntaxTree *>::Error();
 
-    Local<Array<uint32_t> *> dataArray(acx, maybeDataArray.value());
-
-    // Allocate data array.
-    Result<Array<Box> *> maybeConstPoolArray =
-        Array<Box>::Create(acx, constPool);
-    if (!maybeConstPoolArray)
+    // Allocate constPool array.
+    Local<Array<Box> *> constPoolArray(acx);
+    if (!constPoolArray.setResult(Array<Box>::Create(acx, constPool)))
         return Result<PackedSyntaxTree *>::Error();
-        
-    Local<Array<Box> *> constPoolArray(acx, maybeConstPoolArray.value());
 
     return acx.create<PackedSyntaxTree>(dataArray.handle(),
                                         constPoolArray.handle());

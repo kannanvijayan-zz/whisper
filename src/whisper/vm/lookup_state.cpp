@@ -21,11 +21,9 @@ LookupSeenObjects::Create(AllocationContext acx, uint32_t size,
     // The given size should be enough to fit the other's pointers.
     WH_ASSERT(other->filled_ < (size * MaxFillRatio));
 
-    Result<LookupSeenObjects *> maybeNewSeen = Create(acx, size);
-    if (!maybeNewSeen)
+    Local<LookupSeenObjects *> newSeen(acx);
+    if (!newSeen.setResult(Create(acx, size)))
         return Result<LookupSeenObjects *>::Error();
-
-    Local<LookupSeenObjects *> newSeen(acx, maybeNewSeen.value());
 
     // Add old entries to new.
     for (uint32_t i = 0; i < other->size_; i++) {
@@ -109,15 +107,13 @@ LookupState::Create(AllocationContext acx,
                     Handle<Wobject *> receiver,
                     Handle<String *> name)
 {
-    Result<LookupSeenObjects *> maybeSeen = LookupSeenObjects::Create(acx, 10);
-    if (!maybeSeen)
+    Local<LookupSeenObjects *> seen(acx);
+    if (!seen.setResult(LookupSeenObjects::Create(acx, 10)))
         return Result<LookupState *>::Error();
-    Local<LookupSeenObjects *> seen(acx, maybeSeen.value());
 
-    Result<LookupNode *> maybeNode = LookupNode::Create(acx, receiver);
-    if (!maybeNode)
+    Local<LookupNode *> node(acx);
+    if (!node.setResult(LookupNode::Create(acx, receiver)))
         return Result<LookupState *>::Error();
-    Local<LookupNode *> node(acx, maybeNode.value());
 
     return acx.create<LookupState>(receiver, name,
                                    seen.handle(), node.handle());
@@ -185,11 +181,9 @@ LookupState::LinkNextNode(AllocationContext acx,
 {
     Local<Wobject *> obj(acx, parent->delegates()->get(index));
 
-    Result<LookupNode *> maybeNewNode = LookupNode::Create(acx, parent, obj);
-    if (!maybeNewNode)
+    Local<LookupNode *> newNode(acx);
+    if (!newNode.setResult(LookupNode::Create(acx, parent, obj)))
         return OkResult::Error();
-
-    Local<LookupNode *> newNode(acx, maybeNewNode.value());
 
     if (!AddToSeen(acx, lookupState, obj))
         return OkResult::Error();
@@ -214,11 +208,10 @@ LookupState::AddToSeen(AllocationContext acx,
     Local<LookupSeenObjects *> oldSeen(acx, lookupState->seen_);
 
     // Replace seen_ with a new larger-sized set.
-    Result<LookupSeenObjects *> maybeNewSeen =
-        LookupSeenObjects::Create(acx, oldSeen->size() * 2, oldSeen);
-    if (!maybeNewSeen)
+    uint32_t newSize = oldSeen->size() * 2;
+    Local<LookupSeenObjects *> newSeen(acx);
+    if (!newSeen.setResult(LookupSeenObjects::Create(acx, newSize, oldSeen)))
         return OkResult::Error();
-    Local<LookupSeenObjects *> newSeen(acx, maybeNewSeen.value());
 
     WH_ASSERT(newSeen->canAdd());
     lookupState->seen_.set(newSeen, lookupState.get());

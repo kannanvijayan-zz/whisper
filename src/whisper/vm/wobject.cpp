@@ -72,11 +72,9 @@ Wobject::GetPropertyDescriptor(
     AllocationContext acx = cx->inHatchery();
 
     // Allocate a lookup state.
-    Result<LookupState *> maybeLookupState =
-        LookupState::Create(acx, obj, name);
-    if (!maybeLookupState)
+    Local<LookupState *> lookupState(cx);
+    if (!lookupState.setResult(LookupState::Create(acx, obj, name)))
         return Result<bool>::Error();
-    Local<LookupState *> lookupState(cx, maybeLookupState.value());
 
     // Recursive lookup through nodes.
     Local<LookupNode *> curNode(cx, lookupState->node());
