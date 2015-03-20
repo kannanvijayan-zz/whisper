@@ -30,7 +30,7 @@ PlainObject::GetDelegates(ThreadContext *cx,
 
 /* static */ bool
 PlainObject::LookupPropertyIndex(Handle<PlainObject *> obj,
-                                 Handle<PropertyName> name,
+                                 Handle<String *> name,
                                  uint32_t *indexOut)
 {
     WH_ASSERT(indexOut);
@@ -46,7 +46,7 @@ PlainObject::LookupPropertyIndex(Handle<PlainObject *> obj,
 /* static */ bool
 PlainObject::LookupProperty(ThreadContext *cx,
                             Handle<PlainObject *> obj,
-                            Handle<PropertyName> name,
+                            Handle<String *> name,
                             MutHandle<PropertyDescriptor> result)
 {
     uint32_t idx = 0;
@@ -60,7 +60,7 @@ PlainObject::LookupProperty(ThreadContext *cx,
 /* static */ OkResult
 PlainObject::DefineProperty(ThreadContext *cx,
                             Handle<PlainObject *> obj,
-                            Handle<PropertyName> name,
+                            Handle<String *> name,
                             Handle<PropertyDescriptor> defn)
 {
     uint32_t idx = 0;
@@ -73,13 +73,8 @@ PlainObject::DefineProperty(ThreadContext *cx,
 
     // Entry needs to be added.  Either define a string
     // or use existing one.
-    Result<String *> maybeNameString = name->createString(cx->inHatchery());
-    if (!maybeNameString)
-        return OkResult::Error();
-    Local<String *> nameString(cx, maybeNameString.value());
-
     // Property not found.  Add an entry.
-    if (obj->dict_->addEntry(nameString.get(), defn))
+    if (obj->dict_->addEntry(name.get(), defn))
         return OkResult::Ok();
 
     // TODO: Try to enlarge dict and add.

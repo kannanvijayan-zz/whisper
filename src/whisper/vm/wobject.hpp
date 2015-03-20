@@ -26,13 +26,20 @@ class Wobject
 
     static Result<bool> LookupProperty(ThreadContext *cx,
                                        Handle<Wobject *> obj,
-                                       Handle<PropertyName> name,
+                                       Handle<String *> name,
                                        MutHandle<PropertyDescriptor> result);
 
     static OkResult DefineProperty(ThreadContext *cx,
                                    Handle<Wobject *> obj,
-                                   Handle<PropertyName> name,
+                                   Handle<String *> name,
                                    Handle<PropertyDescriptor> defn);
+
+    static Result<bool> GetPropertyDescriptor(
+            ThreadContext *cx,
+            Handle<Wobject *> obj,
+            Handle<String *> name,
+            MutHandle<LookupState *> stateOut,
+            MutHandle<PropertyDescriptor> defnOut);
 };
 
 

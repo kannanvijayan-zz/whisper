@@ -41,17 +41,17 @@ class PlainObject : public Wobject
                              MutHandle<Array<Wobject *> *> delegatesOut);
 
     static bool LookupPropertyIndex(Handle<PlainObject *> obj,
-                                    Handle<PropertyName> name,
+                                    Handle<String *> name,
                                     uint32_t *indexOut);
 
     static bool LookupProperty(ThreadContext *cx,
                                Handle<PlainObject *> obj,
-                               Handle<PropertyName> name,
+                               Handle<String *> name,
                                MutHandle<PropertyDescriptor> result);
 
     static OkResult DefineProperty(ThreadContext *cx,
                                    Handle<PlainObject *> obj,
-                                   Handle<PropertyName> name,
+                                   Handle<String *> name,
                                    Handle<PropertyDescriptor> defn);
 };
 

@@ -86,6 +86,10 @@ class PropertyDescriptor
     StackField<Box> value_;
 
   public:
+    PropertyDescriptor()
+      : value_()
+    {}
+
     PropertyDescriptor(const Box &value)
       : value_(value)
     {}

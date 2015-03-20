@@ -24,6 +24,9 @@ class Box
 
     static constexpr word_t TagMask = 0x7;
     static constexpr word_t PointerTag = 0x0;
+    static constexpr word_t InvalidValue = static_cast<word_t>(-1);
+
+    Box() : value_(InvalidValue) {}
 
     template <typename T>
     Box(T *ptr) {
@@ -33,6 +36,9 @@ class Box
         value_ = reinterpret_cast<word_t>(ptr);
     }
 
+    bool isInvalid() const {
+        return (value_ & TagMask) == InvalidValue;
+    }
     bool isPointer() const {
         return (value_ & TagMask) == PointerTag;
     }
@@ -47,6 +53,10 @@ class Box
     void snprint(char *buf, size_t n) const {
         if (isPointer()) {
             snprintf(buf, n, "ptr(%p)", pointer<HeapThing>());
+            return;
+        }
+        if (isInvalid()) {
+            snprintf(buf, n, "invalid");
             return;
         }
         WH_UNREACHABLE("Unknown box kind.");

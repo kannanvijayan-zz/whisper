@@ -25,6 +25,12 @@ class MutHandle
     {}
 
   public:
+    inline MutHandle(const MutHandle<T> &other)
+      : valAddr_(other.valAddr_)
+    {}
+    inline MutHandle(MutHandle<T> &&other)
+      : valAddr_(other.valAddr_)
+    {}
     inline MutHandle(Local<T> &stackVal)
       : valAddr_(stackVal.address())
     {}
@@ -151,12 +157,17 @@ class Handle
     {}
 
   public:
-    inline Handle(const Local<T> &stackVal)
-      : valAddr_(stackVal.address())
+    inline Handle(const Handle<T> &other)
+      : valAddr_(other.valAddr_)
     {}
-
+    inline Handle(Handle<T> &&other)
+      : valAddr_(other.valAddr_)
+    {}
     inline Handle(const MutHandle<T> &mutHandle)
       : valAddr_(mutHandle.address())
+    {}
+    inline Handle(const Local<T> &stackVal)
+      : valAddr_(stackVal.address())
     {}
 
     inline static Handle FromTrackedLocation(const T *valAddr)

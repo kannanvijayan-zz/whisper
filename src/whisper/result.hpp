@@ -69,6 +69,9 @@ class Result
     bool isError() const {
         return !isValue_;
     }
+    explicit operator bool() const {
+        return isValue();
+    }
 
     const V &value() const {
         WH_ASSERT(isValue());
