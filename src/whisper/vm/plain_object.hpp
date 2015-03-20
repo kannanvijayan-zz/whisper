@@ -3,35 +3,20 @@
 
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
-#include "vm/box.hpp"
-#include "vm/wobject.hpp"
-#include "vm/property_dict.hpp"
-#include "vm/array.hpp"
+#include "vm/hash_object.hpp"
 
 namespace Whisper {
 namespace VM {
 
 
-class PlainObject : public Wobject
+class PlainObject : public HashObject
 {
   friend class TraceTraits<PlainObject>;
-  private:
-    HeapField<Array<Wobject *> *> delegates_;
-    HeapField<PropertyDict *> dict_;
-
-    // Initial dictionary size is 8.
-    static constexpr uint32_t InitialPropertyCapacity = 8;
-
   public:
     PlainObject(Handle<Array<Wobject *> *> delegates,
                 Handle<PropertyDict *> dict)
-      : Wobject(),
-        delegates_(delegates),
-        dict_(dict)
-    {
-        WH_ASSERT(delegates_ != nullptr);
-        WH_ASSERT(dict_ != nullptr);
-    }
+      : HashObject(delegates, dict)
+    {}
 
     static Result<PlainObject *> Create(AllocationContext acx,
                                         Handle<Array<Wobject *> *> delegates);
@@ -39,10 +24,6 @@ class PlainObject : public Wobject
     static void GetDelegates(ThreadContext *cx,
                              Handle<PlainObject *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
-
-    static bool GetPropertyIndex(Handle<PlainObject *> obj,
-                                 Handle<String *> name,
-                                 uint32_t *indexOut);
 
     static bool GetProperty(ThreadContext *cx,
                             Handle<PlainObject *> obj,
@@ -82,16 +63,14 @@ struct TraceTraits<VM::PlainObject>
     static void Scan(Scanner &scanner, const VM::PlainObject &obj,
                      const void *start, const void *end)
     {
-        obj.delegates_.scan(scanner, start, end);
-        obj.dict_.scan(scanner, start, end);
+        TraceTraits<VM::HashObject>::Scan(scanner, obj, start, end);
     }
 
     template <typename Updater>
     static void Update(Updater &updater, VM::PlainObject &obj,
                        const void *start, const void *end)
     {
-        obj.delegates_.update(updater, start, end);
-        obj.dict_.update(updater, start, end);
+        TraceTraits<VM::HashObject>::Update(updater, obj, start, end);
     }
 };
 

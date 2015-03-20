@@ -32,11 +32,18 @@ namespace Whisper {
 namespace VM {
 
 class Wobject;
+class HashObject;
 
 } // namespace VM
 
 template <>
 struct BaseHeapTypeTraits<VM::Wobject>
+{
+    BaseHeapTypeTraits() = delete;
+    static constexpr bool Specialized = true;
+};
+template <>
+struct BaseHeapTypeTraits<VM::HashObject>
 {
     BaseHeapTypeTraits() = delete;
     static constexpr bool Specialized = true;
