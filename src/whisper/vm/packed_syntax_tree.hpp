@@ -45,12 +45,49 @@ class PackedSyntaxTree
     }
 };
 
+//
+// A SyntaxTreeFragment combines the following things:
+//
+// A reference to an underlying PackedSyntaxTree.
+// An offset into the data of the PackedSyntaxTree identifying the
+// subtree represented by the fragment.
+//
+class SyntaxTreeFragment
+{
+    friend struct TraceTraits<SyntaxTreeFragment>;
+
+  private:
+    HeapField<PackedSyntaxTree *> pst_;
+    uint32_t offset_;
+
+  public:
+    SyntaxTreeFragment(Handle<PackedSyntaxTree *> pst, uint32_t offset)
+      : pst_(pst),
+        offset_(offset)
+    {
+        WH_ASSERT(pst.get() != nullptr);
+    }
+
+    static Result<SyntaxTreeFragment *> Create(
+            AllocationContext acx,
+            ArrayHandle<PackedSyntaxTree *> pst,
+            uint32_t offset);
+
+    PackedSyntaxTree *pst() const {
+        return pst_;
+    }
+
+    uint32_t offset() const {
+        return offset_;
+    }
+};
+
 
 } // namespace VM
 
 
 //
-// GC-Specializations for PackedSyntaxTree
+// GC-Specializations.
 //
 
 template <>
@@ -59,8 +96,6 @@ struct HeapFormatTraits<HeapFormat::PackedSyntaxTree>
     HeapFormatTraits() = delete;
     typedef VM::PackedSyntaxTree Type;
 };
-
-
 template <>
 struct TraceTraits<VM::PackedSyntaxTree>
 {
@@ -83,6 +118,36 @@ struct TraceTraits<VM::PackedSyntaxTree>
     {
         packedSt.data_.update(updater, start, end);
         packedSt.constants_.update(updater, start, end);
+    }
+};
+
+
+template <>
+struct HeapFormatTraits<HeapFormat::SyntaxTreeFragment>
+{
+    HeapFormatTraits() = delete;
+    typedef VM::SyntaxTreeFragment Type;
+};
+template <>
+struct TraceTraits<VM::SyntaxTreeFragment>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const VM::SyntaxTreeFragment &stFrag,
+                     const void *start, const void *end)
+    {
+        stFrag.pst_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater &updater, VM::SyntaxTreeFragment &stFrag,
+                       const void *start, const void *end)
+    {
+        stFrag.pst_.update(updater, start, end);
     }
 };
 

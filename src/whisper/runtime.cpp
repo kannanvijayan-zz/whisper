@@ -151,6 +151,7 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
     tenured_(tenured),
     tenuredList_(),
     locals_(nullptr),
+    lastFrame_(nullptr),
     suppressGC_(false),
     randSeed_(NewRandSeed()),
     spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16))

@@ -36,6 +36,14 @@ class Box
         value_ = reinterpret_cast<word_t>(ptr);
     }
 
+    static Box Invalid() {
+        return Box();
+    }
+    template <typename T>
+    static Box Pointer(T *ptr) {
+        return Box(ptr);
+    }
+
     bool isInvalid() const {
         return (value_ & TagMask) == InvalidValue;
     }

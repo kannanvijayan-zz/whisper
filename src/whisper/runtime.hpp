@@ -13,6 +13,9 @@
 
 namespace Whisper {
 
+namespace VM { class Frame; }
+
+
 class ThreadContext;
 class RunActivationHelper;
 
@@ -121,6 +124,7 @@ class ThreadContext
     Slab *tenured_;
     SlabList tenuredList_;
     LocalBase *locals_;
+    VM::Frame *lastFrame_;
     bool suppressGC_;
 
     unsigned int randSeed_;

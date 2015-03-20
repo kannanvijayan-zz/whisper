@@ -24,6 +24,7 @@
     _(String)                   \
     _(BoxArray)                 \
     _(PackedSyntaxTree)         \
+    _(SyntaxTreeFragment)       \
     _(HeapPointerArray)         \
     _(SourceFile)               \
     _(PropertyDict)             \

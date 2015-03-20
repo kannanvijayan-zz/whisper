@@ -20,6 +20,7 @@ PREDECLARE_HEAP_OBJ_(LookupSeenObjects, LookupSeenObjects, true);
 PREDECLARE_HEAP_OBJ_(LookupNode, LookupNode, false);
 PREDECLARE_HEAP_OBJ_(LookupState, LookupState, false);
 PREDECLARE_HEAP_OBJ_(PackedSyntaxTree, PackedSyntaxTree, false);
+PREDECLARE_HEAP_OBJ_(SyntaxTreeFragment, SyntaxTreeFragment, false);
 PREDECLARE_HEAP_OBJ_(PlainObject, PlainObject, false);
 PREDECLARE_HEAP_OBJ_(PropertyDict, PropertyDict, true);
 PREDECLARE_HEAP_OBJ_(SourceFile, SourceFile, false);
