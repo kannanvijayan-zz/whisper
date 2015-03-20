@@ -133,7 +133,7 @@ LookupState::NextNode(AllocationContext acx,
     // Check if current object has any unseen delegates.
     Local<Wobject *> obj(acx, cur->object());
     Local<Array<Wobject *> *> delgs(acx, nullptr);
-    if (!Wobject::GetDelegates(cx, obj, delgs.mutHandle()))
+    if (!Wobject::GetDelegates(cx, obj, &delgs))
         return OkResult::Error();
 
     if (delgs->length() > 0) {

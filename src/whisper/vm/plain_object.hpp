@@ -40,14 +40,14 @@ class PlainObject : public Wobject
                              Handle<PlainObject *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
 
-    static bool LookupPropertyIndex(Handle<PlainObject *> obj,
-                                    Handle<String *> name,
-                                    uint32_t *indexOut);
+    static bool GetPropertyIndex(Handle<PlainObject *> obj,
+                                 Handle<String *> name,
+                                 uint32_t *indexOut);
 
-    static bool LookupProperty(ThreadContext *cx,
-                               Handle<PlainObject *> obj,
-                               Handle<String *> name,
-                               MutHandle<PropertyDescriptor> result);
+    static bool GetProperty(ThreadContext *cx,
+                            Handle<PlainObject *> obj,
+                            Handle<String *> name,
+                            MutHandle<PropertyDescriptor> result);
 
     static OkResult DefineProperty(ThreadContext *cx,
                                    Handle<PlainObject *> obj,

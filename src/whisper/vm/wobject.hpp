@@ -20,21 +20,24 @@ class Wobject
     Wobject() {}
 
   public:
-    static OkResult GetDelegates(ThreadContext *cx,
-                                 Handle<Wobject *> obj,
-                                 MutHandle<Array<Wobject *> *> delegatesOut);
+    static OkResult GetDelegates(
+            ThreadContext *cx,
+            Handle<Wobject *> obj,
+            MutHandle<Array<Wobject *> *> delegatesOut);
 
-    static Result<bool> LookupProperty(ThreadContext *cx,
-                                       Handle<Wobject *> obj,
-                                       Handle<String *> name,
-                                       MutHandle<PropertyDescriptor> result);
+    static Result<bool> GetProperty(
+            ThreadContext *cx,
+            Handle<Wobject *> obj,
+            Handle<String *> name,
+            MutHandle<PropertyDescriptor> result);
 
-    static OkResult DefineProperty(ThreadContext *cx,
-                                   Handle<Wobject *> obj,
-                                   Handle<String *> name,
-                                   Handle<PropertyDescriptor> defn);
+    static OkResult DefineProperty(
+            ThreadContext *cx,
+            Handle<Wobject *> obj,
+            Handle<String *> name,
+            Handle<PropertyDescriptor> defn);
 
-    static Result<bool> GetPropertyDescriptor(
+    static Result<bool> LookupProperty(
             ThreadContext *cx,
             Handle<Wobject *> obj,
             Handle<String *> name,

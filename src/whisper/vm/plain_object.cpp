@@ -27,9 +27,9 @@ PlainObject::GetDelegates(ThreadContext *cx,
 }
 
 /* static */ bool
-PlainObject::LookupPropertyIndex(Handle<PlainObject *> obj,
-                                 Handle<String *> name,
-                                 uint32_t *indexOut)
+PlainObject::GetPropertyIndex(Handle<PlainObject *> obj,
+                              Handle<String *> name,
+                              uint32_t *indexOut)
 {
     WH_ASSERT(indexOut);
     for (uint32_t i = 0; i < obj->dict_->size(); i++) {
@@ -42,13 +42,13 @@ PlainObject::LookupPropertyIndex(Handle<PlainObject *> obj,
 }
 
 /* static */ bool
-PlainObject::LookupProperty(ThreadContext *cx,
-                            Handle<PlainObject *> obj,
-                            Handle<String *> name,
-                            MutHandle<PropertyDescriptor> result)
+PlainObject::GetProperty(ThreadContext *cx,
+                         Handle<PlainObject *> obj,
+                         Handle<String *> name,
+                         MutHandle<PropertyDescriptor> result)
 {
     uint32_t idx = 0;
-    if (!LookupPropertyIndex(obj, name, &idx))
+    if (!GetPropertyIndex(obj, name, &idx))
         return false;
 
     result = PropertyDescriptor(obj->dict_->value(idx));
@@ -62,7 +62,7 @@ PlainObject::DefineProperty(ThreadContext *cx,
                             Handle<PropertyDescriptor> defn)
 {
     uint32_t idx = 0;
-    if (LookupPropertyIndex(obj, name, &idx)) {
+    if (GetPropertyIndex(obj, name, &idx)) {
         // Override existing definition.
         WH_ASSERT(name->equals(obj->dict_->name(idx)));
         obj->dict_->setValue(idx, defn);

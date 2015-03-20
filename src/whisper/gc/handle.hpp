@@ -31,8 +31,8 @@ class MutHandle
     inline MutHandle(MutHandle<T> &&other)
       : valAddr_(other.valAddr_)
     {}
-    inline MutHandle(Local<T> &stackVal)
-      : valAddr_(stackVal.address())
+    inline MutHandle(Local<T> *stackVal)
+      : valAddr_(stackVal->address())
     {}
 
     inline static MutHandle FromTrackedLocation(T *valAddr)

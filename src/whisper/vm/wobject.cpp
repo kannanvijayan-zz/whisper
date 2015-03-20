@@ -26,17 +26,17 @@ Wobject::GetDelegates(ThreadContext *cx,
 }
 
 /* static */ Result<bool>
-Wobject::LookupProperty(ThreadContext *cx,
-                        Handle<Wobject *> obj,
-                        Handle<String *> name,
-                        MutHandle<PropertyDescriptor> result)
+Wobject::GetProperty(ThreadContext *cx,
+                     Handle<Wobject *> obj,
+                     Handle<String *> name,
+                     MutHandle<PropertyDescriptor> result)
 {
     HeapThing *heapThing = HeapThing::From(obj.get());
     if (heapThing->isPlainObject()) {
         Local<PlainObject *> plainObj(cx,
             reinterpret_cast<PlainObject *>(heapThing));
-        bool got = PlainObject::LookupProperty(cx, plainObj, name, result);
-        return Result<bool>::Value(got);
+        return Result<bool>::Value(PlainObject::GetProperty(cx, plainObj,
+                                                            name, result));
     }
 
     WH_UNREACHABLE("Unknown object kind");
@@ -62,7 +62,7 @@ Wobject::DefineProperty(ThreadContext *cx,
 
 
 /* static */ Result<bool>
-Wobject::GetPropertyDescriptor(
+Wobject::LookupProperty(
         ThreadContext* cx,
         Handle<Wobject *> obj,
         Handle<String *> name,
@@ -82,8 +82,7 @@ Wobject::GetPropertyDescriptor(
         // Check current node.
         Local<Wobject *> curObj(cx, curNode->object());
         Local<PropertyDescriptor> defn(cx);
-        Result<bool> prop = Wobject::LookupProperty(cx, obj, name,
-                                                    defn.mutHandle());
+        Result<bool> prop = Wobject::GetProperty(cx, obj, name, &defn);
         if (!prop)
             return Result<bool>::Error();
 
@@ -95,7 +94,7 @@ Wobject::GetPropertyDescriptor(
         }
 
         // Property not found on object, go to next lookup node.
-        if (!LookupState::NextNode(acx, lookupState, curNode))
+        if (!LookupState::NextNode(acx, lookupState, &curNode))
             return Result<bool>::Error();
     }
 

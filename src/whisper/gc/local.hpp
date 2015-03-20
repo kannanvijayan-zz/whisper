@@ -154,13 +154,6 @@ class Local : public LocalBase
         return get();
     }
 
-    inline const T *operator &() const {
-        return address();
-    }
-    inline T *operator &() {
-        return address();
-    }
-
     inline const T &operator =(const T &ref) {
         set(std::move(ref));
         return ref;
