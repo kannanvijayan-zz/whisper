@@ -91,8 +91,8 @@ Wobject::GetPropertyDescriptor(
 
         // Property found on object.
         if (prop.value()) {
-            defnOut = defn.get();
-            stateOut = lookupState.get();
+            defnOut.set(defn);
+            stateOut.set(lookupState);
             return Result<bool>::Value(true);
         }
 
