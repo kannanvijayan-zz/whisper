@@ -16,40 +16,35 @@
       }; \
     }
 
+#define PREDECLARE_BASE_HEAP_TYPE_(name) \
+    namespace Whisper { \
+      namespace VM { \
+        class name; \
+      } \
+      template <> struct BaseHeapTypeTraits<VM::name> { \
+        BaseHeapTypeTraits() = delete; \
+        static constexpr bool Specialized = true; \
+      }; \
+    }
+
 PREDECLARE_HEAP_OBJ_(LookupSeenObjects, LookupSeenObjects, true);
 PREDECLARE_HEAP_OBJ_(LookupNode, LookupNode, false);
 PREDECLARE_HEAP_OBJ_(LookupState, LookupState, false);
 PREDECLARE_HEAP_OBJ_(PackedSyntaxTree, PackedSyntaxTree, false);
 PREDECLARE_HEAP_OBJ_(SyntaxTreeFragment, SyntaxTreeFragment, false);
 PREDECLARE_HEAP_OBJ_(PlainObject, PlainObject, false);
+PREDECLARE_HEAP_OBJ_(CallObject, CallObject, false);
+PREDECLARE_HEAP_OBJ_(GlobalObject, GlobalObject, false);
 PREDECLARE_HEAP_OBJ_(PropertyDict, PropertyDict, true);
 PREDECLARE_HEAP_OBJ_(SourceFile, SourceFile, false);
 PREDECLARE_HEAP_OBJ_(String, String, true);
 
+PREDECLARE_BASE_HEAP_TYPE_(Wobject);
+PREDECLARE_BASE_HEAP_TYPE_(HashObject);
+PREDECLARE_BASE_HEAP_TYPE_(ScopeObject);
+
+#undef PREDECLARE_BASE_HEAP_TYPE_
 #undef PREDECLARE_HEAP_OBJ_
-
-namespace Whisper {
-namespace VM {
-
-class Wobject;
-class HashObject;
-
-} // namespace VM
-
-template <>
-struct BaseHeapTypeTraits<VM::Wobject>
-{
-    BaseHeapTypeTraits() = delete;
-    static constexpr bool Specialized = true;
-};
-template <>
-struct BaseHeapTypeTraits<VM::HashObject>
-{
-    BaseHeapTypeTraits() = delete;
-    static constexpr bool Specialized = true;
-};
-
-} // namespace Whisper
 
 
 #endif // WHISPER__VM__PREDECLARE_HPP

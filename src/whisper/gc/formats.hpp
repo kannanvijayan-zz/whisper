@@ -29,6 +29,8 @@
     _(SourceFile)               \
     _(PropertyDict)             \
     _(PlainObject)              \
+    _(CallObject)               \
+    _(GlobalObject)             \
     _(LookupSeenObjects)        \
     _(LookupNode)               \
     _(LookupState)
