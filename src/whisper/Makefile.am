@@ -29,7 +29,8 @@ shared_cpp = \
     vm/scope_object.cpp \
     vm/packed_syntax_tree.cpp \
     vm/property_dict.cpp \
-    vm/lookup_state.cpp
+    vm/lookup_state.cpp \
+    vm/function.cpp
 
 whisper_SOURCES = \
     $(shared_cpp) \

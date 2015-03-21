@@ -33,7 +33,8 @@
     _(GlobalObject)             \
     _(LookupSeenObjects)        \
     _(LookupNode)               \
-    _(LookupState)
+    _(LookupState)              \
+    _(NativeFunction)
 
 
 #endif // WHISPER__GC__FORMATS_HPP
