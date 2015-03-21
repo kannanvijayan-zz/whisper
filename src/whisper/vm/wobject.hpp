@@ -43,6 +43,21 @@ class Wobject
             Handle<String *> name,
             MutHandle<LookupState *> stateOut,
             MutHandle<PropertyDescriptor> defnOut);
+
+    static bool IsWobjectFormat(HeapFormat format) {
+        switch (format) {
+          case HeapFormat::PlainObject:
+          case HeapFormat::CallObject:
+          case HeapFormat::GlobalObject:
+          case HeapFormat::FunctionObject:
+            return true;
+          default:
+            return false;
+        }
+    }
+    static bool IsWobject(HeapThing *heapThing) {
+        return IsWobjectFormat(heapThing->format());
+    }
 };
 
 

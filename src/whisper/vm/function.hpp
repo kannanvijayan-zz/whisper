@@ -41,6 +41,18 @@ class Function
     bool isOperative() const {
         return !isApplicative();
     }
+
+    static bool IsFunctionFormat(HeapFormat format) {
+        switch (format) {
+          case HeapFormat::NativeFunction:
+            return true;
+          default:
+            return false;
+        }
+    }
+    static bool IsFunction(HeapThing *heapThing) {
+        return IsFunctionFormat(heapThing->format());
+    }
 };
 
 

@@ -89,13 +89,23 @@ class PropertyDescriptor
     PropertyDescriptor()
       : value_()
     {}
-
     PropertyDescriptor(const Box &value)
       : value_(value)
     {}
+    PropertyDescriptor(Function *func)
+      : value_(Box(func))
+    {}
+
+    bool isValue() const;
+    bool isMethod() const;
 
     const Box &value() const {
+        WH_ASSERT(isValue());
         return value_;
+    }
+    Function *method() const {
+        WH_ASSERT(isMethod());
+        return value_->pointer<Function>();
     }
 };
 
