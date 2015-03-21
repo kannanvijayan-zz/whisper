@@ -41,6 +41,7 @@ PREDECLARE_HEAP_OBJ_(CallObject, CallObject, false);
 PREDECLARE_HEAP_OBJ_(GlobalObject, GlobalObject, false);
 
 PREDECLARE_HEAP_OBJ_(NativeFunction, NativeFunction, false);
+PREDECLARE_HEAP_OBJ_(FunctionObject, FunctionObject, false);
 
 PREDECLARE_BASE_HEAP_TYPE_(Wobject);
 PREDECLARE_BASE_HEAP_TYPE_(HashObject);

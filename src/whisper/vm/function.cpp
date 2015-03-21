@@ -1,7 +1,6 @@
 
 #include "runtime_inlines.hpp"
 #include "vm/core.hpp"
-#include "vm/predeclare.hpp"
 #include "vm/function.hpp"
 
 namespace Whisper {
@@ -32,6 +31,59 @@ NativeFunction::Create(AllocationContext acx,
                        NativeOperativeFuncPtr *operative)
 {
     return acx.create<NativeFunction>(operative);
+}
+
+
+/* static */ Result<FunctionObject *>
+FunctionObject::Create(AllocationContext acx, Handle<Function *> func)
+{
+    // Allocate empty array of delegates.
+    Local<Array<Wobject *> *> delegates(acx);
+    if (!delegates.setResult(Array<Wobject *>::Create(acx, 0,
+            static_cast<Wobject*>(nullptr))))
+    {
+        return Result<FunctionObject *>::Error();
+    }
+
+    // Allocate a dictionary.
+    Local<PropertyDict *> props(acx);
+    if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
+        return Result<FunctionObject *>::Error();
+
+    return acx.create<FunctionObject>(delegates.handle(), props.handle(),
+                                      func);
+}
+
+/* static */ void
+FunctionObject::GetDelegates(ThreadContext *cx,
+                             Handle<FunctionObject *> obj,
+                             MutHandle<Array<Wobject *> *> delegatesOut)
+{
+    HashObject::GetDelegates(cx,
+        Handle<HashObject *>::Convert(obj),
+        delegatesOut);
+}
+
+/* static */ bool
+FunctionObject::GetProperty(ThreadContext *cx,
+                            Handle<FunctionObject *> obj,
+                            Handle<String *> name,
+                            MutHandle<PropertyDescriptor> result)
+{
+    return HashObject::GetProperty(cx,
+        Handle<HashObject *>::Convert(obj),
+        name, result);
+}
+
+/* static */ OkResult
+FunctionObject::DefineProperty(ThreadContext *cx,
+                               Handle<FunctionObject *> obj,
+                               Handle<String *> name,
+                               Handle<PropertyDescriptor> defn)
+{
+    return HashObject::DefineProperty(cx,
+        Handle<HashObject *>::Convert(obj),
+        name, defn);
 }
 
 

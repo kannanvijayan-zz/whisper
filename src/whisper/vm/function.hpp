@@ -4,6 +4,7 @@
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
 #include "vm/wobject.hpp"
+#include "vm/hash_object.hpp"
 #include "vm/scope_object.hpp"
 #include "vm/packed_syntax_tree.hpp"
 
@@ -109,6 +110,48 @@ class NativeFunction : public Function
 };
 
 
+class FunctionObject : public HashObject
+{
+    friend struct TraceTraits<FunctionObject>;
+  private:
+    HeapField<Function *> func_;
+
+  public:
+    FunctionObject(Handle<Array<Wobject *> *> delegates,
+                   Handle<PropertyDict *> dict,
+                   Handle<Function *> func)
+      : HashObject(delegates, dict),
+        func_(func)
+    {}
+
+    static Result<FunctionObject *> Create(
+            AllocationContext acx,
+            Handle<Function *> func);
+
+    Function *func() const {
+        return func_;
+    }
+
+    static void GetDelegates(ThreadContext *cx,
+                             Handle<FunctionObject *> obj,
+                             MutHandle<Array<Wobject *> *> delegatesOut);
+
+    static bool GetPropertyIndex(Handle<FunctionObject *> obj,
+                                 Handle<String *> name,
+                                 uint32_t *indexOut);
+
+    static bool GetProperty(ThreadContext *cx,
+                            Handle<FunctionObject *> obj,
+                            Handle<String *> name,
+                            MutHandle<PropertyDescriptor> result);
+
+    static OkResult DefineProperty(ThreadContext *cx,
+                                   Handle<FunctionObject *> obj,
+                                   Handle<String *> name,
+                                   Handle<PropertyDescriptor> defn);
+};
+
+
 } // namespace VM
 
 
@@ -122,10 +165,21 @@ struct HeapFormatTraits<HeapFormat::NativeFunction>
     HeapFormatTraits() = delete;
     typedef VM::NativeFunction Type;
 };
-
 template <>
 struct TraceTraits<VM::NativeFunction>
   : public UntracedTraceTraits<VM::NativeFunction>
+{};
+
+
+template <>
+struct HeapFormatTraits<HeapFormat::FunctionObject>
+{
+    HeapFormatTraits() = delete;
+    typedef VM::FunctionObject Type;
+};
+template <>
+struct TraceTraits<VM::FunctionObject>
+  : public UntracedTraceTraits<VM::FunctionObject>
 {};
 
 
