@@ -121,6 +121,59 @@ class NativeFunction : public Function
     }
 };
 
+class ScriptedFunction : public Function
+{
+    friend struct TraceTraits<ScriptedFunction>;
+  private:
+    static constexpr uint8_t OperativeFlag = 0x1;
+
+    // The syntax tree of the definition.
+    HeapField<SyntaxTreeFragment *> definition_;
+
+    // The scope chain for the function.
+    HeapField<ScopeObject *> scopeChain_;
+
+    HeapHeader &header() {
+        return HeapThing::From(this)->header();
+    }
+    const HeapHeader &header() const {
+        return HeapThing::From(this)->header();
+    }
+  public:
+    ScriptedFunction(SyntaxTreeFragment *definition,
+                     ScopeObject *scopeChain,
+                     bool isOperative)
+      : definition_(definition),
+        scopeChain_(scopeChain)
+    {
+        WH_ASSERT(definition != nullptr);
+        WH_ASSERT(scopeChain != nullptr);
+
+        if (isOperative)
+            header().setUserData(OperativeFlag);
+    }
+
+    static Result<ScriptedFunction *> Create(
+            AllocationContext acx,
+            Handle<SyntaxTreeFragment *> definition,
+            Handle<ScopeObject *> scopeChain,
+            bool isOperative);
+
+    bool isApplicative() const {
+        return (header().userData() & OperativeFlag) == 0;
+    }
+    bool isOperative() const {
+        return (header().userData() & OperativeFlag) != 0;
+    }
+
+    SyntaxTreeFragment *definition() const {
+        return definition_;
+    }
+    ScopeObject *scopeChain() const {
+        return scopeChain_;
+    }
+};
+
 
 class FunctionObject : public HashObject
 {
@@ -184,6 +237,38 @@ struct TraceTraits<VM::NativeFunction>
 
 
 template <>
+struct HeapFormatTraits<HeapFormat::ScriptedFunction>
+{
+    HeapFormatTraits() = delete;
+    typedef VM::ScriptedFunction Type;
+};
+template <>
+struct TraceTraits<VM::ScriptedFunction>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const VM::ScriptedFunction &func,
+                     const void *start, const void *end)
+    {
+        func.definition_.scan(scanner, start, end);
+        func.scopeChain_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater &updater, VM::ScriptedFunction &func,
+                       const void *start, const void *end)
+    {
+        func.definition_.update(updater, start, end);
+        func.scopeChain_.update(updater, start, end);
+    }
+};
+
+
+template <>
 struct HeapFormatTraits<HeapFormat::FunctionObject>
 {
     HeapFormatTraits() = delete;
@@ -191,8 +276,26 @@ struct HeapFormatTraits<HeapFormat::FunctionObject>
 };
 template <>
 struct TraceTraits<VM::FunctionObject>
-  : public UntracedTraceTraits<VM::FunctionObject>
-{};
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const VM::FunctionObject &obj,
+                     const void *start, const void *end)
+    {
+        obj.func_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater &updater, VM::FunctionObject &obj,
+                       const void *start, const void *end)
+    {
+        obj.func_.update(updater, start, end);
+    }
+};
 
 
 } // namespace Whisper

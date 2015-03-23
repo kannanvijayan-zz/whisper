@@ -35,6 +35,7 @@
     _(LookupNode)               \
     _(LookupState)              \
     _(NativeFunction)           \
+    _(ScriptedFunction)         \
     _(FunctionObject)
 
 

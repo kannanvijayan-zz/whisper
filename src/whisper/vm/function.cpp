@@ -34,6 +34,16 @@ NativeFunction::Create(AllocationContext acx,
 }
 
 
+/* static */ Result<ScriptedFunction *>
+ScriptedFunction::Create(AllocationContext acx,
+                         Handle<SyntaxTreeFragment *> definition,
+                         Handle<ScopeObject *> scopeChain,
+                         bool isOperative)
+{
+    return acx.create<ScriptedFunction>(definition, scopeChain, isOperative);
+}
+
+
 /* static */ Result<FunctionObject *>
 FunctionObject::Create(AllocationContext acx, Handle<Function *> func)
 {
