@@ -10,9 +10,11 @@ namespace VM {
 bool
 Function::isApplicative() const
 {
-    if (isNative()) {
+    if (isNative())
         return asNative()->isApplicative();
-    }
+
+    if (isScripted())
+        return asScripted()->isApplicative();
 
     WH_UNREACHABLE("Unknown function type.");
     return false;

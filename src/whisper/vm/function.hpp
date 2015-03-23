@@ -27,6 +27,9 @@ class Function
     bool isNative() const {
         return HeapThing::From(this)->isNativeFunction();
     }
+    bool isScripted() const {
+        return HeapThing::From(this)->isScriptedFunction();
+    }
 
     const NativeFunction *asNative() const {
         WH_ASSERT(isNative());
@@ -35,6 +38,15 @@ class Function
     NativeFunction *asNative() {
         WH_ASSERT(isNative());
         return reinterpret_cast<NativeFunction *>(this);
+    }
+
+    const ScriptedFunction *asScripted() const {
+        WH_ASSERT(isScripted());
+        return reinterpret_cast<const ScriptedFunction *>(this);
+    }
+    ScriptedFunction *asScripted() {
+        WH_ASSERT(isScripted());
+        return reinterpret_cast<ScriptedFunction *>(this);
     }
 
     bool isApplicative() const;
