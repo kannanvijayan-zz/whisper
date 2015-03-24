@@ -91,12 +91,6 @@ class SyntaxTreeFragment
 //
 
 template <>
-struct HeapFormatTraits<HeapFormat::PackedSyntaxTree>
-{
-    HeapFormatTraits() = delete;
-    typedef VM::PackedSyntaxTree Type;
-};
-template <>
 struct TraceTraits<VM::PackedSyntaxTree>
 {
     TraceTraits() = delete;
@@ -122,12 +116,6 @@ struct TraceTraits<VM::PackedSyntaxTree>
 };
 
 
-template <>
-struct HeapFormatTraits<HeapFormat::SyntaxTreeFragment>
-{
-    HeapFormatTraits() = delete;
-    typedef VM::SyntaxTreeFragment Type;
-};
 template <>
 struct TraceTraits<VM::SyntaxTreeFragment>
 {

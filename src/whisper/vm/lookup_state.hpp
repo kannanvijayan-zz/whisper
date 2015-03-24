@@ -191,14 +191,6 @@ class LookupState
 // GC Specializations
 //
 
-
-template <>
-struct HeapFormatTraits<HeapFormat::LookupSeenObjects>
-{
-    HeapFormatTraits() = delete;
-    static constexpr bool Specialized = true;
-    typedef VM::LookupSeenObjects Type;
-};
 template <>
 struct TraceTraits<VM::LookupSeenObjects>
 {
@@ -229,14 +221,6 @@ struct TraceTraits<VM::LookupSeenObjects>
     }
 };
 
-
-template <>
-struct HeapFormatTraits<HeapFormat::LookupNode>
-{
-    HeapFormatTraits() = delete;
-    static constexpr bool Specialized = true;
-    typedef VM::LookupNode Type;
-};
 template <>
 struct TraceTraits<VM::LookupNode>
 {
@@ -266,14 +250,6 @@ struct TraceTraits<VM::LookupNode>
     }
 };
 
-
-template <>
-struct HeapFormatTraits<HeapFormat::LookupState>
-{
-    HeapFormatTraits() = delete;
-    static constexpr bool Specialized = true;
-    typedef VM::LookupState Type;
-};
 template <>
 struct TraceTraits<VM::LookupState>
 {

@@ -54,14 +54,6 @@ class SourceFile
 //
 
 template <>
-struct HeapFormatTraits<HeapFormat::SourceFile>
-{
-    HeapFormatTraits() = delete;
-    typedef VM::SourceFile Type;
-};
-
-
-template <>
 struct TraceTraits<VM::SourceFile>
 {
     TraceTraits() = delete;

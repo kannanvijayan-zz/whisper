@@ -45,13 +45,6 @@ class PlainObject : public HashObject
 //
 
 template <>
-struct HeapFormatTraits<HeapFormat::PlainObject>
-{
-    HeapFormatTraits() = delete;
-    typedef VM::PlainObject Type;
-};
-
-template <>
 struct TraceTraits<VM::PlainObject>
 {
     TraceTraits() = delete;

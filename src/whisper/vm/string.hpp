@@ -109,12 +109,9 @@ class String
 } // namespace VM
 
 
-template <>
-struct HeapFormatTraits<HeapFormat::String>
-{
-    HeapFormatTraits() = delete;
-    typedef VM::String Type;
-};
+//
+// GC Specializations
+//
 
 template <>
 struct TraceTraits<VM::String> : public UntracedTraceTraits<VM::String>

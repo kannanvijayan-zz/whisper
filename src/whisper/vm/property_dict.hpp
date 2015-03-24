@@ -82,13 +82,6 @@ class PropertyDict
 //
 
 template <>
-struct HeapFormatTraits<HeapFormat::PropertyDict>
-{
-    HeapFormatTraits() = delete;
-    typedef VM::PropertyDict Type;
-};
-
-template <>
 struct TraceTraits<VM::PropertyDict>
 {
     TraceTraits() = delete;

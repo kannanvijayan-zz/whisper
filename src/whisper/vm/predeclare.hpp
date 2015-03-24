@@ -14,6 +14,10 @@
         static constexpr HeapFormat Format = HeapFormat::fmtName; \
         static constexpr bool VarSized = isVarSized; \
       }; \
+      template <> struct HeapFormatTraits<HeapFormat::fmtName> { \
+        HeapFormatTraits() = delete; \
+        typedef VM::name Type; \
+      }; \
     }
 
 #define PREDECLARE_FIXSIZED_HEAP_OBJ_(name) \

@@ -93,12 +93,6 @@ class GlobalObject : public ScopeObject
 //
 
 template <>
-struct HeapFormatTraits<HeapFormat::CallObject>
-{
-    HeapFormatTraits() = delete;
-    typedef VM::CallObject Type;
-};
-template <>
 struct TraceTraits<VM::CallObject>
 {
     TraceTraits() = delete;
@@ -121,13 +115,6 @@ struct TraceTraits<VM::CallObject>
     }
 };
 
-
-template <>
-struct HeapFormatTraits<HeapFormat::GlobalObject>
-{
-    HeapFormatTraits() = delete;
-    typedef VM::GlobalObject Type;
-};
 template <>
 struct TraceTraits<VM::GlobalObject>
 {

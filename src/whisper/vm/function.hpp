@@ -237,23 +237,10 @@ class FunctionObject : public HashObject
 //
 
 template <>
-struct HeapFormatTraits<HeapFormat::NativeFunction>
-{
-    HeapFormatTraits() = delete;
-    typedef VM::NativeFunction Type;
-};
-template <>
 struct TraceTraits<VM::NativeFunction>
   : public UntracedTraceTraits<VM::NativeFunction>
 {};
 
-
-template <>
-struct HeapFormatTraits<HeapFormat::ScriptedFunction>
-{
-    HeapFormatTraits() = delete;
-    typedef VM::ScriptedFunction Type;
-};
 template <>
 struct TraceTraits<VM::ScriptedFunction>
 {
@@ -279,13 +266,6 @@ struct TraceTraits<VM::ScriptedFunction>
     }
 };
 
-
-template <>
-struct HeapFormatTraits<HeapFormat::FunctionObject>
-{
-    HeapFormatTraits() = delete;
-    typedef VM::FunctionObject Type;
-};
 template <>
 struct TraceTraits<VM::FunctionObject>
 {

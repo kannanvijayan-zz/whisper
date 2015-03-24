@@ -125,12 +125,9 @@ class Frame
 } // namespace VM
 
 
-template <>
-struct HeapFormatTraits<HeapFormat::Frame>
-{
-    HeapFormatTraits() = delete;
-    typedef VM::Frame Type;
-};
+//
+// GC Specializations
+//
 
 template <>
 struct TraceTraits<VM::Frame>
