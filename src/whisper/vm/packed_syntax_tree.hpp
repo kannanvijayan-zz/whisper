@@ -70,7 +70,7 @@ class SyntaxTreeFragment
 
     static Result<SyntaxTreeFragment *> Create(
             AllocationContext acx,
-            ArrayHandle<PackedSyntaxTree *> pst,
+            Handle<PackedSyntaxTree *> pst,
             uint32_t offset);
 
     PackedSyntaxTree *pst() const {

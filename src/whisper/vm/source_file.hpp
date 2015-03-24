@@ -56,11 +56,19 @@ class SourceFile
         WH_ASSERT(hasFunc());
         return func_;
     }
+    static Result<ScriptedFunction *> CreateFunc(
+            ThreadContext *cx,
+            Handle<SourceFile *> sourceFile,
+            Handle<GlobalObject *> global);
 
   private:
     void setSyntaxTree(PackedSyntaxTree *tree) {
         WH_ASSERT(!hasSyntaxTree());
         syntaxTree_.set(tree, this);
+    }
+    void setFunc(ScriptedFunction *func) {
+        WH_ASSERT(!hasFunc());
+        func_.set(func, this);
     }
 };
 

@@ -26,6 +26,14 @@ PackedSyntaxTree::Create(AllocationContext acx,
                                         constPoolArray.handle());
 }
 
+/* static */ Result<SyntaxTreeFragment *>
+SyntaxTreeFragment::Create(AllocationContext acx,
+                           Handle<PackedSyntaxTree *> pst,
+                           uint32_t offset)
+{
+    return acx.create<SyntaxTreeFragment>(pst, offset);
+}
+
 
 } // namespace VM
 } // namespace Whisper

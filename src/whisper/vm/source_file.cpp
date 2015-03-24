@@ -5,6 +5,7 @@
 #include "parser/parser.hpp"
 #include "parser/packed_writer.hpp"
 #include "runtime_inlines.hpp"
+#include "vm/function.hpp"
 #include "vm/source_file.hpp"
 
 namespace Whisper {
@@ -65,6 +66,38 @@ SourceFile::ParseSyntaxTree(ThreadContext *cx, Handle<SourceFile *> sourceFile)
 
     sourceFile->setSyntaxTree(packedSt);
     return Result<PackedSyntaxTree *>::Value(sourceFile->syntaxTree());
+}
+
+/* static */ Result<ScriptedFunction *>
+SourceFile::CreateFunc(
+            ThreadContext *cx,
+            Handle<SourceFile *> sourceFile,
+            Handle<GlobalObject *> global)
+{
+    // Ensure we have a packed syntax tree.
+    Local<PackedSyntaxTree *> pst(cx);
+    if (!pst.setResult(SourceFile::ParseSyntaxTree(cx, sourceFile)))
+        return Result<ScriptedFunction *>::Error();
+
+    AllocationContext acx = cx->inTenured();
+
+    // Create a new SyntaxTreeFrament pointing to the File node.
+    Local<SyntaxTreeFragment *> defn(cx);
+    if (!defn.setResult(SyntaxTreeFragment::Create(acx, pst, 0)))
+        return Result<ScriptedFunction *>::Error();
+
+    // Createa a new scripted function.
+    Local<ScriptedFunction *> func(cx);
+    if (!func.setResult(ScriptedFunction::Create(acx, defn,
+                            Handle<ScopeObject *>::Convert(global),
+                            /* isOperative = */ false)))
+    {
+        return Result<ScriptedFunction *>::Error();
+    }
+
+    // Save scripted function to source file.
+    sourceFile->setFunc(func);
+    return Result<ScriptedFunction *>::Value(func);
 }
 
 
