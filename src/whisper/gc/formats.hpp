@@ -36,7 +36,8 @@
     _(LookupState)              \
     _(NativeFunction)           \
     _(ScriptedFunction)         \
-    _(FunctionObject)
+    _(FunctionObject)           \
+    _(Frame)
 
 
 #endif // WHISPER__GC__FORMATS_HPP
