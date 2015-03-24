@@ -115,6 +115,7 @@ class AllocationContext
 enum class RuntimeError
 {
     None,
+    MemAllocFailed,
     SyntaxParseFailed
 };
 

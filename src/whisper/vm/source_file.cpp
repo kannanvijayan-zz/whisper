@@ -74,6 +74,9 @@ SourceFile::CreateFunc(
             Handle<SourceFile *> sourceFile,
             Handle<GlobalObject *> global)
 {
+    if (sourceFile->hasFunc())
+        return Result<ScriptedFunction *>::Value(sourceFile->func());
+
     // Ensure we have a packed syntax tree.
     Local<PackedSyntaxTree *> pst(cx);
     if (!pst.setResult(SourceFile::ParseSyntaxTree(cx, sourceFile)))
