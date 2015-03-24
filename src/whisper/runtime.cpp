@@ -9,6 +9,7 @@
 #include "parser/parser.hpp"
 #include "runtime.hpp"
 #include "runtime_inlines.hpp"
+#include "vm/frame.hpp"
 
 namespace Whisper {
 
@@ -161,6 +162,20 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
     WH_ASSERT(tenured != nullptr);
 
     tenuredList_.addSlab(tenured);
+}
+
+void
+ThreadContext::pushLastFrame(VM::Frame *frame)
+{
+    WH_ASSERT(frame->caller() == lastFrame_);
+    lastFrame_ = frame;
+}
+
+void
+ThreadContext::popLastFrame()
+{
+    WH_ASSERT(lastFrame_ != nullptr);
+    lastFrame_ = lastFrame_->caller();
 }
 
 AllocationContext

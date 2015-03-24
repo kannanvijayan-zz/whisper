@@ -163,6 +163,12 @@ class ThreadContext
         return locals_;
     }
 
+    inline VM::Frame *lastFrame() const {
+        return lastFrame_;
+    }
+    void pushLastFrame(VM::Frame *frame);
+    void popLastFrame();
+
     inline bool suppressGC() const {
         return suppressGC_;
     }

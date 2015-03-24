@@ -21,11 +21,13 @@ class SourceFile
   private:
     HeapField<String *> path_;
     HeapField<PackedSyntaxTree *> syntaxTree_;
+    HeapField<ScriptedFunction *> func_;
 
   public:
     SourceFile(Handle<String *> path)
       : path_(path),
-        syntaxTree_(nullptr)
+        syntaxTree_(nullptr),
+        func_(nullptr)
     {
         WH_ASSERT(path != nullptr);
     }
@@ -43,6 +45,14 @@ class SourceFile
     PackedSyntaxTree *syntaxTree() const {
         WH_ASSERT(hasSyntaxTree());
         return syntaxTree_;
+    }
+
+    bool hasFunc() const {
+        return func_.get() != nullptr;
+    }
+    ScriptedFunction *function() const {
+        WH_ASSERT(hasFunc());
+        return func_;
     }
 };
 
@@ -67,6 +77,10 @@ struct TraceTraits<VM::SourceFile>
     {
         // Scan the path string.
         sourceFile.path_.scan(scanner, start, end);
+        if (sourceFile.syntaxTree_.get() != nullptr)
+            sourceFile.syntaxTree_.scan(scanner, start, end);
+        if (sourceFile.func_.get() != nullptr)
+            sourceFile.func_.scan(scanner, start, end);
     }
 
     template <typename Updater>
@@ -75,6 +89,10 @@ struct TraceTraits<VM::SourceFile>
     {
         // Scan the path string.
         sourceFile.path_.update(updater, start, end);
+        if (sourceFile.syntaxTree_.get() != nullptr)
+            sourceFile.syntaxTree_.update(updater, start, end);
+        if (sourceFile.func_.get() != nullptr)
+            sourceFile.func_.update(updater, start, end);
     }
 };
 
