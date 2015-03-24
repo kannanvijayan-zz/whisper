@@ -16,6 +16,12 @@
       }; \
     }
 
+#define PREDECLARE_FIXSIZED_HEAP_OBJ_(name) \
+    PREDECLARE_HEAP_OBJ_(name, name, false)
+
+#define PREDECLARE_VARSIZED_HEAP_OBJ_(name) \
+    PREDECLARE_HEAP_OBJ_(name, name, true)
+
 #define PREDECLARE_BASE_HEAP_TYPE_(name) \
     namespace Whisper { \
       namespace VM { \
@@ -27,29 +33,31 @@
       }; \
     }
 
-PREDECLARE_HEAP_OBJ_(String, String, true);
-PREDECLARE_HEAP_OBJ_(SourceFile, SourceFile, false);
-PREDECLARE_HEAP_OBJ_(PackedSyntaxTree, PackedSyntaxTree, false);
-PREDECLARE_HEAP_OBJ_(SyntaxTreeFragment, SyntaxTreeFragment, false);
-PREDECLARE_HEAP_OBJ_(PropertyDict, PropertyDict, true);
-PREDECLARE_HEAP_OBJ_(LookupSeenObjects, LookupSeenObjects, true);
-PREDECLARE_HEAP_OBJ_(LookupNode, LookupNode, false);
-PREDECLARE_HEAP_OBJ_(LookupState, LookupState, false);
+PREDECLARE_VARSIZED_HEAP_OBJ_(String);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(SourceFile);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(PackedSyntaxTree);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(SyntaxTreeFragment);
+PREDECLARE_VARSIZED_HEAP_OBJ_(PropertyDict);
+PREDECLARE_VARSIZED_HEAP_OBJ_(LookupSeenObjects);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(LookupNode);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(LookupState);
 
-PREDECLARE_HEAP_OBJ_(PlainObject, PlainObject, false);
-PREDECLARE_HEAP_OBJ_(CallObject, CallObject, false);
-PREDECLARE_HEAP_OBJ_(GlobalObject, GlobalObject, false);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(PlainObject);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(CallObject);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(GlobalObject);
 
 PREDECLARE_BASE_HEAP_TYPE_(Function);
-PREDECLARE_HEAP_OBJ_(NativeFunction, NativeFunction, false);
-PREDECLARE_HEAP_OBJ_(ScriptedFunction, ScriptedFunction, false);
-PREDECLARE_HEAP_OBJ_(FunctionObject, FunctionObject, false);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(NativeFunction);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(ScriptedFunction);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(FunctionObject);
 
 PREDECLARE_BASE_HEAP_TYPE_(Wobject);
 PREDECLARE_BASE_HEAP_TYPE_(HashObject);
 PREDECLARE_BASE_HEAP_TYPE_(ScopeObject);
 
 #undef PREDECLARE_BASE_HEAP_TYPE_
+#undef PREDECLARE_FIXSIZED_HEAP_OBJ_
+#undef PREDECLARE_VARSIZED_HEAP_OBJ_
 #undef PREDECLARE_HEAP_OBJ_
 
 
