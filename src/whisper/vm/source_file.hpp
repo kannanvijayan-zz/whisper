@@ -32,8 +32,8 @@ class SourceFile
         WH_ASSERT(path != nullptr);
     }
 
-    static Result<SourceFile *>Create(AllocationContext acx,
-                                      Handle<String *> path);
+    static Result<SourceFile *> Create(AllocationContext acx,
+                                       Handle<String *> path);
 
     String *path() const {
         return path_;
@@ -46,6 +46,8 @@ class SourceFile
         WH_ASSERT(hasSyntaxTree());
         return syntaxTree_;
     }
+    static Result<PackedSyntaxTree *> ParseSyntaxTree(
+            ThreadContext *cx, Handle<SourceFile *> sourceFile);
 
     bool hasFunc() const {
         return func_.get() != nullptr;
@@ -53,6 +55,12 @@ class SourceFile
     ScriptedFunction *function() const {
         WH_ASSERT(hasFunc());
         return func_;
+    }
+
+  private:
+    void setSyntaxTree(PackedSyntaxTree *tree) {
+        WH_ASSERT(!hasSyntaxTree());
+        syntaxTree_.set(tree, this);
     }
 };
 

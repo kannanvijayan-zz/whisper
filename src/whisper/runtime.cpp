@@ -155,7 +155,8 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
     lastFrame_(nullptr),
     suppressGC_(false),
     randSeed_(NewRandSeed()),
-    spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16))
+    spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16)),
+    error_(RuntimeError::None)
 {
     WH_ASSERT(runtime != nullptr);
     WH_ASSERT(hatchery != nullptr);

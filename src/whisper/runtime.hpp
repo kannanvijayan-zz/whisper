@@ -108,6 +108,17 @@ class AllocationContext
 };
 
 //
+// RuntimeError
+//
+// All possible error variants.
+//
+enum class RuntimeError
+{
+    None,
+    SyntaxParseFailed
+};
+
+//
 // ThreadContext
 //
 // Holds all relevant information for a thread to interact with a runtime.
@@ -130,47 +141,62 @@ class ThreadContext
     unsigned int randSeed_;
     uint32_t spoiler_;
 
+    // If an error occurs during execution, it is recorded
+    // here before returning an error result.
+    RuntimeError error_;
+
     static unsigned int NewRandSeed();
 
   public:
     ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured);
 
-    inline Runtime *runtime() const {
+    Runtime *runtime() const {
         return runtime_;
     }
 
-    inline Slab *hatchery() const {
+    Slab *hatchery() const {
         return hatchery_;
     }
 
-    inline Slab *nursery() const {
+    Slab *nursery() const {
         return nursery_;
     }
 
-    inline Slab *tenured() const {
+    Slab *tenured() const {
         return tenured_;
     }
 
-    inline const SlabList &tenuredList() const {
+    const SlabList &tenuredList() const {
         return tenuredList_;
     }
 
-    inline SlabList &tenuredList() {
+    SlabList &tenuredList() {
         return tenuredList_;
     }
 
-    inline LocalBase *locals() const {
+    LocalBase *locals() const {
         return locals_;
     }
 
-    inline VM::Frame *lastFrame() const {
+    VM::Frame *lastFrame() const {
         return lastFrame_;
     }
     void pushLastFrame(VM::Frame *frame);
     void popLastFrame();
 
-    inline bool suppressGC() const {
+    bool suppressGC() const {
         return suppressGC_;
+    }
+
+    bool hasError() const {
+        return error_ != RuntimeError::None;
+    }
+    RuntimeError error() const {
+        return error_;
+    }
+    void setError(RuntimeError error) {
+        WH_ASSERT(!hasError());
+        error_ = error;
     }
 
     AllocationContext inHatchery();

@@ -89,6 +89,9 @@ class String
     const uint8_t *bytes() const {
         return data_;
     }
+    const char *c_chars() const {
+        return reinterpret_cast<const char *>(bytes());
+    }
 
     bool equals(const String *other) const;
     bool equals(const char *str, uint32_t length) const;

@@ -114,6 +114,7 @@ class FileCodeSource : public CodeSource
     void setError(const char *msg, const char *data);
 };
 
+
 //
 // SourceReader
 //
