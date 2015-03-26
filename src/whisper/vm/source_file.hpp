@@ -52,7 +52,7 @@ class SourceFile
     bool hasFunc() const {
         return func_.get() != nullptr;
     }
-    ScriptedFunction *function() const {
+    ScriptedFunction *func() const {
         WH_ASSERT(hasFunc());
         return func_;
     }

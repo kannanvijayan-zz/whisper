@@ -74,26 +74,6 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    FileCodeSource inputFile(argv[1]);
-    if (inputFile.hasError()) {
-        std::cerr << "Could not open input file " << argv[1]
-                  << " for reading." << std::endl;
-        std::cerr << inputFile.error() << std::endl;
-        exit(1);
-    }
-    Tokenizer tokenizer(inputFile);
-
-    BumpAllocator allocator;
-    STLBumpAllocator<uint8_t> wrappedAllocator(allocator);
-    Parser parser(wrappedAllocator, tokenizer);
-
-    FileNode *fileNode = parser.parseFile();
-    if (!fileNode) {
-        WH_ASSERT(parser.hasError());
-        std::cerr << "Parse error: " << parser.error() << std::endl;
-        return 1;
-    }
-
     // Initialize a runtime.
     Runtime runtime;
     if (!runtime.initialize()) {
@@ -111,20 +91,27 @@ int main(int argc, char **argv) {
     ThreadContext *cx = runtime.threadContext();
     AllocationContext acx(cx->inTenured());
 
-    // Write out the syntax tree in packed format.
-    Local<AST::PackedWriter> packedWriter(cx,
-        PackedWriter(
-            STLBumpAllocator<uint32_t>(wrappedAllocator),
-            tokenizer.sourceReader(),
-            acx));
-    packedWriter->writeNode(fileNode);
+    // Create a new String containing the file name.
+    Local<VM::String *> filename(cx);
+    if (!filename.setResult(VM::String::Create(acx, argv[1]))) {
+        std::cerr << "Error creating filename string." << std::endl;
+        return 1;
+    }
 
-    ArrayHandle<uint32_t> buffer = packedWriter->buffer();
-    ArrayHandle<VM::Box> constPool = packedWriter->constPool();
+    // Create a new SourceFile.
+    Local<VM::SourceFile *> sourceFile(cx);
+    if (!sourceFile.setResult(VM::SourceFile::Create(acx, filename))) {
+        std::cerr << "Error creating source file." << std::endl;
+        return 1;
+    }
 
-    Result<VM::PackedSyntaxTree *> maybePackedSt =
-        VM::PackedSyntaxTree::Create(acx, buffer, constPool);
-    Local<VM::PackedSyntaxTree *> packedSt(cx, maybePackedSt.value());
+    // Prase a syntax tree from the source file.
+    Local<VM::PackedSyntaxTree *> packedSt(cx);
+    if (!packedSt.setResult(VM::SourceFile::ParseSyntaxTree(cx, sourceFile))) {
+        std::cerr << "Error parsing syntax tree." << std::endl;
+        return 1;
+    }
+
     fprintf(stderr, "packedSt local @%p\n", packedSt.stackThing());
 
     fprintf(stderr, "STACK SCAN!\n");
