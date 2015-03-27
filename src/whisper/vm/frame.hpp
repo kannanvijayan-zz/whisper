@@ -15,6 +15,32 @@ class Frame
 {
     friend class TraceTraits<Frame>;
 
+  public:
+    // The packed syntax tree buffer is at most 2**28 words long, so
+    // 4 bits of the offset are usable.  The offset is shifted 4 bits,
+    // and the low 4 bits are used to store the kind of syntax
+    // element an offset refers to.
+    enum class OffsetKind : uint32_t {
+        TopLevel    = 0x0,
+        Statement   = 0x1
+    };
+
+    class OffsetAndKind
+    {
+      private:
+        uint32_t word_;
+
+      public:
+        explicit OffsetAndKind(uint32_t word) : word_(word) {}
+
+        OffsetKind kind() const {
+            return static_cast<OffsetKind>(word_ & 0xf);
+        }
+        uint32_t offset() const {
+            return word_ >> 4;
+        }
+    };
+
   private:
     // The caller frame.
     HeapField<Frame *> caller_;
@@ -26,18 +52,18 @@ class Frame
     uint32_t maxStackDepth_;
     uint32_t maxEvalDepth_;
 
-    // The current stack depth, and expression eval depth.
-    uint32_t stackDepth_;
-    uint32_t evalDepth_;
+    // The current stack top, and expression eval top.
+    HeapField<Box> *stackTop_;
+    OffsetAndKind *evalTop_;
 
     // Implicit following fields:
     //
     //      Box stack_[maxStackDepth_]
-    //      uint32_t evalOffsets_[maxEvalDepth_];
+    //      OffsetAndKind evalOffsets_[maxEvalDepth_];
     //
-    // stack_ holds Boxed values.
-    // evalOffsets_ holds offsets into the the scripted function's
-    // definition.
+    // * stack_ holds Boxed values.
+    // * evalOffsets_ holds OffsetAndKind values pointing into the
+    //   scripted function's packed syntax tree buffer.
 
   public:
     Frame(Frame *caller, ScriptedFunction *func,
@@ -46,8 +72,8 @@ class Frame
         func_(func),
         maxStackDepth_(maxStackDepth),
         maxEvalDepth_(maxEvalDepth),
-        stackDepth_(0),
-        evalDepth_(0)
+        stackTop_(stackStart()),
+        evalTop_(evalStart())
     {}
 
     static uint32_t StackOffset() {
@@ -90,18 +116,28 @@ class Frame
         return maxEvalDepth_;
     }
     uint32_t stackDepth() const {
-        return stackDepth_;
+        return stackTop_ - stackStart();
     }
     uint32_t evalDepth() const {
-        return evalDepth_;
+        return evalTop_ - evalStart();
     }
+
     const HeapField<Box> &stackVal(uint32_t idx) const {
         WH_ASSERT(idx < stackDepth());
-        return stackStart()[idx];
+        return stackTop_[-ToInt32(idx)];
     }
     HeapField<Box> &stackVal(uint32_t idx) {
         WH_ASSERT(idx < stackDepth());
-        return stackStart()[idx];
+        return stackTop_[-ToInt32(idx)];
+    }
+
+    const OffsetAndKind &evalElement(uint32_t idx) const {
+        WH_ASSERT(idx < evalDepth());
+        return evalTop_[-ToInt32(idx)];
+    }
+    OffsetAndKind &evalElement(uint32_t idx) {
+        WH_ASSERT(idx < evalDepth());
+        return evalTop_[-ToInt32(idx)];
     }
 
   private:
@@ -109,15 +145,19 @@ class Frame
         const uint8_t *ptr = reinterpret_cast<const uint8_t *>(this);
         return reinterpret_cast<const HeapField<Box> *>(ptr + StackOffset());
     }
-    const HeapField<Box> *stackEnd() const {
-        return stackStart() + stackDepth_;
-    }
     HeapField<Box> *stackStart() {
         uint8_t *ptr = reinterpret_cast<uint8_t *>(this);
         return reinterpret_cast<HeapField<Box> *>(ptr + StackOffset());
     }
-    HeapField<Box> *stackEnd() {
-        return stackStart() + stackDepth_;
+    const OffsetAndKind *evalStart() const {
+        const uint8_t *ptr = reinterpret_cast<const uint8_t *>(this);
+        return reinterpret_cast<const OffsetAndKind *>(
+                ptr + EvalOffset(maxStackDepth_));
+    }
+    OffsetAndKind *evalStart() {
+        uint8_t *ptr = reinterpret_cast<uint8_t *>(this);
+        return reinterpret_cast<OffsetAndKind *>(
+                ptr + EvalOffset(maxStackDepth_));
     }
 };
 
@@ -143,7 +183,7 @@ struct TraceTraits<VM::Frame>
     {
         obj.caller_.scan(scanner, start, end);
         obj.func_.scan(scanner, start, end);
-        for (uint32_t i = 0; i < obj.stackDepth_; i++)
+        for (uint32_t i = 0; i < obj.stackDepth(); i++)
             obj.stackVal(i).scan(scanner, start, end);
     }
 
@@ -153,7 +193,7 @@ struct TraceTraits<VM::Frame>
     {
         obj.caller_.update(updater, start, end);
         obj.func_.update(updater, start, end);
-        for (uint32_t i = 0; i < obj.stackDepth_; i++)
+        for (uint32_t i = 0; i < obj.stackDepth(); i++)
             obj.stackVal(i).update(updater, start, end);
     }
 };
