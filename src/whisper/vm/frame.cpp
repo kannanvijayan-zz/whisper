@@ -12,11 +12,12 @@ namespace VM {
 Frame::Create(AllocationContext acx,
               Handle<Frame *> caller,
               Handle<ScriptedFunction *> func,
+              Handle<CallObject *> scope,
               uint32_t maxStackDepth,
               uint32_t maxEvalDepth)
 {
     uint32_t size = CalculateSize(maxStackDepth, maxEvalDepth);
-    return acx.createSized<Frame>(size, caller, func,
+    return acx.createSized<Frame>(size, caller, func, scope,
                                   maxStackDepth, maxEvalDepth);
 }
 

@@ -21,8 +21,21 @@ class Frame
     // and the low 4 bits are used to store the kind of syntax
     // element an offset refers to.
     enum class OffsetKind : uint32_t {
-        TopLevel    = 0x0,
-        Statement   = 0x1
+        // TopLevel offsets point to the start of the dump
+        // for a top-level syntactic element, such as a FileNode,
+        // IfStmtNode, etc.
+        TopLevel        = 0x0,
+
+        // ImplicitChild offsets point to the same location as
+        // TopLevel offsets, but denote the fact that we're executing
+        // the first (implicit) child of that top-level syntactic
+        // node.
+        ImplicitChild   = 0x1,
+
+        // Child offsets point to a location in the packed syntax
+        // tree that contains an explicit offset-reference to a
+        // child syntactic element.
+        Child           = 0x2
     };
 
     class OffsetAndKind
@@ -48,6 +61,9 @@ class Frame
     // The scripted function being interpreted in this frame.
     HeapField<ScriptedFunction *> func_;
 
+    // The call object in effect for this frame.
+    HeapField<CallObject *> scope_;
+
     // The maximal stack and eval depth.
     uint32_t maxStackDepth_;
     uint32_t maxEvalDepth_;
@@ -66,10 +82,14 @@ class Frame
     //   scripted function's packed syntax tree buffer.
 
   public:
-    Frame(Frame *caller, ScriptedFunction *func,
-          uint32_t maxStackDepth, uint32_t maxEvalDepth)
+    Frame(Frame *caller,
+          ScriptedFunction *func,
+          CallObject *scope,
+          uint32_t maxStackDepth,
+          uint32_t maxEvalDepth)
       : caller_(caller),
         func_(func),
+        scope_(scope),
         maxStackDepth_(maxStackDepth),
         maxEvalDepth_(maxEvalDepth),
         stackTop_(stackStart()),
@@ -100,6 +120,7 @@ class Frame
     static Result<Frame *> Create(AllocationContext acx,
                                   Handle<Frame *> caller,
                                   Handle<ScriptedFunction *> func,
+                                  Handle<CallObject *> scope,
                                   uint32_t maxStackDepth,
                                   uint32_t maxEvalDepth);
 
