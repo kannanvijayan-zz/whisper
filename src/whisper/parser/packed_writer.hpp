@@ -79,6 +79,12 @@ class PackedWriter
   public:
     typedef uint32_t *Position;
 
+    // The maximum number size of the packed buffer and
+    // the constant array, is 0x0fffffff == ((1 << 28) - 1).
+    // This leaves 4 high bits unused.
+    static constexpr uint32_t MaxBufferSize = (ToUInt32(1) << 28) - 1u;
+    static constexpr uint32_t MaxConstPoolSize = (ToUInt32(1) << 28) - 1u;
+
   private:
     STLBumpAllocator<uint32_t> allocator_;
     const SourceReader &src_;

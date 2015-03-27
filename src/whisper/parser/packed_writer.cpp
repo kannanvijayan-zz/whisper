@@ -42,8 +42,13 @@ PackedWriter::expandBuffer()
 {
     WH_ASSERT(!hasError());
     uint32_t oldSize = end_ - start_;
+    if (oldSize == MaxBufferSize)
+        emitError("Exceeded maximum buffer size.");
+
     uint32_t cursorOffset = cursor_ - start_;
     uint32_t newSize = oldSize ? oldSize * 2 : InitialBufferSize;
+    if (newSize > MaxBufferSize)
+        newSize = MaxBufferSize;
 
     uint32_t *data = allocator_.allocate(newSize);
     std::copy(start_, end_, data);
@@ -93,10 +98,15 @@ void
 PackedWriter::expandConstPool()
 {
     WH_ASSERT(!hasError());
+    if (constPoolCapacity_ == MaxConstPoolSize)
+        emitError("Exceeded maximum const pool size size.");
+
     STLBumpAllocator<VM::Box> alloc(allocator_);
     uint32_t newCapacity = constPoolCapacity_ * 2;
     if (newCapacity == 0)
         newCapacity = InitialConstPoolSize;
+    else if (newCapacity > MaxConstPoolSize)
+        newCapacity = MaxConstPoolSize;
 
     VM::Box *newConstPool = alloc.allocate(newCapacity);
     std::copy(constPool_, constPool_ + constPoolSize_, newConstPool);
