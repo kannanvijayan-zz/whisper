@@ -103,11 +103,11 @@ class Array
 
     const T &getRaw(uint32_t idx) const {
         WH_ASSERT(idx < length());
-        return vals_[idx];
+        return vals_[idx].getRaw();
     }
     T &getRaw(uint32_t idx) {
         WH_ASSERT(idx < length());
-        return vals_[idx];
+        return vals_[idx].getRaw();
     }
 
     T get(uint32_t idx) const {

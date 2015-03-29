@@ -54,6 +54,13 @@ class PackedReader
         constPool_(constPool.ptr()),
         constPoolSize_(constPool.length())
     {}
+    PackedReader(const uint32_t *buffer, uint32_t bufferSize,
+                 const VM::Box *constPool, uint32_t constPoolSize)
+      : buffer_(buffer),
+        bufferSize_(bufferSize),
+        constPool_(constPool),
+        constPoolSize_(constPoolSize)
+    {}
 
     const uint32_t *buffer() const {
         return buffer_;
