@@ -38,10 +38,12 @@ class PackedVisitor
 
 class PackedReader
 {
+    friend class TraceTraits<PackedReader>;
+
   private:
     // Packed syntax tree.
-    VM::Array<uint32_t> *text_;
-    VM::Array<VM::Box> *constPool_;
+    StackField<VM::Array<uint32_t> *> text_;
+    StackField<VM::Array<VM::Box> *> constPool_;
 
   public:
     PackedReader(VM::Array<uint32_t> *text, VM::Array<VM::Box> *constPool)
@@ -368,6 +370,51 @@ class PrintingPackedVisitor : public PackedVisitor
 
 
 } // namespace AST
+
+
+// GC-specialize PackedReader as a stack type.
+template <>
+struct StackTraits<AST::PackedReader>
+{
+    StackTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr StackFormat Format = StackFormat::PackedReader;
+};
+
+template <>
+struct StackFormatTraits<StackFormat::PackedReader>
+{
+    StackFormatTraits() = delete;
+    typedef AST::PackedReader Type;
+};
+
+template <>
+struct TraceTraits<AST::PackedReader>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const AST::PackedReader &pr,
+                     const void *start, const void *end)
+    {
+        pr.text_.scan(scanner, start, end);
+        pr.constPool_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater &updater, AST::PackedReader &pr,
+                       const void *start, const void *end)
+    {
+        pr.text_.update(updater, start, end);
+        pr.constPool_.update(updater, start, end);
+    }
+};
+
+
 } // namespace Whisper
 
 #endif // WHISPER__PARSER__PACKED_READER_HPP

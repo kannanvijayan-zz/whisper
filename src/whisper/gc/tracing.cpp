@@ -5,7 +5,9 @@
 #include "gc/tracing.hpp"
 #include "gc/specializations.hpp"
 
+#include "parser/packed_syntax.hpp"
 #include "parser/packed_writer.hpp"
+#include "parser/packed_reader.hpp"
 
 #include "vm/string.hpp"
 #include "vm/properties.hpp"

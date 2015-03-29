@@ -6,7 +6,9 @@
     _(PropertyName)             \
     _(PropertyDescriptor)       \
     _(Box)                      \
+    _(PackedSyntaxElement)      \
     _(PackedWriter)             \
+    _(PackedReader)             \
     _(HeapPointer)
 
 

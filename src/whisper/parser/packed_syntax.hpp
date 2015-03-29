@@ -24,6 +24,7 @@ class PackedSizedBlock;
 
 class PackedSyntaxElement
 {
+    friend class TraceTraits<PackedSyntaxElement>;
   public:
     class Position {
       private:
@@ -34,7 +35,7 @@ class PackedSyntaxElement
     };
 
   protected:
-    VM::Array<uint32_t> *text_;
+    StackField<VM::Array<uint32_t> *> text_;
     uint32_t offset_;
 
     PackedSyntaxElement(VM::Array<uint32_t> *text, uint32_t offset)
@@ -653,6 +654,61 @@ class PackedIntegerExprNode : public PackedBaseNode
 
 
 } // namespace AST
+
+
+// GC specializations.
+
+#define PACKEDST_GC_SPECIALIZE_(classname) \
+    template <> struct StackTraits<AST::classname> { \
+        StackTraits() = delete; \
+        static constexpr bool Specialized = true; \
+        static constexpr StackFormat Format = \
+            StackFormat::PackedSyntaxElement; \
+    };
+
+    PACKEDST_GC_SPECIALIZE_(PackedSyntaxElement)
+    PACKEDST_GC_SPECIALIZE_(PackedBaseNode)
+    PACKEDST_GC_SPECIALIZE_(PackedBlock)
+    PACKEDST_GC_SPECIALIZE_(PackedSizedBlock)
+
+#define PACKEDST_GC_SPECIALIZE_NODE_(ntype) \
+    PACKEDST_GC_SPECIALIZE_(Packed##ntype##Node)
+    WHISPER_DEFN_SYNTAX_NODES(PACKEDST_GC_SPECIALIZE_NODE_)
+#undef PACKEDST_GC_SPECIALIZE_NODE_
+
+#undef PACKEDST_GC_SPECIALIZE_
+
+template <>
+struct StackFormatTraits<StackFormat::PackedSyntaxElement>
+{
+    StackFormatTraits() = delete;
+    typedef AST::PackedSyntaxElement Type;
+};
+
+template <>
+struct TraceTraits<AST::PackedSyntaxElement>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const AST::PackedSyntaxElement &pse,
+                     const void *start, const void *end)
+    {
+        pse.text_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater &updater, AST::PackedSyntaxElement &pse,
+                       const void *start, const void *end)
+    {
+        pse.text_.update(updater, start, end);
+    }
+};
+
+
 } // namespace Whisper
 
 #endif // WHISPER__PARSER__PACKED_SYNTAX_HPP
