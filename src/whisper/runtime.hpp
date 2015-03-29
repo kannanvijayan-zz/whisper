@@ -18,6 +18,7 @@ namespace VM { class Frame; }
 
 class ThreadContext;
 class RunActivationHelper;
+class NamePool;
 
 //
 // InitializeRuntime
@@ -43,6 +44,7 @@ class Runtime
   friend class ThreadContext;
   private:
     // Every running thread uses a thread context.
+    ThreadContext *immortalThreadContext_;
     std::vector<ThreadContext *> threadContexts_;
     pthread_key_t threadKey_;
 
@@ -68,11 +70,19 @@ class Runtime
         return error_;
     }
 
-    const char *registerThread();
+    OkResult registerThread();
 
     ThreadContext *maybeThreadContext();
     bool hasThreadContext();
     ThreadContext *threadContext();
+
+  private:
+    OkResult makeImmortalThreadContext();
+
+    OkResult okFail(const char *error) {
+        error_ = error;
+        return OkResult::Error();
+    }
 };
 
 

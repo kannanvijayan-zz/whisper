@@ -46,9 +46,8 @@ int main(int argc, char **argv)
     }
 
     // Create a new thread context.
-    const char *err = runtime.registerThread();
-    if (err) {
-        std::cerr << "ThreadContext error: " << err << std::endl;
+    if (!runtime.registerThread()) {
+        std::cerr << "ThreadContext error: " << runtime.error() << std::endl;
         return 1;
     }
     ThreadContext *cx = runtime.threadContext();

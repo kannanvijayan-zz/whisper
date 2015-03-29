@@ -45,11 +45,14 @@ Runtime::initialize()
         return false;
     }
 
+    if (!makeImmortalThreadContext())
+        return false;
+
     initialized_ = true;
     return true;
 }
 
-const char *
+OkResult
 Runtime::registerThread()
 {
     WH_ASSERT(initialized_);
@@ -58,13 +61,13 @@ Runtime::registerThread()
     // Create a new nursery slab.
     Slab *hatchery = Slab::AllocateStandard(Gen::Hatchery);
     if (!hatchery)
-        return "Could not allocate hatchery slab.";
+        return okFail("Could not allocate hatchery slab.");
     AutoDestroySlab _cleanupHatchery(hatchery);
 
     // Create initial tenured space slab.
     Slab *tenured = Slab::AllocateStandard(Gen::Tenured);
     if (!tenured)
-        return "Could not allocate tenured slab.";
+        return okFail("Could not allocate tenured slab.");
     AutoDestroySlab _cleanupTenured(tenured);
 
     // Allocate the ThreadContext
@@ -73,21 +76,52 @@ Runtime::registerThread()
         ctx = new ThreadContext(this, hatchery, tenured);
         threadContexts_.push_back(ctx);
     } catch (std::bad_alloc &err) {
-        return "Could not allocate ThreadContext.";
+        return okFail("Could not allocate ThreadContext.");
     }
 
     // Associate the thread context with the thread.
     int error = pthread_setspecific(threadKey_, ctx);
     if (error) {
         delete ctx;
-        return "pthread_setspecific failed to set ThreadContext.";
+        return okFail("pthread_setspecific failed to set ThreadContext.");
     }
 
     // Steal the allocated slabs so they don't get destroyed.
     _cleanupHatchery.steal();
     _cleanupTenured.steal();
 
-    return nullptr;
+    return OkResult::Ok();
+}
+
+OkResult
+Runtime::makeImmortalThreadContext()
+{
+    WH_ASSERT(!initialized_);
+    WH_ASSERT(immortalThreadContext_ == nullptr);
+
+    // The immortal thread context only has a tenured
+    // generation.
+
+    Slab *tenured = Slab::AllocateStandard(Gen::Tenured);
+    if (!tenured)
+        return okFail("Could not allocate tenured slab.");
+    AutoDestroySlab _cleanupTenured(tenured);
+
+    // Allocate the ThreadContext
+    ThreadContext *ctx = nullptr;
+    try {
+        ctx = new ThreadContext(this, nullptr, tenured);
+        threadContexts_.push_back(ctx);
+    } catch (std::bad_alloc &err) {
+        return okFail("Could not allocate ThreadContext.");
+    }
+
+    // Steal the allocated tenured slab so it doesn't get destroyed.
+    _cleanupTenured.steal();
+
+    // Set up k
+
+    return OkResult::Ok();
 }
 
 ThreadContext *
@@ -159,10 +193,9 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
     error_(RuntimeError::None)
 {
     WH_ASSERT(runtime != nullptr);
-    WH_ASSERT(hatchery != nullptr);
-    WH_ASSERT(tenured != nullptr);
 
-    tenuredList_.addSlab(tenured);
+    if (tenured)
+        tenuredList_.addSlab(tenured);
 }
 
 void
