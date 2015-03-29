@@ -188,6 +188,14 @@ class Handle
         return Handle<T>(reinterpret_cast<const T *>(other.address()));
     }
 
+    template <typename U>
+    inline static Handle<U> convertTo()
+    {
+        static_assert(std::is_convertible<T, U>::value,
+                      "T is not convertible to U.");
+        return Handle<U>(reinterpret_cast<const U *>(address()));
+    }
+
     inline const T &get() const {
         return *valAddr_;
     }
