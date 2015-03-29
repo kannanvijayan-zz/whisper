@@ -8,6 +8,7 @@
 #include "parser/code_source.hpp"
 #include "parser/syntax_tree.hpp"
 #include "vm/string.hpp"
+#include "vm/array.hpp"
 
 namespace Whisper {
 namespace AST {
@@ -33,36 +34,29 @@ class PackedSyntaxElement
     };
 
   protected:
-    const uint32_t *text_;
-    uint32_t size_;
+    VM::Array<uint32_t> *text_;
+    uint32_t offset_;
 
-    PackedSyntaxElement(const uint32_t *text, uint32_t size)
-      : text_(text), size_(size)
+    PackedSyntaxElement(VM::Array<uint32_t> *text, uint32_t offset)
+      : text_(text), offset_(offset)
     {}
 
   public:
-    const uint32_t *text() const {
+    const VM::Array<uint32_t> *text() const {
         return text_;
     }
-    const uint32_t *textEnd() const {
-        return text_ + size_;
-    }
-    uint32_t size() const {
-        return size_;
+    uint32_t offset() const {
+        return offset_;
     }
 
   protected:
-    uint32_t adjustedSize(uint32_t adj) const {
-        WH_ASSERT(adj <= size_);
-        return size_ - adj;
+    const uint32_t valAt(uint32_t idx) const {
+        WH_ASSERT(offset_ + idx < text_->length());
+        return text_->get(offset_ + idx);
     }
-
-    const uint32_t &refAt(uint32_t idx) const {
-        WH_ASSERT(idx < size_);
-        return text_[idx];
-    }
-    const uint32_t *ptrAt(uint32_t idx) const {
-        return &refAt(idx);
+    const uint32_t adjustedOffset(uint32_t idx) const {
+        WH_ASSERT(offset_ + idx < text_->length());
+        return offset_ + idx;
     }
 
     inline PackedBaseNode nodeAt(uint32_t idx) const;
@@ -76,20 +70,21 @@ class PackedSyntaxElement
 class PackedBaseNode : public PackedSyntaxElement
 {
   protected:
-    typedef Bitfield<uint32_t, uint16_t, 12, 0> TypeBitfield;
-    typedef Bitfield<uint32_t, uint32_t, 20, 12> ExtraBitfield;
+    typedef typename Bitfield<uint32_t, uint16_t, 12, 0>::Const TypeBitfield;
+    typedef typename Bitfield<uint32_t, uint32_t, 20, 12>::Const ExtraBitfield;
 
   public:
-    PackedBaseNode(const uint32_t *text, uint32_t size)
-      : PackedSyntaxElement(text, size)
+    PackedBaseNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedSyntaxElement(text, offset)
     {}
 
     NodeType type() const {
-        uint16_t typeBits = TypeBitfield::Const(refAt(0)).value();
-        return static_cast<NodeType>(typeBits);
+        uint32_t val = valAt(0);
+        return static_cast<NodeType>(TypeBitfield(val).value());
     }
     uint32_t extra() const {
-        return ExtraBitfield::Const(refAt(0)).value();
+        uint32_t val = valAt(0);
+        return ExtraBitfield(val).value();
     }
 
 #define PACKED_NODE_PRED_(ntype) \
@@ -111,8 +106,10 @@ class PackedBlock : public PackedSyntaxElement
     uint32_t numStatements_;
 
   public:
-    PackedBlock(const uint32_t *text, uint32_t size, uint32_t numStatements)
-      : PackedSyntaxElement(text, size),
+    PackedBlock(VM::Array<uint32_t> *text,
+                uint32_t offset,
+                uint32_t numStatements)
+      : PackedSyntaxElement(text, offset),
         numStatements_(numStatements)
     {}
 
@@ -131,12 +128,12 @@ class PackedBlock : public PackedSyntaxElement
 class PackedSizedBlock : public PackedSyntaxElement
 {
   public:
-    PackedSizedBlock(const uint32_t *text, uint32_t size)
-      : PackedSyntaxElement(text, size)
+    PackedSizedBlock(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedSyntaxElement(text, offset)
     {}
 
     uint32_t numStatements() const {
-        return refAt(0);
+        return valAt(0);
     }
 
     PackedBaseNode statement(uint32_t idx) const {
@@ -147,38 +144,38 @@ class PackedSizedBlock : public PackedSyntaxElement
     }
 
     PackedBlock unsizedBlock() const {
-        return PackedBlock(text_ + 1, adjustedSize(1), numStatements());
+        return PackedBlock(text_, adjustedOffset(1), numStatements());
     }
 };
 
 inline PackedBaseNode
 PackedSyntaxElement::nodeAt(uint32_t idx) const
 {
-    return PackedBaseNode(ptrAt(idx), adjustedSize(idx));
+    return PackedBaseNode(text_, adjustedOffset(idx));
 }
 
 inline PackedBlock
 PackedSyntaxElement::blockAt(uint32_t idx, uint32_t stmts) const
 {
-    return PackedBlock(ptrAt(idx), adjustedSize(idx), stmts);
+    return PackedBlock(text_, adjustedOffset(idx), stmts);
 }
 
 inline PackedSizedBlock
 PackedSyntaxElement::sizedBlockAt(uint32_t idx) const
 {
-    return PackedSizedBlock(ptrAt(idx), adjustedSize(idx));
+    return PackedSizedBlock(text_, adjustedOffset(idx));
 }
 
 inline PackedBaseNode
 PackedSyntaxElement::indirectNodeAt(uint32_t idx) const
 {
-    return nodeAt(idx + refAt(idx));
+    return nodeAt(idx + valAt(idx));
 }
 
 inline PackedSizedBlock
 PackedSyntaxElement::indirectSizedBlockAt(uint32_t idx) const
 {
-    return sizedBlockAt(idx + refAt(idx));
+    return sizedBlockAt(idx + valAt(idx));
 }
 
 
@@ -194,8 +191,8 @@ class PackedFileNode : public PackedBaseNode
   public:
     static constexpr uint32_t MaxStatements = 0xffff;
 
-    PackedFileNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedFileNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == File);
     }
@@ -217,8 +214,8 @@ class PackedEmptyStmtNode : public PackedBaseNode
     // Format:
     //      { <Type> }
   public:
-    PackedEmptyStmtNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedEmptyStmtNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == EmptyStmt);
     }
@@ -230,8 +227,8 @@ class PackedExprStmtNode : public PackedBaseNode
     //      { <Type>;
     //        Expr... }
   public:
-    PackedExprStmtNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedExprStmtNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == ExprStmt);
     }
@@ -247,8 +244,8 @@ class PackedReturnStmtNode : public PackedBaseNode
     //      { <HasExpression:1 | Type>;
     //        Expr... if HasExpression }
   public:
-    PackedReturnStmtNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedReturnStmtNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == ReturnStmt);
     }
@@ -280,8 +277,8 @@ class PackedIfStmtNode : public PackedBaseNode
   public:
     static constexpr uint32_t MaxElsifs = 0xffff;
 
-    PackedIfStmtNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedIfStmtNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == IfStmt);
     }
@@ -326,8 +323,8 @@ class PackedDefStmtNode : public PackedBaseNode
   public:
     static constexpr uint32_t MaxParams = 0xffff;
 
-    PackedDefStmtNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedDefStmtNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == DefStmt);
     }
@@ -337,11 +334,11 @@ class PackedDefStmtNode : public PackedBaseNode
         return extra();
     }
     uint32_t nameCid() const {
-        return refAt(1);
+        return valAt(1);
     }
     uint32_t paramCid(uint32_t paramIdx) const {
         WH_ASSERT(paramIdx < numParams());
-        return refAt(1 + 1 + paramIdx);
+        return valAt(1 + 1 + paramIdx);
     }
     PackedSizedBlock bodyBlock() const {
         return sizedBlockAt(1 + 1 + numParams());
@@ -361,8 +358,8 @@ class PackedConstStmtNode : public PackedBaseNode
   public:
     static constexpr uint32_t MaxBindings = 0xffff;
 
-    PackedConstStmtNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedConstStmtNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == ConstStmt);
     }
@@ -373,7 +370,7 @@ class PackedConstStmtNode : public PackedBaseNode
     }
     uint32_t varnameCid(uint32_t idx) const {
         WH_ASSERT(idx < numBindings());
-        return refAt(1 + (idx * 2));
+        return valAt(1 + (idx * 2));
     }
     PackedBaseNode varexpr(uint32_t idx) const {
         WH_ASSERT(idx < numBindings());
@@ -397,8 +394,8 @@ class PackedVarStmtNode : public PackedBaseNode
   public:
     static constexpr uint32_t MaxBindings = 0xffff;
 
-    PackedVarStmtNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedVarStmtNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == VarStmt);
     }
@@ -409,11 +406,11 @@ class PackedVarStmtNode : public PackedBaseNode
     }
     uint32_t varnameCid(uint32_t idx) const {
         WH_ASSERT(idx < numBindings());
-        return refAt(1 + (idx * 2));
+        return valAt(1 + (idx * 2));
     }
     bool hasVarexpr(uint32_t idx) const {
         WH_ASSERT(idx < numBindings());
-        return refAt(1 + (idx * 2) + 1) > 0;
+        return valAt(1 + (idx * 2) + 1) > 0;
     }
     PackedBaseNode varexpr(uint32_t idx) const {
         WH_ASSERT(idx < numBindings());
@@ -428,8 +425,8 @@ class PackedLoopStmtNode : public PackedBaseNode
     //      { <NumStmts:16 | Type>;
     //        Block... }
   public:
-    PackedLoopStmtNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedLoopStmtNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == LoopStmt);
     }
@@ -451,8 +448,8 @@ class PackedCallExprNode : public PackedBaseNode
   public:
     static constexpr uint32_t MaxArgs = 0xffff;
 
-    PackedCallExprNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedCallExprNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == CallExpr);
     }
@@ -475,14 +472,14 @@ class PackedDotExprNode : public PackedBaseNode
     // Format:
     //      { <Type>; NameCid; TargetExpr... }
   public:
-    PackedDotExprNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedDotExprNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == DotExpr);
     }
 
     uint32_t nameCid() const {
-        return refAt(1);
+        return valAt(1);
     }
     PackedBaseNode target() const {
         return nodeAt(2);
@@ -494,14 +491,14 @@ class PackedArrowExprNode : public PackedBaseNode
     // Format:
     //      { <Type>; NameCid; TargetExpr... }
   public:
-    PackedArrowExprNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedArrowExprNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == ArrowExpr);
     }
 
     uint32_t nameCid() const {
-        return refAt(1);
+        return valAt(1);
     }
     PackedBaseNode target() const {
         return nodeAt(2);
@@ -511,8 +508,8 @@ class PackedArrowExprNode : public PackedBaseNode
 class PackedPosExprNode : public PackedBaseNode
 {
   public:
-    PackedPosExprNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedPosExprNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == PosExpr);
     }
@@ -525,8 +522,8 @@ class PackedPosExprNode : public PackedBaseNode
 class PackedNegExprNode : public PackedBaseNode
 {
   public:
-    PackedNegExprNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedNegExprNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == NegExpr);
     }
@@ -539,8 +536,8 @@ class PackedNegExprNode : public PackedBaseNode
 class PackedAddExprNode : public PackedBaseNode
 {
   public:
-    PackedAddExprNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedAddExprNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == AddExpr);
     }
@@ -556,8 +553,8 @@ class PackedAddExprNode : public PackedBaseNode
 class PackedSubExprNode : public PackedBaseNode
 {
   public:
-    PackedSubExprNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedSubExprNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == SubExpr);
     }
@@ -573,8 +570,8 @@ class PackedSubExprNode : public PackedBaseNode
 class PackedMulExprNode : public PackedBaseNode
 {
   public:
-    PackedMulExprNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedMulExprNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == MulExpr);
     }
@@ -590,8 +587,8 @@ class PackedMulExprNode : public PackedBaseNode
 class PackedDivExprNode : public PackedBaseNode
 {
   public:
-    PackedDivExprNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedDivExprNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == DivExpr);
     }
@@ -607,8 +604,8 @@ class PackedDivExprNode : public PackedBaseNode
 class PackedParenExprNode : public PackedBaseNode
 {
   public:
-    PackedParenExprNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedParenExprNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == ParenExpr);
     }
@@ -621,28 +618,28 @@ class PackedParenExprNode : public PackedBaseNode
 class PackedNameExprNode : public PackedBaseNode
 {
   public:
-    PackedNameExprNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedNameExprNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == NameExpr);
     }
 
     uint32_t nameCid() const {
-        return refAt(1);
+        return valAt(1);
     }
 };
 
 class PackedIntegerExprNode : public PackedBaseNode
 {
   public:
-    PackedIntegerExprNode(const uint32_t *text, uint32_t size)
-      : PackedBaseNode(text, size)
+    PackedIntegerExprNode(VM::Array<uint32_t> *text, uint32_t offset)
+      : PackedBaseNode(text, offset)
     {
         WH_ASSERT(type() == IntegerExpr);
     }
 
     int32_t value() const {
-        return static_cast<int32_t>(refAt(1));
+        return static_cast<int32_t>(valAt(1));
     }
 };
 

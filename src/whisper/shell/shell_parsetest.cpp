@@ -1,6 +1,5 @@
 
 #include <iostream>
-#include <getopt.h>
 
 #include "common.hpp"
 #include "allocators.hpp"
@@ -12,6 +11,8 @@
 #include "parser/packed_syntax.hpp"
 #include "parser/packed_writer.hpp"
 #include "parser/packed_reader.hpp"
+#include "vm/source_file.hpp"
+#include "vm/packed_syntax_tree.hpp"
 
 using namespace Whisper;
 
@@ -26,133 +27,15 @@ struct Printer
     }
 };
 
-static void
-print_tokens(CodeSource &code, Tokenizer &tokenizer)
-{
-    // Read and print tokens.
-    for (;;) {
-        Token tok = tokenizer.readToken();
-        char buf[20];
-        if (tok.isLineTerminatorSequence() || tok.isWhitespace() ||
-            tok.isEnd())
-        {
-            std::cerr << "Token " << tok.typeString() << std::endl;
-
-        }
-        else
-        {
-            int len = tok.length() < 19 ? tok.length()+1 : 20;
-            snprintf(buf, len, "%s", tok.text(code));
-            if (tok.length() >= 19) {
-                buf[16] = '.';
-                buf[17] = '.';
-                buf[18] = '.';
-            }
-
-            std::cerr << "Token " << tok.typeString() << ":" << buf
-                      << std::endl;
-        }
-
-        if (tok.isError()) {
-            WH_ASSERT(tokenizer.hasError());
-            std::cerr << "Token error: " << tokenizer.error() << std::endl;
-            break;
-        }
-
-        if (tok.isEnd())
-            break;
-    }
-}
-
-enum ParseOpt
-{
-    Opt_Tokenize = 1,
-    Opt_Ast = 2,
-    Opt_PackedAst = 3
-};
-
-int parse_opts(int argc, char **argv, ParseOpt *parseOptOut)
-{
-    bool found_opt = false;
-    for (;;) {
-        int result = getopt(argc, argv, "tap");
-        if (result == 't') {
-            *parseOptOut = Opt_Tokenize;
-            found_opt = true;
-            continue;
-        }
-
-        if (result == 'a') {
-            *parseOptOut = Opt_Ast;
-            found_opt = true;
-            continue;
-        }
-
-        if (result == 'p') {
-            *parseOptOut = Opt_PackedAst;
-            found_opt = true;
-            continue;
-        }
-
-        WH_ASSERT(result == -1);
-        break;
-    }
-
-    if (!found_opt)
-        *parseOptOut = Opt_PackedAst;
-
-    return optind;
-}
-
 int main(int argc, char **argv)
 {
-    ParseOpt parseOpt;
-    int argIndex = parse_opts(argc, argv, &parseOpt);
-    WH_ASSERT(argIndex <= argc);
-    if (argIndex >= argc) {
+    if (argc <= 1) {
         std::cerr << "No input file provided!" << std::endl;
         exit(1);
     }
 
     // Initialize static tables.
-    InitializeSpew();
-    InitializeTokenizer();
-
-    // Open input file.
-    FileCodeSource inputFile(argv[optind]);
-    if (inputFile.hasError()) {
-        std::cerr << "Could not open input file " << argv[optind]
-                  << " for reading." << std::endl;
-        std::cerr << inputFile.error() << std::endl;
-        exit(1);
-    }
-
-    Tokenizer tokenizer(inputFile);
-
-    if (parseOpt == Opt_Tokenize) {
-        // Handle tokenizer.
-        print_tokens(inputFile, tokenizer);
-        return 0;
-    }
-
-    BumpAllocator allocator;
-    STLBumpAllocator<uint8_t> wrappedAllocator(allocator);
-    Parser parser(wrappedAllocator, tokenizer);
-
-    FileNode *fileNode = parser.parseFile();
-    if (!fileNode) {
-        WH_ASSERT(parser.hasError());
-        std::cerr << "Parse error: " << parser.error() << std::endl;
-        return 1;
-    }
-
-    if (parseOpt == Opt_Ast) {
-        Printer pr;
-        PrintNode(tokenizer.sourceReader(), fileNode, pr, 0);
-        return 0;
-    }
-
-    WH_ASSERT(parseOpt == Opt_PackedAst);
+    InitializeRuntime();
 
     // Initialize a runtime.
     Runtime runtime;
@@ -171,39 +54,56 @@ int main(int argc, char **argv)
     ThreadContext *cx = runtime.threadContext();
     AllocationContext acx(cx->inTenured());
 
-    // Write out the syntax tree in packed format.
-    Local<AST::PackedWriter> packedWriter(cx,
-        PackedWriter(
-            STLBumpAllocator<uint32_t>(wrappedAllocator),
-            tokenizer.sourceReader(),
-            acx));
-    packedWriter->writeNode(fileNode);
+    // Create a new String containing the file name.
+    Local<VM::String *> filename(cx);
+    if (!filename.setResult(VM::String::Create(acx, argv[1]))) {
+        std::cerr << "Error creating filename string." << std::endl;
+        return 1;
+    }
+
+    // Create a new SourceFile.
+    Local<VM::SourceFile *> sourceFile(cx);
+    if (!sourceFile.setResult(VM::SourceFile::Create(acx, filename))) {
+        std::cerr << "Error creating source file." << std::endl;
+        return 1;
+    }
+
+    // Prase a syntax tree from the source file.
+    Local<VM::PackedSyntaxTree *> packedSt(cx);
+    if (!packedSt.setResult(VM::SourceFile::ParseSyntaxTree(cx, sourceFile))) {
+        std::cerr << "Error parsing syntax tree." << std::endl;
+        return 1;
+    }
 
     // Print packed raw data.
-    ArrayHandle<uint32_t> buffer = packedWriter->buffer();
+    Local<VM::Array<uint32_t> *> stData(cx, packedSt->data());
     fprintf(stderr, "Packed Syntax Tree:\n");
-    for (uint32_t bufi = 0; bufi < buffer.length(); bufi += 4) {
-        if (buffer.length() - bufi >= 4) {
+    for (uint32_t bufi = 0; bufi < stData->length(); bufi += 4) {
+        if (stData->length() - bufi >= 4) {
             fprintf(stderr, "[%04d]  %08x %08x %08x %08x\n", bufi,
-                    buffer[bufi], buffer[bufi+1],
-                    buffer[bufi+2], buffer[bufi+3]);
-        } else if (buffer.length() - bufi == 3) {
+                    stData->get(bufi), stData->get(bufi+1),
+                    stData->get(bufi+2), stData->get(bufi+3));
+
+        } else if (stData->length() - bufi == 3) {
             fprintf(stderr, "[%04d]  %08x %08x %08x\n", bufi,
-                    buffer[bufi], buffer[bufi+1], buffer[bufi+2]);
-        } else if (buffer.length() - bufi == 2) {
+                    stData->get(bufi), stData->get(bufi+1),
+                    stData->get(bufi+2));
+
+        } else if (stData->length() - bufi == 2) {
             fprintf(stderr, "[%04d]  %08x %08x\n", bufi,
-                    buffer[bufi], buffer[bufi+1]);
+                    stData->get(bufi), stData->get(bufi+1));
+
         } else {
             fprintf(stderr, "[%04d]  %08x\n", bufi,
-                    buffer[bufi]);
+                    stData->get(bufi));
         }
     }
 
     // Print constant pool.
-    ArrayHandle<VM::Box> constPool = packedWriter->constPool();
+    Local<VM::Array<VM::Box> *> stConstants(cx, packedSt->constants());
     fprintf(stderr, "Constant Pool:\n");
-    for (uint32_t i = 0; i < constPool.length(); i++) {
-        VM::Box box = constPool[i];
+    for (uint32_t i = 0; i < stConstants->length(); i++) {
+        VM::Box box = stConstants->get(i);
         char buf[50];
         box.snprint(buf, 50);
         fprintf(stderr, "[%04d]  %p\n", i, buf);
@@ -220,7 +120,7 @@ int main(int argc, char **argv)
     AST::PrintingPackedVisitor<Printer> packedVisitor(pr2);
 
     fprintf(stderr, "Visited syntax tree:\n");
-    AST::PackedReader packedReader(buffer, constPool);
+    AST::PackedReader packedReader(stData, stConstants);
     packedReader.visit(&packedVisitor);
 
     return 0;

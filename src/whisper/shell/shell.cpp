@@ -65,14 +65,14 @@ struct HeapPrintVisitor : public TracerVisitor
 int main(int argc, char **argv) {
     std::cout << "Whisper says hello." << std::endl;
 
-    // Initialize static tables.
-    InitializeRuntime();
-
     // Open input file.
     if (argc <= 1) {
         std::cerr << "No input file provided!" << std::endl;
         exit(1);
     }
+
+    // Initialize static tables.
+    InitializeRuntime();
 
     // Initialize a runtime.
     Runtime runtime;

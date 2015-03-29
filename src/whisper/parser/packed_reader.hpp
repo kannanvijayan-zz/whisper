@@ -10,6 +10,7 @@
 #include "parser/packed_syntax.hpp"
 #include "vm/string.hpp"
 #include "vm/box.hpp"
+#include "vm/array.hpp"
 
 namespace Whisper {
 namespace AST {
@@ -39,47 +40,29 @@ class PackedReader
 {
   private:
     // Packed syntax tree.
-    const uint32_t *buffer_;
-    uint32_t bufferSize_;
-
-    // Constant pool.
-    const VM::Box *constPool_;
-    uint32_t constPoolSize_;
+    VM::Array<uint32_t> *text_;
+    VM::Array<VM::Box> *constPool_;
 
   public:
-    PackedReader(ArrayHandle<uint32_t> buffer,
-                 ArrayHandle<VM::Box> constPool)
-      : buffer_(buffer.ptr()),
-        bufferSize_(buffer.length()),
-        constPool_(constPool.ptr()),
-        constPoolSize_(constPool.length())
-    {}
-    PackedReader(const uint32_t *buffer, uint32_t bufferSize,
-                 const VM::Box *constPool, uint32_t constPoolSize)
-      : buffer_(buffer),
-        bufferSize_(bufferSize),
-        constPool_(constPool),
-        constPoolSize_(constPoolSize)
+    PackedReader(VM::Array<uint32_t> *text, VM::Array<VM::Box> *constPool)
+      : text_(text),
+        constPool_(constPool)
     {}
 
-    const uint32_t *buffer() const {
-        return buffer_;
+    VM::Array<uint32_t> *text() const {
+        return text_;
     }
-    const uint32_t *bufferEnd() const {
-        return buffer_ + bufferSize_;
-    }
-    uint32_t bufferSize() const {
-        return bufferSize_;
+    VM::Array<VM::Box> *constPool() const {
+        return constPool_;
     }
 
     VM::Box constant(uint32_t idx) const {
-        WH_ASSERT(idx < constPoolSize_);
-        return constPool_[idx];
+        return constPool_->get(idx);
     }
 
     void visitNode(PackedBaseNode node, PackedVisitor *visitor) const;
     void visit(PackedVisitor *visitor) const {
-        visitNode(PackedBaseNode(buffer_, bufferSize_), visitor);
+        visitNode(PackedBaseNode(text_, 0), visitor);
     }
 };
 

@@ -9,8 +9,7 @@ namespace AST {
 void
 PackedReader::visitNode(PackedBaseNode node, PackedVisitor *visitor) const
 {
-    WH_ASSERT(node.text() >= buffer());
-    WH_ASSERT(node.textEnd() == bufferEnd());
+    WH_ASSERT(node.text() >= text());
 
     switch (node.type()) {
 #define CASE_(ntype) \
