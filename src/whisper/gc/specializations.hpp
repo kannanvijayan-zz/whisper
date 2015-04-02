@@ -120,6 +120,8 @@ struct TraceTraits<HeapThing *>
     static void Scan(Scanner &scanner, const T_ &t,
                      const void *start, const void *end)
     {
+        if (!t)
+            return;
         scanner(&t, t);
     }
 
@@ -127,6 +129,8 @@ struct TraceTraits<HeapThing *>
     static void Update(Updater &updater, T_ &t,
                        const void *start, const void *end)
     {
+        if (!t)
+            return;
         HeapThing *ht = updater(&t, t);
         if (ht != t)
             t = ht;
