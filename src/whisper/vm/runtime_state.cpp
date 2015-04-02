@@ -13,7 +13,7 @@ RuntimeState::Create(AllocationContext acx)
     Local<String *> vmstr(acx, nullptr);
     Local<Array<String *> *> namePool(acx);
     if (!namePool.setResult(
-            Array<String *>::Create(acx, NamePool::Size(), vmstr.handle())))
+            Array<String *>::CreateFill(acx, NamePool::Size(), vmstr.handle())))
     {
         return Result<RuntimeState *>::Error();
     }

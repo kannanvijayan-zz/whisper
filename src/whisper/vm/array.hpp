@@ -51,6 +51,13 @@ class Array
         return sizeof(Array<T>) + (sizeof(HeapField<T>) * len);
     }
 
+    Array() {
+        // T should NOT be heap-allocated.
+        static_assert(!HeapTraits<T>::Specialized,
+                      "Heap-allocated objects must use ArrayHandle-based "
+                      "constructor");
+    }
+
     Array(uint32_t len, const T *vals) {
         // T should NOT be heap-allocated.
         static_assert(!HeapTraits<T>::Specialized,
@@ -85,19 +92,20 @@ class Array
             vals_[i].init(arr->vals_[i], this);
     }
 
-    static inline Result<Array<T> *> Create(AllocationContext acx,
+    static inline Result<Array<T> *> CreateEmpty(AllocationContext acx);
+    static inline Result<Array<T> *> CreateCopy(AllocationContext acx,
                                              uint32_t length,
                                              const T *vals);
-    static inline Result<Array<T> *> Create(AllocationContext acx,
-                                            uint32_t length,
-                                            const T &val);
-    static inline Result<Array<T> *> Create(AllocationContext acx,
-                                            ArrayHandle<T> arr);
-    static inline Result<Array<T> *> Create(AllocationContext acx,
-                                            uint32_t length,
-                                            Handle<T> val);
-    static inline Result<Array<T> *> Create(AllocationContext acx,
-                                            Handle<Array<T> *> other);
+    static inline Result<Array<T> *> CreateFill(AllocationContext acx,
+                                                uint32_t length,
+                                                const T &val);
+    static inline Result<Array<T> *> CreateCopy(AllocationContext acx,
+                                                ArrayHandle<T> arr);
+    static inline Result<Array<T> *> CreateFill(AllocationContext acx,
+                                                uint32_t length,
+                                                Handle<T> val);
+    static inline Result<Array<T> *> CreateCopy(AllocationContext acx,
+                                                Handle<Array<T> *> other);
 
     inline uint32_t length() const;
 
@@ -148,21 +156,28 @@ Array<T>::length() const
 
 template <typename T>
 /* static */ inline Result<Array<T> *>
-Array<T>::Create(AllocationContext acx, uint32_t len, const T *vals)
+Array<T>::CreateEmpty(AllocationContext acx)
+{
+    return acx.createSized<Array<T>>(CalculateSize(0));
+}
+
+template <typename T>
+/* static */ inline Result<Array<T> *>
+Array<T>::CreateCopy(AllocationContext acx, uint32_t len, const T *vals)
 {
     return acx.createSized<Array<T>>(CalculateSize(len), len, vals);
 }
 
 template <typename T>
 /* static */ inline Result<Array<T> *>
-Array<T>::Create(AllocationContext acx, uint32_t len, const T &val)
+Array<T>::CreateFill(AllocationContext acx, uint32_t len, const T &val)
 {
     return acx.createSized<Array<T>>(CalculateSize(len), len, val);
 }
 
 template <typename T>
 /* static */ inline Result<Array<T> *>
-Array<T>::Create(AllocationContext acx, ArrayHandle<T> arr)
+Array<T>::CreateCopy(AllocationContext acx, ArrayHandle<T> arr)
 {
     uint32_t len = arr.length();
     return acx.createSized<Array<T>>(CalculateSize(len), arr);
@@ -170,14 +185,14 @@ Array<T>::Create(AllocationContext acx, ArrayHandle<T> arr)
 
 template <typename T>
 /* static */ inline Result<Array<T> *>
-Array<T>::Create(AllocationContext acx, uint32_t length, Handle<T> val)
+Array<T>::CreateFill(AllocationContext acx, uint32_t length, Handle<T> val)
 {
     return acx.createSized<Array<T>>(CalculateSize(length), length, val);
 }
 
 template <typename T>
 /* static */ inline Result<Array<T> *>
-Array<T>::Create(AllocationContext acx, Handle<Array<T> *> other)
+Array<T>::CreateCopy(AllocationContext acx, Handle<Array<T> *> other)
 {
     uint32_t len = other->length();
     return acx.createSized<Array<T>>(CalculateSize(len), other);
