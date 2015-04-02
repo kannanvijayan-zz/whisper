@@ -172,7 +172,6 @@ class Maybe
         return reinterpret_cast<const T *>(&data_[0]);
     }
 
-  public:
     Maybe()
       : hasValue_(false)
     {}
@@ -186,27 +185,35 @@ class Maybe
     Maybe(T &&t)
       : hasValue_(true)
     {
-        new (ptr()) T(t);
+        new (ptr()) T(std::move(t));
     }
-
-    template <typename U>
-    Maybe(const Maybe<U> &u)
-      : hasValue_(u.hasValue())
+  public:
+    Maybe(const Maybe<T> &t)
+      : hasValue_(t.hasValue())
     {
-        if (u.hasValue())
-            new (ptr()) T(u.value());
+        if (t.hasValue())
+            new (ptr()) T(t.value());
     }
-
-    template <typename... ARGS>
-    Maybe(ARGS... args)
-      : hasValue_(true)
+    Maybe(Maybe<T> &&t)
+      : hasValue_(t.hasValue())
     {
-        new (ptr()) T(args...);
+        if (t.hasValue())
+            new (ptr()) T(std::move(t.value()));
     }
 
     ~Maybe() {
         if (hasValue_)
             ptr()->~T();
+    }
+
+    static Maybe<T> None() {
+        return Maybe<T>();
+    }
+    static Maybe<T> Some(const T &t) {
+        return Maybe<T>(t);
+    }
+    static Maybe<T> Some(T &&t) {
+        return Maybe<T>(std::move(t));
     }
 
     bool hasValue() const {
@@ -249,34 +256,45 @@ class Maybe
         return hasValue() ? value() : fallback;
     }
 
-    const T &operator =(const T &val) {
+    Maybe<T> &operator =(const T &val) {
         if (hasValue_) {
             *ptr() = val;
         } else {
             new (ptr()) T(val);
             hasValue_ = true;
         }
-        return val;
+        return *this;
     }
-
-    template <typename U>
-    const Maybe<U> &operator =(const Maybe<U> &val) {
-        if (hasValue()) {
-            // If we have a value, either assign new value,
-            // or destroy existing value.
-            if (val.hasValue()) {
-                *ptr() = val;
-            } else {
-                ptr()->~T();
-                hasValue_ = false;
-            }
-        } else if (val.hasValue()) {
-            // If we have no value, then construct a new value.
-            // if the other one has one.
-            new (ptr()) T(val.value());
+    Maybe<T> &operator =(T &&val) {
+        if (hasValue_) {
+            *ptr() = std::move(val);
+        } else {
+            new (ptr()) T(std::move(val));
             hasValue_ = true;
         }
-        return val;
+        return *this;
+    }
+    void clear() {
+        if (hasValue_) {
+            ptr()->~T();
+            hasValue_ = false;
+        }
+    }
+
+    Maybe<T> &operator =(const Maybe<T> &val) {
+        if (val.hasValue())
+            *this = val.value();
+        else
+            clear();
+        return *this;
+    }
+
+    Maybe<T> &operator =(Maybe<T> &&val) {
+        if (val.hasValue())
+            *this = std::move(val.value());
+        else
+            clear();
+        return *this;
     }
 };
 
