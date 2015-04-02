@@ -225,11 +225,23 @@ class ThreadContext
       return runtime_->runtimeState();
     }
 
+    bool hasLastFrame() const {
+        return lastFrame_ != nullptr;
+    }
     VM::Frame *lastFrame() const {
+        WH_ASSERT(hasLastFrame());
         return lastFrame_;
     }
     void pushLastFrame(VM::Frame *frame);
     void popLastFrame();
+
+    bool hasGlobal() const {
+        return global_ != nullptr;
+    }
+    VM::GlobalObject *global() const {
+        WH_ASSERT(hasGlobal());
+        return global_;
+    }
 
     bool suppressGC() const {
         return suppressGC_;
