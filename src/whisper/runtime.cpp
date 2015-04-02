@@ -141,6 +141,8 @@ Runtime::makeImmortalThreadContext()
     // Steal the allocated tenured slab so it doesn't get destroyed.
     _cleanupTenured.steal();
 
+    immortalThreadContext_ = ctx;
+
     return OkResult::Ok();
 }
 
