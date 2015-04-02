@@ -33,7 +33,8 @@ InitializeRuntime()
 Runtime::Runtime()
   : threadContexts_(),
     immortalThreadContext_(nullptr),
-    runtimeState_(nullptr)
+    runtimeState_(nullptr),
+    nextRtid_(1024)
 {}
 
 Runtime::~Runtime()
@@ -88,7 +89,7 @@ Runtime::registerThread()
     // Allocate the ThreadContext
     ThreadContext *ctx = nullptr;
     try {
-        ctx = new ThreadContext(this, hatchery, tenured);
+        ctx = new ThreadContext(this, nextRtid_++, hatchery, tenured);
         threadContexts_.push_back(ctx);
     } catch (std::bad_alloc &err) {
         return okFail("Could not allocate ThreadContext.");
@@ -131,7 +132,7 @@ Runtime::makeImmortalThreadContext()
     // Allocate the ThreadContext
     ThreadContext *ctx = nullptr;
     try {
-        ctx = new ThreadContext(this, nullptr, tenured);
+        ctx = new ThreadContext(this, 0, nullptr, tenured);
         threadContexts_.push_back(ctx);
     } catch (std::bad_alloc &err) {
         return okFail("Could not allocate ThreadContext.");
@@ -200,8 +201,10 @@ ThreadContext::NewRandSeed()
     return result;
 }
 
-ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
+ThreadContext::ThreadContext(Runtime *runtime, uint32_t rtid,
+                             Slab *hatchery, Slab *tenured)
   : runtime_(runtime),
+    rtid_(rtid),
     hatchery_(hatchery),
     nursery_(nullptr),
     tenured_(tenured),

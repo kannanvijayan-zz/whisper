@@ -55,6 +55,9 @@ class Runtime
     ThreadContext *immortalThreadContext_;
     VM::RuntimeState *runtimeState_;
 
+    static constexpr uint32_t MaxRtid = 0x7fffffffu;
+    uint32_t nextRtid_;
+
     // initialized flag.
     bool initialized_ = false;
 
@@ -93,6 +96,12 @@ class Runtime
     OkResult okFail(const char *error) {
         error_ = error;
         return OkResult::Error();
+    }
+
+    Maybe<uint32_t> nextRtid() {
+        if (nextRtid_ >= MaxRtid)
+            return Maybe<uint32_t>::None();
+        return Maybe<uint32_t>::Some(nextRtid_++);
     }
 };
 
@@ -154,6 +163,8 @@ class ThreadContext
   friend class RunActivationHelper;
   private:
     Runtime *runtime_;
+    uint32_t rtid_;
+
     Slab *hatchery_;
     Slab *nursery_;
     Slab *tenured_;
@@ -175,10 +186,15 @@ class ThreadContext
     static unsigned int NewRandSeed();
 
   public:
-    ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured);
+    ThreadContext(Runtime *runtime, uint32_t rtid,
+                  Slab *hatchery, Slab *tenured);
 
     Runtime *runtime() const {
         return runtime_;
+    }
+
+    uint32_t rtid() const {
+        return rtid_;
     }
 
     Slab *hatchery() const {
