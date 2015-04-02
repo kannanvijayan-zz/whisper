@@ -124,7 +124,7 @@ Runtime::makeImmortalThreadContext()
     // The immortal thread context only has a tenured
     // generation.
 
-    Slab *tenured = Slab::AllocateStandard(Gen::Tenured);
+    Slab *tenured = Slab::AllocateStandard(Gen::Immortal);
     if (!tenured)
         return okFail("Could not allocate tenured slab.");
     AutoDestroySlab _cleanupTenured(tenured);
@@ -140,8 +140,6 @@ Runtime::makeImmortalThreadContext()
 
     // Steal the allocated tenured slab so it doesn't get destroyed.
     _cleanupTenured.steal();
-
-    // Set up k
 
     return OkResult::Ok();
 }

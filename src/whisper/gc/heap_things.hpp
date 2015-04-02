@@ -71,6 +71,8 @@ enum class Gen : uint8_t
     Mature      = 0x03,
     Tenured     = 0x04,
 
+    Immortal    = 0x05,
+
     LIMIT
 };
 static constexpr bool IsValidGen(Gen gen) {
@@ -189,17 +191,8 @@ class alignas(8) HeapHeader
     inline const char *genString() const {
         return GenString(gen());
     }
-    inline bool inHatchery() const {
-        return gen() == Gen::Hatchery;
-    }
-    inline bool inNursery() const {
-        return gen() == Gen::Nursery;
-    }
-    inline bool inMature() const {
-        return gen() == Gen::Mature;
-    }
-    inline bool inTenured() const {
-        return gen() == Gen::Tenured;
+    inline bool inGen(Gen g) const {
+        return gen() == g;
     }
 
     inline uint8_t userData() const {
