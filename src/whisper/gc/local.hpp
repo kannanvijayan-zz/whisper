@@ -3,6 +3,7 @@
 
 #include "common.hpp"
 #include "debug.hpp"
+#include "result.hpp"
 #include "gc/tracing.hpp"
 
 namespace Whisper {

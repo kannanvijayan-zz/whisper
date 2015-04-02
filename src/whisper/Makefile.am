@@ -33,7 +33,8 @@ shared_cpp = \
     vm/property_dict.cpp \
     vm/lookup_state.cpp \
     vm/function.cpp \
-    vm/frame.cpp
+    vm/frame.cpp \
+    vm/interpreter.cpp
 
 whisper_SOURCES = \
     $(shared_cpp) \

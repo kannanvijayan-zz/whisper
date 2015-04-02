@@ -155,6 +155,7 @@ class MutArrayHandle
 template <typename T>
 class Handle
 {
+    template <typename U> friend class Handle;
     typedef typename DerefTraits<T>::Type DerefType;
     typedef typename DerefTraits<T>::ConstType ConstDerefType;
 
@@ -192,7 +193,7 @@ class Handle
     }
 
     template <typename U>
-    inline static Handle<U> convertTo()
+    inline Handle<U> convertTo()
     {
         static_assert(std::is_convertible<T, U>::value,
                       "T is not convertible to U.");

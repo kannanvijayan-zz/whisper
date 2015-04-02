@@ -137,7 +137,8 @@ enum class RuntimeError
     None,
     MemAllocFailed,
     SyntaxParseFailed,
-    MethodLookupFailed
+    MethodLookupFailed,
+    InternalError
 };
 
 //
