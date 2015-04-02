@@ -9,6 +9,7 @@
 #include "runtime_inlines.hpp"
 #include "gc.hpp"
 
+#include "vm/predeclare.hpp"
 #include "shell/shell_tracer.hpp"
 
 using namespace Whisper;
@@ -67,6 +68,12 @@ trace_heap(ThreadContext *cx, TracerVisitor *visitor)
 
     // List of heap-things left to visit in queue.
     std::list<HeapThing *> remaining;
+
+    // Add unrooted heap things hanging directly off of cx.
+    if (cx->hasLastFrame())
+        remaining.push_back(HeapThing::From(cx->lastFrame()));
+    if (cx->hasGlobal())
+        remaining.push_back(HeapThing::From(cx->global()));
 
     // Visit all stack things.
     for (LocalBase *loc = cx->locals(); loc != nullptr; loc = loc->next()) {
