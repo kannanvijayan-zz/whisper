@@ -107,6 +107,9 @@ class MutArrayHandle
     inline MutArrayHandle(Local<T> &stackVal)
       : MutArrayHandle(stackVal.address(), 1)
     {}
+    inline MutArrayHandle(MutHandle<T> &handle)
+      : MutArrayHandle(handle.address(), 1)
+    {}
 
     inline static MutArrayHandle<T> FromTrackedLocation(T *valAddr,
                                                         uint32_t length)
@@ -234,6 +237,9 @@ class ArrayHandle
   public:
     inline ArrayHandle(Local<T> &stackVal)
       : ArrayHandle(stackVal.address(), 1)
+    {}
+    inline ArrayHandle(Handle<T> &handle)
+      : ArrayHandle(handle.address(), 1)
     {}
 
     inline ArrayHandle(const MutArrayHandle<T> &mutHandle)
