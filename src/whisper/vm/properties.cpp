@@ -9,9 +9,15 @@ namespace VM {
 
 
 bool
+PropertyDescriptor::isValid() const
+{
+    return !value_->isInvalid();
+}
+
+bool
 PropertyDescriptor::isValue() const
 {
-    WH_ASSERT(!value_->isInvalid());
+    WH_ASSERT(!isValid());
     if (!value_->isPointer())
         return true;
 
@@ -21,7 +27,7 @@ PropertyDescriptor::isValue() const
 bool
 PropertyDescriptor::isMethod() const
 {
-    WH_ASSERT(!value_->isInvalid());
+    WH_ASSERT(!isValid());
     if (!value_->isPointer())
         return false;
 

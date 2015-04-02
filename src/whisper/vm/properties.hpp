@@ -96,6 +96,7 @@ class PropertyDescriptor
       : value_(Box(func))
     {}
 
+    bool isValid() const;
     bool isValue() const;
     bool isMethod() const;
 
