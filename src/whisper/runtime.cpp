@@ -10,6 +10,8 @@
 #include "runtime.hpp"
 #include "runtime_inlines.hpp"
 #include "vm/frame.hpp"
+#include "vm/wobject.hpp"
+#include "vm/scope_object.hpp"
 #include "vm/runtime_state.hpp"
 #include "name_pool.hpp"
 
@@ -90,6 +92,12 @@ Runtime::registerThread()
         threadContexts_.push_back(ctx);
     } catch (std::bad_alloc &err) {
         return okFail("Could not allocate ThreadContext.");
+    }
+
+    // Allocate a new global object for the thread.
+    if (!ctx->makeGlobal()) {
+        delete ctx;
+        return okFail("Failed to allocate global object for thread.");
     }
 
     // Associate the thread context with the thread.
@@ -200,6 +208,7 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
     tenuredList_(),
     locals_(nullptr),
     lastFrame_(nullptr),
+    global_(nullptr),
     suppressGC_(false),
     randSeed_(NewRandSeed()),
     spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16)),
@@ -250,6 +259,16 @@ uint32_t
 ThreadContext::spoiler() const
 {
     return spoiler_;
+}
+
+OkResult
+ThreadContext::makeGlobal()
+{
+    Local<VM::GlobalObject *> glob(this);
+    if (!glob.setResult(VM::GlobalObject::Create(this->inTenured())))
+        return OkResult::Error();
+    global_ = glob.get();
+    return OkResult::Ok();
 }
 
 

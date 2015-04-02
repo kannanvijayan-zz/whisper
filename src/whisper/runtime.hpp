@@ -16,6 +16,7 @@ namespace Whisper {
 namespace VM {
     class Frame;
     class RuntimeState;
+    class GlobalObject;
 }
 
 
@@ -159,6 +160,7 @@ class ThreadContext
     SlabList tenuredList_;
     LocalBase *locals_;
     VM::Frame *lastFrame_;
+    VM::GlobalObject *global_;
     bool suppressGC_;
 
     unsigned int randSeed_;
@@ -272,6 +274,9 @@ class ThreadContext
     int randInt();
 
     uint32_t spoiler() const;
+
+  private:
+    OkResult makeGlobal();
 };
 
 
