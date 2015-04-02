@@ -24,6 +24,7 @@ shared_cpp = \
     vm/string.cpp \
     vm/source_file.cpp \
     vm/properties.cpp \
+    vm/runtime_state.cpp \
     vm/wobject.cpp \
     vm/hash_object.cpp \
     vm/plain_object.cpp \

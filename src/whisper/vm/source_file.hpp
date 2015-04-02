@@ -24,7 +24,7 @@ class SourceFile
     HeapField<ScriptedFunction *> func_;
 
   public:
-    SourceFile(Handle<String *> path)
+    SourceFile(String *path)
       : path_(path),
         syntaxTree_(nullptr),
         func_(nullptr)

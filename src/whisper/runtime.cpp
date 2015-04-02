@@ -10,6 +10,8 @@
 #include "runtime.hpp"
 #include "runtime_inlines.hpp"
 #include "vm/frame.hpp"
+#include "vm/runtime_state.hpp"
+#include "name_pool.hpp"
 
 namespace Whisper {
 
@@ -27,7 +29,9 @@ InitializeRuntime()
 //
 
 Runtime::Runtime()
-  : threadContexts_()
+  : threadContexts_(),
+    immortalThreadContext_(nullptr),
+    runtimeState_(nullptr)
 {}
 
 Runtime::~Runtime()
@@ -47,6 +51,15 @@ Runtime::initialize()
 
     if (!makeImmortalThreadContext())
         return false;
+
+    ThreadContext *cx = immortalThreadContext_;
+    AllocationContext acx = immortalThreadContext_->inTenured();
+
+    Local<VM::RuntimeState *> rtState(cx);
+    if (!rtState.setResult(VM::RuntimeState::Create(acx)))
+        return false;
+
+    runtimeState_ = rtState.get();
 
     initialized_ = true;
     return true;
@@ -190,7 +203,9 @@ ThreadContext::ThreadContext(Runtime *runtime, Slab *hatchery, Slab *tenured)
     suppressGC_(false),
     randSeed_(NewRandSeed()),
     spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16)),
-    error_(RuntimeError::None)
+    error_(RuntimeError::None),
+    errorString_(nullptr),
+    errorThing_(nullptr)
 {
     WH_ASSERT(runtime != nullptr);
 

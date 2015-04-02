@@ -13,12 +13,14 @@
 
 namespace Whisper {
 
-namespace VM { class Frame; }
+namespace VM {
+    class Frame;
+    class RuntimeState;
+}
 
 
 class ThreadContext;
 class RunActivationHelper;
-class NamePool;
 
 //
 // InitializeRuntime
@@ -44,9 +46,13 @@ class Runtime
   friend class ThreadContext;
   private:
     // Every running thread uses a thread context.
-    ThreadContext *immortalThreadContext_;
     std::vector<ThreadContext *> threadContexts_;
     pthread_key_t threadKey_;
+
+    // Immortal thread context and things allocated
+    // within it.
+    ThreadContext *immortalThreadContext_;
+    VM::RuntimeState *runtimeState_;
 
     // initialized flag.
     bool initialized_ = false;
@@ -75,6 +81,10 @@ class Runtime
     ThreadContext *maybeThreadContext();
     bool hasThreadContext();
     ThreadContext *threadContext();
+
+    VM::RuntimeState *runtimeState() const {
+      return runtimeState_;
+    }
 
   private:
     OkResult makeImmortalThreadContext();
@@ -126,7 +136,8 @@ enum class RuntimeError
 {
     None,
     MemAllocFailed,
-    SyntaxParseFailed
+    SyntaxParseFailed,
+    MethodLookupFailed
 };
 
 //
@@ -155,6 +166,8 @@ class ThreadContext
     // If an error occurs during execution, it is recorded
     // here before returning an error result.
     RuntimeError error_;
+    const char *errorString_;
+    HeapThing *errorThing_;
 
     static unsigned int NewRandSeed();
 
@@ -189,6 +202,10 @@ class ThreadContext
         return locals_;
     }
 
+    VM::RuntimeState *runtimeState() const {
+      return runtime_->runtimeState();
+    }
+
     VM::Frame *lastFrame() const {
         return lastFrame_;
     }
@@ -205,9 +222,47 @@ class ThreadContext
     RuntimeError error() const {
         return error_;
     }
+
+    bool hasErrorString() const {
+        return errorString_ != nullptr;
+    }
+    const char *errorString() const {
+        WH_ASSERT(hasErrorString());
+        return errorString_;
+    }
+
+    bool hasErrorThing() const {
+        return errorThing_ != nullptr;
+    }
+    HeapThing *errorThing() const {
+        WH_ASSERT(hasErrorThing());
+        return errorThing_;
+    }
+
     void setError(RuntimeError error) {
         WH_ASSERT(!hasError());
+        WH_ASSERT(!hasErrorString());
+        WH_ASSERT(!hasErrorThing());
         error_ = error;
+    }
+    void setError(RuntimeError error, const char *string) {
+        WH_ASSERT(!hasError());
+        WH_ASSERT(!hasErrorString());
+        WH_ASSERT(!hasErrorThing());
+        error_ = error;
+        errorString_ = string;
+    }
+    void setError(RuntimeError error, const char *string, HeapThing *thing) {
+        WH_ASSERT(!hasError());
+        WH_ASSERT(!hasErrorString());
+        WH_ASSERT(!hasErrorThing());
+        error_ = error;
+        errorString_ = string;
+        errorThing_ = thing;
+    }
+    template <typename T>
+    void setError(RuntimeError error, const char *string, T *thing) {
+        setError(error, string, HeapThing::From(thing));
     }
 
     AllocationContext inHatchery();

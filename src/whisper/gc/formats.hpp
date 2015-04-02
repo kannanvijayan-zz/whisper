@@ -25,6 +25,7 @@
     _(DoubleArray)              \
     _(String)                   \
     _(BoxArray)                 \
+    _(RuntimeState)             \
     _(PackedSyntaxTree)         \
     _(SyntaxTreeFragment)       \
     _(HeapPointerArray)         \

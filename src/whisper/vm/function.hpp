@@ -4,6 +4,7 @@
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
 #include "vm/wobject.hpp"
+#include "vm/lookup_state.hpp"
 #include "vm/hash_object.hpp"
 #include "vm/scope_object.hpp"
 #include "vm/packed_syntax_tree.hpp"
@@ -70,6 +71,7 @@ class Function
 
 typedef OkResult (*NativeApplicativeFuncPtr)(
         ThreadContext *cx,
+        Handle<LookupState *> lookupState,
         Handle<ScopeObject *> callerScope,
         Handle<Wobject *> receiver,
         ArrayHandle<Box> args,
@@ -77,7 +79,9 @@ typedef OkResult (*NativeApplicativeFuncPtr)(
 
 typedef OkResult (*NativeOperativeFuncPtr)(
         ThreadContext *cx,
+        Handle<LookupState *> lookupState,
         Handle<ScopeObject *> callerScope,
+        Handle<NativeFunction *> calleeFunc,
         Handle<Wobject *> receiver,
         ArrayHandle<SyntaxTreeFragment *> argExprs,
         MutHandle<Box> result);

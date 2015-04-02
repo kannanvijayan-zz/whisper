@@ -13,6 +13,7 @@
 #include "vm/properties.hpp"
 #include "vm/array.hpp"
 #include "vm/source_file.hpp"
+#include "vm/runtime_state.hpp"
 #include "vm/box.hpp"
 #include "vm/packed_syntax_tree.hpp"
 #include "vm/property_dict.hpp"
