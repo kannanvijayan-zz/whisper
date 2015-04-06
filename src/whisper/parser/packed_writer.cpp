@@ -79,7 +79,7 @@ PackedWriter::addIdentifier(const IdentifierToken &ident)
         emitError("Could not allocate identifier.");
 
     WH_ASSERT(constPoolSize_ < constPoolCapacity_);
-    uint32_t idx = addToConstPool(VM::Box(str.value()));
+    uint32_t idx = addToConstPool(VM::Box::Pointer(str.value()));
     identifierMap_.insert(IdentifierMap::value_type(key, idx));
     return idx;
 }

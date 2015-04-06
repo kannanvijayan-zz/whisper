@@ -17,45 +17,72 @@ class Box
 {
     friend class TraceTraits<Box>;
   private:
-    word_t value_;
+    uint64_t value_;
 
   public:
-    static constexpr word_t PointerAlign = 0x8;
+    static constexpr uint64_t PointerAlign = 0x8;
 
-    static constexpr word_t TagMask = 0x7;
-    static constexpr word_t PointerTag = 0x0;
-    static constexpr word_t InvalidValue = static_cast<word_t>(-1);
+    static constexpr uint64_t PointerTagMask = 0x7;
+    static constexpr uint64_t PointerTag = 0x0;
 
-    Box() : value_(InvalidValue) {}
+    static constexpr uint64_t IntegerTagMask = 0x7;
+    static constexpr uint64_t IntegerTag = 0x1;
+    static constexpr unsigned IntegerShift = 3;
+    static constexpr int64_t IntegerMax =
+        std::numeric_limits<int64_t>::max() >> IntegerShift;
+    static constexpr int64_t IntegerMin =
+        std::numeric_limits<int64_t>::min() >> IntegerShift;
 
-    template <typename T>
-    Box(T *ptr) {
-        static_assert(IsHeapThingType<T>(), "T is not a HeapThing type.");
-        WH_ASSERT(ptr != nullptr);
-        WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
-        value_ = reinterpret_cast<word_t>(ptr);
+    static constexpr uint64_t InvalidValue = static_cast<uint64_t>(-1);
+
+    static bool IntegerInRange(int64_t ival) {
+        return (ival >= IntegerMin) && (ival <= IntegerMax);
     }
 
+  private:
+    Box(uint64_t word)
+      : value_(word)
+    {}
+
+  public:
+    Box() : value_(InvalidValue) {}
+
+    bool isInvalid() const {
+        return value_ == InvalidValue;
+    }
     static Box Invalid() {
         return Box();
     }
-    template <typename T>
-    static Box Pointer(T *ptr) {
-        return Box(ptr);
+
+    bool isInteger() const {
+        return (value_ & IntegerTagMask) == IntegerTag;
+    }
+    int64_t integer() const {
+        return static_cast<int64_t>(value_ >> IntegerShift);
+    }
+    static Box Integer(int64_t ival) {
+        WH_ASSERT(IntegerInRange(ival));
+        return Box((static_cast<uint64_t>(ival) << IntegerShift) |
+                   IntegerTag);
     }
 
-    bool isInvalid() const {
-        return (value_ & TagMask) == InvalidValue;
-    }
     bool isPointer() const {
-        return (value_ & TagMask) == PointerTag;
+        return (value_ & PointerTagMask) == PointerTag;
     }
     template <typename T>
     T *pointer() const {
+        static_assert(PointerTag == 0, "");
         static_assert(IsHeapThingType<T>(), "T is not a HeapThing type.");
         WH_ASSERT(isPointer());
         WH_ASSERT(reinterpret_cast<T *>(value_) != nullptr);
         return reinterpret_cast<T *>(value_);
+    }
+    template <typename T>
+    static Box Pointer(T *ptr) {
+        static_assert(IsHeapThingType<T>(), "T is not a HeapThing type.");
+        WH_ASSERT(ptr != nullptr);
+        WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
+        return Box(reinterpret_cast<uint64_t>(ptr));
     }
 
     void snprint(char *buf, size_t n) const {
@@ -76,7 +103,7 @@ class Box
         static_assert(IsHeapThingType<T>(), "T is not a HeapThing type.");
         WH_ASSERT(ptr != nullptr);
         WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
-        value_ = reinterpret_cast<word_t>(ptr);
+        value_ = reinterpret_cast<uint64_t>(ptr);
     }
 };
 

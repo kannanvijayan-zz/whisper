@@ -93,13 +93,17 @@ class PropertyDescriptor
       : value_(value)
     {}
     PropertyDescriptor(Function *func)
-      : value_(Box(func))
+      : value_(Box::Pointer(func))
     {}
 
     bool isValid() const;
     bool isValue() const;
     bool isMethod() const;
 
+    const Box &box() const {
+        WH_ASSERT(isValid());
+        return value_;
+    }
     const Box &value() const {
         WH_ASSERT(isValue());
         return value_;
