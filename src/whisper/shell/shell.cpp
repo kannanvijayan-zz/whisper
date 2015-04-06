@@ -21,8 +21,11 @@
 #include "vm/array.hpp"
 #include "vm/string.hpp"
 #include "vm/box.hpp"
+#include "vm/scope_object.hpp"
 #include "vm/source_file.hpp"
 #include "vm/packed_syntax_tree.hpp"
+#include "vm/function.hpp"
+#include "vm/runtime_state.hpp"
 
 #include "shell/shell_tracer.hpp"
 
@@ -62,6 +65,8 @@ struct HeapPrintVisitor : public TracerVisitor
     }
 };
 
+static OkResult initialize_thread_globals(ThreadContext *cx);
+
 int main(int argc, char **argv) {
     std::cout << "Whisper says hello." << std::endl;
 
@@ -87,7 +92,12 @@ int main(int argc, char **argv) {
         std::cerr << "ThreadContext error: " << runtime.error() << std::endl;
         return 1;
     }
+
     ThreadContext *cx = runtime.threadContext();
+    if (!initialize_thread_globals(cx)) {
+        std::cerr << "ThreadContext error: " << cx->errorString() << std::endl;
+        return 1;
+    }
     AllocationContext acx(cx->inTenured());
 
     // Create a new String containing the file name.
@@ -120,4 +130,48 @@ int main(int argc, char **argv) {
     fprintf(stderr, "}\n");
 
     return 0;
+}
+
+
+static OkResult Lift_Integer(
+    ThreadContext *cx,
+    Handle<VM::LookupState *> lookupState,
+    Handle<VM::ScopeObject *> callerScope,
+    Handle<VM::NativeFunction *> nativeFunc,
+    Handle<VM::Wobject *> receiver,
+    ArrayHandle<VM::SyntaxTreeFragment *> stFrag,
+    MutHandle<VM::Box> resultOut);
+
+static OkResult
+initialize_thread_globals(ThreadContext *cx)
+{
+    AllocationContext acx = cx->inTenured();
+
+    // Allocate '@integer' operative native function.
+    Local<VM::NativeFunction *> atIntF(cx);
+    if (!atIntF.setResult(VM::NativeFunction::Create(acx, &Lift_Integer)))
+        return OkResult::Error();
+    Local<VM::String *> atIntN(cx, cx->runtimeState()->nm_AtInteger());
+    Local<VM::PropertyDescriptor> propDesc(cx,
+        VM::PropertyDescriptor(atIntF.get()));
+
+    // Bind method on global.
+    Local<VM::GlobalObject *> global(cx, cx->global());
+    if (!VM::GlobalObject::DefineProperty(cx, global, atIntN, propDesc))
+        return OkResult::Error();
+
+    return OkResult::Ok();
+}
+
+
+static OkResult Lift_Integer(
+    ThreadContext *cx,
+    Handle<VM::LookupState *> lookupState,
+    Handle<VM::ScopeObject *> callerScope,
+    Handle<VM::NativeFunction *> nativeFunc,
+    Handle<VM::Wobject *> receiver,
+    ArrayHandle<VM::SyntaxTreeFragment *> stFrag,
+    MutHandle<VM::Box> resultOut)
+{
+    return OkResult::Error();
 }
