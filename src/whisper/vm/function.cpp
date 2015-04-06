@@ -21,18 +21,16 @@ Function::isApplicative() const
 }
 
 
-Result<NativeFunction *>
-NativeFunction::Create(AllocationContext acx,
-                       NativeApplicativeFuncPtr *applicative)
+/* static */ Result<NativeFunction *>
+NativeFunction::Create(AllocationContext acx, NativeApplicativeFuncPtr app)
 {
-    return acx.create<NativeFunction>(applicative);
+    return acx.create<NativeFunction>(app);
 }
 
-Result<NativeFunction *>
-NativeFunction::Create(AllocationContext acx,
-                       NativeOperativeFuncPtr *operative)
+/* static */ Result<NativeFunction *>
+NativeFunction::Create(AllocationContext acx, NativeOperativeFuncPtr oper)
 {
-    return acx.create<NativeFunction>(operative);
+    return acx.create<NativeFunction>(oper);
 }
 
 

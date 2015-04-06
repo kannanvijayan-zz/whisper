@@ -146,10 +146,10 @@ InvokeOperativeFunction(ThreadContext *cx,
         Local<NativeFunction *> nativeFunc(cx, func->asNative());
         WH_ASSERT(nativeFunc->isOperative());
 
-        NativeOperativeFuncPtr *opNatF = nativeFunc->operative();
-        return (*opNatF)(cx, lookupState, callerScope, nativeFunc, receiver,
-                         ArrayHandle<SyntaxTreeFragment *>(stFrag),
-                         resultOut);
+        NativeOperativeFuncPtr opNatF = nativeFunc->operative();
+        return opNatF(cx, lookupState, callerScope, nativeFunc, receiver,
+                      ArrayHandle<SyntaxTreeFragment *>(stFrag),
+                      resultOut);
     }
 
     // If scripted, interpret the scripted function.

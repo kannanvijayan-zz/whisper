@@ -94,8 +94,8 @@ class NativeFunction : public Function
     static constexpr uint8_t OperativeFlag = 0x1;
 
     union {
-        NativeApplicativeFuncPtr *applicative_;
-        NativeOperativeFuncPtr *operative_;
+        NativeApplicativeFuncPtr applicative_;
+        NativeOperativeFuncPtr operative_;
     };
 
     HeapHeader &header() {
@@ -106,19 +106,19 @@ class NativeFunction : public Function
     }
 
   public:
-    NativeFunction(NativeApplicativeFuncPtr *applicative) {
+    NativeFunction(NativeApplicativeFuncPtr applicative) {
         applicative_ = applicative;
     }
 
-    NativeFunction(NativeOperativeFuncPtr *operative) {
+    NativeFunction(NativeOperativeFuncPtr operative) {
         header().setUserData(OperativeFlag);
         operative_ = operative;
     }
 
-    Result<NativeFunction *> Create(AllocationContext acx,
-                                    NativeApplicativeFuncPtr *applicative);
-    Result<NativeFunction *> Create(AllocationContext acx,
-                                    NativeOperativeFuncPtr *operative);
+    static Result<NativeFunction *> Create(AllocationContext acx,
+                                           NativeApplicativeFuncPtr app);
+    static Result<NativeFunction *> Create(AllocationContext acx,
+                                           NativeOperativeFuncPtr oper);
 
     bool isApplicative() const {
         return (header().userData() & OperativeFlag) == 0;
@@ -127,11 +127,11 @@ class NativeFunction : public Function
         return (header().userData() & OperativeFlag) != 0;
     }
 
-    NativeApplicativeFuncPtr *applicative() const {
+    NativeApplicativeFuncPtr applicative() const {
         WH_ASSERT(isApplicative());
         return applicative_;
     }
-    NativeOperativeFuncPtr *operative() const {
+    NativeOperativeFuncPtr operative() const {
         WH_ASSERT(isOperative());
         return operative_;
     }
