@@ -67,7 +67,7 @@ class PropertyDict
             return false;
 
         entries_[idx].name.init(name, this);
-        entries_[idx].value.init(descr.value(), this);
+        entries_[idx].value.init(descr.box(), this);
         size_++;
         return true;
     }

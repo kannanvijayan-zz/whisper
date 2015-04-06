@@ -17,7 +17,7 @@ PropertyDescriptor::isValid() const
 bool
 PropertyDescriptor::isValue() const
 {
-    WH_ASSERT(!isValid());
+    WH_ASSERT(isValid());
     if (!value_->isPointer())
         return true;
 
@@ -27,7 +27,7 @@ PropertyDescriptor::isValue() const
 bool
 PropertyDescriptor::isMethod() const
 {
-    WH_ASSERT(!isValid());
+    WH_ASSERT(isValid());
     if (!value_->isPointer())
         return false;
 
