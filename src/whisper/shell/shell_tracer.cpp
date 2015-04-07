@@ -28,12 +28,12 @@ struct StackTracer
     {}
 
     inline void operator () (const void *addr, HeapThing *ptr) {
+        if (seen->find(ptr) == seen->end()) {
+            visitor->visitHeapThing(ptr);
+            seen->insert(ptr);
+            remaining->push_back(ptr);
+        }
         visitor->visitStackChild(node, ptr);
-        if (seen->find(ptr) != seen->end())
-            return;
-        visitor->visitHeapThing(ptr);
-        seen->insert(ptr);
-        remaining->push_back(ptr);
     }
 };
 
@@ -51,12 +51,12 @@ struct HeapTracer
     {}
 
     inline void operator () (const void *addr, HeapThing *ptr) {
+        if (seen->find(ptr) == seen->end()) {
+            visitor->visitHeapThing(ptr);
+            seen->insert(ptr);
+            remaining->push_back(ptr);
+        }
         visitor->visitHeapChild(node, ptr);
-        if (seen->find(ptr) != seen->end())
-            return;
-        visitor->visitHeapThing(ptr);
-        seen->insert(ptr);
-        remaining->push_back(ptr);
     }
 };
 
@@ -70,10 +70,16 @@ trace_heap(ThreadContext *cx, TracerVisitor *visitor)
     std::list<HeapThing *> remaining;
 
     // Add unrooted heap things hanging directly off of cx.
-    if (cx->hasLastFrame())
-        remaining.push_back(HeapThing::From(cx->lastFrame()));
-    if (cx->hasGlobal())
-        remaining.push_back(HeapThing::From(cx->global()));
+    if (cx->hasLastFrame()) {
+        HeapThing *lastFrameThing = HeapThing::From(cx->lastFrame());
+        visitor->visitHeapThing(lastFrameThing);
+        remaining.push_back(lastFrameThing);
+    }
+    if (cx->hasGlobal()) {
+        HeapThing *globalThing = HeapThing::From(cx->global());
+        visitor->visitHeapThing(globalThing);
+        remaining.push_back(globalThing);
+    }
 
     // Visit all stack things.
     for (LocalBase *loc = cx->locals(); loc != nullptr; loc = loc->next()) {
