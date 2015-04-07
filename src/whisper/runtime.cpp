@@ -267,8 +267,8 @@ ThreadContext::spoiler() const
 OkResult
 ThreadContext::makeGlobal()
 {
-    Local<VM::GlobalObject *> glob(this);
-    if (!glob.setResult(VM::GlobalObject::Create(this->inTenured())))
+    Local<VM::GlobalScope *> glob(this);
+    if (!glob.setResult(VM::GlobalScope::Create(this->inTenured())))
         return OkResult::Error();
     global_ = glob.get();
     return OkResult::Ok();

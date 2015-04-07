@@ -21,7 +21,7 @@ class SourceFile
   private:
     HeapField<String *> path_;
     HeapField<PackedSyntaxTree *> syntaxTree_;
-    HeapField<ModuleObject *> scope_;
+    HeapField<ModuleScope *> scope_;
     HeapField<ScriptedFunction *> func_;
 
   public:
@@ -54,11 +54,11 @@ class SourceFile
     bool hasScope() const {
         return scope_.get() != nullptr;
     }
-    ModuleObject *scope() const {
+    ModuleScope *scope() const {
         WH_ASSERT(hasScope());
         return scope_;
     }
-    static Result<ModuleObject *> CreateScope(
+    static Result<ModuleScope *> CreateScope(
             ThreadContext *cx, Handle<SourceFile *> sourceFile);
 
     bool hasFunc() const {
@@ -71,7 +71,7 @@ class SourceFile
     static Result<ScriptedFunction *> CreateFunc(
             ThreadContext *cx,
             Handle<SourceFile *> sourceFile,
-            Handle<GlobalObject *> global);
+            Handle<GlobalScope *> global);
 
   private:
     void setSyntaxTree(PackedSyntaxTree *tree) {

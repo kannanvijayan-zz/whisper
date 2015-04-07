@@ -22,17 +22,24 @@ Wobject::GetDelegates(ThreadContext *cx,
         return OkResult::Ok();
     }
 
-    if (heapThing->isCallObject()) {
-        Local<CallObject *> callObj(cx,
-            reinterpret_cast<CallObject *>(heapThing));
-        CallObject::GetDelegates(cx, callObj, delegatesOut);
+    if (heapThing->isCallScope()) {
+        Local<CallScope *> callObj(cx,
+            reinterpret_cast<CallScope *>(heapThing));
+        CallScope::GetDelegates(cx, callObj, delegatesOut);
         return OkResult::Ok();
     }
 
-    if (heapThing->isGlobalObject()) {
-        Local<GlobalObject *> globalObj(cx,
-            reinterpret_cast<GlobalObject *>(heapThing));
-        GlobalObject::GetDelegates(cx, globalObj, delegatesOut);
+    if (heapThing->isModuleScope()) {
+        Local<ModuleScope *> moduleObj(cx,
+            reinterpret_cast<ModuleScope *>(heapThing));
+        ModuleScope::GetDelegates(cx, moduleObj, delegatesOut);
+        return OkResult::Ok();
+    }
+
+    if (heapThing->isGlobalScope()) {
+        Local<GlobalScope *> globalObj(cx,
+            reinterpret_cast<GlobalScope *>(heapThing));
+        GlobalScope::GetDelegates(cx, globalObj, delegatesOut);
         return OkResult::Ok();
     }
 
@@ -54,17 +61,24 @@ Wobject::GetProperty(ThreadContext *cx,
                                                             name, result));
     }
 
-    if (heapThing->isCallObject()) {
-        Local<CallObject *> callObj(cx,
-            reinterpret_cast<CallObject *>(heapThing));
-        return Result<bool>::Value(CallObject::GetProperty(cx, callObj,
-                                                           name, result));
+    if (heapThing->isCallScope()) {
+        Local<CallScope *> callObj(cx,
+            reinterpret_cast<CallScope *>(heapThing));
+        return Result<bool>::Value(CallScope::GetProperty(cx, callObj,
+                                                          name, result));
     }
 
-    if (heapThing->isGlobalObject()) {
-        Local<GlobalObject *> globalObj(cx,
-            reinterpret_cast<GlobalObject *>(heapThing));
-        return Result<bool>::Value(GlobalObject::GetProperty(cx, globalObj,
+    if (heapThing->isModuleScope()) {
+        Local<ModuleScope *> moduleObj(cx,
+            reinterpret_cast<ModuleScope *>(heapThing));
+        return Result<bool>::Value(ModuleScope::GetProperty(cx, moduleObj,
+                                                            name, result));
+    }
+
+    if (heapThing->isGlobalScope()) {
+        Local<GlobalScope *> globalObj(cx,
+            reinterpret_cast<GlobalScope *>(heapThing));
+        return Result<bool>::Value(GlobalScope::GetProperty(cx, globalObj,
                                                              name, result));
     }
 
@@ -85,16 +99,22 @@ Wobject::DefineProperty(ThreadContext *cx,
         return PlainObject::DefineProperty(cx, plainObj, name, defn);
     }
 
-    if (heapThing->isCallObject()) {
-        Local<CallObject *> callObj(cx,
-            reinterpret_cast<CallObject *>(heapThing));
-        return CallObject::DefineProperty(cx, callObj, name, defn);
+    if (heapThing->isCallScope()) {
+        Local<CallScope *> callObj(cx,
+            reinterpret_cast<CallScope *>(heapThing));
+        return CallScope::DefineProperty(cx, callObj, name, defn);
     }
 
-    if (heapThing->isGlobalObject()) {
-        Local<GlobalObject *> globalObj(cx,
-            reinterpret_cast<GlobalObject *>(heapThing));
-        return GlobalObject::DefineProperty(cx, globalObj, name, defn);
+    if (heapThing->isModuleScope()) {
+        Local<ModuleScope *> moduleObj(cx,
+            reinterpret_cast<ModuleScope *>(heapThing));
+        return ModuleScope::DefineProperty(cx, moduleObj, name, defn);
+    }
+
+    if (heapThing->isGlobalScope()) {
+        Local<GlobalScope *> globalObj(cx,
+            reinterpret_cast<GlobalScope *>(heapThing));
+        return GlobalScope::DefineProperty(cx, globalObj, name, defn);
     }
 
     WH_UNREACHABLE("Unknown object kind");

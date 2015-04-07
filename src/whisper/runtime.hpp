@@ -16,7 +16,7 @@ namespace Whisper {
 namespace VM {
     class Frame;
     class RuntimeState;
-    class GlobalObject;
+    class GlobalScope;
 }
 
 
@@ -171,7 +171,7 @@ class ThreadContext
     SlabList tenuredList_;
     LocalBase *locals_;
     VM::Frame *lastFrame_;
-    VM::GlobalObject *global_;
+    VM::GlobalScope *global_;
     bool suppressGC_;
 
     unsigned int randSeed_;
@@ -238,7 +238,7 @@ class ThreadContext
     bool hasGlobal() const {
         return global_ != nullptr;
     }
-    VM::GlobalObject *global() const {
+    VM::GlobalScope *global() const {
         WH_ASSERT(hasGlobal());
         return global_;
     }

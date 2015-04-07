@@ -10,9 +10,6 @@ namespace Whisper {
 namespace VM {
 
 
-class CallObject;
-
-
 class ScopeObject : public HashObject
 {
   friend class TraceTraits<ScopeObject>;
@@ -23,94 +20,94 @@ class ScopeObject : public HashObject
     {}
 };
 
-class CallObject : public ScopeObject
+class CallScope : public ScopeObject
 {
-  friend class TraceTraits<CallObject>;
+  friend class TraceTraits<CallScope>;
   public:
-    CallObject(Handle<Array<Wobject *> *> delegates,
-               Handle<PropertyDict *> dict)
+    CallScope(Handle<Array<Wobject *> *> delegates,
+              Handle<PropertyDict *> dict)
       : ScopeObject(delegates, dict)
     {}
 
-    static Result<CallObject *> Create(AllocationContext acx,
-                                       Handle<ScopeObject *> callerScope);
+    static Result<CallScope *> Create(AllocationContext acx,
+                                      Handle<ScopeObject *> callerScope);
 
     static void GetDelegates(ThreadContext *cx,
-                             Handle<CallObject *> obj,
+                             Handle<CallScope *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
 
-    static bool GetPropertyIndex(Handle<CallObject *> obj,
+    static bool GetPropertyIndex(Handle<CallScope *> obj,
                                  Handle<String *> name,
                                  uint32_t *indexOut);
 
     static bool GetProperty(ThreadContext *cx,
-                            Handle<CallObject *> obj,
+                            Handle<CallScope *> obj,
                             Handle<String *> name,
                             MutHandle<PropertyDescriptor> result);
 
     static OkResult DefineProperty(ThreadContext *cx,
-                                   Handle<CallObject *> obj,
+                                   Handle<CallScope *> obj,
                                    Handle<String *> name,
                                    Handle<PropertyDescriptor> defn);
 };
 
-class ModuleObject : public ScopeObject
+class ModuleScope : public ScopeObject
 {
-  friend class TraceTraits<ModuleObject>;
+  friend class TraceTraits<ModuleScope>;
   public:
-    ModuleObject(Handle<Array<Wobject *> *> delegates,
-                 Handle<PropertyDict *> dict)
+    ModuleScope(Handle<Array<Wobject *> *> delegates,
+                Handle<PropertyDict *> dict)
       : ScopeObject(delegates, dict)
     {}
 
-    static Result<ModuleObject *> Create(AllocationContext acx,
-                                         Handle<GlobalObject *> global);
+    static Result<ModuleScope *> Create(AllocationContext acx,
+                                        Handle<GlobalScope *> global);
 
     static void GetDelegates(ThreadContext *cx,
-                             Handle<ModuleObject *> obj,
+                             Handle<ModuleScope *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
 
-    static bool GetPropertyIndex(Handle<ModuleObject *> obj,
+    static bool GetPropertyIndex(Handle<ModuleScope *> obj,
                                  Handle<String *> name,
                                  uint32_t *indexOut);
 
     static bool GetProperty(ThreadContext *cx,
-                            Handle<ModuleObject *> obj,
+                            Handle<ModuleScope *> obj,
                             Handle<String *> name,
                             MutHandle<PropertyDescriptor> result);
 
     static OkResult DefineProperty(ThreadContext *cx,
-                                   Handle<ModuleObject *> obj,
+                                   Handle<ModuleScope *> obj,
                                    Handle<String *> name,
                                    Handle<PropertyDescriptor> defn);
 };
 
-class GlobalObject : public ScopeObject
+class GlobalScope : public ScopeObject
 {
-  friend class TraceTraits<GlobalObject>;
+  friend class TraceTraits<GlobalScope>;
   public:
-    GlobalObject(Handle<Array<Wobject *> *> delegates,
-                 Handle<PropertyDict *> dict)
+    GlobalScope(Handle<Array<Wobject *> *> delegates,
+                Handle<PropertyDict *> dict)
       : ScopeObject(delegates, dict)
     {}
 
-    static Result<GlobalObject *> Create(AllocationContext acx);
+    static Result<GlobalScope *> Create(AllocationContext acx);
 
     static void GetDelegates(ThreadContext *cx,
-                             Handle<GlobalObject *> obj,
+                             Handle<GlobalScope *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
 
-    static bool GetPropertyIndex(Handle<GlobalObject *> obj,
+    static bool GetPropertyIndex(Handle<GlobalScope *> obj,
                                  Handle<String *> name,
                                  uint32_t *indexOut);
 
     static bool GetProperty(ThreadContext *cx,
-                            Handle<GlobalObject *> obj,
+                            Handle<GlobalScope *> obj,
                             Handle<String *> name,
                             MutHandle<PropertyDescriptor> result);
 
     static OkResult DefineProperty(ThreadContext *cx,
-                                   Handle<GlobalObject *> obj,
+                                   Handle<GlobalScope *> obj,
                                    Handle<String *> name,
                                    Handle<PropertyDescriptor> defn);
 };
@@ -124,7 +121,7 @@ class GlobalObject : public ScopeObject
 //
 
 template <>
-struct TraceTraits<VM::CallObject>
+struct TraceTraits<VM::CallScope>
 {
     TraceTraits() = delete;
 
@@ -132,22 +129,22 @@ struct TraceTraits<VM::CallObject>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::CallObject &obj,
+    static void Scan(Scanner &scanner, const VM::CallScope &scope,
                      const void *start, const void *end)
     {
-        TraceTraits<VM::HashObject>::Scan(scanner, obj, start, end);
+        TraceTraits<VM::HashObject>::Scan(scanner, scope, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::CallObject &obj,
+    static void Update(Updater &updater, VM::CallScope &scope,
                        const void *start, const void *end)
     {
-        TraceTraits<VM::HashObject>::Update(updater, obj, start, end);
+        TraceTraits<VM::HashObject>::Update(updater, scope, start, end);
     }
 };
 
 template <>
-struct TraceTraits<VM::ModuleObject>
+struct TraceTraits<VM::ModuleScope>
 {
     TraceTraits() = delete;
 
@@ -155,22 +152,22 @@ struct TraceTraits<VM::ModuleObject>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::ModuleObject &obj,
+    static void Scan(Scanner &scanner, const VM::ModuleScope &scope,
                      const void *start, const void *end)
     {
-        TraceTraits<VM::HashObject>::Scan(scanner, obj, start, end);
+        TraceTraits<VM::HashObject>::Scan(scanner, scope, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::ModuleObject &obj,
+    static void Update(Updater &updater, VM::ModuleScope &scope,
                        const void *start, const void *end)
     {
-        TraceTraits<VM::HashObject>::Update(updater, obj, start, end);
+        TraceTraits<VM::HashObject>::Update(updater, scope, start, end);
     }
 };
 
 template <>
-struct TraceTraits<VM::GlobalObject>
+struct TraceTraits<VM::GlobalScope>
 {
     TraceTraits() = delete;
 
@@ -178,17 +175,17 @@ struct TraceTraits<VM::GlobalObject>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::GlobalObject &obj,
+    static void Scan(Scanner &scanner, const VM::GlobalScope &scope,
                      const void *start, const void *end)
     {
-        TraceTraits<VM::HashObject>::Scan(scanner, obj, start, end);
+        TraceTraits<VM::HashObject>::Scan(scanner, scope, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::GlobalObject &obj,
+    static void Update(Updater &updater, VM::GlobalScope &scope,
                        const void *start, const void *end)
     {
-        TraceTraits<VM::HashObject>::Update(updater, obj, start, end);
+        TraceTraits<VM::HashObject>::Update(updater, scope, start, end);
     }
 };
 

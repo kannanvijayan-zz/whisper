@@ -32,9 +32,9 @@
     _(SourceFile)               \
     _(PropertyDict)             \
     _(PlainObject)              \
-    _(CallObject)               \
-    _(ModuleObject)             \
-    _(GlobalObject)             \
+    _(CallScope)                \
+    _(ModuleScope)              \
+    _(GlobalScope)              \
     _(LookupSeenObjects)        \
     _(LookupNode)               \
     _(LookupState)              \

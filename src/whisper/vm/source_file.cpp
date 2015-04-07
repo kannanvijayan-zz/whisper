@@ -69,7 +69,7 @@ SourceFile::ParseSyntaxTree(ThreadContext *cx, Handle<SourceFile *> sourceFile)
     return Result<PackedSyntaxTree *>::Value(sourceFile->syntaxTree());
 }
 
-/* static */ Result<ModuleObject *>
+/* static */ Result<ModuleScope *>
 SourceFile::CreateScope(ThreadContext *cx, Handle<SourceFile *> sourceFile)
 {
     AllocationContext acx = cx->inTenured();
@@ -77,26 +77,26 @@ SourceFile::CreateScope(ThreadContext *cx, Handle<SourceFile *> sourceFile)
     // Ensure we have a packed syntax tree.
     Local<PackedSyntaxTree *> pst(cx);
     if (!pst.setResult(SourceFile::ParseSyntaxTree(cx, sourceFile)))
-        return Result<ModuleObject *>::Error();
+        return Result<ModuleScope *>::Error();
 
     // Create a module object for the file.  The caller scope for
     // the module is the global.
-    Local<GlobalObject *> global(cx, cx->global());
-    Local<ModuleObject *> module(acx);
-    if (!module.setResult(ModuleObject::Create(acx, global)))
-        return Result<ModuleObject *>::Error();
+    Local<GlobalScope *> global(cx, cx->global());
+    Local<ModuleScope *> module(acx);
+    if (!module.setResult(ModuleScope::Create(acx, global)))
+        return Result<ModuleScope *>::Error();
 
     // install the module.
     sourceFile->scope_.set(module, sourceFile.get());
 
-    return Result<ModuleObject *>::Value(module);
+    return Result<ModuleScope *>::Value(module);
 }
 
 /* static */ Result<ScriptedFunction *>
 SourceFile::CreateFunc(
             ThreadContext *cx,
             Handle<SourceFile *> sourceFile,
-            Handle<GlobalObject *> global)
+            Handle<GlobalScope *> global)
 {
     if (sourceFile->hasFunc())
         return Result<ScriptedFunction *>::Value(sourceFile->func());
@@ -116,7 +116,7 @@ SourceFile::CreateFunc(
     // Createa a new scripted function.
     Local<ScriptedFunction *> func(cx);
     if (!func.setResult(ScriptedFunction::Create(acx, defn,
-                            Handle<ScopeObject *>::Convert(global),
+                            global.convertTo<ScopeObject *>(),
                             /* isOperative = */ false)))
     {
         return Result<ScriptedFunction *>::Error();

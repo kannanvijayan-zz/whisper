@@ -47,8 +47,9 @@ class Wobject
     static bool IsWobjectFormat(HeapFormat format) {
         switch (format) {
           case HeapFormat::PlainObject:
-          case HeapFormat::CallObject:
-          case HeapFormat::GlobalObject:
+          case HeapFormat::CallScope:
+          case HeapFormat::ModuleScope:
+          case HeapFormat::GlobalScope:
           case HeapFormat::FunctionObject:
             return true;
           default:

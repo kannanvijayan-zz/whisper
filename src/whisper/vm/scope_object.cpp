@@ -6,28 +6,28 @@ namespace Whisper {
 namespace VM {
 
 
-/* static */ Result<CallObject *>
-CallObject::Create(AllocationContext acx,
-                   Handle<ScopeObject *> callerScope)
+/* static */ Result<CallScope *>
+CallScope::Create(AllocationContext acx,
+                  Handle<ScopeObject *> callerScope)
 {
     // Allocate array of delegates containing caller scope.
     Local<Array<Wobject *> *> delegates(acx);
     if (!delegates.setResult(Array<Wobject *>::CreateFill(acx, 1, nullptr)))
-        return Result<CallObject *>::Error();
+        return Result<CallScope *>::Error();
     delegates->set(0, callerScope.get());
 
     // Allocate a dictionary.
     Local<PropertyDict *> props(acx);
     if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
-        return Result<CallObject *>::Error();
+        return Result<CallScope *>::Error();
 
-    return acx.create<CallObject>(delegates.handle(), props.handle());
+    return acx.create<CallScope>(delegates.handle(), props.handle());
 }
 
 /* static */ void
-CallObject::GetDelegates(ThreadContext *cx,
-                         Handle<CallObject *> obj,
-                         MutHandle<Array<Wobject *> *> delegatesOut)
+CallScope::GetDelegates(ThreadContext *cx,
+                        Handle<CallScope *> obj,
+                        MutHandle<Array<Wobject *> *> delegatesOut)
 {
     HashObject::GetDelegates(cx,
         Handle<HashObject *>::Convert(obj),
@@ -35,10 +35,10 @@ CallObject::GetDelegates(ThreadContext *cx,
 }
 
 /* static */ bool
-CallObject::GetProperty(ThreadContext *cx,
-                        Handle<CallObject *> obj,
-                        Handle<String *> name,
-                        MutHandle<PropertyDescriptor> result)
+CallScope::GetProperty(ThreadContext *cx,
+                       Handle<CallScope *> obj,
+                       Handle<String *> name,
+                       MutHandle<PropertyDescriptor> result)
 {
     return HashObject::GetProperty(cx,
         Handle<HashObject *>::Convert(obj),
@@ -46,8 +46,8 @@ CallObject::GetProperty(ThreadContext *cx,
 }
 
 /* static */ OkResult
-CallObject::DefineProperty(ThreadContext *cx,
-                           Handle<CallObject *> obj,
+CallScope::DefineProperty(ThreadContext *cx,
+                          Handle<CallScope *> obj,
                            Handle<String *> name,
                            Handle<PropertyDescriptor> defn)
 {
@@ -57,27 +57,27 @@ CallObject::DefineProperty(ThreadContext *cx,
 }
 
 
-/* static */ Result<ModuleObject *>
-ModuleObject::Create(AllocationContext acx, Handle<GlobalObject *> global)
+/* static */ Result<ModuleScope *>
+ModuleScope::Create(AllocationContext acx, Handle<GlobalScope *> global)
 {
     // Allocate array of delegates containing caller scope.
     Local<Array<Wobject *> *> delegates(acx);
     if (!delegates.setResult(Array<Wobject *>::CreateFill(acx, 1, nullptr)))
-        return Result<ModuleObject *>::Error();
+        return Result<ModuleScope *>::Error();
     delegates->set(0, global.get());
 
     // Allocate a dictionary.
     Local<PropertyDict *> props(acx);
     if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
-        return Result<ModuleObject *>::Error();
+        return Result<ModuleScope *>::Error();
 
-    return acx.create<ModuleObject>(delegates.handle(), props.handle());
+    return acx.create<ModuleScope>(delegates.handle(), props.handle());
 }
 
 /* static */ void
-ModuleObject::GetDelegates(ThreadContext *cx,
-                           Handle<ModuleObject *> obj,
-                           MutHandle<Array<Wobject *> *> delegatesOut)
+ModuleScope::GetDelegates(ThreadContext *cx,
+                          Handle<ModuleScope *> obj,
+                          MutHandle<Array<Wobject *> *> delegatesOut)
 {
     HashObject::GetDelegates(cx,
         Handle<HashObject *>::Convert(obj),
@@ -85,10 +85,10 @@ ModuleObject::GetDelegates(ThreadContext *cx,
 }
 
 /* static */ bool
-ModuleObject::GetProperty(ThreadContext *cx,
-                          Handle<ModuleObject *> obj,
-                          Handle<String *> name,
-                          MutHandle<PropertyDescriptor> result)
+ModuleScope::GetProperty(ThreadContext *cx,
+                         Handle<ModuleScope *> obj,
+                         Handle<String *> name,
+                         MutHandle<PropertyDescriptor> result)
 {
     return HashObject::GetProperty(cx,
         Handle<HashObject *>::Convert(obj),
@@ -96,10 +96,10 @@ ModuleObject::GetProperty(ThreadContext *cx,
 }
 
 /* static */ OkResult
-ModuleObject::DefineProperty(ThreadContext *cx,
-                             Handle<ModuleObject *> obj,
-                             Handle<String *> name,
-                             Handle<PropertyDescriptor> defn)
+ModuleScope::DefineProperty(ThreadContext *cx,
+                            Handle<ModuleScope *> obj,
+                            Handle<String *> name,
+                            Handle<PropertyDescriptor> defn)
 {
     return HashObject::DefineProperty(cx,
         Handle<HashObject *>::Convert(obj),
@@ -107,26 +107,26 @@ ModuleObject::DefineProperty(ThreadContext *cx,
 }
 
 
-/* static */ Result<GlobalObject *>
-GlobalObject::Create(AllocationContext acx)
+/* static */ Result<GlobalScope *>
+GlobalScope::Create(AllocationContext acx)
 {
     // Allocate empty array of delegates.
     Local<Array<Wobject *> *> delegates(acx);
     if (!delegates.setResult(Array<Wobject *>::CreateEmpty(acx)))
-        return Result<GlobalObject *>::Error();
+        return Result<GlobalScope *>::Error();
 
     // Allocate a dictionary.
     Local<PropertyDict *> props(acx);
     if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
-        return Result<GlobalObject *>::Error();
+        return Result<GlobalScope *>::Error();
 
-    return acx.create<GlobalObject>(delegates.handle(), props.handle());
+    return acx.create<GlobalScope>(delegates.handle(), props.handle());
 }
 
 /* static */ void
-GlobalObject::GetDelegates(ThreadContext *cx,
-                           Handle<GlobalObject *> obj,
-                           MutHandle<Array<Wobject *> *> delegatesOut)
+GlobalScope::GetDelegates(ThreadContext *cx,
+                          Handle<GlobalScope *> obj,
+                          MutHandle<Array<Wobject *> *> delegatesOut)
 {
     HashObject::GetDelegates(cx,
         Handle<HashObject *>::Convert(obj),
@@ -134,10 +134,10 @@ GlobalObject::GetDelegates(ThreadContext *cx,
 }
 
 /* static */ bool
-GlobalObject::GetProperty(ThreadContext *cx,
-                          Handle<GlobalObject *> obj,
-                          Handle<String *> name,
-                          MutHandle<PropertyDescriptor> result)
+GlobalScope::GetProperty(ThreadContext *cx,
+                         Handle<GlobalScope *> obj,
+                         Handle<String *> name,
+                         MutHandle<PropertyDescriptor> result)
 {
     return HashObject::GetProperty(cx,
         Handle<HashObject *>::Convert(obj),
@@ -145,10 +145,10 @@ GlobalObject::GetProperty(ThreadContext *cx,
 }
 
 /* static */ OkResult
-GlobalObject::DefineProperty(ThreadContext *cx,
-                             Handle<GlobalObject *> obj,
-                             Handle<String *> name,
-                             Handle<PropertyDescriptor> defn)
+GlobalScope::DefineProperty(ThreadContext *cx,
+                            Handle<GlobalScope *> obj,
+                            Handle<String *> name,
+                            Handle<PropertyDescriptor> defn)
 {
     return HashObject::DefineProperty(cx,
         Handle<HashObject *>::Convert(obj),

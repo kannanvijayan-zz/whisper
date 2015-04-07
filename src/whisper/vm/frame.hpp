@@ -62,7 +62,7 @@ class Frame
     HeapField<ScriptedFunction *> func_;
 
     // The call object in effect for this frame.
-    HeapField<CallObject *> scope_;
+    HeapField<CallScope *> scope_;
 
     // The maximal stack and eval depth.
     uint32_t maxStackDepth_;
@@ -84,7 +84,7 @@ class Frame
   public:
     Frame(Frame *caller,
           ScriptedFunction *func,
-          CallObject *scope,
+          CallScope *scope,
           uint32_t maxStackDepth,
           uint32_t maxEvalDepth)
       : caller_(caller),
@@ -120,7 +120,7 @@ class Frame
     static Result<Frame *> Create(AllocationContext acx,
                                   Handle<Frame *> caller,
                                   Handle<ScriptedFunction *> func,
-                                  Handle<CallObject *> scope,
+                                  Handle<CallScope *> scope,
                                   uint32_t maxStackDepth,
                                   uint32_t maxEvalDepth);
 

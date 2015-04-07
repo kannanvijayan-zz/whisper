@@ -156,8 +156,8 @@ initialize_thread_globals(ThreadContext *cx)
         VM::PropertyDescriptor(atIntF.get()));
 
     // Bind method on global.
-    Local<VM::GlobalObject *> global(cx, cx->global());
-    if (!VM::GlobalObject::DefineProperty(cx, global, atIntN, propDesc))
+    Local<VM::GlobalScope *> global(cx, cx->global());
+    if (!VM::GlobalScope::DefineProperty(cx, global, atIntN, propDesc))
         return OkResult::Error();
 
     return OkResult::Ok();

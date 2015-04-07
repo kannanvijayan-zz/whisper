@@ -12,7 +12,7 @@ namespace VM {
 Frame::Create(AllocationContext acx,
               Handle<Frame *> caller,
               Handle<ScriptedFunction *> func,
-              Handle<CallObject *> scope,
+              Handle<CallScope *> scope,
               uint32_t maxStackDepth,
               uint32_t maxEvalDepth)
 {
