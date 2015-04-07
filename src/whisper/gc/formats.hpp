@@ -33,6 +33,7 @@
     _(PropertyDict)             \
     _(PlainObject)              \
     _(CallObject)               \
+    _(ModuleObject)             \
     _(GlobalObject)             \
     _(LookupSeenObjects)        \
     _(LookupNode)               \

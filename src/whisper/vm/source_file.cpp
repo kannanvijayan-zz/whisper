@@ -7,6 +7,7 @@
 #include "runtime_inlines.hpp"
 #include "vm/function.hpp"
 #include "vm/source_file.hpp"
+#include "vm/scope_object.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -66,6 +67,29 @@ SourceFile::ParseSyntaxTree(ThreadContext *cx, Handle<SourceFile *> sourceFile)
 
     sourceFile->setSyntaxTree(packedSt);
     return Result<PackedSyntaxTree *>::Value(sourceFile->syntaxTree());
+}
+
+/* static */ Result<ModuleObject *>
+SourceFile::CreateScope(ThreadContext *cx, Handle<SourceFile *> sourceFile)
+{
+    AllocationContext acx = cx->inTenured();
+
+    // Ensure we have a packed syntax tree.
+    Local<PackedSyntaxTree *> pst(cx);
+    if (!pst.setResult(SourceFile::ParseSyntaxTree(cx, sourceFile)))
+        return Result<ModuleObject *>::Error();
+
+    // Create a module object for the file.  The caller scope for
+    // the module is the global.
+    Local<GlobalObject *> global(cx, cx->global());
+    Local<ModuleObject *> module(acx);
+    if (!module.setResult(ModuleObject::Create(acx, global)))
+        return Result<ModuleObject *>::Error();
+
+    // install the module.
+    sourceFile->scope_.set(module, sourceFile.get());
+
+    return Result<ModuleObject *>::Value(module);
 }
 
 /* static */ Result<ScriptedFunction *>

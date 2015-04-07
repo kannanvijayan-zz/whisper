@@ -57,6 +57,56 @@ CallObject::DefineProperty(ThreadContext *cx,
 }
 
 
+/* static */ Result<ModuleObject *>
+ModuleObject::Create(AllocationContext acx, Handle<GlobalObject *> global)
+{
+    // Allocate array of delegates containing caller scope.
+    Local<Array<Wobject *> *> delegates(acx);
+    if (!delegates.setResult(Array<Wobject *>::CreateFill(acx, 1, nullptr)))
+        return Result<ModuleObject *>::Error();
+    delegates->set(0, global.get());
+
+    // Allocate a dictionary.
+    Local<PropertyDict *> props(acx);
+    if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
+        return Result<ModuleObject *>::Error();
+
+    return acx.create<ModuleObject>(delegates.handle(), props.handle());
+}
+
+/* static */ void
+ModuleObject::GetDelegates(ThreadContext *cx,
+                           Handle<ModuleObject *> obj,
+                           MutHandle<Array<Wobject *> *> delegatesOut)
+{
+    HashObject::GetDelegates(cx,
+        Handle<HashObject *>::Convert(obj),
+        delegatesOut);
+}
+
+/* static */ bool
+ModuleObject::GetProperty(ThreadContext *cx,
+                          Handle<ModuleObject *> obj,
+                          Handle<String *> name,
+                          MutHandle<PropertyDescriptor> result)
+{
+    return HashObject::GetProperty(cx,
+        Handle<HashObject *>::Convert(obj),
+        name, result);
+}
+
+/* static */ OkResult
+ModuleObject::DefineProperty(ThreadContext *cx,
+                             Handle<ModuleObject *> obj,
+                             Handle<String *> name,
+                             Handle<PropertyDescriptor> defn)
+{
+    return HashObject::DefineProperty(cx,
+        Handle<HashObject *>::Convert(obj),
+        name, defn);
+}
+
+
 /* static */ Result<GlobalObject *>
 GlobalObject::Create(AllocationContext acx)
 {

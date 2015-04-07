@@ -21,12 +21,14 @@ class SourceFile
   private:
     HeapField<String *> path_;
     HeapField<PackedSyntaxTree *> syntaxTree_;
+    HeapField<ModuleObject *> scope_;
     HeapField<ScriptedFunction *> func_;
 
   public:
     SourceFile(String *path)
       : path_(path),
         syntaxTree_(nullptr),
+        scope_(nullptr),
         func_(nullptr)
     {
         WH_ASSERT(path != nullptr);
@@ -47,6 +49,16 @@ class SourceFile
         return syntaxTree_;
     }
     static Result<PackedSyntaxTree *> ParseSyntaxTree(
+            ThreadContext *cx, Handle<SourceFile *> sourceFile);
+
+    bool hasScope() const {
+        return scope_.get() != nullptr;
+    }
+    ModuleObject *scope() const {
+        WH_ASSERT(hasScope());
+        return scope_;
+    }
+    static Result<ModuleObject *> CreateScope(
             ThreadContext *cx, Handle<SourceFile *> sourceFile);
 
     bool hasFunc() const {

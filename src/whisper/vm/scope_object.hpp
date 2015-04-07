@@ -54,6 +54,37 @@ class CallObject : public ScopeObject
                                    Handle<PropertyDescriptor> defn);
 };
 
+class ModuleObject : public ScopeObject
+{
+  friend class TraceTraits<ModuleObject>;
+  public:
+    ModuleObject(Handle<Array<Wobject *> *> delegates,
+                 Handle<PropertyDict *> dict)
+      : ScopeObject(delegates, dict)
+    {}
+
+    static Result<ModuleObject *> Create(AllocationContext acx,
+                                         Handle<GlobalObject *> global);
+
+    static void GetDelegates(ThreadContext *cx,
+                             Handle<ModuleObject *> obj,
+                             MutHandle<Array<Wobject *> *> delegatesOut);
+
+    static bool GetPropertyIndex(Handle<ModuleObject *> obj,
+                                 Handle<String *> name,
+                                 uint32_t *indexOut);
+
+    static bool GetProperty(ThreadContext *cx,
+                            Handle<ModuleObject *> obj,
+                            Handle<String *> name,
+                            MutHandle<PropertyDescriptor> result);
+
+    static OkResult DefineProperty(ThreadContext *cx,
+                                   Handle<ModuleObject *> obj,
+                                   Handle<String *> name,
+                                   Handle<PropertyDescriptor> defn);
+};
+
 class GlobalObject : public ScopeObject
 {
   friend class TraceTraits<GlobalObject>;
@@ -109,6 +140,29 @@ struct TraceTraits<VM::CallObject>
 
     template <typename Updater>
     static void Update(Updater &updater, VM::CallObject &obj,
+                       const void *start, const void *end)
+    {
+        TraceTraits<VM::HashObject>::Update(updater, obj, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::ModuleObject>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const VM::ModuleObject &obj,
+                     const void *start, const void *end)
+    {
+        TraceTraits<VM::HashObject>::Scan(scanner, obj, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater &updater, VM::ModuleObject &obj,
                        const void *start, const void *end)
     {
         TraceTraits<VM::HashObject>::Update(updater, obj, start, end);
