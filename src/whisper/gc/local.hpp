@@ -138,7 +138,7 @@ class Local : public LocalBase
         if (result.isError())
             return ErrorVal();
         val_ = result.value();
-        return Ok();
+        return OkVal();
     }
 
     inline const T *address() const {

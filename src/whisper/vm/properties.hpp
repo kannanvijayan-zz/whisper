@@ -68,7 +68,7 @@ class PropertyName
 
     Result<String *> createString(AllocationContext acx) const {
         if (isVMString())
-            return Result<String *>::Value(vmString());
+            return OkVal(vmString());
         return String::Create(acx, length(), cString());
     }
 

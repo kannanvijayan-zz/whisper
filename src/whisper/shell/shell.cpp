@@ -176,7 +176,7 @@ initialize_thread_globals(ThreadContext *cx)
     if (!VM::GlobalScope::DefineProperty(cx, global, atIntN, propDesc))
         return ErrorVal();
 
-    return Ok();
+    return OkVal();
 }
 
 

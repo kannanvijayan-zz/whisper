@@ -57,7 +57,7 @@ class MutHandle
         if (result.isError())
             return ErrorVal();
         *valAddr_ = result.value();
-        return Ok();
+        return OkVal();
     }
 
     inline T *address() const {

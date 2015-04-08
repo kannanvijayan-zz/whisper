@@ -112,7 +112,7 @@ Runtime::registerThread()
     _cleanupHatchery.steal();
     _cleanupTenured.steal();
 
-    return Ok();
+    return OkVal();
 }
 
 OkResult
@@ -143,7 +143,7 @@ Runtime::makeImmortalThreadContext()
 
     immortalThreadContext_ = ctx;
 
-    return Ok();
+    return OkVal();
 }
 
 ThreadContext *
@@ -271,7 +271,7 @@ ThreadContext::makeGlobal()
     if (!glob.setResult(VM::GlobalScope::Create(this->inTenured())))
         return ErrorVal();
     global_ = glob.get();
-    return Ok();
+    return OkVal();
 }
 
 

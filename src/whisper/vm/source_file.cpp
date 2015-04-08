@@ -23,7 +23,7 @@ SourceFile::Create(AllocationContext acx, Handle<String *> path)
 SourceFile::ParseSyntaxTree(ThreadContext *cx, Handle<SourceFile *> sourceFile)
 {
     if (sourceFile->hasSyntaxTree())
-        return Result<PackedSyntaxTree *>::Value(sourceFile->syntaxTree());
+        return OkVal(sourceFile->syntaxTree());
 
     // Load the file.
     FileCodeSource inputFile(sourceFile->path()->c_chars());
@@ -66,7 +66,7 @@ SourceFile::ParseSyntaxTree(ThreadContext *cx, Handle<SourceFile *> sourceFile)
         return ErrorVal();
 
     sourceFile->setSyntaxTree(packedSt);
-    return Result<PackedSyntaxTree *>::Value(sourceFile->syntaxTree());
+    return OkVal(sourceFile->syntaxTree());
 }
 
 /* static */ Result<ModuleScope *>
@@ -89,7 +89,7 @@ SourceFile::CreateScope(ThreadContext *cx, Handle<SourceFile *> sourceFile)
     // install the module.
     sourceFile->scope_.set(module, sourceFile.get());
 
-    return Result<ModuleScope *>::Value(module);
+    return OkVal(module.get());
 }
 
 /* static */ Result<ScriptedFunction *>
@@ -99,7 +99,7 @@ SourceFile::CreateFunc(
             Handle<GlobalScope *> global)
 {
     if (sourceFile->hasFunc())
-        return Result<ScriptedFunction *>::Value(sourceFile->func());
+        return OkVal(sourceFile->func());
 
     // Ensure we have a packed syntax tree.
     Local<PackedSyntaxTree *> pst(cx);
@@ -124,7 +124,7 @@ SourceFile::CreateFunc(
 
     // Save scripted function to source file.
     sourceFile->setFunc(func);
-    return Result<ScriptedFunction *>::Value(func);
+    return OkVal(func.get());
 }
 
 

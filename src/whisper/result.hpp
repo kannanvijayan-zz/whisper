@@ -8,19 +8,38 @@
 namespace Whisper {
 
 
-class ErrorVal
+class ErrorT_
 {
   public:
-    ErrorVal() {}
-    ~ErrorVal() {}
+    ErrorT_() {}
+    ~ErrorT_() {}
 };
 
-class Ok
+class OkT_
 {
   public:
-    Ok() {}
-    ~Ok() {}
+    OkT_() {}
+    ~OkT_() {}
 };
+
+template <typename T>
+class OkValT_
+{
+    template <typename V>
+    friend class Result;
+  private:
+    T val_;
+
+  public:
+    OkValT_(const T &val) : val_(val) {}
+    ~OkValT_() {}
+};
+
+inline ErrorT_ ErrorVal() { return ErrorT_(); }
+inline OkT_ OkVal() { return OkT_(); }
+
+template <typename T>
+inline OkValT_<T> OkVal(const T &t) { return OkValT_<T>(t); }
 
 template <typename V>
 class Result
@@ -60,9 +79,20 @@ class Result
         if (isValue_)
             new (valuePtr()) V(std::move(other.value()));
     }
-    Result(const ErrorVal &error)
+    Result(const ErrorT_ &error)
       : isValue_(false)
     {}
+
+    Result(const OkValT_<V> &val)
+      : isValue_(true)
+    {
+        new (valuePtr()) V(val.val_);
+    }
+    Result(OkValT_<V> &&val)
+      : isValue_(true)
+    {
+        new (valuePtr()) V(std::move(val.val_));
+    }
 
     static Result<V> Value(const V &v) {
         return Result<V>(v);
@@ -153,7 +183,7 @@ class Result<P *>
     {}
 
   public:
-    Result(const ErrorVal &error)
+    Result(const ErrorT_ &error)
       : ptr_(nullptr)
     {}
 
@@ -164,6 +194,15 @@ class Result<P *>
     static Result<P *> Error() {
         return Result<P *>();
     }
+
+    template <typename Q>
+    Result(const OkValT_<Q *> &val)
+      : ptr_(val.val_)
+    {}
+    template <typename Q>
+    Result(OkValT_<Q *> &&val)
+      : ptr_(val.val_)
+    {}
 
     bool isValue() const {
         return ptr_ != nullptr;
@@ -198,10 +237,10 @@ class OkResult
     OkResult(bool ok) : ok_(ok) {}
 
   public:
-    OkResult(const ErrorVal &error)
+    OkResult(const ErrorT_ &error)
       : ok_(false)
     {}
-    OkResult(const Ok &ok)
+    OkResult(const OkT_ &ok)
       : ok_(true)
     {}
 

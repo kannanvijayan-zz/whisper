@@ -2,6 +2,7 @@
 #include <functional>
 
 #include "runtime_inlines.hpp"
+#include "result.hpp"
 #include "vm/lookup_state.hpp"
 
 namespace Whisper {
@@ -35,7 +36,7 @@ LookupSeenObjects::Create(AllocationContext acx, uint32_t size,
         }
     }
 
-    return Result<LookupSeenObjects *>::Value(newSeen.get());
+    return OkVal(newSeen.get());
 }
 
 bool
@@ -126,7 +127,7 @@ LookupState::Create(AllocationContext acx,
     if (!AddToSeen(acx, lookupState, receiver))
         return ErrorVal();
 
-    return Result<LookupState *>::Value(lookupState.get());
+    return OkVal(lookupState.get());
 }
 
 /* static */ OkResult
@@ -165,7 +166,7 @@ LookupState::NextNode(AllocationContext acx,
         cur = cur->parent();
         if (cur.get() == nullptr) {
             nodeOut = nullptr;
-            return Ok();
+            return OkVal();
         }
 
         // Search on from index.
@@ -179,7 +180,7 @@ LookupState::NextNode(AllocationContext acx,
     // Walk up chain ended.
     lookupState->node_.set(nullptr, lookupState.get());
     nodeOut.set(nullptr);
-    return Ok();
+    return OkVal();
 }
 
 OkResult
@@ -202,7 +203,7 @@ LookupState::LinkNextNode(AllocationContext acx,
 
     lookupState->node_.set(newNode, lookupState.get());
     nodeOut = newNode.get();
-    return Ok();
+    return OkVal();
 }
 
 OkResult
@@ -213,7 +214,7 @@ LookupState::AddToSeen(AllocationContext acx,
     WH_ASSERT(!lookupState->seen_->contains(obj));
     if (lookupState->seen_->canAdd()) {
         lookupState->seen_->add(obj);
-        return Ok();
+        return OkVal();
     }
     Local<LookupSeenObjects *> oldSeen(acx, lookupState->seen_);
 
@@ -227,7 +228,7 @@ LookupState::AddToSeen(AllocationContext acx,
     lookupState->seen_.set(newSeen, lookupState.get());
 
     lookupState->seen_->add(obj);
-    return Ok();
+    return OkVal();
 }
 
 

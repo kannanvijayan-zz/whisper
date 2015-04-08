@@ -34,7 +34,7 @@ AllocationContext::create(Args... args)
     // Construct object in memory.
     new (mem) ObjT(std::forward<Args>(args)...);
 
-    return Result<ObjT *>::Value(reinterpret_cast<ObjT *>(mem));
+    return OkVal(reinterpret_cast<ObjT *>(mem));
 }
 
 template <typename ObjT, typename... Args>
@@ -59,7 +59,7 @@ AllocationContext::createSized(uint32_t size, Args... args)
     // Construct object in memory.
     new (mem) ObjT(std::forward<Args>(args)...);
 
-    return Result<ObjT *>::Value(reinterpret_cast<ObjT *>(mem));
+    return OkVal(reinterpret_cast<ObjT *>(mem));
 }
 
 template <bool Traced>

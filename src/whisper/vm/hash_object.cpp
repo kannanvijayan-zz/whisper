@@ -54,14 +54,14 @@ HashObject::DefineProperty(ThreadContext *cx,
         // Override existing definition.
         WH_ASSERT(name->equals(obj->dict_->name(idx)));
         obj->dict_->setValue(idx, defn);
-        return Ok();
+        return OkVal();
     }
 
     // Entry needs to be added.  Either define a string
     // or use existing one.
     // Property not found.  Add an entry.
     if (obj->dict_->addEntry(name.get(), defn))
-        return Ok();
+        return OkVal();
 
     // TODO: Try to enlarge dict and add.
     return ErrorVal();

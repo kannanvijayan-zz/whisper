@@ -19,28 +19,28 @@ Wobject::GetDelegates(ThreadContext *cx,
         Local<PlainObject *> plainObj(cx,
             reinterpret_cast<PlainObject *>(heapThing));
         PlainObject::GetDelegates(cx, plainObj, delegatesOut);
-        return Ok();
+        return OkVal();
     }
 
     if (heapThing->isCallScope()) {
         Local<CallScope *> callObj(cx,
             reinterpret_cast<CallScope *>(heapThing));
         CallScope::GetDelegates(cx, callObj, delegatesOut);
-        return Ok();
+        return OkVal();
     }
 
     if (heapThing->isModuleScope()) {
         Local<ModuleScope *> moduleObj(cx,
             reinterpret_cast<ModuleScope *>(heapThing));
         ModuleScope::GetDelegates(cx, moduleObj, delegatesOut);
-        return Ok();
+        return OkVal();
     }
 
     if (heapThing->isGlobalScope()) {
         Local<GlobalScope *> globalObj(cx,
             reinterpret_cast<GlobalScope *>(heapThing));
         GlobalScope::GetDelegates(cx, globalObj, delegatesOut);
-        return Ok();
+        return OkVal();
     }
 
     WH_UNREACHABLE("Unknown object kind");
@@ -57,29 +57,25 @@ Wobject::GetProperty(ThreadContext *cx,
     if (heapThing->isPlainObject()) {
         Local<PlainObject *> plainObj(cx,
             reinterpret_cast<PlainObject *>(heapThing));
-        return Result<bool>::Value(PlainObject::GetProperty(cx, plainObj,
-                                                            name, result));
+        return OkVal(PlainObject::GetProperty(cx, plainObj, name, result));
     }
 
     if (heapThing->isCallScope()) {
         Local<CallScope *> callObj(cx,
             reinterpret_cast<CallScope *>(heapThing));
-        return Result<bool>::Value(CallScope::GetProperty(cx, callObj,
-                                                          name, result));
+        return OkVal(CallScope::GetProperty(cx, callObj, name, result));
     }
 
     if (heapThing->isModuleScope()) {
         Local<ModuleScope *> moduleObj(cx,
             reinterpret_cast<ModuleScope *>(heapThing));
-        return Result<bool>::Value(ModuleScope::GetProperty(cx, moduleObj,
-                                                            name, result));
+        return OkVal(ModuleScope::GetProperty(cx, moduleObj, name, result));
     }
 
     if (heapThing->isGlobalScope()) {
         Local<GlobalScope *> globalObj(cx,
             reinterpret_cast<GlobalScope *>(heapThing));
-        return Result<bool>::Value(GlobalScope::GetProperty(cx, globalObj,
-                                                             name, result));
+        return OkVal(GlobalScope::GetProperty(cx, globalObj, name, result));
     }
 
     WH_UNREACHABLE("Unknown object kind");
@@ -151,7 +147,7 @@ Wobject::LookupProperty(
         if (prop.value()) {
             defnOut.set(defn);
             stateOut.set(lookupState);
-            return Result<bool>::Value(true);
+            return OkVal(true);
         }
 
         // Property not found on object, go to next lookup node.
@@ -160,7 +156,7 @@ Wobject::LookupProperty(
     }
 
     // If we got here, no property was found.
-    return Result<bool>::Value(false);
+    return OkVal(false);
 }
 
 
