@@ -128,9 +128,18 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    fprintf(stderr, "packedSt local @%p\n", packedSt.stackThing());
+    // Look up '@integer' on the module.
+    Local<VM::LookupState *> lookupState(cx);
+    Local<VM::PropertyDescriptor> propDesc(cx);
+    Local<VM::String *> atIntN(cx, cx->runtimeState()->nm_AtInteger());
+    if (!VM::Wobject::LookupProperty(cx,
+            module.handle().convertTo<VM::Wobject *>(),
+            atIntN, &lookupState, &propDesc))
+    {
+        std::cerr << "Error looking up @integer on module." << std::endl;
+        return 1;
+    }
 
-    fprintf(stderr, "STACK SCAN!\n");
     fprintf(stderr, "digraph G {\n");
     HeapPrintVisitor visitor;
     trace_heap(cx, &visitor);
