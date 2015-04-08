@@ -136,9 +136,9 @@ class Local : public LocalBase
     }
     OkResult setResult(const Result<T> &result) {
         if (result.isError())
-            return OkResult::Error();
+            return ErrorVal();
         val_ = result.value();
-        return OkResult::Ok();
+        return Ok();
     }
 
     inline const T *address() const {

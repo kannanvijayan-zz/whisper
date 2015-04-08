@@ -55,9 +55,9 @@ class MutHandle
     }
     OkResult setResult(const Result<T> &result) {
         if (result.isError())
-            return OkResult::Error();
+            return ErrorVal();
         *valAddr_ = result.value();
-        return OkResult::Ok();
+        return Ok();
     }
 
     inline T *address() const {

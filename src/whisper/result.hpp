@@ -15,6 +15,13 @@ class ErrorVal
     ~ErrorVal() {}
 };
 
+class Ok
+{
+  public:
+    Ok() {}
+    ~Ok() {}
+};
+
 template <typename V>
 class Result
 {
@@ -193,6 +200,9 @@ class OkResult
   public:
     OkResult(const ErrorVal &error)
       : ok_(false)
+    {}
+    OkResult(const Ok &ok)
+      : ok_(true)
     {}
 
     static OkResult Ok() {

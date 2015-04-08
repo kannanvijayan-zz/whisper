@@ -29,7 +29,7 @@ AllocationContext::create(Args... args)
     constexpr bool TRACED = ! TraceTraits<TRACE_TYPE>::IsLeaf;
     uint8_t *mem = allocate<TRACED>(size, FMT);
     if (!mem)
-        return Result<ObjT *>::Error();
+        return ErrorVal();
 
     // Construct object in memory.
     new (mem) ObjT(std::forward<Args>(args)...);
@@ -54,7 +54,7 @@ AllocationContext::createSized(uint32_t size, Args... args)
     constexpr bool TRACED = ! TraceTraits<TRACE_TYPE>::IsLeaf;
     uint8_t *mem = allocate<TRACED>(size, FMT);
     if (!mem)
-        return Result<ObjT *>::Error();
+        return ErrorVal();
 
     // Construct object in memory.
     new (mem) ObjT(std::forward<Args>(args)...);

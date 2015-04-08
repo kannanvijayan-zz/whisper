@@ -19,28 +19,28 @@ Wobject::GetDelegates(ThreadContext *cx,
         Local<PlainObject *> plainObj(cx,
             reinterpret_cast<PlainObject *>(heapThing));
         PlainObject::GetDelegates(cx, plainObj, delegatesOut);
-        return OkResult::Ok();
+        return Ok();
     }
 
     if (heapThing->isCallScope()) {
         Local<CallScope *> callObj(cx,
             reinterpret_cast<CallScope *>(heapThing));
         CallScope::GetDelegates(cx, callObj, delegatesOut);
-        return OkResult::Ok();
+        return Ok();
     }
 
     if (heapThing->isModuleScope()) {
         Local<ModuleScope *> moduleObj(cx,
             reinterpret_cast<ModuleScope *>(heapThing));
         ModuleScope::GetDelegates(cx, moduleObj, delegatesOut);
-        return OkResult::Ok();
+        return Ok();
     }
 
     if (heapThing->isGlobalScope()) {
         Local<GlobalScope *> globalObj(cx,
             reinterpret_cast<GlobalScope *>(heapThing));
         GlobalScope::GetDelegates(cx, globalObj, delegatesOut);
-        return OkResult::Ok();
+        return Ok();
     }
 
     WH_UNREACHABLE("Unknown object kind");

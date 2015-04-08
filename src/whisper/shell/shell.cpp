@@ -166,7 +166,7 @@ initialize_thread_globals(ThreadContext *cx)
     // Allocate '@integer' operative native function.
     Local<VM::NativeFunction *> atIntF(cx);
     if (!atIntF.setResult(VM::NativeFunction::Create(acx, &Lift_Integer)))
-        return OkResult::Error();
+        return ErrorVal();
     Local<VM::String *> atIntN(cx, cx->runtimeState()->nm_AtInteger());
     Local<VM::PropertyDescriptor> propDesc(cx,
         VM::PropertyDescriptor(atIntF.get()));
@@ -174,9 +174,9 @@ initialize_thread_globals(ThreadContext *cx)
     // Bind method on global.
     Local<VM::GlobalScope *> global(cx, cx->global());
     if (!VM::GlobalScope::DefineProperty(cx, global, atIntN, propDesc))
-        return OkResult::Error();
+        return ErrorVal();
 
-    return OkResult::Ok();
+    return Ok();
 }
 
 
@@ -189,5 +189,5 @@ static OkResult Lift_Integer(
     ArrayHandle<VM::SyntaxTreeFragment *> stFrag,
     MutHandle<VM::Box> resultOut)
 {
-    return OkResult::Error();
+    return ErrorVal();
 }

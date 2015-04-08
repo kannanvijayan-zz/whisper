@@ -165,7 +165,7 @@ LookupState::NextNode(AllocationContext acx,
         cur = cur->parent();
         if (cur.get() == nullptr) {
             nodeOut = nullptr;
-            return OkResult::Ok();
+            return Ok();
         }
 
         // Search on from index.
@@ -179,7 +179,7 @@ LookupState::NextNode(AllocationContext acx,
     // Walk up chain ended.
     lookupState->node_.set(nullptr, lookupState.get());
     nodeOut.set(nullptr);
-    return OkResult::Ok();
+    return Ok();
 }
 
 OkResult
@@ -202,7 +202,7 @@ LookupState::LinkNextNode(AllocationContext acx,
 
     lookupState->node_.set(newNode, lookupState.get());
     nodeOut = newNode.get();
-    return OkResult::Ok();
+    return Ok();
 }
 
 OkResult
@@ -213,7 +213,7 @@ LookupState::AddToSeen(AllocationContext acx,
     WH_ASSERT(!lookupState->seen_->contains(obj));
     if (lookupState->seen_->canAdd()) {
         lookupState->seen_->add(obj);
-        return OkResult::Ok();
+        return Ok();
     }
     Local<LookupSeenObjects *> oldSeen(acx, lookupState->seen_);
 
@@ -227,7 +227,7 @@ LookupState::AddToSeen(AllocationContext acx,
     lookupState->seen_.set(newSeen, lookupState.get());
 
     lookupState->seen_->add(obj);
-    return OkResult::Ok();
+    return Ok();
 }
 
 
