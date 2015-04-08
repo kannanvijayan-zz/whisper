@@ -24,7 +24,7 @@ InterpretSourceFile(ThreadContext *cx,
     // Try to make a function for the script.
     Local<PackedSyntaxTree *> st(cx);
     if (!st.setResult(SourceFile::ParseSyntaxTree(cx, file)))
-        return OkResult::Error();
+        return ErrorVal();
 
     // Interpret the syntax tree at the given offset.
     return InterpretSyntax(cx, scope, st, 0, resultOut);
@@ -73,7 +73,7 @@ InterpretSyntax(ThreadContext *cx,
       }
       default:
         WH_UNREACHABLE("Unknown node type.");
-        return OkResult::Error();
+        return ErrorVal();
     }
 }
 
@@ -93,12 +93,12 @@ DispatchSyntaxMethod(ThreadContext *cx,
     Result<bool> lookupResult = Wobject::LookupProperty(
         cx, scopeObj, name, &lookupState, &propDesc);
     if (!lookupResult)
-        return OkResult::Error();
+        return ErrorVal();
 
     if (!lookupResult.value()) {
         cx->setError(RuntimeError::MethodLookupFailed,
                      "Could not lookup method on scope", name.get());
-        return OkResult::Error();
+        return ErrorVal();
     }
 
     // Found binding for scope.@integer
@@ -108,7 +108,7 @@ DispatchSyntaxMethod(ThreadContext *cx,
     if (!propDesc->isMethod()) {
         cx->setError(RuntimeError::MethodLookupFailed,
                      "Found non-method binding on scope", name.get());
-        return OkResult::Error();
+        return ErrorVal();
     }
     Local<Function *> func(cx, propDesc->method());
 
@@ -116,7 +116,7 @@ DispatchSyntaxMethod(ThreadContext *cx,
     if (!func->isOperative()) {
         cx->setError(RuntimeError::MethodLookupFailed,
                      "Found applicative scope syntax method", name.get());
-        return OkResult::Error();
+        return ErrorVal();
     }
 
     // Create SyntaxTreeFragment.
@@ -124,7 +124,7 @@ DispatchSyntaxMethod(ThreadContext *cx,
     if (!stFrag.setResult(SyntaxTreeFragment::Create(cx->inHatchery(),
                                                      pst, node->offset())))
     {
-        return OkResult::Error();
+        return ErrorVal();
     }
 
     // Invoke operative function with given arguments.
@@ -157,14 +157,14 @@ InvokeOperativeFunction(ThreadContext *cx,
         WH_ASSERT("Cannot interpret scripted operatives yet!");
         cx->setError(RuntimeError::InternalError,
                      "Cannot interpret scripted operatives yet!");
-        return OkResult::Error();
+        return ErrorVal();
     }
 
     WH_UNREACHABLE("Unknown function type!");
         cx->setError(RuntimeError::InternalError,
                      "Unknown function type seen!",
                      HeapThing::From(func.get()));
-    return OkResult::Error();
+    return ErrorVal();
 }
 
 

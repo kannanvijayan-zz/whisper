@@ -23,7 +23,7 @@ LookupSeenObjects::Create(AllocationContext acx, uint32_t size,
 
     Local<LookupSeenObjects *> newSeen(acx);
     if (!newSeen.setResult(Create(acx, size)))
-        return Result<LookupSeenObjects *>::Error();
+        return ErrorVal();
 
     // Add old entries to new.
     for (uint32_t i = 0; i < other->size_; i++) {
@@ -109,22 +109,22 @@ LookupState::Create(AllocationContext acx,
 {
     Local<LookupSeenObjects *> seen(acx);
     if (!seen.setResult(LookupSeenObjects::Create(acx, 10)))
-        return Result<LookupState *>::Error();
+        return ErrorVal();
 
     Local<LookupNode *> node(acx);
     if (!node.setResult(LookupNode::Create(acx, receiver)))
-        return Result<LookupState *>::Error();
+        return ErrorVal();
 
     Local<LookupState *> lookupState(acx);
     if (!lookupState.setResult(acx.create<LookupState>(
                 receiver, name, seen.handle(), node.handle())))
     {
-        return Result<LookupState *>::Error();
+        return ErrorVal();
     }
 
     // Ensure that the receiver is in the seen set.
     if (!AddToSeen(acx, lookupState, receiver))
-        return Result<LookupState *>::Error();
+        return ErrorVal();
 
     return Result<LookupState *>::Value(lookupState.get());
 }
@@ -144,7 +144,7 @@ LookupState::NextNode(AllocationContext acx,
     Local<Wobject *> obj(acx, cur->object());
     Local<Array<Wobject *> *> delgs(acx, nullptr);
     if (!Wobject::GetDelegates(cx, obj, &delgs))
-        return OkResult::Error();
+        return ErrorVal();
 
     if (delgs->length() > 0) {
         // This object has delegates.  Find the first unseen delegate.
@@ -193,10 +193,10 @@ LookupState::LinkNextNode(AllocationContext acx,
 
     Local<LookupNode *> newNode(acx);
     if (!newNode.setResult(LookupNode::Create(acx, parent, obj)))
-        return OkResult::Error();
+        return ErrorVal();
 
     if (!AddToSeen(acx, lookupState, obj))
-        return OkResult::Error();
+        return ErrorVal();
 
     parent->setIndex(index);
 
@@ -221,7 +221,7 @@ LookupState::AddToSeen(AllocationContext acx,
     uint32_t newSize = oldSeen->size() * 2;
     Local<LookupSeenObjects *> newSeen(acx);
     if (!newSeen.setResult(LookupSeenObjects::Create(acx, newSize, oldSeen)))
-        return OkResult::Error();
+        return ErrorVal();
 
     WH_ASSERT(newSeen->canAdd());
     lookupState->seen_.set(newSeen, lookupState.get());

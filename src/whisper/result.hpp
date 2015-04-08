@@ -8,6 +8,13 @@
 namespace Whisper {
 
 
+class ErrorVal
+{
+  public:
+    ErrorVal() {}
+    ~ErrorVal() {}
+};
+
 template <typename V>
 class Result
 {
@@ -46,6 +53,9 @@ class Result
         if (isValue_)
             new (valuePtr()) V(std::move(other.value()));
     }
+    Result(const ErrorVal &error)
+      : isValue_(false)
+    {}
 
     static Result<V> Value(const V &v) {
         return Result<V>(v);
@@ -136,6 +146,10 @@ class Result<P *>
     {}
 
   public:
+    Result(const ErrorVal &error)
+      : ptr_(nullptr)
+    {}
+
     static Result<P *> Value(P *ptr) {
         return Result<P *>(ptr);
     }
@@ -177,6 +191,10 @@ class OkResult
     OkResult(bool ok) : ok_(ok) {}
 
   public:
+    OkResult(const ErrorVal &error)
+      : ok_(false)
+    {}
+
     static OkResult Ok() {
         return OkResult(true);
     }

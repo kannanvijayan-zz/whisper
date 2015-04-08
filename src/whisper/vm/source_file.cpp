@@ -31,7 +31,7 @@ SourceFile::ParseSyntaxTree(ThreadContext *cx, Handle<SourceFile *> sourceFile)
         SpewParserError("Could not open input file for reading: %s",
                         sourceFile->path()->c_chars());
         cx->setError(RuntimeError::SyntaxParseFailed);
-        return Result<PackedSyntaxTree *>::Error();
+        return ErrorVal();
     }
 
     // Tokenize and parse it.
@@ -44,7 +44,7 @@ SourceFile::ParseSyntaxTree(ThreadContext *cx, Handle<SourceFile *> sourceFile)
     if (!fileNode) {
         WH_ASSERT(parser.hasError());
         SpewParserError("Error during parse: %s", parser.error());
-        return Result<PackedSyntaxTree *>::Error();
+        return ErrorVal();
     }
 
     AllocationContext acx = cx->inTenured();
@@ -63,7 +63,7 @@ SourceFile::ParseSyntaxTree(ThreadContext *cx, Handle<SourceFile *> sourceFile)
 
     Local<PackedSyntaxTree *> packedSt(cx);
     if (!packedSt.setResult(PackedSyntaxTree::Create(acx, buffer, constPool)))
-        return Result<PackedSyntaxTree *>::Error();
+        return ErrorVal();
 
     sourceFile->setSyntaxTree(packedSt);
     return Result<PackedSyntaxTree *>::Value(sourceFile->syntaxTree());
@@ -77,14 +77,14 @@ SourceFile::CreateScope(ThreadContext *cx, Handle<SourceFile *> sourceFile)
     // Ensure we have a packed syntax tree.
     Local<PackedSyntaxTree *> pst(cx);
     if (!pst.setResult(SourceFile::ParseSyntaxTree(cx, sourceFile)))
-        return Result<ModuleScope *>::Error();
+        return ErrorVal();
 
     // Create a module object for the file.  The caller scope for
     // the module is the global.
     Local<GlobalScope *> global(cx, cx->global());
     Local<ModuleScope *> module(acx);
     if (!module.setResult(ModuleScope::Create(acx, global)))
-        return Result<ModuleScope *>::Error();
+        return ErrorVal();
 
     // install the module.
     sourceFile->scope_.set(module, sourceFile.get());
@@ -104,14 +104,14 @@ SourceFile::CreateFunc(
     // Ensure we have a packed syntax tree.
     Local<PackedSyntaxTree *> pst(cx);
     if (!pst.setResult(SourceFile::ParseSyntaxTree(cx, sourceFile)))
-        return Result<ScriptedFunction *>::Error();
+        return ErrorVal();
 
     AllocationContext acx = cx->inTenured();
 
     // Create a new SyntaxTreeFrament pointing to the File node.
     Local<SyntaxTreeFragment *> defn(cx);
     if (!defn.setResult(SyntaxTreeFragment::Create(acx, pst, 0)))
-        return Result<ScriptedFunction *>::Error();
+        return ErrorVal();
 
     // Createa a new scripted function.
     Local<ScriptedFunction *> func(cx);
@@ -119,7 +119,7 @@ SourceFile::CreateFunc(
                             global.convertTo<ScopeObject *>(),
                             /* isOperative = */ false)))
     {
-        return Result<ScriptedFunction *>::Error();
+        return ErrorVal();
     }
 
     // Save scripted function to source file.

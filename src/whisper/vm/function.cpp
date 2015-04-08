@@ -50,12 +50,12 @@ FunctionObject::Create(AllocationContext acx, Handle<Function *> func)
     // Allocate empty array of delegates.
     Local<Array<Wobject *> *> delegates(acx);
     if (!delegates.setResult(Array<Wobject *>::CreateEmpty(acx)))
-        return Result<FunctionObject *>::Error();
+        return ErrorVal();
 
     // Allocate a dictionary.
     Local<PropertyDict *> props(acx);
     if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
-        return Result<FunctionObject *>::Error();
+        return ErrorVal();
 
     return acx.create<FunctionObject>(delegates.handle(), props.handle(),
                                       func);

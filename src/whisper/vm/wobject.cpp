@@ -44,7 +44,7 @@ Wobject::GetDelegates(ThreadContext *cx,
     }
 
     WH_UNREACHABLE("Unknown object kind");
-    return OkResult::Error();
+    return ErrorVal();
 }
 
 /* static */ Result<bool>
@@ -83,7 +83,7 @@ Wobject::GetProperty(ThreadContext *cx,
     }
 
     WH_UNREACHABLE("Unknown object kind");
-    return Result<bool>::Error();
+    return ErrorVal();
 }
 
 /* static */ OkResult
@@ -118,7 +118,7 @@ Wobject::DefineProperty(ThreadContext *cx,
     }
 
     WH_UNREACHABLE("Unknown object kind");
-    return OkResult::Error();
+    return ErrorVal();
 }
 
 
@@ -135,7 +135,7 @@ Wobject::LookupProperty(
     // Allocate a lookup state.
     Local<LookupState *> lookupState(cx);
     if (!lookupState.setResult(LookupState::Create(acx, obj, name)))
-        return Result<bool>::Error();
+        return ErrorVal();
 
     // Recursive lookup through nodes.
     Local<LookupNode *> curNode(cx, lookupState->node());
@@ -145,7 +145,7 @@ Wobject::LookupProperty(
         Local<PropertyDescriptor> defn(cx);
         Result<bool> prop = Wobject::GetProperty(cx, curObj, name, &defn);
         if (!prop)
-            return Result<bool>::Error();
+            return ErrorVal();
 
         // Property found on object.
         if (prop.value()) {
@@ -156,7 +156,7 @@ Wobject::LookupProperty(
 
         // Property not found on object, go to next lookup node.
         if (!LookupState::NextNode(acx, lookupState, &curNode))
-            return Result<bool>::Error();
+            return ErrorVal();
     }
 
     // If we got here, no property was found.

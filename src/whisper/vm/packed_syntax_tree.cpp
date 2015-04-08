@@ -15,12 +15,12 @@ PackedSyntaxTree::Create(AllocationContext acx,
     // Allocate data array.
     Local<Array<uint32_t> *> dataArray(acx);
     if (!dataArray.setResult(Array<uint32_t>::CreateCopy(acx, data)))
-        return Result<PackedSyntaxTree *>::Error();
+        return ErrorVal();
 
     // Allocate constPool array.
     Local<Array<Box> *> constPoolArray(acx);
     if (!constPoolArray.setResult(Array<Box>::CreateCopy(acx, constPool)))
-        return Result<PackedSyntaxTree *>::Error();
+        return ErrorVal();
 
     return acx.create<PackedSyntaxTree>(dataArray.handle(),
                                         constPoolArray.handle());

@@ -13,13 +13,13 @@ CallScope::Create(AllocationContext acx,
     // Allocate array of delegates containing caller scope.
     Local<Array<Wobject *> *> delegates(acx);
     if (!delegates.setResult(Array<Wobject *>::CreateFill(acx, 1, nullptr)))
-        return Result<CallScope *>::Error();
+        return ErrorVal();
     delegates->set(0, callerScope.get());
 
     // Allocate a dictionary.
     Local<PropertyDict *> props(acx);
     if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
-        return Result<CallScope *>::Error();
+        return ErrorVal();
 
     return acx.create<CallScope>(delegates.handle(), props.handle());
 }
@@ -63,13 +63,13 @@ ModuleScope::Create(AllocationContext acx, Handle<GlobalScope *> global)
     // Allocate array of delegates containing caller scope.
     Local<Array<Wobject *> *> delegates(acx);
     if (!delegates.setResult(Array<Wobject *>::CreateFill(acx, 1, nullptr)))
-        return Result<ModuleScope *>::Error();
+        return ErrorVal();
     delegates->set(0, global.get());
 
     // Allocate a dictionary.
     Local<PropertyDict *> props(acx);
     if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
-        return Result<ModuleScope *>::Error();
+        return ErrorVal();
 
     return acx.create<ModuleScope>(delegates.handle(), props.handle());
 }
@@ -113,12 +113,12 @@ GlobalScope::Create(AllocationContext acx)
     // Allocate empty array of delegates.
     Local<Array<Wobject *> *> delegates(acx);
     if (!delegates.setResult(Array<Wobject *>::CreateEmpty(acx)))
-        return Result<GlobalScope *>::Error();
+        return ErrorVal();
 
     // Allocate a dictionary.
     Local<PropertyDict *> props(acx);
     if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
-        return Result<GlobalScope *>::Error();
+        return ErrorVal();
 
     return acx.create<GlobalScope>(delegates.handle(), props.handle());
 }

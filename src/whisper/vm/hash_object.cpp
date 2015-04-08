@@ -64,7 +64,7 @@ HashObject::DefineProperty(ThreadContext *cx,
         return OkResult::Ok();
 
     // TODO: Try to enlarge dict and add.
-    return OkResult::Error();
+    return ErrorVal();
 }
 
 

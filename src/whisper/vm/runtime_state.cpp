@@ -15,12 +15,12 @@ RuntimeState::Create(AllocationContext acx)
     if (!namePool.setResult(
             Array<String *>::CreateFill(acx, NamePool::Size(), vmstr.handle())))
     {
-        return Result<RuntimeState *>::Error();
+        return ErrorVal();
     }
 
 #define ALLOC_STRING_(name, str) \
     if (!vmstr.setResult(VM::String::Create(acx, str))) \
-        return Result<RuntimeState *>::Error(); \
+        return ErrorVal(); \
     namePool->set(NamePool::IndexOfId(NamePool::Id::name), vmstr.get());
         WHISPER_DEFN_NAME_POOL(ALLOC_STRING_)
 #undef ALLOC_STRING_

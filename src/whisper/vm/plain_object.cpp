@@ -13,7 +13,7 @@ PlainObject::Create(AllocationContext acx,
     // Allocate a dictionary.
     Local<PropertyDict *> props(acx);
     if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
-        return Result<PlainObject *>::Error();
+        return ErrorVal();
 
     return acx.create<PlainObject>(delegates, props.handle());
 }
