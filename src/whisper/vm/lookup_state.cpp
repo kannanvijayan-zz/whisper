@@ -115,8 +115,18 @@ LookupState::Create(AllocationContext acx,
     if (!node.setResult(LookupNode::Create(acx, receiver)))
         return Result<LookupState *>::Error();
 
-    return acx.create<LookupState>(receiver, name,
-                                   seen.handle(), node.handle());
+    Local<LookupState *> lookupState(acx);
+    if (!lookupState.setResult(acx.create<LookupState>(
+                receiver, name, seen.handle(), node.handle())))
+    {
+        return Result<LookupState *>::Error();
+    }
+
+    // Ensure that the receiver is in the seen set.
+    if (!AddToSeen(acx, lookupState, receiver))
+        return Result<LookupState *>::Error();
+
+    return Result<LookupState *>::Value(lookupState.get());
 }
 
 /* static */ OkResult
