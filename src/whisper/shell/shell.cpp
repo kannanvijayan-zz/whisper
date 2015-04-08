@@ -114,10 +114,17 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Prase a syntax tree from the source file.
+    // Parse a syntax tree from the source file.
     Local<VM::PackedSyntaxTree *> packedSt(cx);
     if (!packedSt.setResult(VM::SourceFile::ParseSyntaxTree(cx, sourceFile))) {
         std::cerr << "Error parsing syntax tree." << std::endl;
+        return 1;
+    }
+
+    // Create a module scope object for the file.
+    Local<VM::ModuleScope *> module(cx);
+    if (!module.setResult(VM::SourceFile::CreateScope(cx, sourceFile))) {
+        std::cerr << "Error creating module scope." << std::endl;
         return 1;
     }
 
