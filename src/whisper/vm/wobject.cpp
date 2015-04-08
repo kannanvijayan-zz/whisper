@@ -139,11 +139,11 @@ Wobject::LookupProperty(
 
     // Recursive lookup through nodes.
     Local<LookupNode *> curNode(cx, lookupState->node());
-    for (;;) {
+    while (curNode.get() != nullptr) {
         // Check current node.
         Local<Wobject *> curObj(cx, curNode->object());
         Local<PropertyDescriptor> defn(cx);
-        Result<bool> prop = Wobject::GetProperty(cx, obj, name, &defn);
+        Result<bool> prop = Wobject::GetProperty(cx, curObj, name, &defn);
         if (!prop)
             return Result<bool>::Error();
 
