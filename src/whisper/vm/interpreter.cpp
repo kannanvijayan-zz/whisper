@@ -17,7 +17,7 @@ InterpretSourceFile(ThreadContext *cx,
                     Handle<ScopeObject *> scope,
                     MutHandle<Box> resultOut)
 {
-    WH_ASSERT(cx->lastFrame() == nullptr);
+    WH_ASSERT(!cx->hasLastFrame());
     WH_ASSERT(file.get() != nullptr);
     WH_ASSERT(scope.get() != nullptr);
 
@@ -37,7 +37,7 @@ InterpretSyntax(ThreadContext *cx,
                 uint32_t offset,
                 MutHandle<Box> resultOut)
 {
-    WH_ASSERT(cx->lastFrame() == nullptr);
+    WH_ASSERT(!cx->hasLastFrame());
     WH_ASSERT(scope.get() != nullptr);
     WH_ASSERT(pst.get() != nullptr);
 
