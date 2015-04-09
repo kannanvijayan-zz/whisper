@@ -148,8 +148,11 @@ enum class RuntimeError
     MemAllocFailed,
     SyntaxParseFailed,
     MethodLookupFailed,
-    InternalError
+    InternalError,
+    ExceptionRaised
 };
+
+const char *RuntimeErrorString(RuntimeError err);
 
 //
 // ThreadContext
@@ -270,31 +273,49 @@ class ThreadContext
         return errorThing_;
     }
 
-    void setError(RuntimeError error) {
+    OkResult setError(RuntimeError error) {
         WH_ASSERT(!hasError());
         WH_ASSERT(!hasErrorString());
         WH_ASSERT(!hasErrorThing());
         error_ = error;
+        return ErrorVal();
     }
-    void setError(RuntimeError error, const char *string) {
+    OkResult setError(RuntimeError error, const char *string) {
         WH_ASSERT(!hasError());
         WH_ASSERT(!hasErrorString());
         WH_ASSERT(!hasErrorThing());
         error_ = error;
         errorString_ = string;
+        return ErrorVal();
     }
-    void setError(RuntimeError error, const char *string, HeapThing *thing) {
+    OkResult setError(RuntimeError error, const char *string,
+                      HeapThing *thing)
+    {
         WH_ASSERT(!hasError());
         WH_ASSERT(!hasErrorString());
         WH_ASSERT(!hasErrorThing());
         error_ = error;
         errorString_ = string;
         errorThing_ = thing;
+        return ErrorVal();
     }
     template <typename T>
-    void setError(RuntimeError error, const char *string, T *thing) {
-        setError(error, string, HeapThing::From(thing));
+    OkResult setError(RuntimeError error, const char *string, T *thing) {
+        return setError(error, string, HeapThing::From(thing));
     }
+
+    OkResult setExceptionRaised(const char *string) {
+        return setError(RuntimeError::ExceptionRaised, string);
+    }
+    OkResult setExceptionRaised(const char *string, HeapThing *thing) {
+        return setError(RuntimeError::ExceptionRaised, string, thing);
+    }
+    template <typename T>
+    OkResult setExceptionRaised(const char *string, T *thing) {
+        return setError<T>(RuntimeError::ExceptionRaised, string, thing);
+    }
+
+    size_t formatError(char *buf, size_t bufSize);
 
     AllocationContext inHatchery();
     AllocationContext inTenured();

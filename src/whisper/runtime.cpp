@@ -181,6 +181,32 @@ AllocationContext::AllocationContext(ThreadContext *cx, Slab *slab)
 
 
 //
+// RuntimeError
+//
+
+const char *
+RuntimeErrorString(RuntimeError err)
+{
+    switch (err) {
+      case RuntimeError::None:
+        return "None";
+      case RuntimeError::MemAllocFailed:
+        return "MemAllocFailed";
+      case RuntimeError::SyntaxParseFailed:
+        return "SyntaxParseFailed";
+      case RuntimeError::MethodLookupFailed:
+        return "MethodLookupFailed";
+      case RuntimeError::InternalError:
+        return "InternalError";
+      case RuntimeError::ExceptionRaised:
+        return "ExceptionRaised";
+      default:
+        return "UNKNOWN";
+    }
+}
+
+
+//
 // ThreadContext
 //
 
@@ -237,6 +263,26 @@ ThreadContext::popLastFrame()
 {
     WH_ASSERT(lastFrame_ != nullptr);
     lastFrame_ = lastFrame_->caller();
+}
+
+size_t
+ThreadContext::formatError(char *buf, size_t bufSize)
+{
+    WH_ASSERT(hasError());
+    if (hasErrorString()) {
+        if (hasErrorThing()) {
+            return snprintf(buf, bufSize, "%s: %s [%s]",
+                            RuntimeErrorString(error()),
+                            errorString(),
+                            errorThing()->header().formatString());
+        }
+
+        return snprintf(buf, bufSize, "%s: %s",
+                        RuntimeErrorString(error()),
+                        errorString());
+    }
+
+    return snprintf(buf, bufSize, "%s", RuntimeErrorString(error()));
 }
 
 AllocationContext
