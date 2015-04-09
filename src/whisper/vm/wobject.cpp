@@ -2,6 +2,7 @@
 #include "vm/wobject.hpp"
 #include "vm/plain_object.hpp"
 #include "vm/scope_object.hpp"
+#include "vm/global_scope.hpp"
 #include "vm/lookup_state.hpp"
 #include "vm/properties.hpp"
 

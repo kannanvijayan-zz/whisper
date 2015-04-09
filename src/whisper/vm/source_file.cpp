@@ -8,6 +8,7 @@
 #include "vm/function.hpp"
 #include "vm/source_file.hpp"
 #include "vm/scope_object.hpp"
+#include "vm/global_scope.hpp"
 
 namespace Whisper {
 namespace VM {

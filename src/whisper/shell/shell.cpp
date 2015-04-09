@@ -22,6 +22,7 @@
 #include "vm/string.hpp"
 #include "vm/box.hpp"
 #include "vm/scope_object.hpp"
+#include "vm/global_scope.hpp"
 #include "vm/source_file.hpp"
 #include "vm/packed_syntax_tree.hpp"
 #include "vm/function.hpp"

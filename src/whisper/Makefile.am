@@ -29,6 +29,7 @@ shared_cpp = \
     vm/hash_object.cpp \
     vm/plain_object.cpp \
     vm/scope_object.cpp \
+    vm/global_scope.cpp \
     vm/packed_syntax_tree.cpp \
     vm/property_dict.cpp \
     vm/lookup_state.cpp \
