@@ -76,10 +76,7 @@ GlobalScope::DefineProperty(ThreadContext *cx,
 #define DECLARE_LIFT_FN_(name) \
     static OkResult Lift_##name( \
         ThreadContext *cx, \
-        Handle<LookupState *> lookupState, \
-        Handle<ScopeObject *> callerScope, \
-        Handle<NativeFunction *> nativeFunc, \
-        Handle<Wobject *> receiver, \
+        Handle<NativeCallInfo> callInfo, \
         ArrayHandle<SyntaxTreeRef> stFrag, \
         MutHandle<Box> resultOut);
 
@@ -125,10 +122,7 @@ GlobalScope::BindSyntaxHandlers(AllocationContext acx,
 #define IMPL_LIFT_FN_(name) \
     static OkResult Lift_##name( \
         ThreadContext *cx, \
-        Handle<LookupState *> lookupState, \
-        Handle<ScopeObject *> callerScope, \
-        Handle<NativeFunction *> nativeFunc, \
-        Handle<Wobject *> receiver, \
+        Handle<NativeCallInfo> callInfo, \
         ArrayHandle<SyntaxTreeRef> stFrag, \
         MutHandle<Box> resultOut)
 

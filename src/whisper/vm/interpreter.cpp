@@ -219,12 +219,13 @@ InvokeOperativeFunction(ThreadContext *cx,
 {
     // Call native if native.
     if (func->isNative()) {
-        Local<NativeFunction *> nativeFunc(cx, func->asNative());
-        WH_ASSERT(nativeFunc->isOperative());
+        WH_ASSERT(func->asNative()->isOperative());
+        Local<NativeCallInfo> callInfo(cx,
+            NativeCallInfo(lookupState, callerScope,
+                           func->asNative(), receiver));
 
-        NativeOperativeFuncPtr opNatF = nativeFunc->operative();
-        return opNatF(cx, lookupState, callerScope, nativeFunc, receiver,
-                      ArrayHandle<SyntaxTreeRef>(stRef),
+        NativeOperativeFuncPtr opNatF = func->asNative()->operative();
+        return opNatF(cx, callInfo, ArrayHandle<SyntaxTreeRef>(stRef),
                       resultOut);
     }
 

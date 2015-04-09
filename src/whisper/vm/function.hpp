@@ -68,21 +68,55 @@ class Function
     }
 };
 
+class NativeCallInfo
+{
+    friend struct TraceTraits<NativeCallInfo>;
+
+  private:
+    StackField<LookupState *> lookupState_;
+    StackField<ScopeObject *> callerScope_;
+    StackField<NativeFunction *> calleeFunc_;
+    StackField<Wobject *> receiver_;
+
+  public:
+    NativeCallInfo(LookupState *lookupState,
+                   ScopeObject *callerScope,
+                   NativeFunction *calleeFunc,
+                   Wobject *receiver)
+      : lookupState_(lookupState),
+        callerScope_(callerScope),
+        calleeFunc_(calleeFunc),
+        receiver_(receiver)
+    {
+        WH_ASSERT(lookupState_ != nullptr);
+        WH_ASSERT(callerScope_ != nullptr);
+        WH_ASSERT(calleeFunc_ != nullptr);
+        WH_ASSERT(receiver_ != nullptr);
+    }
+
+    LookupState *lookupState() const {
+        return lookupState_;
+    }
+    ScopeObject *callerScope() const {
+        return callerScope_;
+    }
+    NativeFunction *calleeFunc() const {
+        return calleeFunc_;
+    }
+    Wobject *receiver() const {
+        return receiver_;
+    }
+};
+
 typedef OkResult (*NativeApplicativeFuncPtr)(
         ThreadContext *cx,
-        Handle<LookupState *> lookupState,
-        Handle<ScopeObject *> callerScope,
-        Handle<NativeFunction *> calleeFunc,
-        Handle<Wobject *> receiver,
+        Handle<NativeCallInfo> callInfo,
         ArrayHandle<Box> args,
         MutHandle<Box> result);
 
 typedef OkResult (*NativeOperativeFuncPtr)(
         ThreadContext *cx,
-        Handle<LookupState *> lookupState,
-        Handle<ScopeObject *> callerScope,
-        Handle<NativeFunction *> calleeFunc,
-        Handle<Wobject *> receiver,
+        Handle<NativeCallInfo> callInfo,
         ArrayHandle<SyntaxTreeRef> args,
         MutHandle<Box> result);
 
@@ -290,6 +324,35 @@ struct TraceTraits<VM::FunctionObject>
                        const void *start, const void *end)
     {
         obj.func_.update(updater, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::NativeCallInfo>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const VM::NativeCallInfo &info,
+                     const void *start, const void *end)
+    {
+        info.lookupState_.scan(scanner, start, end);
+        info.callerScope_.scan(scanner, start, end);
+        info.calleeFunc_.scan(scanner, start, end);
+        info.receiver_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater &updater, VM::NativeCallInfo &info,
+                       const void *start, const void *end)
+    {
+        info.lookupState_.update(updater, start, end);
+        info.callerScope_.update(updater, start, end);
+        info.calleeFunc_.update(updater, start, end);
+        info.receiver_.update(updater, start, end);
     }
 };
 
