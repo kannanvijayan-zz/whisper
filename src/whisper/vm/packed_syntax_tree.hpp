@@ -175,22 +175,6 @@ struct TraceTraits<VM::SyntaxTreeFragment>
     }
 };
 
-template <>
-struct StackTraits<VM::SyntaxTreeRef>
-{
-    StackTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr StackFormat Format = StackFormat::SyntaxTreeRef;
-};
-template <>
-struct StackFormatTraits<StackFormat::SyntaxTreeRef>
-{
-    StackFormatTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    typedef VM::SyntaxTreeRef Type;
-};
 
 template <>
 struct TraceTraits<VM::SyntaxTreeRef>

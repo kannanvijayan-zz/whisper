@@ -120,26 +120,15 @@ struct ArrayTraits<Box>
 } // namespace VM
 
 
-template <>
-struct StackTraits<VM::Box>
-{
-    StackTraits() = delete;
-    static constexpr bool Specialized = true;
-    static constexpr StackFormat Format = StackFormat::Box;
-};
+//
+// GC-Specializations.
+//
 
 template <>
 struct FieldTraits<VM::Box>
 {
     FieldTraits() = delete;
     static constexpr bool Specialized = true;
-};
-
-template <>
-struct StackFormatTraits<StackFormat::Box>
-{
-    StackFormatTraits() = delete;
-    typedef VM::Box Type;
 };
 
 template <>

@@ -123,36 +123,6 @@ class PropertyDescriptor
 //
 
 template <>
-struct StackTraits<VM::PropertyName>
-{
-    StackTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr StackFormat Format = StackFormat::PropertyName;
-};
-template <>
-struct StackTraits<VM::PropertyDescriptor>
-{
-    StackTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr StackFormat Format = StackFormat::PropertyDescriptor;
-};
-
-template <>
-struct StackFormatTraits<StackFormat::PropertyName>
-{
-    StackFormatTraits() = delete;
-    typedef VM::PropertyName Type;
-};
-template <>
-struct StackFormatTraits<StackFormat::PropertyDescriptor>
-{
-    StackFormatTraits() = delete;
-    typedef VM::PropertyDescriptor Type;
-};
-
-template <>
 struct TraceTraits<VM::PropertyName>
 {
     TraceTraits() = delete;

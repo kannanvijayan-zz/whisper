@@ -20,6 +20,25 @@
       }; \
     }
 
+#define PREDECLARE_STACK_OBJ_FMT_(name, fmtName) \
+    namespace Whisper { \
+      namespace VM { \
+        class name; \
+      } \
+      template <> struct StackTraits<VM::name> { \
+        StackTraits() = delete; \
+        static constexpr bool Specialized = true; \
+        static constexpr StackFormat Format = StackFormat::fmtName; \
+      }; \
+      template <> struct StackFormatTraits<StackFormat::fmtName> { \
+        StackFormatTraits() = delete; \
+        typedef VM::name Type; \
+      }; \
+    }
+
+#define PREDECLARE_STACK_OBJ_(name) \
+    PREDECLARE_STACK_OBJ_FMT_(name, name)
+
 #define PREDECLARE_FIXSIZED_HEAP_OBJ_(name) \
     PREDECLARE_HEAP_OBJ_(name, name, false)
 
@@ -37,10 +56,18 @@
       }; \
     }
 
+PREDECLARE_STACK_OBJ_(Box);
+
 PREDECLARE_VARSIZED_HEAP_OBJ_(String);
 PREDECLARE_FIXSIZED_HEAP_OBJ_(SourceFile);
+
 PREDECLARE_FIXSIZED_HEAP_OBJ_(PackedSyntaxTree);
 PREDECLARE_FIXSIZED_HEAP_OBJ_(SyntaxTreeFragment);
+PREDECLARE_STACK_OBJ_(SyntaxTreeRef);
+
+PREDECLARE_STACK_OBJ_(PropertyName);
+PREDECLARE_STACK_OBJ_(PropertyDescriptor);
+
 PREDECLARE_FIXSIZED_HEAP_OBJ_(RuntimeState);
 PREDECLARE_VARSIZED_HEAP_OBJ_(PropertyDict);
 PREDECLARE_VARSIZED_HEAP_OBJ_(LookupSeenObjects);
@@ -66,6 +93,8 @@ PREDECLARE_VARSIZED_HEAP_OBJ_(Frame);
 #undef PREDECLARE_BASE_HEAP_TYPE_
 #undef PREDECLARE_FIXSIZED_HEAP_OBJ_
 #undef PREDECLARE_VARSIZED_HEAP_OBJ_
+#undef PREDECLARE_STACK_OBJ_
+#undef PREDECLARE_STACK_OBJ_FMT_
 #undef PREDECLARE_HEAP_OBJ_
 
 
