@@ -216,6 +216,9 @@ static OkResult Lift_File(
     ArrayHandle<VM::SyntaxTreeFragment *> stFrag,
     MutHandle<VM::Box> resultOut)
 {
+    std::cerr << "Lift_File: syntax node "
+              << stFrag.get(0)->nodeTypeCString()
+              << std::endl;
     return cx->setExceptionRaised("File syntax handler not implemented.");
 }
 

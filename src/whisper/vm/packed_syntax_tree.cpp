@@ -2,6 +2,8 @@
 #include "runtime_inlines.hpp"
 #include "vm/array.hpp"
 #include "vm/packed_syntax_tree.hpp"
+#include "parser/syntax_tree.hpp"
+#include "parser/packed_syntax.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -32,6 +34,20 @@ SyntaxTreeFragment::Create(AllocationContext acx,
                            uint32_t offset)
 {
     return acx.create<SyntaxTreeFragment>(pst, offset);
+}
+
+AST::NodeType
+SyntaxTreeFragment::nodeType() const
+{
+    // Create a packed syntax node.
+    AST::PackedBaseNode node(pst_->data(), offset_);
+    return node.type();
+}
+
+const char *
+SyntaxTreeFragment::nodeTypeCString() const
+{
+    return AST::NodeTypeString(nodeType());
 }
 
 

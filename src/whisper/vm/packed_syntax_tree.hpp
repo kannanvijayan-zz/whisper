@@ -1,6 +1,7 @@
 #ifndef WHISPER__VM__PACKED_SYNTAX_TREE_HPP
 #define WHISPER__VM__PACKED_SYNTAX_TREE_HPP
 
+#include "parser/syntax_tree.hpp"
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
 #include "vm/string.hpp"
@@ -80,6 +81,9 @@ class SyntaxTreeFragment
     uint32_t offset() const {
         return offset_;
     }
+
+    AST::NodeType nodeType() const;
+    const char *nodeTypeCString() const;
 };
 
 
