@@ -135,6 +135,10 @@ int main(int argc, char **argv) {
             module.handle().convertTo<VM::ScopeObject *>(), &result))
     {
         std::cerr << "Error interpreting code!" << std::endl;
+        WH_ASSERT(cx->hasError());
+        char buf[512];
+        cx->formatError(buf, 512);
+        std::cerr << "ERROR: " << buf << std::endl;
         return 1;
     }
 
@@ -192,10 +196,11 @@ static OkResult
 initialize_thread_globals(ThreadContext *cx)
 {
     Local<VM::RuntimeState *> rtState(cx, cx->runtimeState());
-    if (!def_global_prop(cx, rtState->nm_AtInteger(), &Lift_Integer))
-        return ErrorVal();
 
     if (!def_global_prop(cx, rtState->nm_AtFile(), &Lift_File))
+        return ErrorVal();
+
+    if (!def_global_prop(cx, rtState->nm_AtInteger(), &Lift_Integer))
         return ErrorVal();
 
     return OkVal();
@@ -211,8 +216,7 @@ static OkResult Lift_File(
     ArrayHandle<VM::SyntaxTreeFragment *> stFrag,
     MutHandle<VM::Box> resultOut)
 {
-    fprintf(stderr, "HANDLING FILE!\n");
-    return ErrorVal();
+    return cx->setExceptionRaised("File syntax handler not implemented.");
 }
 
 
@@ -225,5 +229,5 @@ static OkResult Lift_Integer(
     ArrayHandle<VM::SyntaxTreeFragment *> stFrag,
     MutHandle<VM::Box> resultOut)
 {
-    return ErrorVal();
+    return cx->setExceptionRaised("Integer syntax handler not implemented.");
 }
