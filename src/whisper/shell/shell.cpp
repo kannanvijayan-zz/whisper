@@ -26,6 +26,7 @@
 #include "vm/packed_syntax_tree.hpp"
 #include "vm/function.hpp"
 #include "vm/runtime_state.hpp"
+#include "vm/interpreter.hpp"
 
 #include "shell/shell_tracer.hpp"
 
@@ -128,15 +129,12 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Look up '@integer' on the module.
-    Local<VM::LookupState *> lookupState(cx);
-    Local<VM::PropertyDescriptor> propDesc(cx);
-    Local<VM::String *> atIntN(cx, cx->runtimeState()->nm_AtInteger());
-    if (!VM::Wobject::LookupProperty(cx,
-            module.handle().convertTo<VM::Wobject *>(),
-            atIntN, &lookupState, &propDesc))
+    // Interpret the file.
+    Local<VM::Box> result(cx);
+    if (!VM::InterpretSourceFile(cx, sourceFile,
+            module.handle().convertTo<VM::ScopeObject *>(), &result))
     {
-        std::cerr << "Error looking up @integer on module." << std::endl;
+        std::cerr << "Error interpreting code!" << std::endl;
         return 1;
     }
 
@@ -158,25 +156,63 @@ static OkResult Lift_Integer(
     ArrayHandle<VM::SyntaxTreeFragment *> stFrag,
     MutHandle<VM::Box> resultOut);
 
+static OkResult Lift_File(
+    ThreadContext *cx,
+    Handle<VM::LookupState *> lookupState,
+    Handle<VM::ScopeObject *> callerScope,
+    Handle<VM::NativeFunction *> nativeFunc,
+    Handle<VM::Wobject *> receiver,
+    ArrayHandle<VM::SyntaxTreeFragment *> stFrag,
+    MutHandle<VM::Box> resultOut);
+
 static OkResult
-initialize_thread_globals(ThreadContext *cx)
+def_global_prop(ThreadContext *cx,
+                VM::String *name,
+                VM::NativeOperativeFuncPtr opFunc)
 {
     AllocationContext acx = cx->inTenured();
 
-    // Allocate '@integer' operative native function.
-    Local<VM::NativeFunction *> atIntF(cx);
-    if (!atIntF.setResult(VM::NativeFunction::Create(acx, &Lift_Integer)))
+    Local<VM::String *> rootedName(cx, name);
+
+    // Allocate NativeFunction object.
+    Local<VM::NativeFunction *> natF(cx);
+    if (!natF.setResult(VM::NativeFunction::Create(acx, opFunc)))
         return ErrorVal();
-    Local<VM::String *> atIntN(cx, cx->runtimeState()->nm_AtInteger());
-    Local<VM::PropertyDescriptor> propDesc(cx,
-        VM::PropertyDescriptor(atIntF.get()));
+    Local<VM::PropertyDescriptor> desc(cx, VM::PropertyDescriptor(natF.get()));
 
     // Bind method on global.
     Local<VM::GlobalScope *> global(cx, cx->global());
-    if (!VM::GlobalScope::DefineProperty(cx, global, atIntN, propDesc))
+    if (!VM::GlobalScope::DefineProperty(cx, global, rootedName, desc))
         return ErrorVal();
 
     return OkVal();
+}
+
+static OkResult
+initialize_thread_globals(ThreadContext *cx)
+{
+    Local<VM::RuntimeState *> rtState(cx, cx->runtimeState());
+    if (!def_global_prop(cx, rtState->nm_AtInteger(), &Lift_Integer))
+        return ErrorVal();
+
+    if (!def_global_prop(cx, rtState->nm_AtFile(), &Lift_File))
+        return ErrorVal();
+
+    return OkVal();
+}
+
+
+static OkResult Lift_File(
+    ThreadContext *cx,
+    Handle<VM::LookupState *> lookupState,
+    Handle<VM::ScopeObject *> callerScope,
+    Handle<VM::NativeFunction *> nativeFunc,
+    Handle<VM::Wobject *> receiver,
+    ArrayHandle<VM::SyntaxTreeFragment *> stFrag,
+    MutHandle<VM::Box> resultOut)
+{
+    fprintf(stderr, "HANDLING FILE!\n");
+    return ErrorVal();
 }
 
 
