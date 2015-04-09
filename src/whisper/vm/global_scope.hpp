@@ -38,6 +38,10 @@ class GlobalScope : public ScopeObject
                                    Handle<GlobalScope *> obj,
                                    Handle<String *> name,
                                    Handle<PropertyDescriptor> defn);
+
+  private:
+    static OkResult BindSyntaxHandlers(AllocationContext acx,
+                                       Handle<GlobalScope *> obj);
 };
 
 

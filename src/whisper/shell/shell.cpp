@@ -67,8 +67,6 @@ struct HeapPrintVisitor : public TracerVisitor
     }
 };
 
-static OkResult initialize_thread_globals(ThreadContext *cx);
-
 int main(int argc, char **argv) {
     std::cout << "Whisper says hello." << std::endl;
 
@@ -96,10 +94,6 @@ int main(int argc, char **argv) {
     }
 
     ThreadContext *cx = runtime.threadContext();
-    if (!initialize_thread_globals(cx)) {
-        std::cerr << "ThreadContext error: " << cx->errorString() << std::endl;
-        return 1;
-    }
     AllocationContext acx(cx->inTenured());
 
     // Create a new String containing the file name.
@@ -149,89 +143,4 @@ int main(int argc, char **argv) {
     fprintf(stderr, "}\n");
 
     return 0;
-}
-
-
-static OkResult Lift_Integer(
-    ThreadContext *cx,
-    Handle<VM::LookupState *> lookupState,
-    Handle<VM::ScopeObject *> callerScope,
-    Handle<VM::NativeFunction *> nativeFunc,
-    Handle<VM::Wobject *> receiver,
-    ArrayHandle<VM::SyntaxTreeFragment *> stFrag,
-    MutHandle<VM::Box> resultOut);
-
-static OkResult Lift_File(
-    ThreadContext *cx,
-    Handle<VM::LookupState *> lookupState,
-    Handle<VM::ScopeObject *> callerScope,
-    Handle<VM::NativeFunction *> nativeFunc,
-    Handle<VM::Wobject *> receiver,
-    ArrayHandle<VM::SyntaxTreeFragment *> stFrag,
-    MutHandle<VM::Box> resultOut);
-
-static OkResult
-def_global_prop(ThreadContext *cx,
-                VM::String *name,
-                VM::NativeOperativeFuncPtr opFunc)
-{
-    AllocationContext acx = cx->inTenured();
-
-    Local<VM::String *> rootedName(cx, name);
-
-    // Allocate NativeFunction object.
-    Local<VM::NativeFunction *> natF(cx);
-    if (!natF.setResult(VM::NativeFunction::Create(acx, opFunc)))
-        return ErrorVal();
-    Local<VM::PropertyDescriptor> desc(cx, VM::PropertyDescriptor(natF.get()));
-
-    // Bind method on global.
-    Local<VM::GlobalScope *> global(cx, cx->global());
-    if (!VM::GlobalScope::DefineProperty(cx, global, rootedName, desc))
-        return ErrorVal();
-
-    return OkVal();
-}
-
-static OkResult
-initialize_thread_globals(ThreadContext *cx)
-{
-    Local<VM::RuntimeState *> rtState(cx, cx->runtimeState());
-
-    if (!def_global_prop(cx, rtState->nm_AtFile(), &Lift_File))
-        return ErrorVal();
-
-    if (!def_global_prop(cx, rtState->nm_AtInteger(), &Lift_Integer))
-        return ErrorVal();
-
-    return OkVal();
-}
-
-
-static OkResult Lift_File(
-    ThreadContext *cx,
-    Handle<VM::LookupState *> lookupState,
-    Handle<VM::ScopeObject *> callerScope,
-    Handle<VM::NativeFunction *> nativeFunc,
-    Handle<VM::Wobject *> receiver,
-    ArrayHandle<VM::SyntaxTreeFragment *> stFrag,
-    MutHandle<VM::Box> resultOut)
-{
-    std::cerr << "Lift_File: syntax node "
-              << stFrag.get(0)->nodeTypeCString()
-              << std::endl;
-    return cx->setExceptionRaised("File syntax handler not implemented.");
-}
-
-
-static OkResult Lift_Integer(
-    ThreadContext *cx,
-    Handle<VM::LookupState *> lookupState,
-    Handle<VM::ScopeObject *> callerScope,
-    Handle<VM::NativeFunction *> nativeFunc,
-    Handle<VM::Wobject *> receiver,
-    ArrayHandle<VM::SyntaxTreeFragment *> stFrag,
-    MutHandle<VM::Box> resultOut)
-{
-    return cx->setExceptionRaised("Integer syntax handler not implemented.");
 }
