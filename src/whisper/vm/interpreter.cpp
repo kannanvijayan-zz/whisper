@@ -154,6 +154,7 @@ InterpretSyntax(ThreadContext *cx,
 
       default:
         WH_UNREACHABLE("Unknown node type.");
+        cx->setError(RuntimeError::InternalError, "Saw unknown node type!");
         return ErrorVal();
     }
 
@@ -172,16 +173,15 @@ DispatchSyntaxMethod(ThreadContext *cx,
     Local<LookupState *> lookupState(cx);
     Local<PropertyDescriptor> propDesc(cx);
 
-    // Lookup methodn ame on scope.
+    // Lookup method name on scope.
     Result<bool> lookupResult = Wobject::LookupProperty(
         cx, scopeObj, name, &lookupState, &propDesc);
     if (!lookupResult)
         return ErrorVal();
 
     if (!lookupResult.value()) {
-        cx->setError(RuntimeError::MethodLookupFailed,
-                     "Could not lookup method on scope", name.get());
-        return ErrorVal();
+        return cx->setExceptionRaised("Syntax method binding not found.",
+                                      name.get());
     }
 
     // Found binding for scope.@integer
@@ -189,17 +189,15 @@ DispatchSyntaxMethod(ThreadContext *cx,
     WH_ASSERT(propDesc->isValid());
 
     if (!propDesc->isMethod()) {
-        cx->setError(RuntimeError::MethodLookupFailed,
-                     "Found non-method binding on scope", name.get());
-        return ErrorVal();
+        return cx->setExceptionRaised("Syntax method binding is not a method.",
+                                      name.get());
     }
     Local<Function *> func(cx, propDesc->method());
 
     // Function must be an operative.
     if (!func->isOperative()) {
-        cx->setError(RuntimeError::MethodLookupFailed,
-                     "Found applicative scope syntax method", name.get());
-        return ErrorVal();
+        return cx->setExceptionRaised("Syntax method binding is applicative.",
+                                      name.get());
     }
 
     // Create SyntaxTreeFragment.
