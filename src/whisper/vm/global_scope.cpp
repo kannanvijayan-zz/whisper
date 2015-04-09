@@ -76,12 +76,12 @@ GlobalScope::DefineProperty(ThreadContext *cx,
 #define DECLARE_LIFT_FN_(name) \
     static OkResult Lift_##name( \
         ThreadContext *cx, \
-        Handle<VM::LookupState *> lookupState, \
-        Handle<VM::ScopeObject *> callerScope, \
-        Handle<VM::NativeFunction *> nativeFunc, \
-        Handle<VM::Wobject *> receiver, \
-        ArrayHandle<VM::SyntaxTreeFragment *> stFrag, \
-        MutHandle<VM::Box> resultOut);
+        Handle<LookupState *> lookupState, \
+        Handle<ScopeObject *> callerScope, \
+        Handle<NativeFunction *> nativeFunc, \
+        Handle<Wobject *> receiver, \
+        ArrayHandle<SyntaxTreeRef> stFrag, \
+        MutHandle<Box> resultOut);
 
     DECLARE_LIFT_FN_(File)
     //WHISPER_DEFN_SYNTAX_NODES(DECLARE_LIFT_FN_)
@@ -90,21 +90,21 @@ GlobalScope::DefineProperty(ThreadContext *cx,
 
 static OkResult
 BindGlobalMethod(AllocationContext acx,
-                 Handle<VM::GlobalScope *> obj,
-                 VM::String *name,
-                 VM::NativeOperativeFuncPtr opFunc)
+                 Handle<GlobalScope *> obj,
+                 String *name,
+                 NativeOperativeFuncPtr opFunc)
 {
     ThreadContext *cx = acx.threadContext();
-    Local<VM::String *> rootedName(acx, name);
+    Local<String *> rootedName(acx, name);
 
     // Allocate NativeFunction object.
-    Local<VM::NativeFunction *> natF(cx);
-    if (!natF.setResult(VM::NativeFunction::Create(acx, opFunc)))
+    Local<NativeFunction *> natF(cx);
+    if (!natF.setResult(NativeFunction::Create(acx, opFunc)))
         return ErrorVal();
-    Local<VM::PropertyDescriptor> desc(cx, VM::PropertyDescriptor(natF.get()));
+    Local<PropertyDescriptor> desc(cx, PropertyDescriptor(natF.get()));
 
     // Bind method on global.
-    if (!VM::GlobalScope::DefineProperty(cx, obj, rootedName, desc))
+    if (!GlobalScope::DefineProperty(cx, obj, rootedName, desc))
         return ErrorVal();
 
     return OkVal();
@@ -115,7 +115,7 @@ GlobalScope::BindSyntaxHandlers(AllocationContext acx,
                                 Handle<GlobalScope *> obj)
 {
     ThreadContext *cx = acx.threadContext();
-    Local<VM::RuntimeState *> rtState(acx, cx->runtimeState());
+    Local<RuntimeState *> rtState(acx, cx->runtimeState());
     if (!BindGlobalMethod(acx, obj, rtState->nm_AtFile(), &Lift_File))
         return ErrorVal();
 
@@ -125,12 +125,12 @@ GlobalScope::BindSyntaxHandlers(AllocationContext acx,
 #define IMPL_LIFT_FN_(name) \
     static OkResult Lift_##name( \
         ThreadContext *cx, \
-        Handle<VM::LookupState *> lookupState, \
-        Handle<VM::ScopeObject *> callerScope, \
-        Handle<VM::NativeFunction *> nativeFunc, \
-        Handle<VM::Wobject *> receiver, \
-        ArrayHandle<VM::SyntaxTreeFragment *> stFrag, \
-        MutHandle<VM::Box> resultOut)
+        Handle<LookupState *> lookupState, \
+        Handle<ScopeObject *> callerScope, \
+        Handle<NativeFunction *> nativeFunc, \
+        Handle<Wobject *> receiver, \
+        ArrayHandle<SyntaxTreeRef> stFrag, \
+        MutHandle<Box> resultOut)
 
 IMPL_LIFT_FN_(File)
 {
@@ -139,11 +139,11 @@ IMPL_LIFT_FN_(File)
             "@File called with wrong number of arguments.");
     }
 
-    WH_ASSERT(stFrag.get(0)->nodeType() == AST::File);
+    WH_ASSERT(stFrag.get(0).nodeType() == AST::File);
 
     Local<AST::PackedFileNode> fileNode(cx,
-        AST::PackedFileNode(stFrag.get(0)->pst()->data(),
-                            stFrag.get(0)->offset()));
+        AST::PackedFileNode(stFrag.get(0).pst()->data(),
+                            stFrag.get(0).offset()));
 
     std::cerr << "Lift_File: Interpreting "
               << fileNode->numStatements()

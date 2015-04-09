@@ -200,17 +200,12 @@ DispatchSyntaxMethod(ThreadContext *cx,
                                       name.get());
     }
 
-    // Create SyntaxTreeFragment.
-    Local<SyntaxTreeFragment *> stFrag(cx);
-    if (!stFrag.setResult(SyntaxTreeFragment::Create(cx->inHatchery(),
-                                                     pst, node->offset())))
-    {
-        return ErrorVal();
-    }
+    // Create SyntaxTreeRef.
+    Local<SyntaxTreeRef> stRef(cx, SyntaxTreeRef(pst, node->offset()));
 
     // Invoke operative function with given arguments.
     return InvokeOperativeFunction(cx, lookupState, scope, func,
-                                   scopeObj, stFrag, resultOut);
+                                   scopeObj, stRef, resultOut);
 }
 
 OkResult
@@ -219,7 +214,7 @@ InvokeOperativeFunction(ThreadContext *cx,
                         Handle<ScopeObject *> callerScope,
                         Handle<Function *> func,
                         Handle<Wobject *> receiver,
-                        Handle<SyntaxTreeFragment *> stFrag,
+                        Handle<SyntaxTreeRef> stRef,
                         MutHandle<Box> resultOut)
 {
     // Call native if native.
@@ -229,7 +224,7 @@ InvokeOperativeFunction(ThreadContext *cx,
 
         NativeOperativeFuncPtr opNatF = nativeFunc->operative();
         return opNatF(cx, lookupState, callerScope, nativeFunc, receiver,
-                      ArrayHandle<SyntaxTreeFragment *>(stFrag),
+                      ArrayHandle<SyntaxTreeRef>(stRef),
                       resultOut);
     }
 

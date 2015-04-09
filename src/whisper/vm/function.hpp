@@ -68,11 +68,11 @@ class Function
     }
 };
 
-
 typedef OkResult (*NativeApplicativeFuncPtr)(
         ThreadContext *cx,
         Handle<LookupState *> lookupState,
         Handle<ScopeObject *> callerScope,
+        Handle<NativeFunction *> calleeFunc,
         Handle<Wobject *> receiver,
         ArrayHandle<Box> args,
         MutHandle<Box> result);
@@ -83,7 +83,7 @@ typedef OkResult (*NativeOperativeFuncPtr)(
         Handle<ScopeObject *> callerScope,
         Handle<NativeFunction *> calleeFunc,
         Handle<Wobject *> receiver,
-        ArrayHandle<SyntaxTreeFragment *> argExprs,
+        ArrayHandle<SyntaxTreeRef> args,
         MutHandle<Box> result);
 
 class NativeFunction : public Function

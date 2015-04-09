@@ -35,7 +35,7 @@ OkResult InvokeOperativeFunction(ThreadContext *cx,
                                  Handle<ScopeObject *> callerScope,
                                  Handle<Function *> func,
                                  Handle<Wobject *> receiver,
-                                 Handle<SyntaxTreeFragment *> stFrag,
+                                 Handle<SyntaxTreeRef> stRef,
                                  MutHandle<Box> resultOut);
 
 
