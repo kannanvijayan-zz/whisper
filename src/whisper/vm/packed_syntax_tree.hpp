@@ -86,6 +86,38 @@ class SyntaxTreeFragment
     const char *nodeTypeCString() const;
 };
 
+//
+// A SyntaxTreeRef is a on-stack version of SyntaxTreeFragment.
+//
+//
+class SyntaxTreeRef
+{
+    friend struct TraceTraits<SyntaxTreeRef>;
+
+  private:
+    StackField<PackedSyntaxTree *> pst_;
+    uint32_t offset_;
+
+  public:
+    SyntaxTreeRef(Handle<PackedSyntaxTree *> pst, uint32_t offset)
+      : pst_(pst),
+        offset_(offset)
+    {
+        WH_ASSERT(pst.get() != nullptr);
+    }
+
+    PackedSyntaxTree *pst() const {
+        return pst_;
+    }
+
+    uint32_t offset() const {
+        return offset_;
+    }
+
+    AST::NodeType nodeType() const;
+    const char *nodeTypeCString() const;
+};
+
 
 } // namespace VM
 
@@ -140,6 +172,46 @@ struct TraceTraits<VM::SyntaxTreeFragment>
                        const void *start, const void *end)
     {
         stFrag.pst_.update(updater, start, end);
+    }
+};
+
+template <>
+struct StackTraits<VM::SyntaxTreeRef>
+{
+    StackTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr StackFormat Format = StackFormat::SyntaxTreeRef;
+};
+template <>
+struct StackFormatTraits<StackFormat::SyntaxTreeRef>
+{
+    StackFormatTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    typedef VM::SyntaxTreeRef Type;
+};
+
+template <>
+struct TraceTraits<VM::SyntaxTreeRef>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const VM::SyntaxTreeRef &stRef,
+                     const void *start, const void *end)
+    {
+        stRef.pst_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater &updater, VM::SyntaxTreeRef &stRef,
+                       const void *start, const void *end)
+    {
+        stRef.pst_.update(updater, start, end);
     }
 };
 

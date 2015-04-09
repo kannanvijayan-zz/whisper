@@ -50,6 +50,18 @@ SyntaxTreeFragment::nodeTypeCString() const
     return AST::NodeTypeString(nodeType());
 }
 
+AST::NodeType
+SyntaxTreeRef::nodeType() const
+{
+    return AST::PackedBaseNode(pst_->data(), offset_).type();
+}
+
+const char *
+SyntaxTreeRef::nodeTypeCString() const
+{
+    return AST::NodeTypeString(nodeType());
+}
+
 
 } // namespace VM
 } // namespace Whisper
