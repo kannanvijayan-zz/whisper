@@ -5,7 +5,27 @@
 #include "vm/string.hpp"
 
 #define WHISPER_DEFN_NAME_POOL(_) \
-    _(AtInteger,    "@integer")
+    _(AtFile,       "@File"         ) \
+    _(AtEmptyStmt,  "@EmptyStmt"    ) \
+    _(AtExprStmt,   "@ExprStmt"     ) \
+    _(AtReturnStmt, "@ReturnStmt"   ) \
+    _(AtIfStmt,     "@IfStmt"       ) \
+    _(AtDefStmt,    "@DefStmt"      ) \
+    _(AtConstStmt,  "@ConstStmt"    ) \
+    _(AtVarStmt,    "@VarStmt"      ) \
+    _(AtLoopStmt,   "@LoopStmt"     ) \
+    _(AtCallExpr,   "@CallExpr"     ) \
+    _(AtDotExpr,    "@DotExpr"      ) \
+    _(AtArrowExpr,  "@ArrowExpr"    ) \
+    _(AtPosExpr,    "@PosExpr"      ) \
+    _(AtNegExpr,    "@NegExpr"      ) \
+    _(AtAddExpr,    "@AddExpr"      ) \
+    _(AtSubExpr,    "@SubExpr"      ) \
+    _(AtMulExpr,    "@MulExpr"      ) \
+    _(AtDivExpr,    "@DivExpr"      ) \
+    _(AtParenExpr,  "@ParenExpr"    ) \
+    _(AtNameExpr,   "@NameExpr"     ) \
+    _(AtInteger,    "@Integer"      )
 
 namespace Whisper {
 namespace NamePool {

@@ -45,36 +45,119 @@ InterpretSyntax(ThreadContext *cx,
         AST::PackedBaseNode(pst->data(), offset));
 
     // Interpret values based on type.
+    Local<String *> name(cx);
     switch (node->type()) {
       case AST::File:
+        // scope.@File(...)
+        name = cx->runtimeState()->nm_AtFile();
+        break;
+
       case AST::EmptyStmt:
+        // scope.@EmptyStmt(...)
+        name = cx->runtimeState()->nm_AtEmptyStmt();
+        break;
+
       case AST::ExprStmt:
+        // scope.@ExprStmt(...)
+        name = cx->runtimeState()->nm_AtExprStmt();
+        break;
+
       case AST::ReturnStmt:
+        // scope.@ReturnStmt(...)
+        name = cx->runtimeState()->nm_AtReturnStmt();
+        break;
+
       case AST::IfStmt:
+        // scope.@IfStmt(...)
+        name = cx->runtimeState()->nm_AtIfStmt();
+        break;
+
       case AST::DefStmt:
+        // scope.@DefStmt(...)
+        name = cx->runtimeState()->nm_AtDefStmt();
+        break;
+
       case AST::ConstStmt:
+        // scope.@ConstStmt(...)
+        name = cx->runtimeState()->nm_AtConstStmt();
+        break;
+
       case AST::VarStmt:
+        // scope.@VarStmt(...)
+        name = cx->runtimeState()->nm_AtVarStmt();
+        break;
+
       case AST::LoopStmt:
+        // scope.@LoopStmt(...)
+        name = cx->runtimeState()->nm_AtLoopStmt();
+        break;
+
       case AST::CallExpr:
+        // scope.@CallExpr(...)
+        name = cx->runtimeState()->nm_AtCallExpr();
+        break;
+
       case AST::DotExpr:
+        // scope.@DotExpr(...)
+        name = cx->runtimeState()->nm_AtDotExpr();
+        break;
+
       case AST::ArrowExpr:
+        // scope.@ArrowExpr(...)
+        name = cx->runtimeState()->nm_AtArrowExpr();
+        break;
+
       case AST::PosExpr:
+        // scope.@PosExpr(...)
+        name = cx->runtimeState()->nm_AtPosExpr();
+        break;
+
       case AST::NegExpr:
+        // scope.@NegExpr(...)
+        name = cx->runtimeState()->nm_AtNegExpr();
+        break;
+
       case AST::AddExpr:
+        // scope.@AddExpr(...)
+        name = cx->runtimeState()->nm_AtAddExpr();
+        break;
+
       case AST::SubExpr:
+        // scope.@SubExpr(...)
+        name = cx->runtimeState()->nm_AtSubExpr();
+        break;
+
       case AST::MulExpr:
+        // scope.@MulExpr(...)
+        name = cx->runtimeState()->nm_AtMulExpr();
+        break;
+
       case AST::DivExpr:
+        // scope.@DivExpr(...)
+        name = cx->runtimeState()->nm_AtDivExpr();
+        break;
+
       case AST::ParenExpr:
+        // scope.@ParenExpr(...)
+        name = cx->runtimeState()->nm_AtParenExpr();
+        break;
+
       case AST::NameExpr:
-      case AST::IntegerExpr: {
-        // scope.@integer(value)
-        Local<String *> name(cx, cx->runtimeState()->nm_AtInteger());
-        return DispatchSyntaxMethod(cx, scope, name, pst, node, resultOut);
-      }
+        // scope.@NameExpr(...)
+        name = cx->runtimeState()->nm_AtNameExpr();
+        break;
+
+      case AST::IntegerExpr:
+        // scope.@Integer(...)
+        name = cx->runtimeState()->nm_AtInteger();
+        break;
+
       default:
         WH_UNREACHABLE("Unknown node type.");
         return ErrorVal();
     }
+
+    return DispatchSyntaxMethod(cx, scope, name, pst, node, resultOut);
 }
 
 OkResult
