@@ -22,6 +22,7 @@ shared_cpp = \
     parser/packed_reader.cpp \
     gc/tracing.cpp \
     vm/string.cpp \
+    vm/box.cpp \
     vm/source_file.cpp \
     vm/properties.cpp \
     vm/runtime_state.cpp \
