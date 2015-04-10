@@ -170,6 +170,8 @@ IMPL_LIFT_FN_(File)
             return ErrorVal();
         }
     }
+
+    resultOut = Box::Undefined();
     return OkVal();
 }
 
@@ -184,6 +186,7 @@ IMPL_LIFT_FN_(VarStmt)
 
     // TODO: Implement VarStmt
     SpewInterpNote("Lift_VarStmt: Interpreting!\n");
+    resultOut = Box::Undefined();
     return OkVal();
 }
 
@@ -198,6 +201,7 @@ IMPL_LIFT_FN_(DefStmt)
 
     // TODO: Implement VarStmt
     SpewInterpNote("Lift_DefStmt: Interpreting!\n");
+    resultOut = Box::Undefined();
     return OkVal();
 }
 
@@ -212,6 +216,7 @@ IMPL_LIFT_FN_(ExprStmt)
 
     // TODO: Implement VarStmt
     SpewInterpNote("Lift_ExprStmt: Interpreting!\n");
+    resultOut = Box::Undefined();
     return OkVal();
 }
 

@@ -43,6 +43,7 @@ InterpretSyntax(ThreadContext *cx,
 
     Local<AST::PackedBaseNode> node(cx,
         AST::PackedBaseNode(pst->data(), offset));
+    SpewInterpNote("InterpretSyntax %s", AST::NodeTypeString(node->type()));
 
     // Interpret values based on type.
     Local<String *> name(cx);
@@ -224,24 +225,34 @@ InvokeOperativeFunction(ThreadContext *cx,
             NativeCallInfo(lookupState, callerScope,
                            func->asNative(), receiver));
 
+        resultOut = Box::Invalid();
         NativeOperativeFuncPtr opNatF = func->asNative()->operative();
-        return opNatF(cx, callInfo, ArrayHandle<SyntaxTreeRef>(stRef),
-                      resultOut);
+        if (!opNatF(cx, callInfo, ArrayHandle<SyntaxTreeRef>(stRef),
+                    resultOut))
+        {
+            return ErrorVal();
+        }
+
+        // Ensure that resultOut now has a valid value.
+        WH_ASSERT(resultOut->isValid());
+        if (!resultOut->isValid()) {
+            return cx->setError(RuntimeError::InternalError,
+                "Syntax handler method did not set valid result!");
+        }
+        return OkVal();
     }
 
     // If scripted, interpret the scripted function.
     if (func->isScripted()) {
         WH_ASSERT("Cannot interpret scripted operatives yet!");
-        cx->setError(RuntimeError::InternalError,
-                     "Cannot interpret scripted operatives yet!");
-        return ErrorVal();
+        return cx->setError(RuntimeError::InternalError,
+                            "Cannot interpret scripted operatives yet!");
     }
 
     WH_UNREACHABLE("Unknown function type!");
-        cx->setError(RuntimeError::InternalError,
-                     "Unknown function type seen!",
-                     HeapThing::From(func.get()));
-    return ErrorVal();
+    return cx->setError(RuntimeError::InternalError,
+                        "Unknown function type seen!",
+                        HeapThing::From(func.get()));
 }
 
 
