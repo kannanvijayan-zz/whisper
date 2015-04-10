@@ -85,6 +85,7 @@ GlobalScope::DefineProperty(ThreadContext *cx,
     DECLARE_LIFT_FN_(VarStmt)
     DECLARE_LIFT_FN_(DefStmt)
     DECLARE_LIFT_FN_(ExprStmt)
+    DECLARE_LIFT_FN_(IntegerExpr)
     //WHISPER_DEFN_SYNTAX_NODES(DECLARE_LIFT_FN_)
 
 #undef DECLARE_LIFT_FN_
@@ -129,6 +130,12 @@ GlobalScope::BindSyntaxHandlers(AllocationContext acx,
 
     if (!BindGlobalMethod(acx, obj, rtState->nm_AtExprStmt(), &Lift_ExprStmt))
         return ErrorVal();
+
+    if (!BindGlobalMethod(acx, obj, rtState->nm_AtIntegerExpr(),
+                          &Lift_IntegerExpr))
+    {
+        return ErrorVal();
+    }
 
     return OkVal();
 }
@@ -184,8 +191,47 @@ IMPL_LIFT_FN_(VarStmt)
 
     WH_ASSERT(args.get(0).nodeType() == AST::VarStmt);
 
+    Local<Wobject *> receiver(cx, callInfo->receiver());
+    Local<SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<PackedSyntaxTree *> pst(cx, stRef->pst());
+    Local<AST::PackedVarStmtNode> varStmtNode(cx,
+        AST::PackedVarStmtNode(pst->data(), stRef->offset()));
+    Local<Box> varnameBox(cx);
+    Local<String *> varname(cx);
+    Local<Box> varvalBox(cx);
+
+    // Iterate through all bindings.
+    SpewInterpNote("Lift_VarStmt: Defining %u vars!",
+                   unsigned(varStmtNode->numBindings()));
+    for (uint32_t i = 0; i < varStmtNode->numBindings(); i++) {
+        varnameBox = pst->getConstant(varStmtNode->varnameCid(i));
+        WH_ASSERT(varnameBox->isPointer());
+        WH_ASSERT(varnameBox->pointer<HeapThing>()->header().isFormat_String());
+        varname = varnameBox->pointer<String>();
+        
+        if (varStmtNode->hasVarexpr(i)) {
+            SpewInterpNote("Lift_VarStmt var %d evaluating initial value!",
+                           unsigned(i));
+            Local<AST::PackedBaseNode> exprNode(cx, varStmtNode->varexpr(i));
+            if (!InterpretSyntax(cx, callInfo->callerScope(), pst,
+                                 exprNode->offset(), &varvalBox))
+            {
+                return ErrorVal();
+            }
+        } else {
+            varvalBox = Box::Undefined();
+        }
+
+        WH_ASSERT_IF(varvalBox->isPointer(),
+            Wobject::IsWobject(varvalBox->pointer<HeapThing>()));
+
+        // Bind the name and value onto the receiver.
+        Local<PropertyDescriptor> descr(cx, PropertyDescriptor(varvalBox));
+        if (!Wobject::DefineProperty(cx, receiver, varname, descr))
+            return ErrorVal();
+    }
+
     // TODO: Implement VarStmt
-    SpewInterpNote("Lift_VarStmt: Interpreting!\n");
     resultOut = Box::Undefined();
     return OkVal();
 }
@@ -217,6 +263,25 @@ IMPL_LIFT_FN_(ExprStmt)
     // TODO: Implement VarStmt
     SpewInterpNote("Lift_ExprStmt: Interpreting!\n");
     resultOut = Box::Undefined();
+    return OkVal();
+}
+
+IMPL_LIFT_FN_(IntegerExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@ExprStmt called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::IntegerExpr);
+
+    Local<SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<PackedSyntaxTree *> pst(cx, stRef->pst());
+    Local<AST::PackedIntegerExprNode> intExpr(cx,
+        AST::PackedIntegerExprNode(pst->data(), stRef->offset()));
+
+    // Make an integer box and return it.
+    resultOut = Box::Integer(intExpr->value());
     return OkVal();
 }
 
