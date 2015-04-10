@@ -92,13 +92,12 @@ class BaseField
     inline const T *address() const {
         return &val_;
     }
+    inline T *address() {
+        return &val_;
+    }
 
     inline operator const T &() const {
         return get();
-    }
-
-    inline const T *operator &() const {
-        return address();
     }
 
     inline ConstDerefType *operator ->() const {

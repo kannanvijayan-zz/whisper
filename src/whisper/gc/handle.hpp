@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "debug.hpp"
 #include "gc/local.hpp"
+#include "gc/field.hpp"
 
 namespace Whisper {
 
@@ -33,6 +34,9 @@ class MutHandle
     {}
     inline MutHandle(Local<T> *stackVal)
       : valAddr_(stackVal->address())
+    {}
+    inline MutHandle(StackField<T> *stackField)
+      : valAddr_(stackField->address())
     {}
 
     inline static MutHandle FromTrackedLocation(T *valAddr)
@@ -178,6 +182,9 @@ class Handle
     {}
     inline Handle(const Local<T> &stackVal)
       : valAddr_(stackVal.address())
+    {}
+    inline Handle(const StackField<T> &stackField)
+      : valAddr_(stackField.address())
     {}
 
     inline static Handle FromTrackedLocation(const T *valAddr)
