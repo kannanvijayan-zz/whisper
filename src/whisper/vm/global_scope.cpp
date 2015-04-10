@@ -7,6 +7,7 @@
 #include "vm/global_scope.hpp"
 #include "vm/runtime_state.hpp"
 #include "vm/function.hpp"
+#include "vm/interpreter.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -77,10 +78,13 @@ GlobalScope::DefineProperty(ThreadContext *cx,
     static OkResult Lift_##name( \
         ThreadContext *cx, \
         Handle<NativeCallInfo> callInfo, \
-        ArrayHandle<SyntaxTreeRef> stFrag, \
+        ArrayHandle<SyntaxTreeRef> args, \
         MutHandle<Box> resultOut);
 
     DECLARE_LIFT_FN_(File)
+    DECLARE_LIFT_FN_(VarStmt)
+    DECLARE_LIFT_FN_(DefStmt)
+    DECLARE_LIFT_FN_(ExprStmt)
     //WHISPER_DEFN_SYNTAX_NODES(DECLARE_LIFT_FN_)
 
 #undef DECLARE_LIFT_FN_
@@ -113,7 +117,17 @@ GlobalScope::BindSyntaxHandlers(AllocationContext acx,
 {
     ThreadContext *cx = acx.threadContext();
     Local<RuntimeState *> rtState(acx, cx->runtimeState());
+
     if (!BindGlobalMethod(acx, obj, rtState->nm_AtFile(), &Lift_File))
+        return ErrorVal();
+
+    if (!BindGlobalMethod(acx, obj, rtState->nm_AtVarStmt(), &Lift_VarStmt))
+        return ErrorVal();
+
+    if (!BindGlobalMethod(acx, obj, rtState->nm_AtDefStmt(), &Lift_DefStmt))
+        return ErrorVal();
+
+    if (!BindGlobalMethod(acx, obj, rtState->nm_AtExprStmt(), &Lift_ExprStmt))
         return ErrorVal();
 
     return OkVal();
@@ -123,31 +137,81 @@ GlobalScope::BindSyntaxHandlers(AllocationContext acx,
     static OkResult Lift_##name( \
         ThreadContext *cx, \
         Handle<NativeCallInfo> callInfo, \
-        ArrayHandle<SyntaxTreeRef> stFrag, \
+        ArrayHandle<SyntaxTreeRef> args, \
         MutHandle<Box> resultOut)
 
 IMPL_LIFT_FN_(File)
 {
-    if (stFrag.length() != 1) {
+    if (args.length() != 1) {
         return cx->setExceptionRaised(
             "@File called with wrong number of arguments.");
     }
 
-    WH_ASSERT(stFrag.get(0).nodeType() == AST::File);
+    WH_ASSERT(args.get(0).nodeType() == AST::File);
 
+    Local<SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<PackedSyntaxTree *> pst(cx, stRef->pst());
     Local<AST::PackedFileNode> fileNode(cx,
-        AST::PackedFileNode(stFrag.get(0).pst()->data(),
-                            stFrag.get(0).offset()));
+        AST::PackedFileNode(pst->data(), stRef->offset()));
+    Local<Box> stmtResult(cx);
 
-    std::cerr << "Lift_File: Interpreting "
-              << fileNode->numStatements()
-              << " statements" << std::endl;
+    SpewInterpNote("Lift_File: Interpreting %u statements",
+                   unsigned(fileNode->numStatements()));
+    SpewInterpNote("Lift_File: Receiver is %s",
+               HeapThing::From(callInfo->receiver().get())->header().formatString());
     for (uint32_t i = 0; i < fileNode->numStatements(); i++) {
         Local<AST::PackedBaseNode> stmtNode(cx, fileNode->statement(i));
-        std::cerr << "Lift_File statement " << i << ":"
-                  << AST::NodeTypeString(stmtNode->type())
-                  << std::endl;
+        SpewInterpNote("Lift_File: statement %u is %s",
+                       unsigned(i), AST::NodeTypeString(stmtNode->type()));
+
+        if (!InterpretSyntax(cx, callInfo->callerScope(), pst,
+                             stmtNode->offset(), &stmtResult))
+        {
+            return ErrorVal();
+        }
     }
+    return OkVal();
+}
+
+IMPL_LIFT_FN_(VarStmt)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@VarStmt called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::VarStmt);
+
+    // TODO: Implement VarStmt
+    SpewInterpNote("Lift_VarStmt: Interpreting!\n");
+    return OkVal();
+}
+
+IMPL_LIFT_FN_(DefStmt)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@DefStmt called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::DefStmt);
+
+    // TODO: Implement VarStmt
+    SpewInterpNote("Lift_DefStmt: Interpreting!\n");
+    return OkVal();
+}
+
+IMPL_LIFT_FN_(ExprStmt)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@ExprStmt called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::ExprStmt);
+
+    // TODO: Implement VarStmt
+    SpewInterpNote("Lift_ExprStmt: Interpreting!\n");
     return OkVal();
 }
 
