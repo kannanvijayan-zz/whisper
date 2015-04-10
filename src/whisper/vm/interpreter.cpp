@@ -150,7 +150,7 @@ InterpretSyntax(ThreadContext *cx,
 
       case AST::IntegerExpr:
         // scope.@Integer(...)
-        name = cx->runtimeState()->nm_AtInteger();
+        name = cx->runtimeState()->nm_AtIntegerExpr();
         break;
 
       default:
