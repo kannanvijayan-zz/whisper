@@ -36,7 +36,7 @@ class Box
     static constexpr uint64_t PrimitiveTag = 0x1;
 
     static constexpr uint64_t UndefinedTagMask = 0xff;
-    static constexpr uint64_t UndefinedTag = 0x00;
+    static constexpr uint64_t UndefinedTag = 0x01;
 
     static constexpr uint64_t IntegerTagMask = 0xff;
     static constexpr uint64_t IntegerTag = 0x81;
@@ -66,6 +66,9 @@ class Box
 
     bool isInvalid() const {
         return value_ == InvalidValue;
+    }
+    bool isValid() const {
+        return !isInvalid();
     }
     static Box Invalid() {
         return Box();
