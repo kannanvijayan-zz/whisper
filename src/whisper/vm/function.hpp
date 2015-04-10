@@ -94,16 +94,16 @@ class NativeCallInfo
         WH_ASSERT(receiver_ != nullptr);
     }
 
-    LookupState *lookupState() const {
+    Handle<LookupState *> lookupState() const {
         return lookupState_;
     }
-    ScopeObject *callerScope() const {
+    Handle<ScopeObject *> callerScope() const {
         return callerScope_;
     }
-    NativeFunction *calleeFunc() const {
+    Handle<NativeFunction *> calleeFunc() const {
         return calleeFunc_;
     }
-    Wobject *receiver() const {
+    Handle<Wobject *> receiver() const {
         return receiver_;
     }
 };
