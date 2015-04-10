@@ -155,13 +155,13 @@ class Local : public LocalBase
         return get();
     }
 
-    inline const T &operator =(const T &ref) {
-        set(std::move(ref));
-        return ref;
-    }
-    inline const T &operator =(T &&ref) {
+    inline Local<T> &operator =(const T &ref) {
         this->set(ref);
-        return ref;
+        return *this;
+    }
+    inline Local<T> &operator =(T &&ref) {
+        set(std::move(ref));
+        return *this;
     }
 
     inline ConstDerefType *operator ->() const {
