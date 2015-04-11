@@ -93,41 +93,6 @@ SourceFile::CreateScope(ThreadContext *cx, Handle<SourceFile *> sourceFile)
     return OkVal(module.get());
 }
 
-/* static */ Result<ScriptedFunction *>
-SourceFile::CreateFunc(
-            ThreadContext *cx,
-            Handle<SourceFile *> sourceFile,
-            Handle<GlobalScope *> global)
-{
-    if (sourceFile->hasFunc())
-        return OkVal(sourceFile->func());
-
-    // Ensure we have a packed syntax tree.
-    Local<PackedSyntaxTree *> pst(cx);
-    if (!pst.setResult(SourceFile::ParseSyntaxTree(cx, sourceFile)))
-        return ErrorVal();
-
-    AllocationContext acx = cx->inTenured();
-
-    // Create a new SyntaxTreeFrament pointing to the File node.
-    Local<SyntaxTreeFragment *> defn(cx);
-    if (!defn.setResult(SyntaxTreeFragment::Create(acx, pst, 0)))
-        return ErrorVal();
-
-    // Createa a new scripted function.
-    Local<ScriptedFunction *> func(cx);
-    if (!func.setResult(ScriptedFunction::Create(acx, defn,
-                            global.convertTo<ScopeObject *>(),
-                            /* isOperative = */ false)))
-    {
-        return ErrorVal();
-    }
-
-    // Save scripted function to source file.
-    sourceFile->setFunc(func);
-    return OkVal(func.get());
-}
-
 
 } // namespace VM
 } // namespace Whisper

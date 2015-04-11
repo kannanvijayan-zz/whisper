@@ -178,7 +178,8 @@ class ScriptedFunction : public Function
     static constexpr uint8_t OperativeFlag = 0x1;
 
     // The syntax tree of the definition.
-    HeapField<SyntaxTreeFragment *> definition_;
+    HeapField<PackedSyntaxTree *> pst_;
+    uint32_t offset_;
 
     // The scope chain for the function.
     HeapField<ScopeObject *> scopeChain_;
@@ -190,13 +191,15 @@ class ScriptedFunction : public Function
         return HeapThing::From(this)->header();
     }
   public:
-    ScriptedFunction(SyntaxTreeFragment *definition,
+    ScriptedFunction(PackedSyntaxTree *pst,
+                     uint32_t offset,
                      ScopeObject *scopeChain,
                      bool isOperative)
-      : definition_(definition),
+      : pst_(pst),
+        offset_(offset),
         scopeChain_(scopeChain)
     {
-        WH_ASSERT(definition != nullptr);
+        WH_ASSERT(pst != nullptr);
         WH_ASSERT(scopeChain != nullptr);
 
         if (isOperative)
@@ -205,7 +208,8 @@ class ScriptedFunction : public Function
 
     static Result<ScriptedFunction *> Create(
             AllocationContext acx,
-            Handle<SyntaxTreeFragment *> definition,
+            Handle<PackedSyntaxTree *> pst,
+            uint32_t offset,
             Handle<ScopeObject *> scopeChain,
             bool isOperative);
 
@@ -216,8 +220,11 @@ class ScriptedFunction : public Function
         return (header().userData() & OperativeFlag) != 0;
     }
 
-    SyntaxTreeFragment *definition() const {
-        return definition_;
+    PackedSyntaxTree *pst() const {
+        return pst_;
+    }
+    uint32_t offset() const {
+        return offset_;
     }
     ScopeObject *scopeChain() const {
         return scopeChain_;
@@ -291,7 +298,7 @@ struct TraceTraits<VM::ScriptedFunction>
     static void Scan(Scanner &scanner, const VM::ScriptedFunction &func,
                      const void *start, const void *end)
     {
-        func.definition_.scan(scanner, start, end);
+        func.pst_.scan(scanner, start, end);
         func.scopeChain_.scan(scanner, start, end);
     }
 
@@ -299,7 +306,7 @@ struct TraceTraits<VM::ScriptedFunction>
     static void Update(Updater &updater, VM::ScriptedFunction &func,
                        const void *start, const void *end)
     {
-        func.definition_.update(updater, start, end);
+        func.pst_.update(updater, start, end);
         func.scopeChain_.update(updater, start, end);
     }
 };

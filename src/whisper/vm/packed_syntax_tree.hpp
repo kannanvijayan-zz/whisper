@@ -78,7 +78,7 @@ class SyntaxTreeRef
         WH_ASSERT(pst_.get() != nullptr);
     }
 
-    PackedSyntaxTree *pst() const {
+    Handle<PackedSyntaxTree *> pst() const {
         return pst_;
     }
 
@@ -117,6 +117,13 @@ class SyntaxTreeFragment
             AllocationContext acx,
             Handle<PackedSyntaxTree *> pst,
             uint32_t offset);
+
+    static Result<SyntaxTreeFragment *> Create(
+            AllocationContext acx,
+            Handle<SyntaxTreeRef> ref)
+    {
+        return Create(acx, ref->pst(), ref->offset());
+    }
 
     PackedSyntaxTree *pst() const {
         return pst_;

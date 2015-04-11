@@ -245,8 +245,30 @@ IMPL_LIFT_FN_(DefStmt)
 
     WH_ASSERT(args.get(0).nodeType() == AST::DefStmt);
 
-    // TODO: Implement VarStmt
-    SpewInterpNote("Lift_DefStmt: Interpreting!\n");
+    Local<Wobject *> receiver(cx, callInfo->receiver());
+    Local<SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<PackedSyntaxTree *> pst(cx, stRef->pst());
+    Local<AST::PackedDefStmtNode> defStmtNode(cx,
+        AST::PackedDefStmtNode(pst->data(), stRef->offset()));
+
+    AllocationContext acx = cx->inHatchery();
+
+    Local<ScriptedFunction *> func(cx);
+    if (!func.setResult(ScriptedFunction::Create(
+            acx, pst, stRef->offset(), callInfo->callerScope(), false)))
+    {
+        return ErrorVal();
+    }
+
+    // Bind the name to the function.
+    Local<Box> funcnameBox(cx, pst->getConstant(defStmtNode->nameCid()));
+    WH_ASSERT(funcnameBox->isPointer());
+    WH_ASSERT(funcnameBox->pointer<HeapThing>()->header().isFormat_String());
+    Local<String *> funcname(cx, funcnameBox->pointer<String>());
+    Local<PropertyDescriptor> descr(cx, PropertyDescriptor(func.get()));
+    if (!Wobject::DefineProperty(cx, receiver, funcname, descr))
+        return ErrorVal();
+    
     resultOut = Box::Undefined();
     return OkVal();
 }

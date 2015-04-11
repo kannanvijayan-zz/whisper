@@ -22,14 +22,12 @@ class SourceFile
     HeapField<String *> path_;
     HeapField<PackedSyntaxTree *> syntaxTree_;
     HeapField<ModuleScope *> scope_;
-    HeapField<ScriptedFunction *> func_;
 
   public:
     SourceFile(String *path)
       : path_(path),
         syntaxTree_(nullptr),
-        scope_(nullptr),
-        func_(nullptr)
+        scope_(nullptr)
     {
         WH_ASSERT(path != nullptr);
     }
@@ -61,26 +59,11 @@ class SourceFile
     static Result<ModuleScope *> CreateScope(
             ThreadContext *cx, Handle<SourceFile *> sourceFile);
 
-    bool hasFunc() const {
-        return func_.get() != nullptr;
-    }
-    ScriptedFunction *func() const {
-        WH_ASSERT(hasFunc());
-        return func_;
-    }
-    static Result<ScriptedFunction *> CreateFunc(
-            ThreadContext *cx,
-            Handle<SourceFile *> sourceFile,
-            Handle<GlobalScope *> global);
 
   private:
     void setSyntaxTree(PackedSyntaxTree *tree) {
         WH_ASSERT(!hasSyntaxTree());
         syntaxTree_.set(tree, this);
-    }
-    void setFunc(ScriptedFunction *func) {
-        WH_ASSERT(!hasFunc());
-        func_.set(func, this);
     }
 };
 
@@ -105,10 +88,7 @@ struct TraceTraits<VM::SourceFile>
     {
         // Scan the path string.
         sourceFile.path_.scan(scanner, start, end);
-        if (sourceFile.syntaxTree_.get() != nullptr)
-            sourceFile.syntaxTree_.scan(scanner, start, end);
-        if (sourceFile.func_.get() != nullptr)
-            sourceFile.func_.scan(scanner, start, end);
+        sourceFile.syntaxTree_.scan(scanner, start, end);
     }
 
     template <typename Updater>
@@ -117,10 +97,7 @@ struct TraceTraits<VM::SourceFile>
     {
         // Scan the path string.
         sourceFile.path_.update(updater, start, end);
-        if (sourceFile.syntaxTree_.get() != nullptr)
-            sourceFile.syntaxTree_.update(updater, start, end);
-        if (sourceFile.func_.get() != nullptr)
-            sourceFile.func_.update(updater, start, end);
+        sourceFile.syntaxTree_.update(updater, start, end);
     }
 };
 

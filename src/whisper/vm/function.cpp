@@ -1,4 +1,5 @@
 
+#include "parser/packed_syntax.hpp"
 #include "runtime_inlines.hpp"
 #include "vm/core.hpp"
 #include "vm/function.hpp"
@@ -36,11 +37,13 @@ NativeFunction::Create(AllocationContext acx, NativeOperativeFuncPtr oper)
 
 /* static */ Result<ScriptedFunction *>
 ScriptedFunction::Create(AllocationContext acx,
-                         Handle<SyntaxTreeFragment *> definition,
+                         Handle<PackedSyntaxTree *> pst,
+                         uint32_t offset,
                          Handle<ScopeObject *> scopeChain,
                          bool isOperative)
 {
-    return acx.create<ScriptedFunction>(definition, scopeChain, isOperative);
+    WH_ASSERT(SyntaxTreeRef(pst, offset).nodeType() == AST::DefStmt);
+    return acx.create<ScriptedFunction>(pst, offset, scopeChain, isOperative);
 }
 
 
