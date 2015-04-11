@@ -19,34 +19,34 @@ PlainObject::Create(AllocationContext acx,
 }
 
 /* static */ void
-PlainObject::GetDelegates(ThreadContext *cx,
+PlainObject::GetDelegates(AllocationContext acx,
                           Handle<PlainObject *> obj,
                           MutHandle<Array<Wobject *> *> delegatesOut)
 {
-    HashObject::GetDelegates(cx,
-        Handle<HashObject *>::Convert(obj),
+    HashObject::GetDelegates(acx,
+        obj.convertTo<HashObject *>(),
         delegatesOut);
 }
 
 /* static */ bool
-PlainObject::GetProperty(ThreadContext *cx,
+PlainObject::GetProperty(AllocationContext acx,
                          Handle<PlainObject *> obj,
                          Handle<String *> name,
                          MutHandle<PropertyDescriptor> result)
 {
-    return HashObject::GetProperty(cx,
-        Handle<HashObject *>::Convert(obj),
+    return HashObject::GetProperty(acx,
+        obj.convertTo<HashObject *>(),
         name, result);
 }
 
 /* static */ OkResult
-PlainObject::DefineProperty(ThreadContext *cx,
+PlainObject::DefineProperty(AllocationContext acx,
                             Handle<PlainObject *> obj,
                             Handle<String *> name,
                             Handle<PropertyDescriptor> defn)
 {
-    return HashObject::DefineProperty(cx,
-        Handle<HashObject *>::Convert(obj),
+    return HashObject::DefineProperty(acx,
+        obj.convertTo<HashObject *>(),
         name, defn);
 }
 

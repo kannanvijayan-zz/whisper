@@ -21,16 +21,16 @@ class PlainObject : public HashObject
     static Result<PlainObject *> Create(AllocationContext acx,
                                         Handle<Array<Wobject *> *> delegates);
 
-    static void GetDelegates(ThreadContext *cx,
+    static void GetDelegates(AllocationContext acx,
                              Handle<PlainObject *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
 
-    static bool GetProperty(ThreadContext *cx,
+    static bool GetProperty(AllocationContext acx,
                             Handle<PlainObject *> obj,
                             Handle<String *> name,
                             MutHandle<PropertyDescriptor> result);
 
-    static OkResult DefineProperty(ThreadContext *cx,
+    static OkResult DefineProperty(AllocationContext acx,
                                    Handle<PlainObject *> obj,
                                    Handle<String *> name,
                                    Handle<PropertyDescriptor> defn);

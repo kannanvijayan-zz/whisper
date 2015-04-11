@@ -26,33 +26,33 @@ CallScope::Create(AllocationContext acx,
 }
 
 /* static */ void
-CallScope::GetDelegates(ThreadContext *cx,
+CallScope::GetDelegates(AllocationContext acx,
                         Handle<CallScope *> obj,
                         MutHandle<Array<Wobject *> *> delegatesOut)
 {
-    HashObject::GetDelegates(cx,
+    HashObject::GetDelegates(acx,
         Handle<HashObject *>::Convert(obj),
         delegatesOut);
 }
 
 /* static */ bool
-CallScope::GetProperty(ThreadContext *cx,
+CallScope::GetProperty(AllocationContext acx,
                        Handle<CallScope *> obj,
                        Handle<String *> name,
                        MutHandle<PropertyDescriptor> result)
 {
-    return HashObject::GetProperty(cx,
+    return HashObject::GetProperty(acx,
         Handle<HashObject *>::Convert(obj),
         name, result);
 }
 
 /* static */ OkResult
-CallScope::DefineProperty(ThreadContext *cx,
+CallScope::DefineProperty(AllocationContext acx,
                           Handle<CallScope *> obj,
                            Handle<String *> name,
                            Handle<PropertyDescriptor> defn)
 {
-    return HashObject::DefineProperty(cx,
+    return HashObject::DefineProperty(acx,
         Handle<HashObject *>::Convert(obj),
         name, defn);
 }
@@ -76,33 +76,33 @@ ModuleScope::Create(AllocationContext acx, Handle<GlobalScope *> global)
 }
 
 /* static */ void
-ModuleScope::GetDelegates(ThreadContext *cx,
+ModuleScope::GetDelegates(AllocationContext acx,
                           Handle<ModuleScope *> obj,
                           MutHandle<Array<Wobject *> *> delegatesOut)
 {
-    HashObject::GetDelegates(cx,
+    HashObject::GetDelegates(acx,
         Handle<HashObject *>::Convert(obj),
         delegatesOut);
 }
 
 /* static */ bool
-ModuleScope::GetProperty(ThreadContext *cx,
+ModuleScope::GetProperty(AllocationContext acx,
                          Handle<ModuleScope *> obj,
                          Handle<String *> name,
                          MutHandle<PropertyDescriptor> result)
 {
-    return HashObject::GetProperty(cx,
+    return HashObject::GetProperty(acx,
         Handle<HashObject *>::Convert(obj),
         name, result);
 }
 
 /* static */ OkResult
-ModuleScope::DefineProperty(ThreadContext *cx,
+ModuleScope::DefineProperty(AllocationContext acx,
                             Handle<ModuleScope *> obj,
                             Handle<String *> name,
                             Handle<PropertyDescriptor> defn)
 {
-    return HashObject::DefineProperty(cx,
+    return HashObject::DefineProperty(acx,
         Handle<HashObject *>::Convert(obj),
         name, defn);
 }

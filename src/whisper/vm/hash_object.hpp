@@ -33,7 +33,7 @@ class HashObject : public Wobject
         WH_ASSERT(dict_ != nullptr);
     }
 
-    static void GetDelegates(ThreadContext *cx,
+    static void GetDelegates(AllocationContext acx,
                              Handle<HashObject *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
 
@@ -41,12 +41,12 @@ class HashObject : public Wobject
                                  Handle<String *> name,
                                  uint32_t *indexOut);
 
-    static bool GetProperty(ThreadContext *cx,
+    static bool GetProperty(AllocationContext acx,
                             Handle<HashObject *> obj,
                             Handle<String *> name,
                             MutHandle<PropertyDescriptor> result);
 
-    static OkResult DefineProperty(ThreadContext *cx,
+    static OkResult DefineProperty(AllocationContext acx,
                                    Handle<HashObject *> obj,
                                    Handle<String *> name,
                                    Handle<PropertyDescriptor> defn);

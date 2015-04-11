@@ -32,20 +32,16 @@ class CallScope : public ScopeObject
     static Result<CallScope *> Create(AllocationContext acx,
                                       Handle<ScopeObject *> callerScope);
 
-    static void GetDelegates(ThreadContext *cx,
+    static void GetDelegates(AllocationContext acx,
                              Handle<CallScope *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
 
-    static bool GetPropertyIndex(Handle<CallScope *> obj,
-                                 Handle<String *> name,
-                                 uint32_t *indexOut);
-
-    static bool GetProperty(ThreadContext *cx,
+    static bool GetProperty(AllocationContext acx,
                             Handle<CallScope *> obj,
                             Handle<String *> name,
                             MutHandle<PropertyDescriptor> result);
 
-    static OkResult DefineProperty(ThreadContext *cx,
+    static OkResult DefineProperty(AllocationContext acx,
                                    Handle<CallScope *> obj,
                                    Handle<String *> name,
                                    Handle<PropertyDescriptor> defn);
@@ -63,20 +59,16 @@ class ModuleScope : public ScopeObject
     static Result<ModuleScope *> Create(AllocationContext acx,
                                         Handle<GlobalScope *> global);
 
-    static void GetDelegates(ThreadContext *cx,
+    static void GetDelegates(AllocationContext acx,
                              Handle<ModuleScope *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
 
-    static bool GetPropertyIndex(Handle<ModuleScope *> obj,
-                                 Handle<String *> name,
-                                 uint32_t *indexOut);
-
-    static bool GetProperty(ThreadContext *cx,
+    static bool GetProperty(AllocationContext acx,
                             Handle<ModuleScope *> obj,
                             Handle<String *> name,
                             MutHandle<PropertyDescriptor> result);
 
-    static OkResult DefineProperty(ThreadContext *cx,
+    static OkResult DefineProperty(AllocationContext acx,
                                    Handle<ModuleScope *> obj,
                                    Handle<String *> name,
                                    Handle<PropertyDescriptor> defn);

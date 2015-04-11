@@ -11,36 +11,36 @@ namespace VM {
 
 
 /* static */ OkResult
-Wobject::GetDelegates(ThreadContext *cx,
+Wobject::GetDelegates(AllocationContext acx,
                       Handle<Wobject *> obj,
                       MutHandle<Array<Wobject *> *> delegatesOut)
 {
     HeapThing *heapThing = HeapThing::From(obj.get());
     if (heapThing->isPlainObject()) {
-        Local<PlainObject *> plainObj(cx,
+        Local<PlainObject *> plainObj(acx,
             reinterpret_cast<PlainObject *>(heapThing));
-        PlainObject::GetDelegates(cx, plainObj, delegatesOut);
+        PlainObject::GetDelegates(acx, plainObj, delegatesOut);
         return OkVal();
     }
 
     if (heapThing->isCallScope()) {
-        Local<CallScope *> callObj(cx,
+        Local<CallScope *> callObj(acx,
             reinterpret_cast<CallScope *>(heapThing));
-        CallScope::GetDelegates(cx, callObj, delegatesOut);
+        CallScope::GetDelegates(acx, callObj, delegatesOut);
         return OkVal();
     }
 
     if (heapThing->isModuleScope()) {
-        Local<ModuleScope *> moduleObj(cx,
+        Local<ModuleScope *> moduleObj(acx,
             reinterpret_cast<ModuleScope *>(heapThing));
-        ModuleScope::GetDelegates(cx, moduleObj, delegatesOut);
+        ModuleScope::GetDelegates(acx, moduleObj, delegatesOut);
         return OkVal();
     }
 
     if (heapThing->isGlobalScope()) {
-        Local<GlobalScope *> globalObj(cx,
+        Local<GlobalScope *> globalObj(acx,
             reinterpret_cast<GlobalScope *>(heapThing));
-        GlobalScope::GetDelegates(cx, globalObj, delegatesOut);
+        GlobalScope::GetDelegates(acx, globalObj, delegatesOut);
         return OkVal();
     }
 
@@ -49,34 +49,34 @@ Wobject::GetDelegates(ThreadContext *cx,
 }
 
 /* static */ Result<bool>
-Wobject::GetProperty(ThreadContext *cx,
+Wobject::GetProperty(AllocationContext acx,
                      Handle<Wobject *> obj,
                      Handle<String *> name,
                      MutHandle<PropertyDescriptor> result)
 {
     HeapThing *heapThing = HeapThing::From(obj.get());
     if (heapThing->isPlainObject()) {
-        Local<PlainObject *> plainObj(cx,
+        Local<PlainObject *> plainObj(acx,
             reinterpret_cast<PlainObject *>(heapThing));
-        return OkVal(PlainObject::GetProperty(cx, plainObj, name, result));
+        return OkVal(PlainObject::GetProperty(acx, plainObj, name, result));
     }
 
     if (heapThing->isCallScope()) {
-        Local<CallScope *> callObj(cx,
+        Local<CallScope *> callObj(acx,
             reinterpret_cast<CallScope *>(heapThing));
-        return OkVal(CallScope::GetProperty(cx, callObj, name, result));
+        return OkVal(CallScope::GetProperty(acx, callObj, name, result));
     }
 
     if (heapThing->isModuleScope()) {
-        Local<ModuleScope *> moduleObj(cx,
+        Local<ModuleScope *> moduleObj(acx,
             reinterpret_cast<ModuleScope *>(heapThing));
-        return OkVal(ModuleScope::GetProperty(cx, moduleObj, name, result));
+        return OkVal(ModuleScope::GetProperty(acx, moduleObj, name, result));
     }
 
     if (heapThing->isGlobalScope()) {
-        Local<GlobalScope *> globalObj(cx,
+        Local<GlobalScope *> globalObj(acx,
             reinterpret_cast<GlobalScope *>(heapThing));
-        return OkVal(GlobalScope::GetProperty(cx, globalObj, name, result));
+        return OkVal(GlobalScope::GetProperty(acx, globalObj, name, result));
     }
 
     WH_UNREACHABLE("Unknown object kind");
@@ -84,34 +84,34 @@ Wobject::GetProperty(ThreadContext *cx,
 }
 
 /* static */ OkResult
-Wobject::DefineProperty(ThreadContext *cx,
+Wobject::DefineProperty(AllocationContext acx,
                         Handle<Wobject *> obj,
                         Handle<String *> name,
                         Handle<PropertyDescriptor> defn)
 {
     HeapThing *heapThing = HeapThing::From(obj.get());
     if (heapThing->isPlainObject()) {
-        Local<PlainObject *> plainObj(cx,
+        Local<PlainObject *> plainObj(acx,
             reinterpret_cast<PlainObject *>(heapThing));
-        return PlainObject::DefineProperty(cx, plainObj, name, defn);
+        return PlainObject::DefineProperty(acx, plainObj, name, defn);
     }
 
     if (heapThing->isCallScope()) {
-        Local<CallScope *> callObj(cx,
+        Local<CallScope *> callObj(acx,
             reinterpret_cast<CallScope *>(heapThing));
-        return CallScope::DefineProperty(cx, callObj, name, defn);
+        return CallScope::DefineProperty(acx, callObj, name, defn);
     }
 
     if (heapThing->isModuleScope()) {
-        Local<ModuleScope *> moduleObj(cx,
+        Local<ModuleScope *> moduleObj(acx,
             reinterpret_cast<ModuleScope *>(heapThing));
-        return ModuleScope::DefineProperty(cx, moduleObj, name, defn);
+        return ModuleScope::DefineProperty(acx, moduleObj, name, defn);
     }
 
     if (heapThing->isGlobalScope()) {
-        Local<GlobalScope *> globalObj(cx,
+        Local<GlobalScope *> globalObj(acx,
             reinterpret_cast<GlobalScope *>(heapThing));
-        return GlobalScope::DefineProperty(cx, globalObj, name, defn);
+        return GlobalScope::DefineProperty(acx, globalObj, name, defn);
     }
 
     WH_UNREACHABLE("Unknown object kind");
@@ -121,26 +121,24 @@ Wobject::DefineProperty(ThreadContext *cx,
 
 /* static */ Result<bool>
 Wobject::LookupProperty(
-        ThreadContext* cx,
+        AllocationContext acx,
         Handle<Wobject *> obj,
         Handle<String *> name,
         MutHandle<LookupState *> stateOut,
         MutHandle<PropertyDescriptor> defnOut)
 {
-    AllocationContext acx = cx->inHatchery();
-
     // Allocate a lookup state.
-    Local<LookupState *> lookupState(cx);
+    Local<LookupState *> lookupState(acx);
     if (!lookupState.setResult(LookupState::Create(acx, obj, name)))
         return ErrorVal();
 
     // Recursive lookup through nodes.
-    Local<LookupNode *> curNode(cx, lookupState->node());
+    Local<LookupNode *> curNode(acx, lookupState->node());
     while (curNode.get() != nullptr) {
         // Check current node.
-        Local<Wobject *> curObj(cx, curNode->object());
-        Local<PropertyDescriptor> defn(cx);
-        Result<bool> prop = Wobject::GetProperty(cx, curObj, name, &defn);
+        Local<Wobject *> curObj(acx, curNode->object());
+        Local<PropertyDescriptor> defn(acx);
+        Result<bool> prop = Wobject::GetProperty(acx, curObj, name, &defn);
         if (!prop)
             return ErrorVal();
 

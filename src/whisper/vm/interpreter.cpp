@@ -176,7 +176,7 @@ DispatchSyntaxMethod(ThreadContext *cx,
 
     // Lookup method name on scope.
     Result<bool> lookupResult = Wobject::LookupProperty(
-        cx, scopeObj, name, &lookupState, &propDesc);
+        cx->inHatchery(), scopeObj, name, &lookupState, &propDesc);
     if (!lookupResult)
         return ErrorVal();
 

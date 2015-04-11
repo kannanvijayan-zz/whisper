@@ -7,7 +7,7 @@ namespace VM {
 
 
 /* static */ void
-HashObject::GetDelegates(ThreadContext *cx,
+HashObject::GetDelegates(AllocationContext acx,
                          Handle<HashObject *> obj,
                          MutHandle<Array<Wobject *> *> delegatesOut)
 {
@@ -30,7 +30,7 @@ HashObject::GetPropertyIndex(Handle<HashObject *> obj,
 }
 
 /* static */ bool
-HashObject::GetProperty(ThreadContext *cx,
+HashObject::GetProperty(AllocationContext acx,
                         Handle<HashObject *> obj,
                         Handle<String *> name,
                         MutHandle<PropertyDescriptor> result)
@@ -44,7 +44,7 @@ HashObject::GetProperty(ThreadContext *cx,
 }
 
 /* static */ OkResult
-HashObject::DefineProperty(ThreadContext *cx,
+HashObject::DefineProperty(AllocationContext acx,
                            Handle<HashObject *> obj,
                            Handle<String *> name,
                            Handle<PropertyDescriptor> defn)

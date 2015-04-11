@@ -21,20 +21,16 @@ class GlobalScope : public ScopeObject
 
     static Result<GlobalScope *> Create(AllocationContext acx);
 
-    static void GetDelegates(ThreadContext *cx,
+    static void GetDelegates(AllocationContext acx,
                              Handle<GlobalScope *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
 
-    static bool GetPropertyIndex(Handle<GlobalScope *> obj,
-                                 Handle<String *> name,
-                                 uint32_t *indexOut);
-
-    static bool GetProperty(ThreadContext *cx,
+    static bool GetProperty(AllocationContext acx,
                             Handle<GlobalScope *> obj,
                             Handle<String *> name,
                             MutHandle<PropertyDescriptor> result);
 
-    static OkResult DefineProperty(ThreadContext *cx,
+    static OkResult DefineProperty(AllocationContext acx,
                                    Handle<GlobalScope *> obj,
                                    Handle<String *> name,
                                    Handle<PropertyDescriptor> defn);

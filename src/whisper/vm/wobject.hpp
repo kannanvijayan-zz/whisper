@@ -21,24 +21,24 @@ class Wobject
 
   public:
     static OkResult GetDelegates(
-            ThreadContext *cx,
+            AllocationContext acx,
             Handle<Wobject *> obj,
             MutHandle<Array<Wobject *> *> delegatesOut);
 
     static Result<bool> GetProperty(
-            ThreadContext *cx,
+            AllocationContext acx,
             Handle<Wobject *> obj,
             Handle<String *> name,
             MutHandle<PropertyDescriptor> result);
 
     static OkResult DefineProperty(
-            ThreadContext *cx,
+            AllocationContext acx,
             Handle<Wobject *> obj,
             Handle<String *> name,
             Handle<PropertyDescriptor> defn);
 
     static Result<bool> LookupProperty(
-            ThreadContext *cx,
+            AllocationContext acx,
             Handle<Wobject *> obj,
             Handle<String *> name,
             MutHandle<LookupState *> stateOut,

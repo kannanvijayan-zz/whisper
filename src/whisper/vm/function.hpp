@@ -254,20 +254,16 @@ class FunctionObject : public HashObject
         return func_;
     }
 
-    static void GetDelegates(ThreadContext *cx,
+    static void GetDelegates(AllocationContext acx,
                              Handle<FunctionObject *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut);
 
-    static bool GetPropertyIndex(Handle<FunctionObject *> obj,
-                                 Handle<String *> name,
-                                 uint32_t *indexOut);
-
-    static bool GetProperty(ThreadContext *cx,
+    static bool GetProperty(AllocationContext acx,
                             Handle<FunctionObject *> obj,
                             Handle<String *> name,
                             MutHandle<PropertyDescriptor> result);
 
-    static OkResult DefineProperty(ThreadContext *cx,
+    static OkResult DefineProperty(AllocationContext acx,
                                    Handle<FunctionObject *> obj,
                                    Handle<String *> name,
                                    Handle<PropertyDescriptor> defn);

@@ -42,33 +42,33 @@ GlobalScope::Create(AllocationContext acx)
 }
 
 /* static */ void
-GlobalScope::GetDelegates(ThreadContext *cx,
+GlobalScope::GetDelegates(AllocationContext acx,
                           Handle<GlobalScope *> obj,
                           MutHandle<Array<Wobject *> *> delegatesOut)
 {
-    HashObject::GetDelegates(cx,
+    HashObject::GetDelegates(acx,
         Handle<HashObject *>::Convert(obj),
         delegatesOut);
 }
 
 /* static */ bool
-GlobalScope::GetProperty(ThreadContext *cx,
+GlobalScope::GetProperty(AllocationContext acx,
                          Handle<GlobalScope *> obj,
                          Handle<String *> name,
                          MutHandle<PropertyDescriptor> result)
 {
-    return HashObject::GetProperty(cx,
+    return HashObject::GetProperty(acx,
         Handle<HashObject *>::Convert(obj),
         name, result);
 }
 
 /* static */ OkResult
-GlobalScope::DefineProperty(ThreadContext *cx,
+GlobalScope::DefineProperty(AllocationContext acx,
                             Handle<GlobalScope *> obj,
                             Handle<String *> name,
                             Handle<PropertyDescriptor> defn)
 {
-    return HashObject::DefineProperty(cx,
+    return HashObject::DefineProperty(acx,
         Handle<HashObject *>::Convert(obj),
         name, defn);
 }
@@ -96,17 +96,16 @@ BindGlobalMethod(AllocationContext acx,
                  String *name,
                  NativeOperativeFuncPtr opFunc)
 {
-    ThreadContext *cx = acx.threadContext();
     Local<String *> rootedName(acx, name);
 
     // Allocate NativeFunction object.
-    Local<NativeFunction *> natF(cx);
+    Local<NativeFunction *> natF(acx);
     if (!natF.setResult(NativeFunction::Create(acx, opFunc)))
         return ErrorVal();
-    Local<PropertyDescriptor> desc(cx, PropertyDescriptor(natF.get()));
+    Local<PropertyDescriptor> desc(acx, PropertyDescriptor(natF.get()));
 
     // Bind method on global.
-    if (!GlobalScope::DefineProperty(cx, obj, rootedName, desc))
+    if (!GlobalScope::DefineProperty(acx, obj, rootedName, desc))
         return ErrorVal();
 
     return OkVal();
@@ -200,6 +199,8 @@ IMPL_LIFT_FN_(VarStmt)
     Local<String *> varname(cx);
     Local<Box> varvalBox(cx);
 
+    AllocationContext acx = cx->inHatchery();
+
     // Iterate through all bindings.
     SpewInterpNote("Lift_VarStmt: Defining %u vars!",
                    unsigned(varStmtNode->numBindings()));
@@ -227,7 +228,7 @@ IMPL_LIFT_FN_(VarStmt)
 
         // Bind the name and value onto the receiver.
         Local<PropertyDescriptor> descr(cx, PropertyDescriptor(varvalBox));
-        if (!Wobject::DefineProperty(cx, receiver, varname, descr))
+        if (!Wobject::DefineProperty(acx, receiver, varname, descr))
             return ErrorVal();
     }
 
@@ -267,7 +268,7 @@ IMPL_LIFT_FN_(DefStmt)
     WH_ASSERT(funcnameBox->pointer<HeapThing>()->header().isFormat_String());
     Local<String *> funcname(cx, funcnameBox->pointer<String>());
     Local<PropertyDescriptor> descr(cx, PropertyDescriptor(func.get()));
-    if (!Wobject::DefineProperty(cx, receiver, funcname, descr))
+    if (!Wobject::DefineProperty(acx, receiver, funcname, descr))
         return ErrorVal();
     
     resultOut = Box::Undefined();

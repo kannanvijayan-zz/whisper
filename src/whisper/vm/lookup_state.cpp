@@ -135,8 +135,6 @@ LookupState::NextNode(AllocationContext acx,
                       Handle<LookupState *> lookupState,
                       MutHandle<LookupNode *> nodeOut)
 {
-    ThreadContext *cx = acx.threadContext();
-
     // node_ refers to a leaf-level node whose |delegates| field is null.
     Local<LookupNode *> cur(acx, lookupState->node_);
     WH_ASSERT(cur->delegates() == nullptr);
@@ -144,7 +142,7 @@ LookupState::NextNode(AllocationContext acx,
     // Check if current object has any unseen delegates.
     Local<Wobject *> obj(acx, cur->object());
     Local<Array<Wobject *> *> delgs(acx, nullptr);
-    if (!Wobject::GetDelegates(cx, obj, &delgs))
+    if (!Wobject::GetDelegates(acx, obj, &delgs))
         return ErrorVal();
 
     if (delgs->length() > 0) {

@@ -65,33 +65,33 @@ FunctionObject::Create(AllocationContext acx, Handle<Function *> func)
 }
 
 /* static */ void
-FunctionObject::GetDelegates(ThreadContext *cx,
+FunctionObject::GetDelegates(AllocationContext acx,
                              Handle<FunctionObject *> obj,
                              MutHandle<Array<Wobject *> *> delegatesOut)
 {
-    HashObject::GetDelegates(cx,
+    HashObject::GetDelegates(acx,
         Handle<HashObject *>::Convert(obj),
         delegatesOut);
 }
 
 /* static */ bool
-FunctionObject::GetProperty(ThreadContext *cx,
+FunctionObject::GetProperty(AllocationContext acx,
                             Handle<FunctionObject *> obj,
                             Handle<String *> name,
                             MutHandle<PropertyDescriptor> result)
 {
-    return HashObject::GetProperty(cx,
+    return HashObject::GetProperty(acx,
         Handle<HashObject *>::Convert(obj),
         name, result);
 }
 
 /* static */ OkResult
-FunctionObject::DefineProperty(ThreadContext *cx,
+FunctionObject::DefineProperty(AllocationContext acx,
                                Handle<FunctionObject *> obj,
                                Handle<String *> name,
                                Handle<PropertyDescriptor> defn)
 {
-    return HashObject::DefineProperty(cx,
+    return HashObject::DefineProperty(acx,
         Handle<HashObject *>::Convert(obj),
         name, defn);
 }
