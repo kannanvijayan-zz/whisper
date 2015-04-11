@@ -253,6 +253,7 @@ IMPL_LIFT_FN_(DefStmt)
 
     AllocationContext acx = cx->inHatchery();
 
+    // Create the scripted function.
     Local<ScriptedFunction *> func(cx);
     if (!func.setResult(ScriptedFunction::Create(
             acx, pst, stRef->offset(), callInfo->callerScope(), false)))
