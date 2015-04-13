@@ -15,7 +15,7 @@ OkResult
 InterpretSourceFile(ThreadContext *cx,
                     Handle<SourceFile *> file,
                     Handle<ScopeObject *> scope,
-                    MutHandle<Box> resultOut)
+                    MutHandle<ValBox> resultOut)
 {
     WH_ASSERT(!cx->hasLastFrame());
     WH_ASSERT(file.get() != nullptr);
@@ -35,7 +35,7 @@ InterpretSyntax(ThreadContext *cx,
                 Handle<ScopeObject *> scope,
                 Handle<PackedSyntaxTree *> pst,
                 uint32_t offset,
-                MutHandle<Box> resultOut)
+                MutHandle<ValBox> resultOut)
 {
     WH_ASSERT(!cx->hasLastFrame());
     WH_ASSERT(scope.get() != nullptr);
@@ -168,7 +168,7 @@ DispatchSyntaxMethod(ThreadContext *cx,
                      Handle<String *> name,
                      Handle<PackedSyntaxTree *> pst,
                      Handle<AST::PackedBaseNode> node,
-                     MutHandle<Box> resultOut)
+                     MutHandle<ValBox> resultOut)
 {
     Local<Wobject *> scopeObj(cx, scope.convertTo<Wobject *>());
     Local<LookupState *> lookupState(cx);
@@ -216,7 +216,7 @@ InvokeOperativeFunction(ThreadContext *cx,
                         Handle<Function *> func,
                         Handle<Wobject *> receiver,
                         Handle<SyntaxTreeRef> stRef,
-                        MutHandle<Box> resultOut)
+                        MutHandle<ValBox> resultOut)
 {
     // Call native if native.
     if (func->isNative()) {
@@ -225,7 +225,7 @@ InvokeOperativeFunction(ThreadContext *cx,
             NativeCallInfo(lookupState, callerScope,
                            func->asNative(), receiver));
 
-        resultOut = Box::Invalid();
+        resultOut = ValBox::Invalid();
         NativeOperativeFuncPtr opNatF = func->asNative()->operative();
         if (!opNatF(cx, callInfo, ArrayHandle<SyntaxTreeRef>(stRef),
                     resultOut))

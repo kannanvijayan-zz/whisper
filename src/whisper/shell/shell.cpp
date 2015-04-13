@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
     }
 
     // Interpret the file.
-    Local<VM::Box> result(cx);
+    Local<VM::ValBox> result(cx);
     if (!VM::InterpretSourceFile(cx, sourceFile,
             module.handle().convertTo<VM::ScopeObject *>(), &result))
     {

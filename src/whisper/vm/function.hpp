@@ -111,14 +111,14 @@ class NativeCallInfo
 typedef OkResult (*NativeApplicativeFuncPtr)(
         ThreadContext *cx,
         Handle<NativeCallInfo> callInfo,
-        ArrayHandle<Box> args,
-        MutHandle<Box> result);
+        ArrayHandle<ValBox> args,
+        MutHandle<ValBox> result);
 
 typedef OkResult (*NativeOperativeFuncPtr)(
         ThreadContext *cx,
         Handle<NativeCallInfo> callInfo,
         ArrayHandle<SyntaxTreeRef> args,
-        MutHandle<Box> result);
+        MutHandle<ValBox> result);
 
 class NativeFunction : public Function
 {

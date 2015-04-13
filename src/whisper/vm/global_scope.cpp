@@ -79,7 +79,7 @@ GlobalScope::DefineProperty(AllocationContext acx,
         ThreadContext *cx, \
         Handle<NativeCallInfo> callInfo, \
         ArrayHandle<SyntaxTreeRef> args, \
-        MutHandle<Box> resultOut);
+        MutHandle<ValBox> resultOut);
 
     DECLARE_LIFT_FN_(File)
     DECLARE_LIFT_FN_(VarStmt)
@@ -144,7 +144,7 @@ GlobalScope::BindSyntaxHandlers(AllocationContext acx,
         ThreadContext *cx, \
         Handle<NativeCallInfo> callInfo, \
         ArrayHandle<SyntaxTreeRef> args, \
-        MutHandle<Box> resultOut)
+        MutHandle<ValBox> resultOut)
 
 IMPL_LIFT_FN_(File)
 {
@@ -159,7 +159,7 @@ IMPL_LIFT_FN_(File)
     Local<PackedSyntaxTree *> pst(cx, stRef->pst());
     Local<AST::PackedFileNode> fileNode(cx,
         AST::PackedFileNode(pst->data(), stRef->offset()));
-    Local<Box> stmtResult(cx);
+    Local<ValBox> stmtResult(cx);
 
     SpewInterpNote("Lift_File: Interpreting %u statements",
                    unsigned(fileNode->numStatements()));
@@ -177,7 +177,7 @@ IMPL_LIFT_FN_(File)
         }
     }
 
-    resultOut = Box::Undefined();
+    resultOut = ValBox::Undefined();
     return OkVal();
 }
 
@@ -197,7 +197,7 @@ IMPL_LIFT_FN_(VarStmt)
         AST::PackedVarStmtNode(pst->data(), stRef->offset()));
     Local<Box> varnameBox(cx);
     Local<String *> varname(cx);
-    Local<Box> varvalBox(cx);
+    Local<ValBox> varvalBox(cx);
 
     AllocationContext acx = cx->inHatchery();
 
@@ -220,7 +220,7 @@ IMPL_LIFT_FN_(VarStmt)
                 return ErrorVal();
             }
         } else {
-            varvalBox = Box::Undefined();
+            varvalBox = ValBox::Undefined();
         }
 
         WH_ASSERT_IF(varvalBox->isPointer(),
@@ -233,7 +233,7 @@ IMPL_LIFT_FN_(VarStmt)
     }
 
     // TODO: Implement VarStmt
-    resultOut = Box::Undefined();
+    resultOut = ValBox::Undefined();
     return OkVal();
 }
 
@@ -271,7 +271,7 @@ IMPL_LIFT_FN_(DefStmt)
     if (!Wobject::DefineProperty(acx, receiver, funcname, descr))
         return ErrorVal();
     
-    resultOut = Box::Undefined();
+    resultOut = ValBox::Undefined();
     return OkVal();
 }
 
@@ -286,7 +286,7 @@ IMPL_LIFT_FN_(ExprStmt)
 
     // TODO: Implement VarStmt
     SpewInterpNote("Lift_ExprStmt: Interpreting!\n");
-    resultOut = Box::Undefined();
+    resultOut = ValBox::Undefined();
     return OkVal();
 }
 
@@ -305,7 +305,7 @@ IMPL_LIFT_FN_(IntegerExpr)
         AST::PackedIntegerExprNode(pst->data(), stRef->offset()));
 
     // Make an integer box and return it.
-    resultOut = Box::Integer(intExpr->value());
+    resultOut = ValBox::Integer(intExpr->value());
     return OkVal();
 }
 

@@ -14,21 +14,21 @@ namespace VM {
 OkResult InterpretSourceFile(ThreadContext *cx,
                              Handle<SourceFile *> file,
                              Handle<ScopeObject *> scope,
-                             MutHandle<Box> resultOut);
+                             MutHandle<ValBox> resultOut);
 
 
 OkResult InterpretSyntax(ThreadContext *cx,
                          Handle<ScopeObject *> scope,
                          Handle<PackedSyntaxTree *> pst,
                          uint32_t offset,
-                         MutHandle<Box> resultOut);
+                         MutHandle<ValBox> resultOut);
 
 OkResult DispatchSyntaxMethod(ThreadContext *cx,
                               Handle<ScopeObject *> scope,
                               Handle<String *> name,
                               Handle<PackedSyntaxTree *> pst,
                               Handle<AST::PackedBaseNode> node,
-                              MutHandle<Box> resultOut);
+                              MutHandle<ValBox> resultOut);
 
 OkResult InvokeOperativeFunction(ThreadContext *cx,
                                  Handle<LookupState *> lookupState,
@@ -36,7 +36,7 @@ OkResult InvokeOperativeFunction(ThreadContext *cx,
                                  Handle<Function *> func,
                                  Handle<Wobject *> receiver,
                                  Handle<SyntaxTreeRef> stRef,
-                                 MutHandle<Box> resultOut);
+                                 MutHandle<ValBox> resultOut);
 
 
 } // namespace VM

@@ -160,7 +160,7 @@ class ValBox : public Box
   public:
     ValBox() : Box() {}
 
-    static Box Invalid() {
+    static ValBox Invalid() {
         return ValBox();
     }
 
