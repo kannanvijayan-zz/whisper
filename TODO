@@ -1,0 +1,4 @@
+
+* Make ThreadContext.errorThing be a Box.
+* Split Box into ConstPoolBox and ValBox
+* Allow methods to be invoked on simple box things, not just objects.
