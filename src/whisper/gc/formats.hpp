@@ -8,6 +8,7 @@
     _(PropertyName)             \
     _(PropertyDescriptor)       \
     _(Box)                      \
+    _(ValBox)                   \
     _(PackedSyntaxElement)      \
     _(PackedWriter)             \
     _(PackedReader)             \
@@ -27,6 +28,7 @@
     _(DoubleArray)              \
     _(String)                   \
     _(BoxArray)                 \
+    _(ValBoxArray)              \
     _(RuntimeState)             \
     _(PackedSyntaxTree)         \
     _(SyntaxTreeFragment)       \

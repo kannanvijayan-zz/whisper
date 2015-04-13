@@ -10,6 +10,8 @@
 namespace Whisper {
 namespace VM {
 
+class Wobject;
+
 //
 // A Box is a 64-bit that represents a pointer or immediate value.
 //
@@ -23,7 +25,7 @@ namespace VM {
 class Box
 {
     friend class TraceTraits<Box>;
-  private:
+  protected:
     uint64_t value_;
 
   public:
@@ -56,7 +58,7 @@ class Box
 
     static constexpr uint64_t InvalidValue = static_cast<uint64_t>(-1);
 
-  private:
+  protected:
     Box(uint64_t word)
       : value_(word)
     {}
@@ -132,6 +134,66 @@ class Box
 
     void snprint(char *buf, size_t n) const;
 
+  protected:
+    template <typename T>
+    void setPointer(T *ptr) {
+        static_assert(IsHeapThingType<T>(), "T is not a HeapThing type.");
+        WH_ASSERT(ptr != nullptr);
+        WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
+        value_ = reinterpret_cast<uint64_t>(ptr);
+    }
+};
+
+//
+// A ValBox is a box for in-language values.  This means that all
+// pointers stored in a ValBox are definitely pointers to Wobjects.
+//
+class ValBox : public Box
+{
+    friend class TraceTraits<ValBox>;
+
+  protected:
+    ValBox(uint64_t word)
+      : Box(word)
+    {}
+
+  public:
+    ValBox() : Box() {}
+
+    static Box Invalid() {
+        return ValBox();
+    }
+
+    template <typename T>
+    static ValBox Pointer(T *ptr) {
+        // Ensure ptr converts to Wobject.
+        static_assert(std::is_convertible<T *, Wobject *>(),
+                      "T is not a Wobject type.");
+        WH_ASSERT(ptr != nullptr);
+        WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
+        return ValBox(reinterpret_cast<uint64_t>(ptr));
+    }
+
+    static ValBox Undefined() {
+        return ValBox(UndefinedTag);
+    }
+
+    static ValBox Integer(int64_t ival) {
+        WH_ASSERT(IntegerInRange(ival));
+        return ValBox((static_cast<uint64_t>(ival) << IntegerShift) |
+                      IntegerTag);
+    }
+
+    static ValBox True() {
+        return ValBox(BooleanBit | BooleanTag);
+    }
+    static ValBox False() {
+        return ValBox(BooleanTag);
+    }
+    static ValBox Boolean(bool val) {
+        return ValBox((val ? BooleanBit : 0u) | BooleanTag);
+    }
+
   private:
     template <typename T>
     void setPointer(T *ptr) {
@@ -151,6 +213,15 @@ struct ArrayTraits<Box>
     static const HeapFormat ArrayFormat = HeapFormat::BoxArray;
 };
 
+template <>
+struct ArrayTraits<ValBox>
+{
+    ArrayTraits() = delete;
+
+    static const bool Specialized = true;
+    static const HeapFormat ArrayFormat = HeapFormat::ValBoxArray;
+};
+
 
 } // namespace VM
 
@@ -165,12 +236,24 @@ struct FieldTraits<VM::Box>
     FieldTraits() = delete;
     static constexpr bool Specialized = true;
 };
+template <>
+struct FieldTraits<VM::ValBox>
+{
+    FieldTraits() = delete;
+    static constexpr bool Specialized = true;
+};
 
 template <>
 struct HeapFormatTraits<HeapFormat::BoxArray>
 {
     HeapFormatTraits() = delete;
     typedef VM::Array<VM::Box> Type;
+};
+template <>
+struct HeapFormatTraits<HeapFormat::ValBoxArray>
+{
+    HeapFormatTraits() = delete;
+    typedef VM::Array<VM::ValBox> Type;
 };
 
 template <>
@@ -203,6 +286,28 @@ struct TraceTraits<VM::Box>
         HeapThing *updated = updater(&(box.value_), heapThing);
         if (updated != heapThing)
             box.setPointer(updated);
+    }
+};
+template <>
+struct TraceTraits<VM::ValBox>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner &scanner, const VM::ValBox &box,
+                     const void *start, const void *end)
+    {
+        TraceTraits<VM::Box>::Scan<Scanner>(scanner, box, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater &updater, VM::Box &box,
+                       const void *start, const void *end)
+    {
+        TraceTraits<VM::Box>::Update<Updater>(updater, box, start, end);
     }
 };
 
