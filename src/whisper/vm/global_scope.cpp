@@ -164,7 +164,7 @@ IMPL_LIFT_FN_(File)
     SpewInterpNote("Lift_File: Interpreting %u statements",
                    unsigned(fileNode->numStatements()));
     SpewInterpNote("Lift_File: Receiver is %s",
-               HeapThing::From(callInfo->receiver().get())->header().formatString());
+       HeapThing::From(callInfo->receiver().get())->header().formatString());
     for (uint32_t i = 0; i < fileNode->numStatements(); i++) {
         Local<AST::PackedBaseNode> stmtNode(cx, fileNode->statement(i));
         SpewInterpNote("Lift_File: statement %u is %s",
@@ -284,9 +284,19 @@ IMPL_LIFT_FN_(ExprStmt)
 
     WH_ASSERT(args.get(0).nodeType() == AST::ExprStmt);
 
-    // TODO: Implement VarStmt
-    SpewInterpNote("Lift_ExprStmt: Interpreting!\n");
-    resultOut = ValBox::Undefined();
+    Local<SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<PackedSyntaxTree *> pst(cx, stRef->pst());
+    Local<AST::PackedExprStmtNode> exprStmtNode(cx,
+        AST::PackedExprStmtNode(pst->data(), stRef->offset()));
+
+    Local<AST::PackedBaseNode> exprNode(cx, exprStmtNode->expression());
+
+    if (!InterpretSyntax(cx, callInfo->callerScope(), pst,
+                         exprNode->offset(), resultOut))
+    {
+        return ErrorVal();
+    }
+
     return OkVal();
 }
 

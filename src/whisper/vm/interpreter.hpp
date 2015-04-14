@@ -16,7 +16,6 @@ OkResult InterpretSourceFile(ThreadContext *cx,
                              Handle<ScopeObject *> scope,
                              MutHandle<ValBox> resultOut);
 
-
 OkResult InterpretSyntax(ThreadContext *cx,
                          Handle<ScopeObject *> scope,
                          Handle<PackedSyntaxTree *> pst,
