@@ -17,7 +17,9 @@ namespace VM {
 class Wobject
 {
   protected:
-    Wobject() {}
+    Wobject() {
+        WH_ASSERT(IsWobject(HeapThing::From(this)));
+    }
 
   public:
     static OkResult GetDelegates(
