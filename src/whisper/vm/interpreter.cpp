@@ -223,7 +223,8 @@ InvokeOperativeFunction(ThreadContext *cx,
         WH_ASSERT(func->asNative()->isOperative());
         Local<NativeCallInfo> callInfo(cx,
             NativeCallInfo(lookupState, callerScope,
-                           func->asNative(), receiver));
+                           func->asNative(),
+                           ValBox::Pointer(receiver.get())));
 
         resultOut = ValBox::Invalid();
         NativeOperativeFuncPtr opNatF = func->asNative()->operative();

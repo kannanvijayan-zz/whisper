@@ -8,6 +8,7 @@
 #include "vm/hash_object.hpp"
 #include "vm/scope_object.hpp"
 #include "vm/packed_syntax_tree.hpp"
+#include "vm/box.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -76,13 +77,13 @@ class NativeCallInfo
     StackField<LookupState *> lookupState_;
     StackField<ScopeObject *> callerScope_;
     StackField<NativeFunction *> calleeFunc_;
-    StackField<Wobject *> receiver_;
+    StackField<ValBox> receiver_;
 
   public:
     NativeCallInfo(LookupState *lookupState,
                    ScopeObject *callerScope,
                    NativeFunction *calleeFunc,
-                   Wobject *receiver)
+                   ValBox receiver)
       : lookupState_(lookupState),
         callerScope_(callerScope),
         calleeFunc_(calleeFunc),
@@ -91,7 +92,7 @@ class NativeCallInfo
         WH_ASSERT(lookupState_ != nullptr);
         WH_ASSERT(callerScope_ != nullptr);
         WH_ASSERT(calleeFunc_ != nullptr);
-        WH_ASSERT(receiver_ != nullptr);
+        WH_ASSERT(receiver_->isValid());
     }
 
     Handle<LookupState *> lookupState() const {
@@ -103,7 +104,7 @@ class NativeCallInfo
     Handle<NativeFunction *> calleeFunc() const {
         return calleeFunc_;
     }
-    Handle<Wobject *> receiver() const {
+    Handle<ValBox> receiver() const {
         return receiver_;
     }
 };

@@ -4,7 +4,7 @@
 
 #include <cstdio>
 
-#include "vm/core.hpp"
+#include "vm/predeclare.hpp"
 #include "vm/array.hpp"
 
 namespace Whisper {
@@ -74,6 +74,11 @@ class Box
     }
     static Box Invalid() {
         return Box();
+    }
+
+    bool isPrimitive() const {
+        WH_ASSERT(isValid());
+        return !isPointer();
     }
 
     bool isPointer() const {
@@ -172,6 +177,9 @@ class ValBox : public Box
         WH_ASSERT(ptr != nullptr);
         WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
         return ValBox(reinterpret_cast<uint64_t>(ptr));
+    }
+    Wobject *objPointer() const {
+        return pointer<Wobject>();
     }
 
     static ValBox Undefined() {

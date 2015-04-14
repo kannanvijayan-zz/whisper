@@ -163,8 +163,6 @@ IMPL_LIFT_FN_(File)
 
     SpewInterpNote("Lift_File: Interpreting %u statements",
                    unsigned(fileNode->numStatements()));
-    SpewInterpNote("Lift_File: Receiver is %s",
-       HeapThing::From(callInfo->receiver().get())->header().formatString());
     for (uint32_t i = 0; i < fileNode->numStatements(); i++) {
         Local<AST::PackedBaseNode> stmtNode(cx, fileNode->statement(i));
         SpewInterpNote("Lift_File: statement %u is %s",
@@ -190,7 +188,11 @@ IMPL_LIFT_FN_(VarStmt)
 
     WH_ASSERT(args.get(0).nodeType() == AST::VarStmt);
 
-    Local<Wobject *> receiver(cx, callInfo->receiver());
+    Local<ValBox> receiverBox(cx, callInfo->receiver());
+    if (receiverBox->isPrimitive())
+        return cx->setExceptionRaised("Cannot define var on primitive.");
+    Local<Wobject *> receiver(cx, receiverBox->objPointer());
+
     Local<SyntaxTreeRef> stRef(cx, args.get(0));
     Local<PackedSyntaxTree *> pst(cx, stRef->pst());
     Local<AST::PackedVarStmtNode> varStmtNode(cx,
@@ -246,7 +248,11 @@ IMPL_LIFT_FN_(DefStmt)
 
     WH_ASSERT(args.get(0).nodeType() == AST::DefStmt);
 
-    Local<Wobject *> receiver(cx, callInfo->receiver());
+    Local<ValBox> receiverBox(cx, callInfo->receiver());
+    if (receiverBox->isPrimitive())
+        return cx->setExceptionRaised("Cannot define var on primitive.");
+    Local<Wobject *> receiver(cx, receiverBox->objPointer());
+
     Local<SyntaxTreeRef> stRef(cx, args.get(0));
     Local<PackedSyntaxTree *> pst(cx, stRef->pst());
     Local<AST::PackedDefStmtNode> defStmtNode(cx,
