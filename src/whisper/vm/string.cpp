@@ -71,6 +71,8 @@ String::String(uint32_t byteLength, const uint8_t *data)
   : length_(0)
 {
     std::copy(data, data + byteLength, data_);
+    // Add terminating null byte.
+    data_[byteLength] = 0;
 
     // Count length of string.
     for (Cursor curs = begin(); curs < end(); advance(curs))

@@ -72,7 +72,14 @@ class String
                                    const String *other);
 
     static uint32_t CalculateSize(uint32_t byteLength) {
-        return sizeof(String) + byteLength;
+        // Always add 1 byte to the byteLength to allow for a terminating
+        // null char.
+        return sizeof(String) + byteLength + 1;
+    }
+    static uint32_t CalculateByteLength(uint32_t size) {
+        // Always add 1 byte to the byteLength to allow for a terminating
+        // null char.
+        return size - (sizeof(String) + 1);
     }
 
     uint32_t length() const {
@@ -83,7 +90,7 @@ class String
     {
         uint32_t size = HeapThing::From(this)->size();
         WH_ASSERT(size >= sizeof(VM::String));
-        return size - sizeof(VM::String);
+        return CalculateByteLength(size);
     }
 
     const uint8_t *bytes() const {
