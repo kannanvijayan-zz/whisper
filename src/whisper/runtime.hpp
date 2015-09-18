@@ -273,14 +273,14 @@ class ThreadContext
         return errorThing_;
     }
 
-    OkResult setError(RuntimeError error) {
+    ErrorT_ setError(RuntimeError error) {
         WH_ASSERT(!hasError());
         WH_ASSERT(!hasErrorString());
         WH_ASSERT(!hasErrorThing());
         error_ = error;
         return ErrorVal();
     }
-    OkResult setError(RuntimeError error, const char *string) {
+    ErrorT_ setError(RuntimeError error, const char *string) {
         WH_ASSERT(!hasError());
         WH_ASSERT(!hasErrorString());
         WH_ASSERT(!hasErrorThing());
@@ -288,7 +288,7 @@ class ThreadContext
         errorString_ = string;
         return ErrorVal();
     }
-    OkResult setError(RuntimeError error, const char *string,
+    ErrorT_ setError(RuntimeError error, const char *string,
                       HeapThing *thing)
     {
         WH_ASSERT(!hasError());
@@ -300,18 +300,18 @@ class ThreadContext
         return ErrorVal();
     }
     template <typename T>
-    OkResult setError(RuntimeError error, const char *string, T *thing) {
+    ErrorT_ setError(RuntimeError error, const char *string, T *thing) {
         return setError(error, string, HeapThing::From(thing));
     }
 
-    OkResult setExceptionRaised(const char *string) {
+    ErrorT_ setExceptionRaised(const char *string) {
         return setError(RuntimeError::ExceptionRaised, string);
     }
-    OkResult setExceptionRaised(const char *string, HeapThing *thing) {
+    ErrorT_ setExceptionRaised(const char *string, HeapThing *thing) {
         return setError(RuntimeError::ExceptionRaised, string, thing);
     }
     template <typename T>
-    OkResult setExceptionRaised(const char *string, T *thing) {
+    ErrorT_ setExceptionRaised(const char *string, T *thing) {
         return setError<T>(RuntimeError::ExceptionRaised, string, thing);
     }
 

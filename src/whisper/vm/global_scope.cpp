@@ -75,7 +75,7 @@ GlobalScope::DefineProperty(AllocationContext acx,
 
 // Declare a lift function for each syntax node type.
 #define DECLARE_LIFT_FN_(name) \
-    static OkResult Lift_##name( \
+    static Result<ControlFlow> Lift_##name( \
         ThreadContext *cx, \
         Handle<NativeCallInfo> callInfo, \
         ArrayHandle<SyntaxTreeRef> args, \
@@ -140,7 +140,7 @@ GlobalScope::BindSyntaxHandlers(AllocationContext acx,
 }
 
 #define IMPL_LIFT_FN_(name) \
-    static OkResult Lift_##name( \
+    static Result<ControlFlow> Lift_##name( \
         ThreadContext *cx, \
         Handle<NativeCallInfo> callInfo, \
         ArrayHandle<SyntaxTreeRef> args, \
@@ -176,7 +176,7 @@ IMPL_LIFT_FN_(File)
     }
 
     resultOut = ValBox::Undefined();
-    return OkVal();
+    return OkVal(ControlFlow::Void);
 }
 
 IMPL_LIFT_FN_(VarStmt)
@@ -236,7 +236,7 @@ IMPL_LIFT_FN_(VarStmt)
 
     // TODO: Implement VarStmt
     resultOut = ValBox::Undefined();
-    return OkVal();
+    return OkVal(ControlFlow::Void);
 }
 
 IMPL_LIFT_FN_(DefStmt)
@@ -278,7 +278,7 @@ IMPL_LIFT_FN_(DefStmt)
         return ErrorVal();
     
     resultOut = ValBox::Undefined();
-    return OkVal();
+    return OkVal(ControlFlow::Void);
 }
 
 IMPL_LIFT_FN_(ExprStmt)
@@ -303,7 +303,7 @@ IMPL_LIFT_FN_(ExprStmt)
         return ErrorVal();
     }
 
-    return OkVal();
+    return OkVal(ControlFlow::Value);
 }
 
 IMPL_LIFT_FN_(IntegerExpr)
@@ -322,7 +322,7 @@ IMPL_LIFT_FN_(IntegerExpr)
 
     // Make an integer box and return it.
     resultOut = ValBox::Integer(intExpr->value());
-    return OkVal();
+    return OkVal(ControlFlow::Value);
 }
 
 

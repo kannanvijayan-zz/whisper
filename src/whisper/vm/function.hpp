@@ -9,6 +9,7 @@
 #include "vm/scope_object.hpp"
 #include "vm/packed_syntax_tree.hpp"
 #include "vm/box.hpp"
+#include "vm/control_flow.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -115,7 +116,7 @@ typedef OkResult (*NativeApplicativeFuncPtr)(
         ArrayHandle<ValBox> args,
         MutHandle<ValBox> result);
 
-typedef OkResult (*NativeOperativeFuncPtr)(
+typedef Result<ControlFlow> (*NativeOperativeFuncPtr)(
         ThreadContext *cx,
         Handle<NativeCallInfo> callInfo,
         ArrayHandle<SyntaxTreeRef> args,
