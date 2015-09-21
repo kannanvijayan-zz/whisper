@@ -36,7 +36,8 @@ shared_cpp = \
     vm/lookup_state.cpp \
     vm/function.cpp \
     vm/frame.cpp \
-    vm/interpreter.cpp
+    interp/syntax_behaviour.cpp \
+    interp/interpreter.cpp
 
 whisper_SOURCES = \
     $(shared_cpp) \

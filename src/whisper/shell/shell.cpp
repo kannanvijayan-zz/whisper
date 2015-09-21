@@ -27,8 +27,9 @@
 #include "vm/packed_syntax_tree.hpp"
 #include "vm/function.hpp"
 #include "vm/runtime_state.hpp"
-#include "vm/interpreter.hpp"
 #include "vm/control_flow.hpp"
+#include "interp/syntax_behaviour.hpp"
+#include "interp/interpreter.hpp"
 
 #include "shell/shell_tracer.hpp"
 
@@ -96,6 +97,7 @@ int main(int argc, char **argv) {
 
     ThreadContext *cx = runtime.threadContext();
     AllocationContext acx(cx->inTenured());
+    Interp::BindSyntaxHandlers(acx, cx->global());
 
     // Create a new String containing the file name.
     Local<VM::String *> filename(cx);
@@ -127,7 +129,7 @@ int main(int argc, char **argv) {
 
     // Interpret the file.
     Local<VM::ControlFlow> result(cx,
-        VM::InterpretSourceFile(cx, sourceFile,
+        Interp::InterpretSourceFile(cx, sourceFile,
             module.handle().convertTo<VM::ScopeObject *>()));
 
     if (result->isError()) {

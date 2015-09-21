@@ -4,35 +4,35 @@
 #include "parser/packed_reader.hpp"
 #include "vm/wobject.hpp"
 #include "vm/runtime_state.hpp"
-#include "vm/interpreter.hpp"
 #include "vm/function.hpp"
+#include "interp/interpreter.hpp"
 
 namespace Whisper {
-namespace VM {
+namespace Interp {
 
 
-ControlFlow
+VM::ControlFlow
 InterpretSourceFile(ThreadContext *cx,
-                    Handle<SourceFile *> file,
-                    Handle<ScopeObject *> scope)
+                    Handle<VM::SourceFile *> file,
+                    Handle<VM::ScopeObject *> scope)
 {
     WH_ASSERT(!cx->hasLastFrame());
     WH_ASSERT(file.get() != nullptr);
     WH_ASSERT(scope.get() != nullptr);
 
     // Try to make a function for the script.
-    Local<PackedSyntaxTree *> st(cx);
-    if (!st.setResult(SourceFile::ParseSyntaxTree(cx, file)))
+    Local<VM::PackedSyntaxTree *> st(cx);
+    if (!st.setResult(VM::SourceFile::ParseSyntaxTree(cx, file)))
         return ErrorVal();
 
     // Interpret the syntax tree at the given offset.
     return InterpretSyntax(cx, scope, st, 0);
 }
 
-ControlFlow
+VM::ControlFlow
 InterpretSyntax(ThreadContext *cx,
-                Handle<ScopeObject *> scope,
-                Handle<PackedSyntaxTree *> pst,
+                Handle<VM::ScopeObject *> scope,
+                Handle<VM::PackedSyntaxTree *> pst,
                 uint32_t offset)
 {
     WH_ASSERT(!cx->hasLastFrame());
@@ -44,7 +44,7 @@ InterpretSyntax(ThreadContext *cx,
     SpewInterpNote("InterpretSyntax %s", AST::NodeTypeString(node->type()));
 
     // Interpret values based on type.
-    Local<String *> name(cx);
+    Local<VM::String *> name(cx);
     switch (node->type()) {
       case AST::File:
         // scope.@File(...)
@@ -160,19 +160,19 @@ InterpretSyntax(ThreadContext *cx,
     return DispatchSyntaxMethod(cx, scope, name, pst, node);
 }
 
-ControlFlow
+VM::ControlFlow
 DispatchSyntaxMethod(ThreadContext *cx,
-                     Handle<ScopeObject *> scope,
-                     Handle<String *> name,
-                     Handle<PackedSyntaxTree *> pst,
+                     Handle<VM::ScopeObject *> scope,
+                     Handle<VM::String *> name,
+                     Handle<VM::PackedSyntaxTree *> pst,
                      Handle<AST::PackedBaseNode> node)
 {
-    Local<Wobject *> scopeObj(cx, scope.convertTo<Wobject *>());
-    Local<LookupState *> lookupState(cx);
-    Local<PropertyDescriptor> propDesc(cx);
+    Local<VM::Wobject *> scopeObj(cx, scope.convertTo<VM::Wobject *>());
+    Local<VM::LookupState *> lookupState(cx);
+    Local<VM::PropertyDescriptor> propDesc(cx);
 
     // Lookup method name on scope.
-    Result<bool> lookupResult = Wobject::LookupProperty(
+    Result<bool> lookupResult = VM::Wobject::LookupProperty(
         cx->inHatchery(), scopeObj, name, &lookupState, &propDesc);
     if (!lookupResult)
         return ErrorVal();
@@ -190,7 +190,7 @@ DispatchSyntaxMethod(ThreadContext *cx,
         return cx->setExceptionRaised("Syntax method binding is not a method.",
                                       name.get());
     }
-    Local<Function *> func(cx, propDesc->method());
+    Local<VM::Function *> func(cx, propDesc->method());
 
     // Function must be an operative.
     if (!func->isOperative()) {
@@ -199,31 +199,31 @@ DispatchSyntaxMethod(ThreadContext *cx,
     }
 
     // Create SyntaxTreeRef.
-    Local<SyntaxTreeRef> stRef(cx, SyntaxTreeRef(pst, node->offset()));
+    Local<VM::SyntaxTreeRef> stRef(cx, VM::SyntaxTreeRef(pst, node->offset()));
 
     // Invoke operative function with given arguments.
     return InvokeOperativeFunction(cx, lookupState, scope, func,
                                    scopeObj, stRef);
 }
 
-ControlFlow
+VM::ControlFlow
 InvokeOperativeFunction(ThreadContext *cx,
-                        Handle<LookupState *> lookupState,
-                        Handle<ScopeObject *> callerScope,
-                        Handle<Function *> func,
-                        Handle<Wobject *> receiver,
-                        Handle<SyntaxTreeRef> stRef)
+                        Handle<VM::LookupState *> lookupState,
+                        Handle<VM::ScopeObject *> callerScope,
+                        Handle<VM::Function *> func,
+                        Handle<VM::Wobject *> receiver,
+                        Handle<VM::SyntaxTreeRef> stRef)
 {
     // Call native if native.
     if (func->isNative()) {
         WH_ASSERT(func->asNative()->isOperative());
-        Local<NativeCallInfo> callInfo(cx,
-            NativeCallInfo(lookupState, callerScope,
-                           func->asNative(),
-                           ValBox::Pointer(receiver.get())));
+        Local<VM::NativeCallInfo> callInfo(cx,
+            VM::NativeCallInfo(lookupState, callerScope,
+                               func->asNative(),
+                               VM::ValBox::Pointer(receiver.get())));
 
-        NativeOperativeFuncPtr opNatF = func->asNative()->operative();
-        return opNatF(cx, callInfo, ArrayHandle<SyntaxTreeRef>(stRef));
+        VM::NativeOperativeFuncPtr opNatF = func->asNative()->operative();
+        return opNatF(cx, callInfo, ArrayHandle<VM::SyntaxTreeRef>(stRef));
     }
 
     // If scripted, interpret the scripted function.
@@ -240,5 +240,5 @@ InvokeOperativeFunction(ThreadContext *cx,
 }
 
 
-} // namespace VM
+} // namespace Interp
 } // namespace Whisper
