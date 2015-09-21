@@ -86,6 +86,7 @@ GlobalScope::DefineProperty(AllocationContext acx,
     DECLARE_LIFT_FN_(ReturnStmt)
     DECLARE_LIFT_FN_(DefStmt)
     DECLARE_LIFT_FN_(VarStmt)
+    DECLARE_LIFT_FN_(NameExpr)
     DECLARE_LIFT_FN_(IntegerExpr)
     //WHISPER_DEFN_SYNTAX_NODES(DECLARE_LIFT_FN_)
 
@@ -134,6 +135,7 @@ GlobalScope::BindSyntaxHandlers(AllocationContext acx,
     BIND_GLOBAL_METHOD_(ReturnStmt);
     BIND_GLOBAL_METHOD_(DefStmt);
     BIND_GLOBAL_METHOD_(VarStmt);
+    BIND_GLOBAL_METHOD_(NameExpr);
     BIND_GLOBAL_METHOD_(IntegerExpr);
 
 #undef BIND_GLOBAL_METHOD_
@@ -362,11 +364,67 @@ IMPL_LIFT_FN_(VarStmt)
     return ControlFlow::Void();
 }
 
+IMPL_LIFT_FN_(NameExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@NameExpr called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::NameExpr);
+
+    Local<SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<PackedSyntaxTree *> pst(cx, stRef->pst());
+    Local<AST::PackedNameExprNode> nameExpr(cx,
+        AST::PackedNameExprNode(pst->data(), stRef->offset()));
+
+    // Get the scope to look up on.
+    Local<Wobject *> scopeObj(cx,
+        callInfo->callerScope().convertTo<Wobject *>());
+
+    // Get the constant name to look up.
+    Local<Box> nameBox(cx, pst->getConstant(nameExpr->nameCid()));
+    WH_ASSERT(nameBox->isPointer());
+    WH_ASSERT(nameBox->pointer<HeapThing>()->header().isFormat_String());
+    Local<String *> name(cx, nameBox->pointer<String>());
+
+    // Do the lookup.
+    Local<LookupState *> lookupState(cx);
+    Local<PropertyDescriptor> propDesc(cx);
+
+    Result<bool> lookupResult = Wobject::LookupProperty(
+        cx->inHatchery(), scopeObj, name, &lookupState, &propDesc);
+    if (!lookupResult)
+        return ErrorVal();
+
+    // If name is not bound, throw an exception.
+    if (!lookupResult.value()) {
+        return cx->setExceptionRaised("Name binding not found.", name.get());
+    }
+
+    // Found binding.
+    WH_ASSERT(propDesc->isValid());
+
+    // Handle a value binding.
+    if (propDesc->isValue())
+        return ControlFlow::Value(propDesc->valBox());
+
+    if (propDesc->isMethod()) {
+        return cx->setExceptionRaised(
+            "Can't handle method bindings for name lookups yet.",
+            name.get());
+    }
+
+    return cx->setExceptionRaised(
+        "Unknown property binding for name",
+        name.get());
+}
+
 IMPL_LIFT_FN_(IntegerExpr)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
-            "@ExprStmt called with wrong number of arguments.");
+            "@IntegerExpr called with wrong number of arguments.");
     }
 
     WH_ASSERT(args.get(0).nodeType() == AST::IntegerExpr);

@@ -164,6 +164,7 @@ class ValBox : public Box
 
   public:
     ValBox() : Box() {}
+    explicit ValBox(const Box &box);
 
     static ValBox Invalid() {
         return ValBox();

@@ -89,10 +89,13 @@ class PropertyDescriptor
     PropertyDescriptor()
       : value_()
     {}
-    PropertyDescriptor(const Box &value)
+    explicit PropertyDescriptor(const Box &value)
       : value_(value)
     {}
-    PropertyDescriptor(Function *func)
+    explicit PropertyDescriptor(const ValBox &value)
+      : value_(value)
+    {}
+    explicit PropertyDescriptor(Function *func)
       : value_(Box::Pointer(func))
     {}
 
@@ -111,6 +114,11 @@ class PropertyDescriptor
     Function *method() const {
         WH_ASSERT(isMethod());
         return value_->pointer<Function>();
+    }
+
+    ValBox valBox() const {
+        WH_ASSERT(isValue());
+        return ValBox(value_);
     }
 };
 

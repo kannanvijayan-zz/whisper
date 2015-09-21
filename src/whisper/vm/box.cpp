@@ -1,5 +1,6 @@
 #include "vm/core.hpp"
 #include "vm/box.hpp"
+#include "vm/wobject.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -29,6 +30,13 @@ Box::snprint(char *buf, size_t n) const
         return;
     }
     WH_UNREACHABLE("Unknown box kind.");
+}
+
+ValBox::ValBox(const Box &box)
+  : Box(box)
+{
+    WH_ASSERT_IF(isPointer() && pointer<HeapThing>() != nullptr,
+                 Wobject::IsWobject(pointer<HeapThing>()));
 }
 
 
