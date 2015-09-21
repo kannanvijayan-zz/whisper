@@ -83,6 +83,7 @@ GlobalScope::DefineProperty(AllocationContext acx,
     DECLARE_LIFT_FN_(File)
     DECLARE_LIFT_FN_(EmptyStmt)
     DECLARE_LIFT_FN_(ExprStmt)
+    DECLARE_LIFT_FN_(ReturnStmt)
     DECLARE_LIFT_FN_(DefStmt)
     DECLARE_LIFT_FN_(VarStmt)
     DECLARE_LIFT_FN_(IntegerExpr)
@@ -118,26 +119,24 @@ GlobalScope::BindSyntaxHandlers(AllocationContext acx,
     ThreadContext *cx = acx.threadContext();
     Local<RuntimeState *> rtState(acx, cx->runtimeState());
 
-    if (!BindGlobalMethod(acx, obj, rtState->nm_AtFile(), &Lift_File))
-        return ErrorVal();
+#define BIND_GLOBAL_METHOD_(name) \
+    do { \
+        if (!BindGlobalMethod(acx, obj, rtState->nm_At##name(), \
+                              &Lift_##name)) \
+        { \
+            return ErrorVal(); \
+        } \
+    } while(false)
 
-    if (!BindGlobalMethod(acx, obj, rtState->nm_AtEmptyStmt(), &Lift_EmptyStmt))
-        return ErrorVal();
+    BIND_GLOBAL_METHOD_(File);
+    BIND_GLOBAL_METHOD_(EmptyStmt);
+    BIND_GLOBAL_METHOD_(ExprStmt);
+    BIND_GLOBAL_METHOD_(ReturnStmt);
+    BIND_GLOBAL_METHOD_(DefStmt);
+    BIND_GLOBAL_METHOD_(VarStmt);
+    BIND_GLOBAL_METHOD_(IntegerExpr);
 
-    if (!BindGlobalMethod(acx, obj, rtState->nm_AtExprStmt(), &Lift_ExprStmt))
-        return ErrorVal();
-
-    if (!BindGlobalMethod(acx, obj, rtState->nm_AtDefStmt(), &Lift_DefStmt))
-        return ErrorVal();
-
-    if (!BindGlobalMethod(acx, obj, rtState->nm_AtVarStmt(), &Lift_VarStmt))
-        return ErrorVal();
-
-    if (!BindGlobalMethod(acx, obj, rtState->nm_AtIntegerExpr(),
-                          &Lift_IntegerExpr))
-    {
-        return ErrorVal();
-    }
+#undef BIND_GLOBAL_METHOD_
 
     return OkVal();
 }
@@ -186,7 +185,7 @@ IMPL_LIFT_FN_(EmptyStmt)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
-            "@ExprStmt called with wrong number of arguments.");
+            "@EmptyStmt called with wrong number of arguments.");
     }
 
     WH_ASSERT(args.get(0).nodeType() == AST::EmptyStmt);
@@ -215,6 +214,42 @@ IMPL_LIFT_FN_(ExprStmt)
     WH_ASSERT(exprFlow.isValue() ||
               exprFlow.isError() ||
               exprFlow.isException());
+    return exprFlow;
+}
+
+IMPL_LIFT_FN_(ReturnStmt)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@ReturnStmt called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::ReturnStmt);
+
+    Local<SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<PackedSyntaxTree *> pst(cx, stRef->pst());
+    Local<AST::PackedReturnStmtNode> returnStmtNode(cx,
+        AST::PackedReturnStmtNode(pst->data(), stRef->offset()));
+
+    // If it's a bare return, resolve to a return control flow with
+    // an undefined value.
+    if (!returnStmtNode->hasExpression()) {
+        SpewInterpNote("Lift_ReturnStmt: Empty return.");
+        return ControlFlow::Return(ValBox::Undefined());
+    }
+
+    SpewInterpNote("Lift_ReturnStmt: Evaluating expression.");
+    Local<AST::PackedBaseNode> exprNode(cx, returnStmtNode->expression());
+    ControlFlow exprFlow = InterpretSyntax(cx, callInfo->callerScope(), pst,
+                                           exprNode->offset());
+    // An expression should only ever resolve to a value, error, or exception.
+    WH_ASSERT(exprFlow.isValue() ||
+              exprFlow.isError() ||
+              exprFlow.isException());
+    // If a value, wrap the value in a return, otherwise return straight.
+    if (exprFlow.isValue())
+        return ControlFlow::Return(exprFlow.value());
+
     return exprFlow;
 }
 

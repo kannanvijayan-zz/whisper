@@ -7,9 +7,9 @@
     _(File)              /* done */         \
     \
     /* Statements. */                       \
-    _(EmptyStmt)                            \
+    _(EmptyStmt)         /* done */         \
     _(ExprStmt)          /* done */         \
-    _(ReturnStmt)                           \
+    _(ReturnStmt)        /* done */         \
     _(IfStmt)                               \
     _(DefStmt)           /* done */         \
     _(ConstStmt)                            \
