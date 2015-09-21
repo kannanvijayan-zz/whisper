@@ -28,6 +28,7 @@
 #include "vm/function.hpp"
 #include "vm/runtime_state.hpp"
 #include "vm/interpreter.hpp"
+#include "vm/control_flow.hpp"
 
 #include "shell/shell_tracer.hpp"
 
@@ -125,10 +126,11 @@ int main(int argc, char **argv) {
     }
 
     // Interpret the file.
-    Local<VM::ValBox> result(cx);
-    if (!VM::InterpretSourceFile(cx, sourceFile,
-            module.handle().convertTo<VM::ScopeObject *>(), &result))
-    {
+    Local<VM::ControlFlow> result(cx,
+        VM::InterpretSourceFile(cx, sourceFile,
+            module.handle().convertTo<VM::ScopeObject *>()));
+
+    if (result->isError()) {
         std::cerr << "Error interpreting code!" << std::endl;
         WH_ASSERT(cx->hasError());
         char buf[512];

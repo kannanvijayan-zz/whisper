@@ -75,16 +75,16 @@ GlobalScope::DefineProperty(AllocationContext acx,
 
 // Declare a lift function for each syntax node type.
 #define DECLARE_LIFT_FN_(name) \
-    static Result<ControlFlow> Lift_##name( \
+    static ControlFlow Lift_##name( \
         ThreadContext *cx, \
         Handle<NativeCallInfo> callInfo, \
-        ArrayHandle<SyntaxTreeRef> args, \
-        MutHandle<ValBox> resultOut);
+        ArrayHandle<SyntaxTreeRef> args);
 
     DECLARE_LIFT_FN_(File)
-    DECLARE_LIFT_FN_(VarStmt)
-    DECLARE_LIFT_FN_(DefStmt)
+    DECLARE_LIFT_FN_(EmptyStmt)
     DECLARE_LIFT_FN_(ExprStmt)
+    DECLARE_LIFT_FN_(DefStmt)
+    DECLARE_LIFT_FN_(VarStmt)
     DECLARE_LIFT_FN_(IntegerExpr)
     //WHISPER_DEFN_SYNTAX_NODES(DECLARE_LIFT_FN_)
 
@@ -121,13 +121,16 @@ GlobalScope::BindSyntaxHandlers(AllocationContext acx,
     if (!BindGlobalMethod(acx, obj, rtState->nm_AtFile(), &Lift_File))
         return ErrorVal();
 
-    if (!BindGlobalMethod(acx, obj, rtState->nm_AtVarStmt(), &Lift_VarStmt))
+    if (!BindGlobalMethod(acx, obj, rtState->nm_AtEmptyStmt(), &Lift_EmptyStmt))
+        return ErrorVal();
+
+    if (!BindGlobalMethod(acx, obj, rtState->nm_AtExprStmt(), &Lift_ExprStmt))
         return ErrorVal();
 
     if (!BindGlobalMethod(acx, obj, rtState->nm_AtDefStmt(), &Lift_DefStmt))
         return ErrorVal();
 
-    if (!BindGlobalMethod(acx, obj, rtState->nm_AtExprStmt(), &Lift_ExprStmt))
+    if (!BindGlobalMethod(acx, obj, rtState->nm_AtVarStmt(), &Lift_VarStmt))
         return ErrorVal();
 
     if (!BindGlobalMethod(acx, obj, rtState->nm_AtIntegerExpr(),
@@ -140,11 +143,10 @@ GlobalScope::BindSyntaxHandlers(AllocationContext acx,
 }
 
 #define IMPL_LIFT_FN_(name) \
-    static Result<ControlFlow> Lift_##name( \
+    static ControlFlow Lift_##name( \
         ThreadContext *cx, \
         Handle<NativeCallInfo> callInfo, \
-        ArrayHandle<SyntaxTreeRef> args, \
-        MutHandle<ValBox> resultOut)
+        ArrayHandle<SyntaxTreeRef> args)
 
 IMPL_LIFT_FN_(File)
 {
@@ -159,7 +161,6 @@ IMPL_LIFT_FN_(File)
     Local<PackedSyntaxTree *> pst(cx, stRef->pst());
     Local<AST::PackedFileNode> fileNode(cx,
         AST::PackedFileNode(pst->data(), stRef->offset()));
-    Local<ValBox> stmtResult(cx);
 
     SpewInterpNote("Lift_File: Interpreting %u statements",
                    unsigned(fileNode->numStatements()));
@@ -168,75 +169,53 @@ IMPL_LIFT_FN_(File)
         SpewInterpNote("Lift_File: statement %u is %s",
                        unsigned(i), AST::NodeTypeString(stmtNode->type()));
 
-        if (!InterpretSyntax(cx, callInfo->callerScope(), pst,
-                             stmtNode->offset(), &stmtResult))
-        {
-            return ErrorVal();
-        }
+        ControlFlow stmtFlow = InterpretSyntax(cx, callInfo->callerScope(),
+                                               pst, stmtNode->offset());
+        // Statements can yield void or value control flows and still
+        // continue.
+        if (stmtFlow.isVoid() || stmtFlow.isValue())
+            continue;
+
+        return stmtFlow;
     }
 
-    resultOut = ValBox::Undefined();
-    return OkVal(ControlFlow::Void);
+    return ControlFlow::Void();
 }
 
-IMPL_LIFT_FN_(VarStmt)
+IMPL_LIFT_FN_(EmptyStmt)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
-            "@VarStmt called with wrong number of arguments.");
+            "@ExprStmt called with wrong number of arguments.");
     }
 
-    WH_ASSERT(args.get(0).nodeType() == AST::VarStmt);
+    WH_ASSERT(args.get(0).nodeType() == AST::EmptyStmt);
+    return ControlFlow::Void();
+}
 
-    Local<ValBox> receiverBox(cx, callInfo->receiver());
-    if (receiverBox->isPrimitive())
-        return cx->setExceptionRaised("Cannot define var on primitive.");
-    Local<Wobject *> receiver(cx, receiverBox->objPointer());
+IMPL_LIFT_FN_(ExprStmt)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@ExprStmt called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::ExprStmt);
 
     Local<SyntaxTreeRef> stRef(cx, args.get(0));
     Local<PackedSyntaxTree *> pst(cx, stRef->pst());
-    Local<AST::PackedVarStmtNode> varStmtNode(cx,
-        AST::PackedVarStmtNode(pst->data(), stRef->offset()));
-    Local<Box> varnameBox(cx);
-    Local<String *> varname(cx);
-    Local<ValBox> varvalBox(cx);
+    Local<AST::PackedExprStmtNode> exprStmtNode(cx,
+        AST::PackedExprStmtNode(pst->data(), stRef->offset()));
 
-    AllocationContext acx = cx->inHatchery();
+    Local<AST::PackedBaseNode> exprNode(cx, exprStmtNode->expression());
 
-    // Iterate through all bindings.
-    SpewInterpNote("Lift_VarStmt: Defining %u vars!",
-                   unsigned(varStmtNode->numBindings()));
-    for (uint32_t i = 0; i < varStmtNode->numBindings(); i++) {
-        varnameBox = pst->getConstant(varStmtNode->varnameCid(i));
-        WH_ASSERT(varnameBox->isPointer());
-        WH_ASSERT(varnameBox->pointer<HeapThing>()->header().isFormat_String());
-        varname = varnameBox->pointer<String>();
-        
-        if (varStmtNode->hasVarexpr(i)) {
-            SpewInterpNote("Lift_VarStmt var %d evaluating initial value!",
-                           unsigned(i));
-            Local<AST::PackedBaseNode> exprNode(cx, varStmtNode->varexpr(i));
-            if (!InterpretSyntax(cx, callInfo->callerScope(), pst,
-                                 exprNode->offset(), &varvalBox))
-            {
-                return ErrorVal();
-            }
-        } else {
-            varvalBox = ValBox::Undefined();
-        }
-
-        WH_ASSERT_IF(varvalBox->isPointer(),
-            Wobject::IsWobject(varvalBox->pointer<HeapThing>()));
-
-        // Bind the name and value onto the receiver.
-        Local<PropertyDescriptor> descr(cx, PropertyDescriptor(varvalBox));
-        if (!Wobject::DefineProperty(acx, receiver, varname, descr))
-            return ErrorVal();
-    }
-
-    // TODO: Implement VarStmt
-    resultOut = ValBox::Undefined();
-    return OkVal(ControlFlow::Void);
+    ControlFlow exprFlow = InterpretSyntax(cx, callInfo->callerScope(), pst,
+                                           exprNode->offset());
+    // An expression should only ever resolve to a value, error, or exception.
+    WH_ASSERT(exprFlow.isValue() ||
+              exprFlow.isError() ||
+              exprFlow.isException());
+    return exprFlow;
 }
 
 IMPL_LIFT_FN_(DefStmt)
@@ -277,33 +256,75 @@ IMPL_LIFT_FN_(DefStmt)
     if (!Wobject::DefineProperty(acx, receiver, funcname, descr))
         return ErrorVal();
     
-    resultOut = ValBox::Undefined();
-    return OkVal(ControlFlow::Void);
+    return ControlFlow::Void();
 }
 
-IMPL_LIFT_FN_(ExprStmt)
+IMPL_LIFT_FN_(VarStmt)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
-            "@ExprStmt called with wrong number of arguments.");
+            "@VarStmt called with wrong number of arguments.");
     }
 
-    WH_ASSERT(args.get(0).nodeType() == AST::ExprStmt);
+    WH_ASSERT(args.get(0).nodeType() == AST::VarStmt);
+
+    Local<ValBox> receiverBox(cx, callInfo->receiver());
+    if (receiverBox->isPrimitive())
+        return cx->setExceptionRaised("Cannot define var on primitive.");
+    Local<Wobject *> receiver(cx, receiverBox->objPointer());
 
     Local<SyntaxTreeRef> stRef(cx, args.get(0));
     Local<PackedSyntaxTree *> pst(cx, stRef->pst());
-    Local<AST::PackedExprStmtNode> exprStmtNode(cx,
-        AST::PackedExprStmtNode(pst->data(), stRef->offset()));
+    Local<AST::PackedVarStmtNode> varStmtNode(cx,
+        AST::PackedVarStmtNode(pst->data(), stRef->offset()));
+    Local<Box> varnameBox(cx);
+    Local<String *> varname(cx);
+    Local<ValBox> varvalBox(cx);
 
-    Local<AST::PackedBaseNode> exprNode(cx, exprStmtNode->expression());
+    AllocationContext acx = cx->inHatchery();
 
-    if (!InterpretSyntax(cx, callInfo->callerScope(), pst,
-                         exprNode->offset(), resultOut))
-    {
-        return ErrorVal();
+    // Iterate through all bindings.
+    SpewInterpNote("Lift_VarStmt: Defining %u vars!",
+                   unsigned(varStmtNode->numBindings()));
+    for (uint32_t i = 0; i < varStmtNode->numBindings(); i++) {
+        varnameBox = pst->getConstant(varStmtNode->varnameCid(i));
+        WH_ASSERT(varnameBox->isPointer());
+        WH_ASSERT(varnameBox->pointer<HeapThing>()->header().isFormat_String());
+        varname = varnameBox->pointer<String>();
+        
+        if (varStmtNode->hasVarexpr(i)) {
+            SpewInterpNote("Lift_VarStmt var %d evaluating initial value!",
+                           unsigned(i));
+            Local<AST::PackedBaseNode> exprNode(cx, varStmtNode->varexpr(i));
+            ControlFlow varExprFlow =
+                InterpretSyntax(cx, callInfo->callerScope(), pst,
+                                exprNode->offset());
+
+            // The underlying expression can return a value, error out,
+            // or throw an exception.  It should never conclude with
+            // a void control flow, or a return control flow.
+            WH_ASSERT(varExprFlow.isValue() ||
+                      varExprFlow.isError() ||
+                      varExprFlow.isException());
+            if (!varExprFlow.isValue())
+                return varExprFlow;
+            varvalBox = varExprFlow.value();
+
+        } else {
+            varvalBox = ValBox::Undefined();
+        }
+
+        WH_ASSERT_IF(varvalBox->isPointer(),
+            Wobject::IsWobject(varvalBox->pointer<HeapThing>()));
+
+        // Bind the name and value onto the receiver.
+        Local<PropertyDescriptor> descr(cx, PropertyDescriptor(varvalBox));
+        if (!Wobject::DefineProperty(acx, receiver, varname, descr))
+            return ErrorVal();
     }
 
-    return OkVal(ControlFlow::Value);
+    // TODO: Implement VarStmt
+    return ControlFlow::Void();
 }
 
 IMPL_LIFT_FN_(IntegerExpr)
@@ -321,8 +342,7 @@ IMPL_LIFT_FN_(IntegerExpr)
         AST::PackedIntegerExprNode(pst->data(), stRef->offset()));
 
     // Make an integer box and return it.
-    resultOut = ValBox::Integer(intExpr->value());
-    return OkVal(ControlFlow::Value);
+    return ControlFlow::Value(ValBox::Integer(intExpr->value()));
 }
 
 

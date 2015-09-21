@@ -11,11 +11,10 @@ namespace Whisper {
 namespace VM {
 
 
-OkResult
+ControlFlow
 InterpretSourceFile(ThreadContext *cx,
                     Handle<SourceFile *> file,
-                    Handle<ScopeObject *> scope,
-                    MutHandle<ValBox> resultOut)
+                    Handle<ScopeObject *> scope)
 {
     WH_ASSERT(!cx->hasLastFrame());
     WH_ASSERT(file.get() != nullptr);
@@ -27,15 +26,14 @@ InterpretSourceFile(ThreadContext *cx,
         return ErrorVal();
 
     // Interpret the syntax tree at the given offset.
-    return InterpretSyntax(cx, scope, st, 0, resultOut);
+    return InterpretSyntax(cx, scope, st, 0);
 }
 
-OkResult
+ControlFlow
 InterpretSyntax(ThreadContext *cx,
                 Handle<ScopeObject *> scope,
                 Handle<PackedSyntaxTree *> pst,
-                uint32_t offset,
-                MutHandle<ValBox> resultOut)
+                uint32_t offset)
 {
     WH_ASSERT(!cx->hasLastFrame());
     WH_ASSERT(scope.get() != nullptr);
@@ -159,16 +157,15 @@ InterpretSyntax(ThreadContext *cx,
         return ErrorVal();
     }
 
-    return DispatchSyntaxMethod(cx, scope, name, pst, node, resultOut);
+    return DispatchSyntaxMethod(cx, scope, name, pst, node);
 }
 
-OkResult
+ControlFlow
 DispatchSyntaxMethod(ThreadContext *cx,
                      Handle<ScopeObject *> scope,
                      Handle<String *> name,
                      Handle<PackedSyntaxTree *> pst,
-                     Handle<AST::PackedBaseNode> node,
-                     MutHandle<ValBox> resultOut)
+                     Handle<AST::PackedBaseNode> node)
 {
     Local<Wobject *> scopeObj(cx, scope.convertTo<Wobject *>());
     Local<LookupState *> lookupState(cx);
@@ -206,17 +203,16 @@ DispatchSyntaxMethod(ThreadContext *cx,
 
     // Invoke operative function with given arguments.
     return InvokeOperativeFunction(cx, lookupState, scope, func,
-                                   scopeObj, stRef, resultOut);
+                                   scopeObj, stRef);
 }
 
-OkResult
+ControlFlow
 InvokeOperativeFunction(ThreadContext *cx,
                         Handle<LookupState *> lookupState,
                         Handle<ScopeObject *> callerScope,
                         Handle<Function *> func,
                         Handle<Wobject *> receiver,
-                        Handle<SyntaxTreeRef> stRef,
-                        MutHandle<ValBox> resultOut)
+                        Handle<SyntaxTreeRef> stRef)
 {
     // Call native if native.
     if (func->isNative()) {
@@ -226,21 +222,8 @@ InvokeOperativeFunction(ThreadContext *cx,
                            func->asNative(),
                            ValBox::Pointer(receiver.get())));
 
-        resultOut = ValBox::Invalid();
         NativeOperativeFuncPtr opNatF = func->asNative()->operative();
-        if (!opNatF(cx, callInfo, ArrayHandle<SyntaxTreeRef>(stRef),
-                    resultOut))
-        {
-            return ErrorVal();
-        }
-
-        // Ensure that resultOut now has a valid value.
-        WH_ASSERT(resultOut->isValid());
-        if (!resultOut->isValid()) {
-            return cx->setError(RuntimeError::InternalError,
-                "Syntax handler method did not set valid result!");
-        }
-        return OkVal();
+        return opNatF(cx, callInfo, ArrayHandle<SyntaxTreeRef>(stRef));
     }
 
     // If scripted, interpret the scripted function.

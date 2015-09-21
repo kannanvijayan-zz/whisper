@@ -116,11 +116,10 @@ typedef OkResult (*NativeApplicativeFuncPtr)(
         ArrayHandle<ValBox> args,
         MutHandle<ValBox> result);
 
-typedef Result<ControlFlow> (*NativeOperativeFuncPtr)(
+typedef ControlFlow (*NativeOperativeFuncPtr)(
         ThreadContext *cx,
         Handle<NativeCallInfo> callInfo,
-        ArrayHandle<SyntaxTreeRef> args,
-        MutHandle<ValBox> result);
+        ArrayHandle<SyntaxTreeRef> args);
 
 class NativeFunction : public Function
 {

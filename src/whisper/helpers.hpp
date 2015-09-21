@@ -146,9 +146,29 @@ inline constexpr IntT Max(IntT a, IntT b) {
     return (a >= b) ? a : b;
 }
 
+template <typename IntT, IntT Val1>
+inline constexpr IntT ConstExprMax() {
+    return Val1;
+}
+template <typename IntT, IntT Val1, IntT Val2, IntT... Vals>
+inline constexpr IntT ConstExprMax() {
+    return (Val1 >= Val2) ? ConstExprMax<IntT, Val1, Vals...>()
+                          : ConstExprMax<IntT, Val2, Vals...>();
+}
+
 template <typename IntT>
 inline constexpr IntT Min(IntT a, IntT b) {
     return (a <= b) ? a : b;
+}
+
+template <typename IntT, IntT Val1>
+inline constexpr IntT ConstExprMin() {
+    return Val1;
+}
+template <typename IntT, IntT Val1, IntT Val2, IntT... Vals>
+inline constexpr IntT ConstExprMin() {
+    return (Val1 <= Val2) ? ConstExprMin<IntT, Val1, Vals...>()
+                          : ConstExprMin<IntT, Val2, Vals...>();
 }
 
 // Divide-up

@@ -12,7 +12,8 @@
     _(PackedSyntaxElement)      \
     _(PackedWriter)             \
     _(PackedReader)             \
-    _(HeapPointer)
+    _(HeapPointer)              \
+    _(ControlFlow)
 
 
 #define WHISPER_DEFN_GC_HEAP_FORMATS(_) \

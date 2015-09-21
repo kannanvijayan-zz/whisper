@@ -33,6 +33,10 @@ class OkValT_
   public:
     OkValT_(const T &val) : val_(val) {}
     ~OkValT_() {}
+
+    const T &val() const {
+        return val_;
+    }
 };
 
 inline ErrorT_ ErrorVal() { return ErrorT_(); }

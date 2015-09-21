@@ -4,16 +4,16 @@
 
 #define WHISPER_DEFN_SYNTAX_NODES(_) \
     /* Top level. */                        \
-    _(File)                                 \
+    _(File)              /* done */         \
     \
     /* Statements. */                       \
     _(EmptyStmt)                            \
-    _(ExprStmt)                             \
+    _(ExprStmt)          /* done */         \
     _(ReturnStmt)                           \
     _(IfStmt)                               \
-    _(DefStmt)                              \
+    _(DefStmt)           /* done */         \
     _(ConstStmt)                            \
-    _(VarStmt)                              \
+    _(VarStmt)           /* done */         \
     _(LoopStmt)                             \
     \
     /* Expressions. */                      \
@@ -28,7 +28,7 @@
     _(DivExpr)                              \
     _(ParenExpr)                            \
     _(NameExpr)                             \
-    _(IntegerExpr)
+    _(IntegerExpr)       /* done */
 
 
 #endif // WHISPER__PARSER__SYNTAX_DEFN_HPP
