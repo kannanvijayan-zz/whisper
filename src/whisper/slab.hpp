@@ -65,18 +65,18 @@ class SlabContentIterator;
 // cardNo it starts on, then a pointer to the object can be mapped back to
 // the Slab as follows:
 //
-//      Slab *PointerToSlab(HeapThing *ptr) {
+//      Slab* PointerToSlab(HeapThing* ptr) {
 //          // Get cardNo
 //          unsigned cardNo = ptr->cardNo
 //
 //          // Get card-aligned pointer
-//          Card *card = AlignPtrDown((Card *) ptr, CARD_SIZE)
+//          Card* card = AlignPtrDown((Card*) ptr, CARD_SIZE)
 //
 //          // Go to card 0
-//          char *card0 = ((char *) card) - (cardNo * CARD_SIZE)
+//          char* card0 = ((char*) card) - (cardNo * CARD_SIZE)
 //
 //          // Read slab pointer.
-//          return *((Slab **) card0)
+//          return *((Slab**) card0)
 //      }
 //
 // This is a relatively efficient operation, in machine code it is:
@@ -114,27 +114,27 @@ class Slab
     static uint32_t NumHeaderCardsForDataCards(uint32_t dataCards);
 
     // Allocate/destroy slabs.
-    static Slab *AllocateStandard(Gen gen);
-    static Slab *AllocateSingleton(uint32_t objectSize, Gen gen);
-    static void Destroy(Slab *slab);
+    static Slab* AllocateStandard(Gen gen);
+    static Slab* AllocateSingleton(uint32_t objectSize, Gen gen);
+    static void Destroy(Slab* slab);
 
   private:
     // Pointer to the actual system-allocated memory region containing
     // the slab.
-    void *region_;
+    void* region_;
     uint32_t regionSize_;
 
     // Next/previous slab pointers.
-    Slab *next_ = nullptr;
-    Slab *previous_ = nullptr;
+    Slab* next_ = nullptr;
+    Slab* previous_ = nullptr;
 
     // Pointer to top and bottom of allocation space
-    uint8_t *allocTop_ = nullptr;
-    uint8_t *allocBottom_ = nullptr;
+    uint8_t* allocTop_ = nullptr;
+    uint8_t* allocBottom_ = nullptr;
 
     // Pointer to head and tail allocation pointers.
-    uint8_t *headAlloc_ = nullptr;
-    uint8_t *tailAlloc_ = nullptr;
+    uint8_t* headAlloc_ = nullptr;
+    uint8_t* tailAlloc_ = nullptr;
 
     // Number of header cards.
     uint32_t headerCards_;
@@ -145,27 +145,27 @@ class Slab
     // Slab generation.
     Gen gen_;
 
-    Slab(void *region, uint32_t regionSize,
+    Slab(void* region, uint32_t regionSize,
          uint32_t headerCards, uint32_t dataCards,
          Gen gen);
 
     ~Slab() {}
 
   public:
-    uint8_t *headStartAlloc() const {
+    uint8_t* headStartAlloc() const {
         WH_ASSERT(allocTop_);
-        return allocTop_ + AlignIntUp<uint32_t>(sizeof(void *), AllocAlign);
+        return allocTop_ + AlignIntUp<uint32_t>(sizeof(void*), AllocAlign);
     }
 
-    uint8_t *tailStartAlloc() const {
+    uint8_t* tailStartAlloc() const {
         WH_ASSERT(allocTop_);
         return allocBottom_;
     }
 
-    Slab *next() const {
+    Slab* next() const {
         return next_;
     }
-    Slab *previous() const {
+    Slab* previous() const {
         return previous_;
     }
 
@@ -181,19 +181,19 @@ class Slab
         return gen_;
     }
 
-    uint8_t *headEndAlloc() const {
+    uint8_t* headEndAlloc() const {
         return headAlloc_;
     }
-    uint8_t *tailEndAlloc() const {
+    uint8_t* tailEndAlloc() const {
         return tailAlloc_;
     }
 
     // Allocate memory from Top
-    uint8_t *allocateHead(uint32_t amount) {
+    uint8_t* allocateHead(uint32_t amount) {
         WH_ASSERT(IsIntAligned(amount, AllocAlign));
 
-        uint8_t *oldTop = headAlloc_;
-        uint8_t *newTop = oldTop + amount;
+        uint8_t* oldTop = headAlloc_;
+        uint8_t* newTop = oldTop + amount;
         if (newTop > allocBottom_)
             return nullptr;
 
@@ -202,10 +202,10 @@ class Slab
     }
 
     // Allocate memory from Bottom
-    uint8_t *allocateTail(uint32_t amount) {
+    uint8_t* allocateTail(uint32_t amount) {
         WH_ASSERT(IsIntAligned(amount, AllocAlign));
 
-        uint8_t *newBot = tailAlloc_ - amount;
+        uint8_t* newBot = tailAlloc_ - amount;
         if (newBot < allocTop_)
             return nullptr;
 
@@ -213,7 +213,7 @@ class Slab
         return newBot;
     }
 
-    uint32_t calculateCardNumber(uint8_t *ptr) const {
+    uint32_t calculateCardNumber(uint8_t* ptr) const {
         WH_ASSERT(ptr >= allocTop_ && ptr < allocBottom_);
         WH_ASSERT(ptr < headAlloc_ || ptr >= tailAlloc_);
         uint32_t diff = ptr - allocTop_;
@@ -221,7 +221,7 @@ class Slab
     }
 
 #if defined(ENABLE_DEBUG)
-    void debugDump(const char *tag);
+    void debugDump(char const* tag);
 #endif // defined(ENABLE_DEBUG)
 };
 
@@ -229,19 +229,19 @@ class Slab
 class AutoDestroySlab
 {
   private:
-    Slab *slab_;
+    Slab* slab_;
 
   public:
-    explicit AutoDestroySlab(Slab *slab) : slab_(slab) {
+    explicit AutoDestroySlab(Slab* slab) : slab_(slab) {
         WH_ASSERT(slab_ != nullptr);
     }
     ~AutoDestroySlab() {
         if (slab_)
             Slab::Destroy(slab_);
     }
-    Slab *steal() {
+    Slab* steal() {
         WH_ASSERT(slab_ != nullptr);
-        Slab *result = slab_;
+        Slab* result = slab_;
         slab_ = nullptr;
         return result;
     }
@@ -251,41 +251,41 @@ class AutoDestroySlab
 class SlabContentIterator
 {
   private:
-    Slab *slab_;
-    uint8_t *cur_;
+    Slab* slab_;
+    uint8_t* cur_;
 
-    SlabContentIterator(Slab *slab)
+    SlabContentIterator(Slab* slab)
       : slab_(slab),
         cur_(slab->headStartAlloc())
     {}
 
   public:
-    static SlabContentIterator HeadBegin(Slab *slab) {
+    static SlabContentIterator HeadBegin(Slab* slab) {
         return SlabContentIterator(slab);
     }
-    static SlabContentIterator HeadEnd(Slab *slab) {
+    static SlabContentIterator HeadEnd(Slab* slab) {
         SlabContentIterator iter(slab);
         iter.resetToHeadEnd();
         return iter;
     }
-    static SlabContentIterator TailBegin(Slab *slab) {
+    static SlabContentIterator TailBegin(Slab* slab) {
         SlabContentIterator iter(slab);
         iter.resetToTailBegin();
         return iter;
     }
-    static SlabContentIterator TailEnd(Slab *slab) {
+    static SlabContentIterator TailEnd(Slab* slab) {
         SlabContentIterator iter(slab);
         iter.resetToTailEnd();
         return iter;
     }
-    static SlabContentIterator Begin(Slab *slab) {
+    static SlabContentIterator Begin(Slab* slab) {
         return HeadBegin(slab);
     }
-    static SlabContentIterator End(Slab *slab) {
+    static SlabContentIterator End(Slab* slab) {
         return TailEnd(slab);
     }
 
-    Slab *slab() const {
+    Slab* slab() const {
         return slab_;
     }
 
@@ -305,35 +305,35 @@ class SlabContentIterator
         cur_ = slab_->tailStartAlloc();
     }
 
-    HeapThing *currentHeapThing() const {
+    HeapThing* currentHeapThing() const {
         WH_ASSERT(isCursorContentValid(cur_));
-        return reinterpret_cast<HeapThing *>(cur_);
+        return reinterpret_cast<HeapThing*>(cur_);
     }
 
-    HeapThing * operator *() const {
+    HeapThing* operator *() const {
         return currentHeapThing();
     }
 
-    bool operator ==(const SlabContentIterator &other) const {
+    bool operator ==(SlabContentIterator const& other) const {
         WH_ASSERT(isCursorValid(cur_));
         WH_ASSERT(other.isCursorValid(other.cur_));
         WH_ASSERT(slab_ == other.slab_);
         return cur_ == other.cur_;
     }
-    bool operator !=(const SlabContentIterator &other) const {
+    bool operator !=(SlabContentIterator const& other) const {
         return !(*this == other);
     }
 
     void nextHeapThing();
 
-    SlabContentIterator &operator++() {
+    SlabContentIterator& operator++() {
         nextHeapThing();
         return *this;
     }
 
   private:
 #if defined(ENABLE_DEBUG)
-    bool isCursorContentValid(const uint8_t *cur) const {
+    bool isCursorContentValid(uint8_t const* cur) const {
         if (cur < slab_->headStartAlloc())
             return false;
         if (cur >= slab_->headEndAlloc() && cur < slab_->tailEndAlloc())
@@ -342,7 +342,7 @@ class SlabContentIterator
             return false;
         return true;
     }
-    bool isCursorValid(const uint8_t *cur) const {
+    bool isCursorValid(uint8_t const* cur) const {
         return isCursorContentValid(cur) || cur == slab_->tailStartAlloc();
     }
 #endif // defined(ENABLE_DEBUG)
@@ -358,8 +358,8 @@ class SlabList
 {
   private:
     uint32_t numSlabs_;
-    Slab *firstSlab_;
-    Slab *lastSlab_;
+    Slab* firstSlab_;
+    Slab* lastSlab_;
 
   public:
     SlabList()
@@ -372,7 +372,7 @@ class SlabList
         return numSlabs_;
     }
 
-    void addSlab(Slab *slab) {
+    void addSlab(Slab* slab) {
         WH_ASSERT(slab->next_ == nullptr);
         WH_ASSERT(slab->previous_ == nullptr);
 
@@ -390,32 +390,32 @@ class SlabList
     {
       friend class SlabList;
       private:
-        const SlabList &list_;
-        Slab *slab_;
+        SlabList const& list_;
+        Slab* slab_;
 
-        Iterator(const SlabList &list, Slab *slab)
+        Iterator(SlabList const& list, Slab* slab)
           : list_(list), slab_(slab)
         {}
 
       public:
-        Slab *operator *() const {
+        Slab* operator *() const {
             WH_ASSERT(slab_);
             return slab_;
         }
 
-        bool operator ==(const Iterator &other) const {
+        bool operator ==(Iterator const& other) const {
             return slab_ == other.slab_;
         }
 
-        bool operator !=(const Iterator &other) const {
+        bool operator !=(Iterator const& other) const {
             return slab_ != other.slab_;
         }
 
-        Iterator &operator ++() {
+        Iterator& operator ++() {
             slab_ = slab_->next();
             return *this;
         }
-        Iterator &operator --() {
+        Iterator& operator --() {
             WH_ASSERT(slab_ != list_.firstSlab_);
             slab_ = slab_ ? slab_->previous() : list_.lastSlab_;
             return *this;
@@ -430,7 +430,7 @@ class SlabList
     }
 
 #if defined(ENABLE_DEBUG)
-    void debugDump(const char *tag);
+    void debugDump(char const* tag);
 #endif // defined(ENABLE_DEBUG)
 };
 

@@ -13,7 +13,7 @@ namespace Whisper {
 //
 
 template <typename ObjT, typename... Args>
-inline Result<ObjT *>
+inline Result<ObjT*>
 AllocationContext::create(Args... args)
 {
     static_assert(HeapTraits<ObjT>::Specialized,
@@ -27,18 +27,18 @@ AllocationContext::create(Args... args)
     constexpr HeapFormat FMT = HeapTraits<ObjT>::Format;
     typedef typename HeapFormatTraits<FMT>::Type TRACE_TYPE;
     constexpr bool TRACED = ! TraceTraits<TRACE_TYPE>::IsLeaf;
-    uint8_t *mem = allocate<TRACED>(size, FMT);
+    uint8_t* mem = allocate<TRACED>(size, FMT);
     if (!mem)
         return ErrorVal();
 
     // Construct object in memory.
     new (mem) ObjT(std::forward<Args>(args)...);
 
-    return OkVal(reinterpret_cast<ObjT *>(mem));
+    return OkVal(reinterpret_cast<ObjT*>(mem));
 }
 
 template <typename ObjT, typename... Args>
-inline Result<ObjT *>
+inline Result<ObjT*>
 AllocationContext::createSized(uint32_t size, Args... args)
 {
     static_assert(HeapTraits<ObjT>::Specialized,
@@ -52,25 +52,25 @@ AllocationContext::createSized(uint32_t size, Args... args)
     constexpr HeapFormat FMT = HeapTraits<ObjT>::Format;
     typedef typename HeapFormatTraits<FMT>::Type TRACE_TYPE;
     constexpr bool TRACED = ! TraceTraits<TRACE_TYPE>::IsLeaf;
-    uint8_t *mem = allocate<TRACED>(size, FMT);
+    uint8_t* mem = allocate<TRACED>(size, FMT);
     if (!mem)
         return ErrorVal();
 
     // Construct object in memory.
     new (mem) ObjT(std::forward<Args>(args)...);
 
-    return OkVal(reinterpret_cast<ObjT *>(mem));
+    return OkVal(reinterpret_cast<ObjT*>(mem));
 }
 
 template <bool Traced>
-inline uint8_t *
+inline uint8_t*
 AllocationContext::allocate(uint32_t size, HeapFormat fmt)
 {
     uint32_t allocSize = AlignIntUp<uint32_t>(size, Slab::AllocAlign)
                          + sizeof(HeapHeader);
 
     // Allocate the space.
-    uint8_t *mem = Traced ? slab_->allocateHead(allocSize)
+    uint8_t* mem = Traced ? slab_->allocateHead(allocSize)
                           : slab_->allocateTail(allocSize);
 
     if (!mem) {
@@ -86,8 +86,8 @@ AllocationContext::allocate(uint32_t size, HeapFormat fmt)
     uint32_t cardNo = slab_->calculateCardNumber(mem);
 
     // Initialize the header.
-    HeapHeader *hdr = new (mem) HeapHeader(fmt, slab_->gen(), cardNo, size);
-    return reinterpret_cast<uint8_t *>(hdr->payload());
+    HeapHeader* hdr = new (mem) HeapHeader(fmt, slab_->gen(), cardNo, size);
+    return reinterpret_cast<uint8_t*>(hdr->payload());
 }
 
 

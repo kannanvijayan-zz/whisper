@@ -47,13 +47,13 @@ class Runtime
   friend class ThreadContext;
   private:
     // Every running thread uses a thread context.
-    std::vector<ThreadContext *> threadContexts_;
+    std::vector<ThreadContext*> threadContexts_;
     pthread_key_t threadKey_;
 
     // Immortal thread context and things allocated
     // within it.
-    ThreadContext *immortalThreadContext_;
-    VM::RuntimeState *runtimeState_;
+    ThreadContext* immortalThreadContext_;
+    VM::RuntimeState* runtimeState_;
 
     static constexpr uint32_t MaxRtid = 0x7fffffffu;
     uint32_t nextRtid_;
@@ -63,7 +63,7 @@ class Runtime
 
     static constexpr size_t ErrorBufferSize = 256;
     char errorBuffer_[ErrorBufferSize];
-    const char *error_ = nullptr;
+    char const* error_ = nullptr;
 
   public:
     Runtime();
@@ -75,25 +75,25 @@ class Runtime
         return error_;
     }
 
-    inline const char *error() const {
+    inline char const* error() const {
         WH_ASSERT(hasError());
         return error_;
     }
 
     OkResult registerThread();
 
-    ThreadContext *maybeThreadContext();
+    ThreadContext* maybeThreadContext();
     bool hasThreadContext();
-    ThreadContext *threadContext();
+    ThreadContext* threadContext();
 
-    VM::RuntimeState *runtimeState() const {
+    VM::RuntimeState* runtimeState() const {
       return runtimeState_;
     }
 
   private:
     OkResult makeImmortalThreadContext();
 
-    OkResult okFail(const char *error) {
+    OkResult okFail(char const* error) {
         error_ = error;
         return OkResult::Error();
     }
@@ -116,25 +116,25 @@ class Runtime
 class AllocationContext
 {
   private:
-    ThreadContext *cx_;
-    Slab *slab_;
+    ThreadContext* cx_;
+    Slab* slab_;
 
   public:
-    AllocationContext(ThreadContext *cx, Slab *slab);
+    AllocationContext(ThreadContext* cx, Slab* slab);
 
     template <typename ObjT, typename... Args>
-    inline Result<ObjT *> create(Args... args);
+    inline Result<ObjT*> create(Args... args);
 
     template <typename ObjT, typename... Args>
-    inline Result<ObjT *> createSized(uint32_t size, Args... args);
+    inline Result<ObjT*> createSized(uint32_t size, Args... args);
 
-    ThreadContext *threadContext() const {
+    ThreadContext* threadContext() const {
         return cx_;
     }
 
   private:
     template <bool Traced>
-    inline uint8_t *allocate(uint32_t size, HeapFormat fmt);
+    inline uint8_t* allocate(uint32_t size, HeapFormat fmt);
 };
 
 //
@@ -152,7 +152,7 @@ enum class RuntimeError
     ExceptionRaised
 };
 
-const char *RuntimeErrorString(RuntimeError err);
+char const* RuntimeErrorString(RuntimeError err);
 
 //
 // ThreadContext
@@ -165,16 +165,16 @@ class ThreadContext
   friend class LocalBase;
   friend class RunActivationHelper;
   private:
-    Runtime *runtime_;
+    Runtime* runtime_;
     uint32_t rtid_;
 
-    Slab *hatchery_;
-    Slab *nursery_;
-    Slab *tenured_;
+    Slab* hatchery_;
+    Slab* nursery_;
+    Slab* tenured_;
     SlabList tenuredList_;
-    LocalBase *locals_;
-    VM::Frame *lastFrame_;
-    VM::GlobalScope *global_;
+    LocalBase* locals_;
+    VM::Frame* lastFrame_;
+    VM::GlobalScope* global_;
     bool suppressGC_;
 
     unsigned int randSeed_;
@@ -183,16 +183,16 @@ class ThreadContext
     // If an error occurs during execution, it is recorded
     // here before returning an error result.
     RuntimeError error_;
-    const char *errorString_;
-    HeapThing *errorThing_;
+    char const* errorString_;
+    HeapThing* errorThing_;
 
     static unsigned int NewRandSeed();
 
   public:
-    ThreadContext(Runtime *runtime, uint32_t rtid,
-                  Slab *hatchery, Slab *tenured);
+    ThreadContext(Runtime* runtime, uint32_t rtid,
+                  Slab* hatchery, Slab* tenured);
 
-    Runtime *runtime() const {
+    Runtime* runtime() const {
         return runtime_;
     }
 
@@ -200,48 +200,48 @@ class ThreadContext
         return rtid_;
     }
 
-    Slab *hatchery() const {
+    Slab* hatchery() const {
         return hatchery_;
     }
 
-    Slab *nursery() const {
+    Slab* nursery() const {
         return nursery_;
     }
 
-    Slab *tenured() const {
+    Slab* tenured() const {
         return tenured_;
     }
 
-    const SlabList &tenuredList() const {
+    SlabList const& tenuredList() const {
         return tenuredList_;
     }
 
-    SlabList &tenuredList() {
+    SlabList& tenuredList() {
         return tenuredList_;
     }
 
-    LocalBase *locals() const {
+    LocalBase* locals() const {
         return locals_;
     }
 
-    VM::RuntimeState *runtimeState() const {
+    VM::RuntimeState* runtimeState() const {
       return runtime_->runtimeState();
     }
 
     bool hasLastFrame() const {
         return lastFrame_ != nullptr;
     }
-    VM::Frame *lastFrame() const {
+    VM::Frame* lastFrame() const {
         WH_ASSERT(hasLastFrame());
         return lastFrame_;
     }
-    void pushLastFrame(VM::Frame *frame);
+    void pushLastFrame(VM::Frame* frame);
     void popLastFrame();
 
     bool hasGlobal() const {
         return global_ != nullptr;
     }
-    VM::GlobalScope *global() const {
+    VM::GlobalScope* global() const {
         WH_ASSERT(hasGlobal());
         return global_;
     }
@@ -260,7 +260,7 @@ class ThreadContext
     bool hasErrorString() const {
         return errorString_ != nullptr;
     }
-    const char *errorString() const {
+    char const* errorString() const {
         WH_ASSERT(hasErrorString());
         return errorString_;
     }
@@ -268,7 +268,7 @@ class ThreadContext
     bool hasErrorThing() const {
         return errorThing_ != nullptr;
     }
-    HeapThing *errorThing() const {
+    HeapThing* errorThing() const {
         WH_ASSERT(hasErrorThing());
         return errorThing_;
     }
@@ -280,7 +280,7 @@ class ThreadContext
         error_ = error;
         return ErrorVal();
     }
-    ErrorT_ setError(RuntimeError error, const char *string) {
+    ErrorT_ setError(RuntimeError error, char const* string) {
         WH_ASSERT(!hasError());
         WH_ASSERT(!hasErrorString());
         WH_ASSERT(!hasErrorThing());
@@ -288,8 +288,8 @@ class ThreadContext
         errorString_ = string;
         return ErrorVal();
     }
-    ErrorT_ setError(RuntimeError error, const char *string,
-                      HeapThing *thing)
+    ErrorT_ setError(RuntimeError error, char const* string,
+                      HeapThing* thing)
     {
         WH_ASSERT(!hasError());
         WH_ASSERT(!hasErrorString());
@@ -300,22 +300,22 @@ class ThreadContext
         return ErrorVal();
     }
     template <typename T>
-    ErrorT_ setError(RuntimeError error, const char *string, T *thing) {
+    ErrorT_ setError(RuntimeError error, char const* string, T* thing) {
         return setError(error, string, HeapThing::From(thing));
     }
 
-    ErrorT_ setExceptionRaised(const char *string) {
+    ErrorT_ setExceptionRaised(char const* string) {
         return setError(RuntimeError::ExceptionRaised, string);
     }
-    ErrorT_ setExceptionRaised(const char *string, HeapThing *thing) {
+    ErrorT_ setExceptionRaised(char const* string, HeapThing* thing) {
         return setError(RuntimeError::ExceptionRaised, string, thing);
     }
     template <typename T>
-    ErrorT_ setExceptionRaised(const char *string, T *thing) {
+    ErrorT_ setExceptionRaised(char const* string, T* thing) {
         return setError<T>(RuntimeError::ExceptionRaised, string, thing);
     }
 
-    size_t formatError(char *buf, size_t bufSize);
+    size_t formatError(char* buf, size_t bufSize);
 
     AllocationContext inHatchery();
     AllocationContext inTenured();

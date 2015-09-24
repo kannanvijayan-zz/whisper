@@ -31,10 +31,10 @@ class OkValT_
     T val_;
 
   public:
-    OkValT_(const T &val) : val_(val) {}
+    OkValT_(T const& val) : val_(val) {}
     ~OkValT_() {}
 
-    const T &val() const {
+    T const& val() const {
         return val_;
     }
 };
@@ -43,7 +43,7 @@ inline ErrorT_ ErrorVal() { return ErrorT_(); }
 inline OkT_ OkVal() { return OkT_(); }
 
 template <typename T>
-inline OkValT_<T> OkVal(const T &t) { return OkValT_<T>(t); }
+inline OkValT_<T> OkVal(T const& t) { return OkValT_<T>(t); }
 
 template <typename V>
 class Result
@@ -54,19 +54,19 @@ class Result
     alignas(Align) char data_[Size];
     bool isValue_;
 
-    V *valuePtr() {
-        return reinterpret_cast<V *>(&data_[0]);
+    V* valuePtr() {
+        return reinterpret_cast<V*>(&data_[0]);
     }
-    const V *valuePtr() const {
-        return reinterpret_cast<const V *>(&data_[0]);
+    V const* valuePtr() const {
+        return reinterpret_cast<V const*>(&data_[0]);
     }
 
-    Result(const V &v)
+    Result(V const& v)
       : isValue_(true)
     {
         new (valuePtr()) V(v);
     }
-    Result(V &&v)
+    Result(V&& v)
       : isValue_(true)
     {
         new (valuePtr()) V(std::move(v));
@@ -76,32 +76,32 @@ class Result
     {}
 
   public:
-    Result(const Result<V> &other) = default;
-    Result(Result<V> &&other)
+    Result(Result<V> const& other) = default;
+    Result(Result<V>&& other)
       : isValue_(other.isValue_)
     {
         if (isValue_)
             new (valuePtr()) V(std::move(other.value()));
     }
-    Result(const ErrorT_ &error)
+    Result(ErrorT_ const& error)
       : isValue_(false)
     {}
 
-    Result(const OkValT_<V> &val)
+    Result(OkValT_<V> const& val)
       : isValue_(true)
     {
         new (valuePtr()) V(val.val_);
     }
-    Result(OkValT_<V> &&val)
+    Result(OkValT_<V>&& val)
       : isValue_(true)
     {
         new (valuePtr()) V(std::move(val.val_));
     }
 
-    static Result<V> Value(const V &v) {
+    static Result<V> Value(V const& v) {
         return Result<V>(v);
     }
-    static Result<V> Value(V &&v) {
+    static Result<V> Value(V&& v) {
         return Result<V>(std::move(v));
     }
 
@@ -124,15 +124,15 @@ class Result
         return isValue();
     }
 
-    const V &value() const {
+    V const& value() const {
         WH_ASSERT(isValue());
         return *(valuePtr());
     }
-    V &value() {
+    V& value() {
         WH_ASSERT(isValue());
         return *(valuePtr());
     }
-    void setValue(const V &val) {
+    void setValue(V const& val) {
         if (isValue()) {
             *(valuePtr()) = val;
         } else {
@@ -140,7 +140,7 @@ class Result
             isValue_ = true;
         }
     }
-    void setValue(V &&val) {
+    void setValue(V&& val) {
         if (isValue()) {
             *(valuePtr()) = std::move(val);
         } else {
@@ -155,14 +155,14 @@ class Result
         isValue_ = false;
     }
 
-    Result<V> &operator =(const Result<V> &other) {
+    Result<V>& operator =(Result<V> const& other) {
         if (other->isValue())
             setValue(other->value());
         else
             setError();
         return *this;
     }
-    Result<V> &operator =(Result<V> &&other) {
+    Result<V>& operator =(Result<V>&& other) {
         if (other->isValue())
             setValue(std::move(other->value()));
         else
@@ -172,12 +172,12 @@ class Result
 };
 
 template <typename P>
-class Result<P *>
+class Result<P*>
 {
   private:
-    P *ptr_;
+    P* ptr_;
 
-    Result(P *ptr)
+    Result(P* ptr)
       : ptr_(ptr)
     {
         WH_ASSERT(ptr != nullptr);
@@ -187,24 +187,24 @@ class Result<P *>
     {}
 
   public:
-    Result(const ErrorT_ &error)
+    Result(ErrorT_ const& error)
       : ptr_(nullptr)
     {}
 
-    static Result<P *> Value(P *ptr) {
-        return Result<P *>(ptr);
+    static Result<P*> Value(P* ptr) {
+        return Result<P*>(ptr);
     }
 
-    static Result<P *> Error() {
-        return Result<P *>();
+    static Result<P*> Error() {
+        return Result<P*>();
     }
 
     template <typename Q>
-    Result(const OkValT_<Q *> &val)
+    Result(OkValT_<Q *> const& val)
       : ptr_(val.val_)
     {}
     template <typename Q>
-    Result(OkValT_<Q *> &&val)
+    Result(OkValT_<Q *>&& val)
       : ptr_(val.val_)
     {}
 
@@ -218,11 +218,11 @@ class Result<P *>
     explicit operator bool() const {
         return isValue();
     }
-    P *value() const {
+    P* value() const {
         WH_ASSERT(isValue());
         return ptr_;
     }
-    void setValue(P *ptr) {
+    void setValue(P* ptr) {
         WH_ASSERT(ptr != nullptr);
         ptr_ = ptr;
     }
@@ -241,10 +241,10 @@ class OkResult
     OkResult(bool ok) : ok_(ok) {}
 
   public:
-    OkResult(const ErrorT_ &error)
+    OkResult(ErrorT_ const& error)
       : ok_(false)
     {}
-    OkResult(const OkT_ &ok)
+    OkResult(OkT_ const& ok)
       : ok_(true)
     {}
 

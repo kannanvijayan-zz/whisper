@@ -8,31 +8,31 @@
 namespace Whisper {
 
 
-void *
+void*
 AllocateMemory(size_t bytes)
 {
-    void *ptr = malloc(bytes);
+    void* ptr = malloc(bytes);
     SpewMemoryNote("AllocateMemory allocated %ld bytes at %p",
                    (long)bytes, ptr);
     return ptr;
 }
 
 void
-ReleaseMemory(void *ptr)
+ReleaseMemory(void* ptr)
 {
     SpewMemoryNote("ReleasingMemory releasing %p", ptr);
     free(ptr);
 }
 
 
-void *
+void*
 AllocateMappedMemory(size_t bytes, bool allowExec)
 {
     int prot = PROT_READ | PROT_WRITE;
     if (allowExec)
         prot |= PROT_EXEC;
 
-    void *result = mmap(nullptr, bytes, prot,
+    void* result = mmap(nullptr, bytes, prot,
                         MAP_PRIVATE | MAP_ANONYMOUS,
                         -1, 0);
     if (result == MAP_FAILED) {
@@ -48,7 +48,7 @@ AllocateMappedMemory(size_t bytes, bool allowExec)
 }
 
 bool
-ReleaseMappedMemory(void *ptr, size_t bytes)
+ReleaseMappedMemory(void*ptr, size_t bytes)
 {
     SpewMemoryNote("ReleaseMappedMemory unmapping %ld bytes at %p",
                    (long)bytes, ptr);

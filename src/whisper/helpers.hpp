@@ -37,19 +37,19 @@ inline IntT AlignIntUp(IntT value, IntT align) {
 
 // Align pointer types
 template <typename PtrT, typename IntT>
-inline bool IsPtrAligned(PtrT *ptr, IntT align) {
+inline bool IsPtrAligned(PtrT* ptr, IntT align) {
     WH_ASSERT(IsPowerOfTwo(align));
     return IsIntAligned<word_t>(PtrToWord(ptr), align);
 }
 
 template <typename PtrT, typename IntT>
-inline PtrT *AlignPtrDown(PtrT *ptr, IntT align) {
+inline PtrT* AlignPtrDown(PtrT* ptr, IntT align) {
     WH_ASSERT(IsPowerOfTwo(align));
     return WordToPtr<PtrT>(AlignIntDown<word_t>(PtrToWord(ptr), align));
 }
 
 template <typename PtrT, typename IntT>
-inline PtrT *AlignPtrUp(PtrT *ptr, IntT align) {
+inline PtrT* AlignPtrUp(PtrT* ptr, IntT align) {
     WH_ASSERT(IsPowerOfTwo(align));
     return WordToPtr<PtrT>(AlignIntUp<word_t>(PtrToWord(ptr), align));
 }
@@ -185,36 +185,36 @@ class Maybe
     alignas(alignof(T)) char data_[sizeof(T)];
     bool hasValue_;
 
-    T *ptr() {
-        return reinterpret_cast<T *>(&data_[0]);
+    T* ptr() {
+        return reinterpret_cast<T*>(&data_[0]);
     }
-    const T *ptr() const {
-        return reinterpret_cast<const T *>(&data_[0]);
+    T const* ptr() const {
+        return reinterpret_cast<T const*>(&data_[0]);
     }
 
     Maybe()
       : hasValue_(false)
     {}
 
-    Maybe(const T &t)
+    Maybe(T const& t)
       : hasValue_(true)
     {
         new (ptr()) T(t);
     }
 
-    Maybe(T &&t)
+    Maybe(T&& t)
       : hasValue_(true)
     {
         new (ptr()) T(std::move(t));
     }
   public:
-    Maybe(const Maybe<T> &t)
+    Maybe(Maybe<T> const& t)
       : hasValue_(t.hasValue())
     {
         if (t.hasValue())
             new (ptr()) T(t.value());
     }
-    Maybe(Maybe<T> &&t)
+    Maybe(Maybe<T>&& t)
       : hasValue_(t.hasValue())
     {
         if (t.hasValue())
@@ -229,10 +229,10 @@ class Maybe
     static Maybe<T> None() {
         return Maybe<T>();
     }
-    static Maybe<T> Some(const T &t) {
+    static Maybe<T> Some(T const& t) {
         return Maybe<T>(t);
     }
-    static Maybe<T> Some(T &&t) {
+    static Maybe<T> Some(T&& t) {
         return Maybe<T>(std::move(t));
     }
 
@@ -240,35 +240,35 @@ class Maybe
         return hasValue_;
     }
 
-    const T &value() const {
+    T const& value() const {
         WH_ASSERT(hasValue());
         return *(ptr());
     }
-    T &value() {
+    T& value() {
         WH_ASSERT(hasValue());
         return *(ptr());
     }
 
-    operator const T *() const {
+    operator T const* () const {
         WH_ASSERT(hasValue());
         return &value();
     }
-    operator T *() {
+    operator T* () {
         WH_ASSERT(hasValue());
         return &value();
     }
 
-    const T *operator ->() const {
+    T const* operator ->() const {
         return &value();
     }
-    T *operator ->() {
+    T* operator ->() {
         return &value();
     }
 
-    const T &operator *() const {
+    T const& operator *() const {
         return value();
     }
-    T &operator *() {
+    T& operator *() {
         return value();
     }
 
@@ -276,7 +276,7 @@ class Maybe
         return hasValue() ? value() : fallback;
     }
 
-    Maybe<T> &operator =(const T &val) {
+    Maybe<T>& operator =(T const& val) {
         if (hasValue_) {
             *ptr() = val;
         } else {
@@ -285,7 +285,7 @@ class Maybe
         }
         return *this;
     }
-    Maybe<T> &operator =(T &&val) {
+    Maybe<T>& operator =(T&& val) {
         if (hasValue_) {
             *ptr() = std::move(val);
         } else {
@@ -301,7 +301,7 @@ class Maybe
         }
     }
 
-    Maybe<T> &operator =(const Maybe<T> &val) {
+    Maybe<T>& operator =(Maybe<T> const& val) {
         if (val.hasValue())
             *this = val.value();
         else
@@ -309,7 +309,7 @@ class Maybe
         return *this;
     }
 
-    Maybe<T> &operator =(Maybe<T> &&val) {
+    Maybe<T>& operator =(Maybe<T>&& val) {
         if (val.hasValue())
             *this = std::move(val.value());
         else
@@ -383,10 +383,10 @@ class BaseBitfield
                    
 
   protected:
-    WordT &word_;
+    WordT& word_;
 
   public:
-    inline BaseBitfield(WordT &word) : word_(word) {}
+    inline BaseBitfield(WordT& word) : word_(word) {}
 
     // Get the value from the bitfield.
     inline FieldT value() const {
@@ -414,7 +414,7 @@ class ConstBitfield : public BaseBitfield<const WordT, FieldT, Bits, Shift>
     typedef BaseBitfield<const WordT, FieldT, Bits, Shift> BaseType;
 
   public:
-    inline ConstBitfield(const WordT &word) : BaseType(word) {}
+    inline ConstBitfield(WordT const& word) : BaseType(word) {}
 };
 
 template <typename WordT, typename FieldT, unsigned Bits, unsigned Shift>
@@ -425,7 +425,7 @@ class Bitfield : public BaseBitfield<WordT, FieldT, Bits, Shift>
   public:
     typedef ConstBitfield<const WordT, FieldT, Bits, Shift> Const;
 
-    inline Bitfield(WordT &word) : BaseType(word) {}
+    inline Bitfield(WordT& word) : BaseType(word) {}
 
     inline void initValue(FieldT val) {
         WH_ASSERT(BaseType::ValueFits(val));

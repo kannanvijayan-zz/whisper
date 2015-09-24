@@ -116,9 +116,9 @@ Slab::NumDataCardsForObjectSize(uint32_t objectSize)
 {
     uint32_t dataSize = AlignIntUp<uint32_t>(objectSize, AllocAlign);
 
-    // Add sizeof(void *) to account for the first word of
+    // Add sizeof(void*) to account for the first word of
     // the data space being a pointer to the slab.
-    dataSize += AlignIntUp<uint32_t>(sizeof(void *), AllocAlign);
+    dataSize += AlignIntUp<uint32_t>(sizeof(void*), AllocAlign);
 
     // Align object size up by CardSize
     return AlignIntUp(dataSize, CardSize) / CardSize;
@@ -140,12 +140,12 @@ Slab::NumHeaderCardsForDataCards(uint32_t dataCards)
     return AlignIntUp<uint32_t>(headerMinimum, CardSize) / CardSize;
 }
 
-/*static*/ Slab *
+/*static*/ Slab*
 Slab::AllocateStandard(Gen gen)
 {
     size_t size = AlignIntUp<size_t>(StandardSlabCards() * CardSize,
                                      PageSize());
-    void *result = AllocateMappedMemory(size);
+    void* result = AllocateMappedMemory(size);
     if (!result)
         return nullptr;
 
@@ -158,7 +158,7 @@ Slab::AllocateStandard(Gen gen)
                              gen);
 }
 
-/*static*/ Slab *
+/*static*/ Slab*
 Slab::AllocateSingleton(uint32_t objectSize, Gen gen)
 {
     uint32_t dataCards = NumDataCardsForObjectSize(objectSize);
@@ -166,7 +166,7 @@ Slab::AllocateSingleton(uint32_t objectSize, Gen gen)
     size_t size = AlignIntUp<size_t>((dataCards + headerCards) * CardSize,
                                      PageSize());
 
-    void *result = AllocateMappedMemory(size);
+    void* result = AllocateMappedMemory(size);
     if (!result)
         return nullptr;
 
@@ -179,7 +179,7 @@ Slab::AllocateSingleton(uint32_t objectSize, Gen gen)
 }
 
 /*static*/ void
-Slab::Destroy(Slab *slab)
+Slab::Destroy(Slab* slab)
 {
     SpewSlabNote("Destroying slab at %p", slab);
     bool r = ReleaseMappedMemory(slab->region_, slab->regionSize_);
@@ -188,7 +188,7 @@ Slab::Destroy(Slab *slab)
     WH_ASSERT(r);
 }
 
-Slab::Slab(void *region, uint32_t regionSize,
+Slab::Slab(void* region, uint32_t regionSize,
            uint32_t headerCards, uint32_t dataCards,
            Gen gen)
   : region_(region), regionSize_(regionSize),
@@ -196,9 +196,9 @@ Slab::Slab(void *region, uint32_t regionSize,
     gen_(gen)
 {
     // Calculate allocTop.
-    uint8_t *slabBase = reinterpret_cast<uint8_t *>(this);
+    uint8_t* slabBase = reinterpret_cast<uint8_t*>(this);
 
-    uint8_t *dataSpace = slabBase + (CardSize * headerCards_);
+    uint8_t* dataSpace = slabBase + (CardSize * headerCards_);
 
     allocTop_ = dataSpace;
     allocBottom_ = dataSpace + (CardSize * dataCards_);
@@ -209,7 +209,7 @@ Slab::Slab(void *region, uint32_t regionSize,
 
 #if defined(ENABLE_DEBUG)
 void
-Slab::debugDump(const char *tag)
+Slab::debugDump(char const* tag)
 {
     auto headStart = SlabContentIterator::HeadBegin(this);
     auto headEnd = SlabContentIterator::HeadEnd(this);
@@ -217,16 +217,16 @@ Slab::debugDump(const char *tag)
     auto tailEnd = SlabContentIterator::TailEnd(this);
 
     for(auto iter = headStart; iter != headEnd; ++iter) {
-        HeapThing *heapThing = *iter;
-        uint8_t *heapThingBytes = reinterpret_cast<uint8_t *>(heapThing);
+        HeapThing* heapThing = *iter;
+        uint8_t* heapThingBytes = reinterpret_cast<uint8_t*>(heapThing);
         SpewSlabNote("%s - @%u - HEAD - %s",
                      tag, heapThingBytes - headStartAlloc(),
                      HeapFormatString(heapThing->format()));
     }
 
     for(auto iter = tailStart; iter != tailEnd; ++iter) {
-        HeapThing *heapThing = *iter;
-        uint8_t *heapThingBytes = reinterpret_cast<uint8_t *>(heapThing);
+        HeapThing* heapThing = *iter;
+        uint8_t* heapThingBytes = reinterpret_cast<uint8_t*>(heapThing);
         SpewSlabNote("%s - @%u - TAIL - %s",
                      tag, heapThingBytes - tailEndAlloc(),
                      HeapFormatString(heapThing->format()));
@@ -238,8 +238,8 @@ void SlabContentIterator::nextHeapThing()
 {
     WH_ASSERT(isCursorContentValid(cur_));
 
-    HeapThing *curThing = currentHeapThing();
-    cur_ = AlignPtrUp(reinterpret_cast<uint8_t *>(curThing), Slab::AllocAlign);
+    HeapThing* curThing = currentHeapThing();
+    cur_ = AlignPtrUp(reinterpret_cast<uint8_t*>(curThing), Slab::AllocAlign);
 
     // If within head or tail, no adjustments needed.
     if (cur_ < slab_->headEndAlloc() || cur_ >= slab_->tailEndAlloc())
@@ -253,10 +253,10 @@ void SlabContentIterator::nextHeapThing()
 
 #if defined(ENABLE_DEBUG)
 void
-SlabList::debugDump(const char *tag)
+SlabList::debugDump(char const* tag)
 {
     for(Iterator iter = begin(); iter != end(); ++iter) {
-        Slab *slab = *iter;
+        Slab* slab = *iter;
         SpewSlabNote("SLAB %p {", this);
         slab->debugDump(tag);
         SpewSlabNote("}");

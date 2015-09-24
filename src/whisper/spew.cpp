@@ -18,7 +18,7 @@ static const unsigned SPEW_NUM_CHANNELS = static_cast<int>(SpewChannel::LIMIT);
 static SpewLevel SPEW_LEVELS[SPEW_NUM_CHANNELS];
 
 struct LevelInfo {
-    const char *str;
+    char const* str;
     int len;
     SpewLevel level;
 } LEVEL_INFO[] = {
@@ -30,10 +30,10 @@ struct LevelInfo {
 };
 
 static SpewLevel
-ParseSpewLevel(const char *s)
+ParseSpewLevel(char const* s)
 {
     for (int i = 0; LEVEL_INFO[i].str != nullptr; i++) {
-        LevelInfo &inf = LEVEL_INFO[i];
+        LevelInfo& inf = LEVEL_INFO[i];
 
         if (strncmp(inf.str, s, inf.len) != 0)
             break;
@@ -48,7 +48,7 @@ ParseSpewLevel(const char *s)
 }
 
 static bool
-CheckChannelName(const char *s, const char *name, SpewChannel chan)
+CheckChannelName(char const* s, char const* name, SpewChannel chan)
 {
     int i = 0;
     bool found = false;
@@ -79,9 +79,9 @@ CheckChannelName(const char *s, const char *name, SpewChannel chan)
 }
 
 static void
-CheckSpewChannel(const char *envstr, const char *channelName, SpewChannel chan)
+CheckSpewChannel(char const* envstr, char const* channelName, SpewChannel chan)
 {
-    const char *cur = envstr;
+    char const* cur = envstr;
     while (cur[0] == ',')
         cur++;
 
@@ -114,7 +114,7 @@ InitializeSpew()
         SPEW_LEVELS[i] = SpewLevel::Warn;
 
     // Get environment variable WHSPEW
-    const char *whspew = getenv("WHSPEW");
+    char const* whspew = getenv("WHSPEW");
 
     if (whspew) {
 
@@ -129,7 +129,7 @@ InitializeSpew()
 }
 
 
-static const char *
+static char const*
 SpewChannelString(SpewChannel chan)
 {
     switch (chan) {
@@ -144,7 +144,7 @@ SpewChannelString(SpewChannel chan)
 }
 
 void
-Spew(SpewChannel chan, SpewLevel level, const char *fmt, ...)
+Spew(SpewChannel chan, SpewLevel level, char const* fmt, ...)
 {
     WH_ASSERT(SPEW_INITIALIZED);
     WH_ASSERT(chan > SpewChannel::INVALID);
@@ -152,7 +152,7 @@ Spew(SpewChannel chan, SpewLevel level, const char *fmt, ...)
     if (SPEW_LEVELS[static_cast<int>(chan)] > level)
         return;
 
-    const char *levelName = nullptr;
+    char const* levelName = nullptr;
     if (level == SpewLevel::Note)
         levelName = "NOTE";
     else if (level == SpewLevel::Warn)

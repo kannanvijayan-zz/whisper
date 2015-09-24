@@ -9,7 +9,7 @@ namespace Whisper {
 #if defined(ENABLE_DEBUG)
 
 void
-Assert(const char *file, int line, const char *condstr, bool cond)
+Assert(char const* file, int line, char const* condstr, bool cond)
 {
     if (cond)
         return;
@@ -19,7 +19,7 @@ Assert(const char *file, int line, const char *condstr, bool cond)
 }
 
 void
-AssertUnreachable(const char *file, int line, const char *msg)
+AssertUnreachable(char const* file, int line, char const* msg)
 {
     std::cerr << "!UNREACHABLE! @ " << file << ":" << line
               << " [" << msg << "]" << std::endl;

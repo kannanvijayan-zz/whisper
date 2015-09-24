@@ -87,12 +87,12 @@ constexpr int8_t ToSize(IntT val) {
 
 // Casting between pointers and words.
 template <typename T>
-constexpr inline word_t PtrToWord(T *ptr) {
+constexpr inline word_t PtrToWord(T* ptr) {
     return reinterpret_cast<word_t>(ptr);
 }
 template <typename T>
-constexpr inline T *WordToPtr(word_t word) {
-    return reinterpret_cast<T *>(word);
+constexpr inline T* WordToPtr(word_t word) {
+    return reinterpret_cast<T*>(word);
 }
 
 

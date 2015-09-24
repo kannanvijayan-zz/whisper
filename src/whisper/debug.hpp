@@ -15,11 +15,11 @@ namespace Whisper {
     } while(false)
 #define WH_ASSERT(cond) \
     ::Whisper::Assert(__FILE__, __LINE__, #cond, cond)
-void Assert(const char *file, int line, const char *condstr, bool cond);
+void Assert(char const* file, int line, char const* condstr, bool cond);
 
 #define WH_UNREACHABLE(msg) \
     ::Whisper::AssertUnreachable(__FILE__, __LINE__, msg)
-void AssertUnreachable(const char *file, int line, const char *msg);
+void AssertUnreachable(char const* file, int line, char const* msg);
 
 template <typename T>
 class DebugVal
@@ -29,9 +29,9 @@ class DebugVal
 
   public:
     DebugVal() : val_() {}
-    DebugVal(const T &val) : val_(val) {}
+    DebugVal(T const& val) : val_(val) {}
 
-    operator const T &() const {
+    operator T const&() const {
         return val_;
     }
 };
@@ -48,7 +48,7 @@ class DebugVal
 {
   public:
     DebugVal() {}
-    DebugVal(const T &val) {}
+    DebugVal(T const& val) {}
 };
 
 

@@ -37,20 +37,20 @@ enum class SpewLevel
 #if defined(ENABLE_SPEW)
 
 void InitializeSpew();
-void Spew(SpewChannel chan, SpewLevel level, const char *fmt, ...);
+void Spew(SpewChannel chan, SpewLevel level, char const* fmt, ...);
 SpewLevel ChannelSpewLevel(SpewChannel channel);
 
 #define DEFSPEW_(n) \
     template <typename... Args> \
-    void Spew##n##Note(const char *fmt, Args... args) {\
+    void Spew##n##Note(char const* fmt, Args... args) {\
         Spew(SpewChannel::n, SpewLevel::Note, fmt, args...); \
     } \
     template <typename... Args> \
-    void Spew##n##Warn(const char *fmt, Args... args) {\
+    void Spew##n##Warn(char const* fmt, Args... args) {\
         Spew(SpewChannel::n, SpewLevel::Warn, fmt, args...); \
     } \
     template <typename... Args> \
-    void Spew##n##Error(const char *fmt, Args... args) {\
+    void Spew##n##Error(char const* fmt, Args... args) {\
         Spew(SpewChannel::n, SpewLevel::Error, fmt, args...); \
     }
     WHISPER_DEFN_SPEW_CHANNELS(DEFSPEW_)

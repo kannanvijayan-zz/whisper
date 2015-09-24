@@ -42,10 +42,10 @@ class BumpAllocator
   friend class SavedBumpSpace;
   private:
     struct Chain {
-        void *addr;
+        void* addr;
         size_t size;
-        Chain *prev;
-        Chain(void *addr, size_t size, Chain *prev)
+        Chain* prev;
+        Chain(void* addr, size_t size, Chain* prev)
           : addr(addr), size(size), prev(prev) {}
     };
 
@@ -57,11 +57,11 @@ class BumpAllocator
     size_t chunkSize_;
 
     // Pointer to the top of the chain.
-    Chain *chainEnd_;
+    Chain* chainEnd_;
 
     // Allocation grows down (top to bottom).
-    uint8_t *allocBottom_;
-    uint8_t *allocTop_;
+    uint8_t* allocBottom_;
+    uint8_t* allocTop_;
 
   public:
     BumpAllocator() : BumpAllocator(DefaultChunkSize) {}
@@ -77,12 +77,12 @@ class BumpAllocator
         pushNewChunk(chunkSize_);
     }
 
-    void *allocate(size_t sz, unsigned align)
+    void* allocate(size_t sz, unsigned align)
     {
         align = Max(align, BasicAlignment);
 
         // ignore hint, just allocate sz bytes, aligned to BasicAlignment
-        uint8_t *result = AlignPtrDown(allocTop_ - sz, align);
+        uint8_t* result = AlignPtrDown(allocTop_ - sz, align);
         if (result >= allocBottom_ && result <= allocTop_) {
             allocTop_ = result;
             return result;
@@ -105,14 +105,14 @@ class BumpAllocator
 
   private:
     void pushNewChunk(size_t size) {
-        void *mem = AllocateMemory(size);
+        void* mem = AllocateMemory(size);
         if (!mem)
             throw BumpAllocatorError();
 
-        uint8_t *memu8 = static_cast<uint8_t *>(mem);
+        uint8_t* memu8 = static_cast<uint8_t*>(mem);
 
         // Align the memory up to the alignment reqired by Chain.
-        uint8_t *chainAddr = AlignPtrUp(memu8, alignof(Chain));
+        uint8_t* chainAddr = AlignPtrUp(memu8, alignof(Chain));
         chainEnd_ = new (chainAddr) Chain(memu8, size, chainEnd_);
 
         // Set up allocTop and allocBottom
@@ -122,7 +122,7 @@ class BumpAllocator
 
     void popChunk() {
         WH_ASSERT(chainEnd_);
-        Chain *chainPrev = chainEnd_->prev;
+        Chain* chainPrev = chainEnd_->prev;
         ReleaseMemory(chainEnd_->addr);
         chainEnd_ = chainPrev;
     }
@@ -145,10 +145,10 @@ class BumpAllocator
 class SavedBumpSpace
 {
   private:
-    BumpAllocator::Chain *memChain_;
+    BumpAllocator::Chain* memChain_;
 
   public:
-    SavedBumpSpace(BumpAllocator &&allocator)
+    SavedBumpSpace(BumpAllocator&& allocator)
       : memChain_(allocator.chainEnd_)
     {
         allocator.chainEnd_ = nullptr;
@@ -157,7 +157,7 @@ class SavedBumpSpace
     ~SavedBumpSpace()
     {
         while (memChain_) {
-            BumpAllocator::Chain *prev = memChain_->prev;
+            BumpAllocator::Chain* prev = memChain_->prev;
             ReleaseMemory(memChain_->addr);
             memChain_ = prev;
         }
@@ -175,8 +175,8 @@ template <>
 class STLBumpAllocator<void>
 {
   public:
-    typedef void *          pointer;
-    typedef const void *    const_pointer;
+    typedef void*           pointer;
+    typedef void const*     const_pointer;
     typedef void            value_type;
     template <class U> struct rebind {
         typedef STLBumpAllocator<U> other;
@@ -192,26 +192,26 @@ class STLBumpAllocator
   public:
     typedef size_t              size_type;
     typedef ptrdiff_t           difference_type;
-    typedef T *                 pointer;
-    typedef const T *           const_pointer;
-    typedef T &                 reference;
-    typedef const T &           const_reference;
+    typedef T*                  pointer;
+    typedef T const*            const_pointer;
+    typedef T&                  reference;
+    typedef T const&            const_reference;
     typedef T                   value_type;
     template <class U> struct rebind {
         typedef STLBumpAllocator<U> other;
     };
 
   private:
-    BumpAllocator &base_;
+    BumpAllocator& base_;
 
   public:
-    STLBumpAllocator(BumpAllocator &base) : base_(base) {}
+    STLBumpAllocator(BumpAllocator& base) : base_(base) {}
 
-    STLBumpAllocator(const STLBumpAllocator &other) throw ()
+    STLBumpAllocator(STLBumpAllocator const& other) throw ()
       : base_(other.base_) {}
 
     template <typename U>
-    STLBumpAllocator(const STLBumpAllocator<U> &other) throw ()
+    STLBumpAllocator(STLBumpAllocator<U> const& other) throw ()
       : base_(other.base_) {}
 
     pointer address(reference x) const {
@@ -221,7 +221,7 @@ class STLBumpAllocator
         return &x;
     }
 
-    pointer allocate(size_type n, void *hint = nullptr)
+    pointer allocate(size_type n, void* hint = nullptr)
     {
         return static_cast<pointer>(base_.allocate(n * sizeof(T), alignof(T)));
     }
@@ -234,7 +234,7 @@ class STLBumpAllocator
         return SIZE_MAX;
     }
 
-    void construct(pointer p, const value_type &val) {
+    void construct(pointer p, value_type const& val) {
         new (p) value_type(val);
     }
     void destroy(pointer p) {
@@ -264,35 +264,35 @@ class PoolAllocator
 
   private:
     struct FreeList {
-        FreeList *next;
-        FreeList(FreeList *next) : next(next) {}
+        FreeList* next;
+        FreeList(FreeList* next) : next(next) {}
     };
 
-    BumpAllocator &bumpAllocator_;
-    FreeList **freeLists_;
+    BumpAllocator& bumpAllocator_;
+    FreeList** freeLists_;
 
   public:
-    PoolAllocator(BumpAllocator &bumpAllocator)
+    PoolAllocator(BumpAllocator& bumpAllocator)
       : bumpAllocator_(bumpAllocator),
         freeLists_(nullptr)
     {
-        size_t arraySize = NumFreeLists * sizeof(FreeList *);
-        void *arrayPtr = bumpAllocator_.allocate(arraySize, BasicAlignment);
-        freeLists_ = static_cast<FreeList **>(arrayPtr);
+        size_t arraySize = NumFreeLists * sizeof(FreeList*);
+        void* arrayPtr = bumpAllocator_.allocate(arraySize, BasicAlignment);
+        freeLists_ = static_cast<FreeList**>(arrayPtr);
 
         for (unsigned i = 0; i < NumFreeLists; i++)
             freeLists_[i] = nullptr;
     }
 
-    void *allocate(size_t sz)
+    void* allocate(size_t sz)
     {
         // Check the free list.
         unsigned idx = sz / BasicAlignment;
         if (idx < NumFreeLists && freeLists_[idx] != nullptr) {
-            FreeList *area = freeLists_[idx];
+            FreeList* area = freeLists_[idx];
             freeLists_[idx] = area->next;
 #if defined(ENABLE_DEBUG)
-            uint8_t *ptr = reinterpret_cast<uint8_t *>(area);
+            uint8_t* ptr = reinterpret_cast<uint8_t*>(area);
             std::fill(ptr, ptr + sz, 0);
 #endif
             return area;
@@ -302,12 +302,12 @@ class PoolAllocator
         return bumpAllocator_.allocate(sz, BasicAlignment);
     }
 
-    void deallocate(void *ptr, size_t sz) {
+    void deallocate(void* ptr, size_t sz) {
         // See if we can add it to the free list.
         unsigned idx = sz / BasicAlignment;
         if (idx < NumFreeLists) {
 #if defined(ENABLE_DEBUG)
-            uint8_t *u8ptr = reinterpret_cast<uint8_t *>(ptr);
+            uint8_t* u8ptr = reinterpret_cast<uint8_t*>(ptr);
             std::fill(u8ptr, u8ptr + sz, 0);
 #endif
             freeLists_[idx] = new (ptr) FreeList(freeLists_[idx]);
@@ -327,8 +327,8 @@ template <>
 class STLPoolAllocator<void>
 {
   public:
-    typedef void *          pointer;
-    typedef const void *    const_pointer;
+    typedef void*           pointer;
+    typedef void const*     const_pointer;
     typedef void            value_type;
     template <class U> struct rebind {
         typedef STLPoolAllocator<U> other;
@@ -344,26 +344,26 @@ class STLPoolAllocator
   public:
     typedef size_t              size_type;
     typedef ptrdiff_t           difference_type;
-    typedef T *                 pointer;
-    typedef const T *           const_pointer;
-    typedef T &                 reference;
-    typedef const T &           const_reference;
+    typedef T*                  pointer;
+    typedef T const*            const_pointer;
+    typedef T&                  reference;
+    typedef T const&            const_reference;
     typedef T                   value_type;
     template <class U> struct rebind {
         typedef STLPoolAllocator<U> other;
     };
 
   private:
-    PoolAllocator &base_;
+    PoolAllocator& base_;
 
   public:
-    STLPoolAllocator(PoolAllocator &base) : base_(base) {}
+    STLPoolAllocator(PoolAllocator& base) : base_(base) {}
 
-    STLPoolAllocator(const STLPoolAllocator &other) throw ()
+    STLPoolAllocator(STLPoolAllocator const& other) throw ()
       : base_(other.base_) {}
 
     template <typename U>
-    STLPoolAllocator(const STLPoolAllocator<U> &other) throw ()
+    STLPoolAllocator(STLPoolAllocator<U> const& other) throw ()
       : base_(other.base_) {}
 
     pointer address(reference x) const {
@@ -373,7 +373,7 @@ class STLPoolAllocator
         return &x;
     }
 
-    pointer allocate(size_type n, void *hint = nullptr)
+    pointer allocate(size_type n, void* hint = nullptr)
     {
         WH_ASSERT(alignof(T) <= PoolAllocator::BasicAlignment);
         return static_cast<pointer>(base_.allocate(n * sizeof(T)));
@@ -387,7 +387,7 @@ class STLPoolAllocator
         return SIZE_MAX;
     }
 
-    void construct(pointer p, const value_type &val) {
+    void construct(pointer p, value_type const& val) {
         new (p) value_type(val);
     }
     void destroy(pointer p) {

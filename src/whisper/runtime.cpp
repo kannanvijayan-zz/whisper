@@ -56,10 +56,10 @@ Runtime::initialize()
     if (!makeImmortalThreadContext())
         return false;
 
-    ThreadContext *cx = immortalThreadContext_;
+    ThreadContext* cx = immortalThreadContext_;
     AllocationContext acx = immortalThreadContext_->inTenured();
 
-    Local<VM::RuntimeState *> rtState(cx);
+    Local<VM::RuntimeState*> rtState(cx);
     if (!rtState.setResult(VM::RuntimeState::Create(acx)))
         return false;
 
@@ -76,23 +76,23 @@ Runtime::registerThread()
     WH_ASSERT(pthread_getspecific(threadKey_) == nullptr);
 
     // Create a new nursery slab.
-    Slab *hatchery = Slab::AllocateStandard(Gen::Hatchery);
+    Slab* hatchery = Slab::AllocateStandard(Gen::Hatchery);
     if (!hatchery)
         return okFail("Could not allocate hatchery slab.");
     AutoDestroySlab _cleanupHatchery(hatchery);
 
     // Create initial tenured space slab.
-    Slab *tenured = Slab::AllocateStandard(Gen::Tenured);
+    Slab* tenured = Slab::AllocateStandard(Gen::Tenured);
     if (!tenured)
         return okFail("Could not allocate tenured slab.");
     AutoDestroySlab _cleanupTenured(tenured);
 
     // Allocate the ThreadContext
-    ThreadContext *ctx = nullptr;
+    ThreadContext* ctx = nullptr;
     try {
         ctx = new ThreadContext(this, nextRtid_++, hatchery, tenured);
         threadContexts_.push_back(ctx);
-    } catch (std::bad_alloc &err) {
+    } catch (std::bad_alloc& err) {
         return okFail("Could not allocate ThreadContext.");
     }
 
@@ -125,17 +125,17 @@ Runtime::makeImmortalThreadContext()
     // The immortal thread context only has a tenured
     // generation.
 
-    Slab *tenured = Slab::AllocateStandard(Gen::Immortal);
+    Slab* tenured = Slab::AllocateStandard(Gen::Immortal);
     if (!tenured)
         return okFail("Could not allocate tenured slab.");
     AutoDestroySlab _cleanupTenured(tenured);
 
     // Allocate the ThreadContext
-    ThreadContext *ctx = nullptr;
+    ThreadContext* ctx = nullptr;
     try {
         ctx = new ThreadContext(this, 0, nullptr, tenured);
         threadContexts_.push_back(ctx);
-    } catch (std::bad_alloc &err) {
+    } catch (std::bad_alloc& err) {
         return okFail("Could not allocate ThreadContext.");
     }
 
@@ -147,12 +147,12 @@ Runtime::makeImmortalThreadContext()
     return OkVal();
 }
 
-ThreadContext *
+ThreadContext*
 Runtime::maybeThreadContext()
 {
     WH_ASSERT(initialized_);
 
-    return reinterpret_cast<ThreadContext *>(pthread_getspecific(threadKey_));
+    return reinterpret_cast<ThreadContext*>(pthread_getspecific(threadKey_));
 }
 
 bool
@@ -163,7 +163,7 @@ Runtime::hasThreadContext()
     return maybeThreadContext() != nullptr;
 }
 
-ThreadContext *
+ThreadContext*
 Runtime::threadContext()
 {
     WH_ASSERT(initialized_);
@@ -176,7 +176,7 @@ Runtime::threadContext()
 // AllocationContext
 //
 
-AllocationContext::AllocationContext(ThreadContext *cx, Slab *slab)
+AllocationContext::AllocationContext(ThreadContext* cx, Slab* slab)
   : cx_(cx), slab_(slab)
 {}
 
@@ -185,7 +185,7 @@ AllocationContext::AllocationContext(ThreadContext *cx, Slab *slab)
 // RuntimeError
 //
 
-const char *
+char const*
 RuntimeErrorString(RuntimeError err)
 {
     switch (err) {
@@ -228,8 +228,8 @@ ThreadContext::NewRandSeed()
     return result;
 }
 
-ThreadContext::ThreadContext(Runtime *runtime, uint32_t rtid,
-                             Slab *hatchery, Slab *tenured)
+ThreadContext::ThreadContext(Runtime* runtime, uint32_t rtid,
+                             Slab* hatchery, Slab* tenured)
   : runtime_(runtime),
     rtid_(rtid),
     hatchery_(hatchery),
@@ -253,7 +253,7 @@ ThreadContext::ThreadContext(Runtime *runtime, uint32_t rtid,
 }
 
 void
-ThreadContext::pushLastFrame(VM::Frame *frame)
+ThreadContext::pushLastFrame(VM::Frame* frame)
 {
     WH_ASSERT(frame->caller() == lastFrame_);
     lastFrame_ = frame;
@@ -267,7 +267,7 @@ ThreadContext::popLastFrame()
 }
 
 size_t
-ThreadContext::formatError(char *buf, size_t bufSize)
+ThreadContext::formatError(char* buf, size_t bufSize)
 {
     WH_ASSERT(hasError());
     if (hasErrorString()) {
@@ -314,7 +314,7 @@ ThreadContext::spoiler() const
 OkResult
 ThreadContext::makeGlobal()
 {
-    Local<VM::GlobalScope *> glob(this);
+    Local<VM::GlobalScope*> glob(this);
     if (!glob.setResult(VM::GlobalScope::Create(this->inTenured())))
         return ErrorVal();
     global_ = glob.get();
