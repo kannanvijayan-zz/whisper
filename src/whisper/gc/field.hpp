@@ -162,7 +162,6 @@ class HeapField : public BaseField<T>
         this->val_ = ref;
         notifySetPost(container);
     }
-
     template <typename HeapT>
     inline void set(T &&ref, HeapT *container) {
         notifySetPre(container);
@@ -181,6 +180,17 @@ class HeapField : public BaseField<T>
         // Pre-notification not required as value is not initialized.
         new (&this->val_) T(std::move(val));
         notifySetPost(container);
+    }
+
+    template <typename HeapT>
+    inline void clear(const T &ref, HeapT *container) {
+        notifySetPre(container);
+        this->val_ = ref;
+    }
+    template <typename HeapT>
+    inline void clear(T &&ref, HeapT *container) {
+        notifySetPre(container);
+        this->val_ = ref;
     }
 
     template <typename HeapT>
