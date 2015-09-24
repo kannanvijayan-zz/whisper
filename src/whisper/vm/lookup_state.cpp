@@ -77,7 +77,7 @@ LookupSeenObjects::add(Wobject *obj)
     size_t probe = index;
     for (;;) {
         Wobject *entry = seen_[probe].get();
-        if (entry == nullptr) {
+        if (entry == nullptr || entry == SENTINEL()) {
             seen_[probe].set(obj, this);
             return;
         }
@@ -86,6 +86,23 @@ LookupSeenObjects::add(Wobject *obj)
         probe %= size_;
         WH_ASSERT(probe != index);
     }
+}
+
+void
+LookupSeenObjects::rehashIndex(uint32_t index)
+{
+    // Index must have a value.
+    WH_ASSERT(indexHasValue(index));
+
+    // Save the old entry.
+    Wobject *obj = seen_[index].get();
+
+    // Replace with a sentinel.
+    seen_[index].clear(SENTINEL(), this);
+    filled_ -= 1;
+
+    // Re-add the entry.
+    add(obj);
 }
 
 /* static */ Result<LookupNode *>

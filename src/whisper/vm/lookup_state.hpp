@@ -19,6 +19,11 @@ namespace VM {
 class LookupSeenObjects
 {
     friend class TraceTraits<LookupSeenObjects>;
+  public:
+    static inline Wobject *SENTINEL() {
+        return reinterpret_cast<Wobject *>(0x1u);
+    }
+
   private:
     uint32_t size_;
     uint32_t filled_;
@@ -59,6 +64,14 @@ class LookupSeenObjects
         return filled_ < (size_ * MaxFillRatio);
     }
     void add(Wobject *obj);
+
+    bool indexHasValue(uint32_t index) const {
+        WH_ASSERT(index < size());
+        Wobject *ptr = seen_[index].get();
+        return (ptr != nullptr) && (ptr != SENTINEL());
+    }
+  private:
+    void rehashIndex(uint32_t index);
 };
 
 
@@ -205,8 +218,9 @@ struct TraceTraits<VM::LookupSeenObjects>
                             const void *start, const void *end)
     {
         for (uint32_t i = 0; i < lookupSeenObjects.size_; i++) {
-            if (lookupSeenObjects.seen_[i].get() != nullptr)
-                lookupSeenObjects.seen_[i].scan(scanner, start, end);
+            if (!lookupSeenObjects.indexHasValue(i))
+                continue;
+            lookupSeenObjects.seen_[i].scan(scanner, start, end);
         }
     }
 
@@ -215,9 +229,18 @@ struct TraceTraits<VM::LookupSeenObjects>
                               VM::LookupSeenObjects &lookupSeenObjects,
                               const void *start, const void *end)
     {
-        for (uint32_t i = 0; i < lookupSeenObjects.size_; i++)
-            if (lookupSeenObjects.seen_[i].get() != nullptr)
-                lookupSeenObjects.seen_[i].update(updater, start, end);
+        for (uint32_t i = 0; i < lookupSeenObjects.size_; i++) {
+            if (!lookupSeenObjects.indexHasValue(i))
+                continue;
+            // Save old value before checking.
+            VM::Wobject *oldValue = lookupSeenObjects.seen_[i].get();
+            lookupSeenObjects.seen_[i].update(updater, start, end);
+            VM::Wobject *newValue = lookupSeenObjects.seen_[i].get();
+
+            // If value changed, rehash it.
+            if (newValue != oldValue)
+                lookupSeenObjects.rehashIndex(i);
+        }
     }
 };
 
