@@ -34,6 +34,14 @@ VM::ControlFlow InvokeOperativeFunction(ThreadContext *cx,
                                     Handle<VM::Wobject *> receiver,
                                     Handle<VM::SyntaxTreeRef> stRef);
 
+VM::ControlFlow GetValueProperty(ThreadContext *cx,
+                                 Handle<VM::ValBox> value,
+                                 Handle<VM::String *> name);
+
+VM::ControlFlow GetObjectProperty(ThreadContext *cx,
+                                  Handle<VM::Wobject *> object,
+                                  Handle<VM::String *> name);
+
 
 } // namespace Interp
 } // namespace Whisper

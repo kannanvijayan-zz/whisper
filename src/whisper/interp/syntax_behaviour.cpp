@@ -154,9 +154,7 @@ IMPL_LIFT_FN_(ExprStmt)
     VM::ControlFlow exprFlow = InterpretSyntax(cx, callInfo->callerScope(), pst,
                                                exprNode->offset());
     // An expression should only ever resolve to a value, error, or exception.
-    WH_ASSERT(exprFlow.isValue() ||
-              exprFlow.isError() ||
-              exprFlow.isException());
+    WH_ASSERT(exprFlow.isExpressionResult());
     return exprFlow;
 }
 
@@ -186,9 +184,7 @@ IMPL_LIFT_FN_(ReturnStmt)
     VM::ControlFlow exprFlow = InterpretSyntax(cx, callInfo->callerScope(), pst,
                                                exprNode->offset());
     // An expression should only ever resolve to a value, error, or exception.
-    WH_ASSERT(exprFlow.isValue() ||
-              exprFlow.isError() ||
-              exprFlow.isException());
+    WH_ASSERT(exprFlow.isExpressionResult());
     // If a value, wrap the value in a return, otherwise return straight.
     if (exprFlow.isValue())
         return VM::ControlFlow::Return(exprFlow.value());
@@ -208,7 +204,7 @@ IMPL_LIFT_FN_(DefStmt)
     Local<VM::ValBox> receiverBox(cx, callInfo->receiver());
     if (receiverBox->isPrimitive())
         return cx->setExceptionRaised("Cannot define method on primitive.");
-    Local<VM::Wobject *> receiver(cx, receiverBox->objPointer());
+    Local<VM::Wobject *> receiver(cx, receiverBox->objectPointer());
 
     Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree *> pst(cx, stRef->pst());
@@ -249,7 +245,7 @@ IMPL_LIFT_FN_(VarStmt)
     Local<VM::ValBox> receiverBox(cx, callInfo->receiver());
     if (receiverBox->isPrimitive())
         return cx->setExceptionRaised("Cannot define var on primitive.");
-    Local<VM::Wobject *> receiver(cx, receiverBox->objPointer());
+    Local<VM::Wobject *> receiver(cx, receiverBox->objectPointer());
 
     Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree *> pst(cx, stRef->pst());
@@ -281,9 +277,7 @@ IMPL_LIFT_FN_(VarStmt)
             // The underlying expression can return a value, error out,
             // or throw an exception.  It should never conclude with
             // a void control flow, or a return control flow.
-            WH_ASSERT(varExprFlow.isValue() ||
-                      varExprFlow.isError() ||
-                      varExprFlow.isException());
+            WH_ASSERT(varExprFlow.isExpressionResult());
             if (!varExprFlow.isValue())
                 return varExprFlow;
             varvalBox = varExprFlow.value();
@@ -334,32 +328,12 @@ IMPL_LIFT_FN_(NameExpr)
     Local<VM::LookupState *> lookupState(cx);
     Local<VM::PropertyDescriptor> propDesc(cx);
 
-    Result<bool> lookupResult = VM::Wobject::LookupProperty(
-        cx->inHatchery(), scopeObj, name, &lookupState, &propDesc);
-    if (!lookupResult)
-        return ErrorVal();
+    VM::ControlFlow propFlow = GetObjectProperty(cx, scopeObj, name);
+    WH_ASSERT(propFlow.isExpressionResult());
+    if (!propFlow.isValue())
+        return propFlow;
 
-    // If name is not bound, throw an exception.
-    if (!lookupResult.value()) {
-        return cx->setExceptionRaised("Name binding not found.", name.get());
-    }
-
-    // Found binding.
-    WH_ASSERT(propDesc->isValid());
-
-    // Handle a value binding.
-    if (propDesc->isValue())
-        return VM::ControlFlow::Value(propDesc->valBox());
-
-    if (propDesc->isMethod()) {
-        return cx->setExceptionRaised(
-            "Can't handle method bindings for name lookups yet.",
-            name.get());
-    }
-
-    return cx->setExceptionRaised(
-        "Unknown property binding for name",
-        name.get());
+    return VM::ControlFlow::Value(propFlow.value());
 }
 
 IMPL_LIFT_FN_(IntegerExpr)

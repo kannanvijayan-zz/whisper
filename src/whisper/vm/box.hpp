@@ -179,7 +179,7 @@ class ValBox : public Box
         WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
         return ValBox(reinterpret_cast<uint64_t>(ptr));
     }
-    Wobject *objPointer() const {
+    Wobject *objectPointer() const {
         return pointer<Wobject>();
     }
 

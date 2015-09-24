@@ -239,6 +239,53 @@ InvokeOperativeFunction(ThreadContext *cx,
                         HeapThing::From(func.get()));
 }
 
+VM::ControlFlow
+GetValueProperty(ThreadContext *cx,
+                 Handle<VM::ValBox> value,
+                 Handle<VM::String *> name)
+{
+    // Check if the value is an object.
+    if (!value->isPointer()) {
+        return cx->setExceptionRaised("Cannot look up property on a "
+                                      "primitive value");
+    }
+
+    // Convert to wobject.
+    Local<VM::Wobject *> object(cx, value->objectPointer());
+    return GetObjectProperty(cx, object, name);
+}
+
+VM::ControlFlow
+GetObjectProperty(ThreadContext *cx,
+                  Handle<VM::Wobject *> object,
+                  Handle<VM::String *> name)
+{
+    Local<VM::LookupState *> lookupState(cx);
+    Local<VM::PropertyDescriptor> propDesc(cx);
+
+    Result<bool> lookupResult = VM::Wobject::LookupProperty(
+        cx->inHatchery(), object, name, &lookupState, &propDesc);
+    if (!lookupResult)
+        return ErrorVal();
+
+    // Found binding.
+    WH_ASSERT(propDesc->isValid());
+
+    // Handle a value binding.
+    if (propDesc->isValue())
+        return VM::ControlFlow::Value(propDesc->valBox());
+
+    if (propDesc->isMethod()) {
+        return cx->setExceptionRaised(
+            "Can't handle method bindings for name lookups yet.",
+            name.get());
+    }
+
+    return cx->setExceptionRaised(
+        "Unknown property binding for name",
+        name.get());
+}
+
 
 } // namespace Interp
 } // namespace Whisper

@@ -159,6 +159,10 @@ class ControlFlow
         return kind() == Kind::Exception;
     }
 
+    bool isExpressionResult() const {
+        return isValue() || isError() || isException();
+    }
+
     const ValBox &value() const {
         WH_ASSERT(isValue());
         return *valBoxPayload();
