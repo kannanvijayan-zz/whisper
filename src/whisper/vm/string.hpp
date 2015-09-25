@@ -113,6 +113,8 @@ class String
     void advance(Cursor& cursor) const;
     unic_t read(Cursor const& cursor) const;
     unic_t readAdvance(Cursor& cursor) const;
+
+    uint32_t fnvHash() const;
 };
 
 

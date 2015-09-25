@@ -3,6 +3,7 @@
 #include "vm/core.hpp"
 #include "vm/string.hpp"
 #include "runtime_inlines.hpp"
+#include "fnv_hash.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -191,6 +192,25 @@ String::readAdvance(Cursor& cursor) const
 
     WH_ASSERT(handler.codepointOut <= MaxUnicode);
     return handler.codepointOut;
+}
+
+uint32_t
+String::fnvHash() const
+{
+    FNVHash hash;
+
+    Cursor cursor = begin();
+    Cursor endCursor = end();
+    while (cursor != endCursor) {
+        unic_t ch = readAdvance(cursor);
+        WH_ASSERT(ch <= MaxUnicode);
+        WH_ASSERT(MaxUnicode == 0x10FFFFu);
+        hash.update(ch & 0xFFu);
+        hash.update((ch >> 8) & 0xFFu);
+        hash.update((ch >> 16) & 0xFFu);
+        hash.update((ch >> 24) & 0xFFu);
+    }
+    return hash.digest();
 }
 
 
