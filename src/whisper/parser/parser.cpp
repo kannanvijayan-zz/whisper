@@ -15,20 +15,20 @@ namespace Whisper {
 // Parser
 //
 
-Parser::Parser(const STLBumpAllocator<uint8_t> &allocator,
-               Tokenizer &tokenizer)
+Parser::Parser(STLBumpAllocator<uint8_t> const& allocator,
+               Tokenizer& tokenizer)
   : allocator_(allocator),
     tokenizer_(tokenizer)
 {}
 
 Parser::~Parser() {}
 
-FileNode *
+FileNode*
 Parser::parseFile()
 {
     try {
         // Parse statements.
-        StatementList stmts(allocatorFor<Statement *>());
+        StatementList stmts(allocatorFor<Statement*>());
         tryParseStatementList(stmts);
 
         // Should have reached end of file.
@@ -48,10 +48,10 @@ Parser::parseFile()
 }
 
 void
-Parser::tryParseStatementList(StatementList &stmts)
+Parser::tryParseStatementList(StatementList& stmts)
 {
     for (;;) {
-        Statement *stmt = tryParseStatement();
+        Statement* stmt = tryParseStatement();
         if (stmt) {
             stmts.push_back(stmt);
             continue;
@@ -61,12 +61,12 @@ Parser::tryParseStatementList(StatementList &stmts)
     }
 }
 
-Statement *
+Statement*
 Parser::tryParseStatement()
 {
     Token tok = nextToken();
 
-    Expression *expr = tryParseExpression(tok, Prec_Statement);
+    Expression* expr = tryParseExpression(tok, Prec_Statement);
     if (expr) {
         // Consume semicolon at end of statement.
         if (!checkNextToken<Token::Type::Semicolon>())
@@ -100,7 +100,7 @@ Parser::tryParseStatement()
     return nullptr;
 }
 
-VarStmtNode *
+VarStmtNode*
 Parser::parseVarStatement()
 {
     BindingStatement::BindingList bindings(
@@ -108,7 +108,7 @@ Parser::parseVarStatement()
 
     for (;;) {
         // Get name.
-        const Token *nameTok = checkGetNextToken<Token::Type::Identifier>();
+        Token const* nameTok = checkGetNextToken<Token::Type::Identifier>();
         if (!nameTok)
             emitError("Expected variable name in 'var' statement.");
 
@@ -123,7 +123,7 @@ Parser::parseVarStatement()
 
         if (nextType == Token::Type::Equal) {
             // Parse initializer expression.
-            Expression *expr = parseExpression(Prec_Comma);
+            Expression* expr = parseExpression(Prec_Comma);
             bindings.push_back(BindingStatement::Binding(name, expr));
 
             // Expect a ',' or ';' after it.
@@ -149,7 +149,7 @@ Parser::parseVarStatement()
     return make<VarStmtNode>(std::move(bindings));
 }
 
-ConstStmtNode *
+ConstStmtNode*
 Parser::parseConstStatement()
 {
     BindingStatement::BindingList bindings(
@@ -157,7 +157,7 @@ Parser::parseConstStatement()
 
     for (;;) {
         // Get name.
-        const Token *nameTok = checkGetNextToken<Token::Type::Identifier>();
+        Token const* nameTok = checkGetNextToken<Token::Type::Identifier>();
         if (!nameTok)
             emitError("Expected variable name in 'const' statement.");
 
@@ -168,7 +168,7 @@ Parser::parseConstStatement()
             emitError("Expected '=' after 'const' name.");
 
         // Parse initializer expression.
-        Expression *expr = parseExpression(Prec_Comma);
+        Expression* expr = parseExpression(Prec_Comma);
         bindings.push_back(BindingStatement::Binding(name, expr));
 
         // Expect a ',' or ';' after it.
@@ -187,11 +187,11 @@ Parser::parseConstStatement()
     return make<ConstStmtNode>(std::move(bindings));
 }
 
-DefStmtNode *
+DefStmtNode*
 Parser::parseDefStatement()
 {
     // Must be followed by name.
-    const Token *nameTok = checkGetNextToken<Token::Type::Identifier>();
+    Token const* nameTok = checkGetNextToken<Token::Type::Identifier>();
     if (!nameTok)
         emitError("Expected name after 'def'.");
 
@@ -204,7 +204,7 @@ Parser::parseDefStatement()
     // Parse parameter list.
     IdentifierList paramNames(allocatorFor<IdentifierToken>());
     for (;;) {
-        const Token *paramTok = checkGetNextToken<Token::Type::Identifier,
+        Token const* paramTok = checkGetNextToken<Token::Type::Identifier,
                                                   Token::Type::CloseParen>();
         if (!paramTok)
             emitError("Unexpected token in def parameter list.");
@@ -233,18 +233,18 @@ Parser::parseDefStatement()
     if (!checkNextToken<Token::Type::OpenBrace>())
         emitError("Expected '{' after def params.");
 
-    Block *block = parseBlock();
+    Block* block = parseBlock();
 
     return make<DefStmtNode>(name, std::move(paramNames), block);
 }
 
-ReturnStmtNode *
+ReturnStmtNode*
 Parser::parseReturnStatement()
 {
     Token nextTok = nextToken();
 
     // Parse return statement.
-    Expression *expr = tryParseExpression(nextTok, Prec_Statement);
+    Expression* expr = tryParseExpression(nextTok, Prec_Statement);
     if (expr) {
         if (!checkNextToken<Token::Type::Semicolon>())
             emitError("Expected semicolon after return statement.");
@@ -258,7 +258,7 @@ Parser::parseReturnStatement()
     return make<ReturnStmtNode>(nullptr);
 }
 
-IfStmtNode *
+IfStmtNode*
 Parser::parseIfStatement()
 {
     IfStmtNode::CondPair ifPair = parseIfCondPair();
@@ -266,7 +266,7 @@ Parser::parseIfStatement()
     // List of elsif cond pairs.
     IfStmtNode::CondPairList elsifPairs(allocatorFor<IfStmtNode::CondPair>());
 
-    Block *elseBlock = nullptr;
+    Block* elseBlock = nullptr;
 
     // Check for following 'elsif' or 'else'
     Token::Type type = checkTypeNextToken<Token::Type::ElseKeyword,
@@ -298,7 +298,7 @@ Parser::parseIfCondPair()
         emitError("Expected '(' in conditional pair.");
 
     // Parse a conditional expression.
-    Expression *expr = parseExpression(Prec_Lowest);
+    Expression* expr = parseExpression(Prec_Lowest);
 
     // Expect close paren afterward.
     if (!checkNextToken<Token::Type::CloseParen>())
@@ -308,27 +308,27 @@ Parser::parseIfCondPair()
     if (!checkNextToken<Token::Type::OpenBrace>())
         emitError("Expected '{' in conditional pair.");
 
-    Block *block = parseBlock();
+    Block* block = parseBlock();
 
     return IfStmtNode::CondPair(expr, block);
 }
 
-LoopStmtNode *
+LoopStmtNode*
 Parser::parseLoopStatement()
 {
     // Expect open-brace afterward.
     if (!checkNextToken<Token::Type::OpenBrace>())
         emitError("Expected '{' after 'loop' keyword.");
 
-    Block *block = parseBlock();
+    Block* block = parseBlock();
     return make<LoopStmtNode>(block);
 }
 
-Block *
+Block*
 Parser::parseBlock()
 {
     // Parse statements.
-    StatementList stmts(allocatorFor<Statement *>());
+    StatementList stmts(allocatorFor<Statement*>());
     tryParseStatementList(stmts);
 
     // Should have reached end-of-block.
@@ -339,22 +339,22 @@ Parser::parseBlock()
     return make<Block>(std::move(stmts));
 }
 
-Expression *
-Parser::parseExpression(const Token &startToken, Precedence prec)
+Expression*
+Parser::parseExpression(Token const& startToken, Precedence prec)
 {
-    Expression *expr = tryParseExpression(startToken, prec);
+    Expression* expr = tryParseExpression(startToken, prec);
     if (!expr)
         emitError("Expected expression.");
 
     return expr;
 }
 
-Expression *
-Parser::tryParseExpression(const Token &startToken, Precedence prec)
+Expression*
+Parser::tryParseExpression(Token const& startToken, Precedence prec)
 {
-    Expression *expr = nullptr;
+    Expression* expr = nullptr;
     if (startToken.isIdentifier()) {
-        NameExprNode *nameExpr = make<NameExprNode>(
+        NameExprNode* nameExpr = make<NameExprNode>(
                                     IdentifierToken(startToken));
 
         expr = parseCallTrailer(nameExpr);
@@ -364,12 +364,12 @@ Parser::tryParseExpression(const Token &startToken, Precedence prec)
 
     } else if (startToken.isMinus()) {
         startToken.debug_markUsed();
-        Expression *subexpr = parseExpression(Prec_Unary);
+        Expression* subexpr = parseExpression(Prec_Unary);
         expr = make<NegExprNode>(subexpr);
 
     } else if (startToken.isPlus()) {
         startToken.debug_markUsed();
-        Expression *subexpr = parseExpression(Prec_Unary);
+        Expression* subexpr = parseExpression(Prec_Unary);
         expr = make<PosExprNode>(subexpr);
 
     } else {
@@ -380,42 +380,42 @@ Parser::tryParseExpression(const Token &startToken, Precedence prec)
     return parseExpressionRest(expr, prec);
 }
 
-Expression *
-Parser::parseExpressionRest(Expression *seedExpr, Precedence prec)
+Expression*
+Parser::parseExpressionRest(Expression* seedExpr, Precedence prec)
 {
     WH_ASSERT(prec > Prec_Highest && prec <= Prec_Lowest);
 
-    Expression *curExpr = seedExpr;
+    Expression* curExpr = seedExpr;
 
     for (;;) {
         // Read first token.
-        const Token &optok = nextToken();
+        Token const& optok = nextToken();
         optok.debug_markUsed();
 
         // Check from highest to lowest precedence.
 
         if (optok.isDot()) {
-            const Token *maybeName =
+            Token const* maybeName =
                 checkGetNextToken<Token::Type::Identifier>();
             if (!maybeName)
                 emitError("Expected identifier after '.'");
 
             IdentifierToken name(*maybeName);
 
-            DotExprNode *dotExpr = make<DotExprNode>(curExpr, name);
+            DotExprNode* dotExpr = make<DotExprNode>(curExpr, name);
             curExpr = parseCallTrailer(dotExpr);
             continue;
         }
 
         if (optok.isArrow()) {
-            const Token *maybeName =
+            Token const* maybeName =
                 checkGetNextToken<Token::Type::Identifier>();
             if (!maybeName)
                 emitError("Expected identifier after '->'");
 
             IdentifierToken name(*maybeName);
 
-            ArrowExprNode *arrowExpr = make<ArrowExprNode>(curExpr, name);
+            ArrowExprNode* arrowExpr = make<ArrowExprNode>(curExpr, name);
             curExpr = parseCallTrailer(arrowExpr);
             continue;
         }
@@ -426,7 +426,7 @@ Parser::parseExpressionRest(Expression *seedExpr, Precedence prec)
                 break;
             }
 
-            Expression *rhsExpr = parseExpression(Prec_Product);
+            Expression* rhsExpr = parseExpression(Prec_Product);
             curExpr = make<MulExprNode>(curExpr, rhsExpr);
             continue;
         }
@@ -437,7 +437,7 @@ Parser::parseExpressionRest(Expression *seedExpr, Precedence prec)
                 break;
             }
 
-            Expression *rhsExpr = parseExpression(Prec_Product);
+            Expression* rhsExpr = parseExpression(Prec_Product);
             curExpr = make<DivExprNode>(curExpr, rhsExpr);
             continue;
         }
@@ -448,7 +448,7 @@ Parser::parseExpressionRest(Expression *seedExpr, Precedence prec)
                 break;
             }
 
-            Expression *rhsExpr = parseExpression(Prec_Sum);
+            Expression* rhsExpr = parseExpression(Prec_Sum);
             curExpr = make<AddExprNode>(curExpr, rhsExpr);
             continue;
         }
@@ -459,7 +459,7 @@ Parser::parseExpressionRest(Expression *seedExpr, Precedence prec)
                 break;
             }
 
-            Expression *rhsExpr = parseExpression(Prec_Sum);
+            Expression* rhsExpr = parseExpression(Prec_Sum);
             curExpr = make<SubExprNode>(curExpr, rhsExpr);
             continue;
         }
@@ -473,21 +473,21 @@ Parser::parseExpressionRest(Expression *seedExpr, Precedence prec)
     return curExpr;
 }
 
-Expression *
-Parser::parseCallTrailer(PropertyExpression *propExpr)
+Expression*
+Parser::parseCallTrailer(PropertyExpression* propExpr)
 {
     // Check for open paren.
     if (!checkNextToken<Token::Type::OpenParen>())
         return propExpr;
 
     // Got open paren, parse call.
-    ExpressionList expressions(allocatorFor<Expression *>());
+    ExpressionList expressions(allocatorFor<Expression*>());
     for (;;) {
         Token tok = nextToken();
 
-        Expression *expr = tryParseExpression(tok, Prec_Comma);
+        Expression* expr = tryParseExpression(tok, Prec_Comma);
         if (expr) {
-            const Token *nextTok =
+            Token const* nextTok =
                 checkGetNextToken<Token::Type::Comma,
                                   Token::Type::CloseParen>();
 
@@ -517,12 +517,12 @@ Parser::parseCallTrailer(PropertyExpression *propExpr)
     return make<CallExprNode>(propExpr, std::move(expressions));
 }
 
-const Token &
+Token const&
 Parser::nextToken()
 {
     // Read next valid token.
     for (;;) {
-        const Token &tok = tokenizer_.readToken();
+        Token const& tok = tokenizer_.readToken();
         tok.debug_markUsed();
         if (tok.isWhitespace())
             continue;
@@ -544,7 +544,7 @@ Parser::nextToken()
 }
 
 Parser::MorphError
-Parser::emitError(const char *msg)
+Parser::emitError(char const* msg)
 {
     error_ = msg;
     SpewParserError("%s", msg);

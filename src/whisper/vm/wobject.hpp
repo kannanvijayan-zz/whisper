@@ -24,26 +24,26 @@ class Wobject
   public:
     static OkResult GetDelegates(
             AllocationContext acx,
-            Handle<Wobject *> obj,
-            MutHandle<Array<Wobject *> *> delegatesOut);
+            Handle<Wobject*> obj,
+            MutHandle<Array<Wobject*>*> delegatesOut);
 
     static Result<bool> GetProperty(
             AllocationContext acx,
-            Handle<Wobject *> obj,
-            Handle<String *> name,
+            Handle<Wobject*> obj,
+            Handle<String*> name,
             MutHandle<PropertyDescriptor> result);
 
     static OkResult DefineProperty(
             AllocationContext acx,
-            Handle<Wobject *> obj,
-            Handle<String *> name,
+            Handle<Wobject*> obj,
+            Handle<String*> name,
             Handle<PropertyDescriptor> defn);
 
     static Result<bool> LookupProperty(
             AllocationContext acx,
-            Handle<Wobject *> obj,
-            Handle<String *> name,
-            MutHandle<LookupState *> stateOut,
+            Handle<Wobject*> obj,
+            Handle<String*> name,
+            MutHandle<LookupState*> stateOut,
             MutHandle<PropertyDescriptor> defnOut);
 
     static bool IsWobjectFormat(HeapFormat format) {
@@ -58,7 +58,7 @@ class Wobject
             return false;
         }
     }
-    static bool IsWobject(HeapThing *heapThing) {
+    static bool IsWobject(HeapThing* heapThing) {
         return IsWobjectFormat(heapThing->format());
     }
 };

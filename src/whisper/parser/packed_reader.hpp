@@ -27,7 +27,7 @@ class PackedVisitor
     virtual ~PackedVisitor() {}
 
 #define METHOD_(ntype) \
-    virtual void visit##ntype(const PackedReader &reader, \
+    virtual void visit##ntype(PackedReader const& reader, \
                               Packed##ntype##Node packedNode) \
     { \
         WH_UNREACHABLE("Abstract base method visit" #ntype); \
@@ -42,19 +42,19 @@ class PackedReader
 
   private:
     // Packed syntax tree.
-    StackField<VM::Array<uint32_t> *> text_;
-    StackField<VM::Array<VM::Box> *> constPool_;
+    StackField<VM::Array<uint32_t>*> text_;
+    StackField<VM::Array<VM::Box>*> constPool_;
 
   public:
-    PackedReader(VM::Array<uint32_t> *text, VM::Array<VM::Box> *constPool)
+    PackedReader(VM::Array<uint32_t>* text, VM::Array<VM::Box>* constPool)
       : text_(text),
         constPool_(constPool)
     {}
 
-    VM::Array<uint32_t> *text() const {
+    VM::Array<uint32_t>* text() const {
         return text_;
     }
-    VM::Array<VM::Box> *constPool() const {
+    VM::Array<VM::Box>* constPool() const {
         return constPool_;
     }
 
@@ -62,8 +62,8 @@ class PackedReader
         return constPool_->get(idx);
     }
 
-    void visitNode(PackedBaseNode node, PackedVisitor *visitor) const;
-    void visit(PackedVisitor *visitor) const {
+    void visitNode(PackedBaseNode node, PackedVisitor* visitor) const;
+    void visit(PackedVisitor* visitor) const {
         visitNode(PackedBaseNode(text_, 0), visitor);
     }
 };
@@ -71,18 +71,18 @@ class PackedReader
 template <typename Printer>
 class PrintingPackedVisitor : public PackedVisitor
 {
-    Printer &printer_;
+    Printer& printer_;
     unsigned tabDepth_;
 
   public:
-    PrintingPackedVisitor(Printer &printer)
+    PrintingPackedVisitor(Printer& printer)
       : printer_(printer),
         tabDepth_(0)
     {}
 
     virtual ~PrintingPackedVisitor() {}
 
-    virtual void visitFile(const PackedReader &reader,
+    virtual void visitFile(PackedReader const& reader,
                            PackedFileNode file)
         override
     {
@@ -90,14 +90,14 @@ class PrintingPackedVisitor : public PackedVisitor
             reader.visitNode(file.statement(i), this);
     }
 
-    virtual void visitEmptyStmt(const PackedReader &reader,
+    virtual void visitEmptyStmt(PackedReader const& reader,
                                 PackedEmptyStmtNode emptyStmt)
         override
     {
         pr(";\n");
     }
 
-    virtual void visitExprStmt(const PackedReader &reader,
+    virtual void visitExprStmt(PackedReader const& reader,
                                PackedExprStmtNode exprStmt)
         override
     {
@@ -106,7 +106,7 @@ class PrintingPackedVisitor : public PackedVisitor
         pr(";\n");
     }
 
-    virtual void visitReturnStmt(const PackedReader &reader,
+    virtual void visitReturnStmt(PackedReader const& reader,
                                  PackedReturnStmtNode returnStmt)
         override
     {
@@ -118,7 +118,7 @@ class PrintingPackedVisitor : public PackedVisitor
         pr(";\n");
     }
 
-    virtual void visitIfStmt(const PackedReader &reader,
+    virtual void visitIfStmt(PackedReader const& reader,
                              PackedIfStmtNode ifStmt)
         override
     {
@@ -141,7 +141,7 @@ class PrintingPackedVisitor : public PackedVisitor
         pr("\n");
     }
 
-    virtual void visitDefStmt(const PackedReader &reader,
+    virtual void visitDefStmt(PackedReader const& reader,
                               PackedDefStmtNode defStmt)
         override
     {
@@ -159,7 +159,7 @@ class PrintingPackedVisitor : public PackedVisitor
         pr("\n");
     }
 
-    virtual void visitConstStmt(const PackedReader &reader,
+    virtual void visitConstStmt(PackedReader const& reader,
                                 PackedConstStmtNode constStmt)
         override
     {
@@ -174,7 +174,7 @@ class PrintingPackedVisitor : public PackedVisitor
         pr(";\n");
     }
 
-    virtual void visitVarStmt(const PackedReader &reader,
+    virtual void visitVarStmt(PackedReader const& reader,
                               PackedVarStmtNode varStmt)
         override
     {
@@ -191,7 +191,7 @@ class PrintingPackedVisitor : public PackedVisitor
         pr(";\n");
     }
 
-    virtual void visitLoopStmt(const PackedReader &reader,
+    virtual void visitLoopStmt(PackedReader const& reader,
                                PackedLoopStmtNode loopStmt)
         override
     {
@@ -200,7 +200,7 @@ class PrintingPackedVisitor : public PackedVisitor
         pr("\n");
     }
 
-    virtual void visitCallExpr(const PackedReader &reader,
+    virtual void visitCallExpr(PackedReader const& reader,
                                PackedCallExprNode callExpr)
         override
     {
@@ -214,7 +214,7 @@ class PrintingPackedVisitor : public PackedVisitor
         pr(")");
     }
 
-    virtual void visitDotExpr(const PackedReader &reader,
+    virtual void visitDotExpr(PackedReader const& reader,
                               PackedDotExprNode dotExpr)
         override
     {
@@ -223,7 +223,7 @@ class PrintingPackedVisitor : public PackedVisitor
         visitIdentifier(reader, dotExpr.nameCid());
     }
 
-    virtual void visitArrowExpr(const PackedReader &reader,
+    virtual void visitArrowExpr(PackedReader const& reader,
                                 PackedArrowExprNode arrowExpr)
         override
     {
@@ -232,49 +232,49 @@ class PrintingPackedVisitor : public PackedVisitor
         visitIdentifier(reader, arrowExpr.nameCid());
     }
 
-    virtual void visitPosExpr(const PackedReader &reader,
+    virtual void visitPosExpr(PackedReader const& reader,
                               PackedPosExprNode posExpr)
         override
     {
         visitUnaryExpr(reader, posExpr.subexpr(), "+");
     }
 
-    virtual void visitNegExpr(const PackedReader &reader,
+    virtual void visitNegExpr(PackedReader const& reader,
                               PackedNegExprNode negExpr)
         override
     {
         visitUnaryExpr(reader, negExpr.subexpr(), "-");
     }
 
-    virtual void visitAddExpr(const PackedReader &reader,
+    virtual void visitAddExpr(PackedReader const& reader,
                               PackedAddExprNode addExpr)
         override
     {
         visitBinaryExpr(reader, addExpr.lhs(), addExpr.rhs(), "+");
     }
 
-    virtual void visitSubExpr(const PackedReader &reader,
+    virtual void visitSubExpr(PackedReader const& reader,
                               PackedSubExprNode subExpr)
         override
     {
         visitBinaryExpr(reader, subExpr.lhs(), subExpr.rhs(), "-");
     }
 
-    virtual void visitMulExpr(const PackedReader &reader,
+    virtual void visitMulExpr(PackedReader const& reader,
                               PackedMulExprNode mulExpr)
         override
     {
         visitBinaryExpr(reader, mulExpr.lhs(), mulExpr.rhs(), "*");
     }
 
-    virtual void visitDivExpr(const PackedReader &reader,
+    virtual void visitDivExpr(PackedReader const& reader,
                               PackedDivExprNode divExpr)
         override
     {
         visitBinaryExpr(reader, divExpr.lhs(), divExpr.rhs(), "/");
     }
 
-    virtual void visitParenExpr(const PackedReader &reader,
+    virtual void visitParenExpr(PackedReader const& reader,
                                 PackedParenExprNode parenExpr)
         override
     {
@@ -283,14 +283,14 @@ class PrintingPackedVisitor : public PackedVisitor
         pr(")");
     }
 
-    virtual void visitNameExpr(const PackedReader &reader,
+    virtual void visitNameExpr(PackedReader const& reader,
                                PackedNameExprNode nameExpr)
         override
     {
         visitIdentifier(reader, nameExpr.nameCid());
     }
 
-    virtual void visitIntegerExpr(const PackedReader &reader,
+    virtual void visitIntegerExpr(PackedReader const& reader,
                                   PackedIntegerExprNode integerExpr)
         override
     {
@@ -307,13 +307,13 @@ class PrintingPackedVisitor : public PackedVisitor
     }
     void tab() { tab(tabDepth_); }
 
-    void pr(const char *text) {
+    void pr(char const* text) {
         printer_(text);
     }
 
-    void visitUnaryExpr(const PackedReader &reader,
+    void visitUnaryExpr(PackedReader const& reader,
                         PackedBaseNode node,
-                        const char *op)
+                        char const* op)
     {
         pr("(| ");
         pr(op);
@@ -322,10 +322,10 @@ class PrintingPackedVisitor : public PackedVisitor
         pr(" |)");
     }
 
-    void visitBinaryExpr(const PackedReader &reader,
+    void visitBinaryExpr(PackedReader const& reader,
                          PackedBaseNode lhs,
                          PackedBaseNode rhs,
-                         const char *op)
+                         char const* op)
     {
         pr("(| ");
         reader.visitNode(lhs, this);
@@ -334,13 +334,13 @@ class PrintingPackedVisitor : public PackedVisitor
         pr(" |)");
     }
 
-    void visitIdentifier(const PackedReader &reader,
+    void visitIdentifier(PackedReader const& reader,
                          uint32_t idx)
     {
         VM::Box box = reader.constant(idx);
         WH_ASSERT(box.isPointer());
         WH_ASSERT(box.pointer<HeapThing>()->isString());
-        VM::String *string = box.pointer<VM::String>();
+        VM::String* string = box.pointer<VM::String>();
         for (uint32_t i = 0; i < string->byteLength(); i++) {
             char cs[2];
             cs[0] = string->bytes()[i];
@@ -349,12 +349,12 @@ class PrintingPackedVisitor : public PackedVisitor
         }
     }
 
-    void visitSizedBlock(const PackedReader &reader, PackedSizedBlock block)
+    void visitSizedBlock(PackedReader const& reader, PackedSizedBlock block)
     {
         visitBlock(reader, block.unsizedBlock());
     }
 
-    void visitBlock(const PackedReader &reader, PackedBlock block)
+    void visitBlock(PackedReader const& reader, PackedBlock block)
     {
         pr("{\n");
         tabDepth_++;
@@ -398,16 +398,16 @@ struct TraceTraits<AST::PackedReader>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const AST::PackedReader &pr,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, AST::PackedReader const& pr,
+                     void const* start, void const* end)
     {
         pr.text_.scan(scanner, start, end);
         pr.constPool_.scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, AST::PackedReader &pr,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, AST::PackedReader& pr,
+                       void const* start, void const* end)
     {
         pr.text_.update(updater, start, end);
         pr.constPool_.update(updater, start, end);

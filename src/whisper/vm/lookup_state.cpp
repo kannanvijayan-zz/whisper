@@ -9,26 +9,26 @@ namespace Whisper {
 namespace VM {
 
 
-/* static */ Result<LookupSeenObjects *>
+/* static */ Result<LookupSeenObjects*>
 LookupSeenObjects::Create(AllocationContext acx, uint32_t size)
 {
     return acx.createSized<LookupSeenObjects>(CalculateSize(size), size);
 }
 
-/* static */ Result<LookupSeenObjects *>
+/* static */ Result<LookupSeenObjects*>
 LookupSeenObjects::Create(AllocationContext acx, uint32_t size,
-                          Handle<LookupSeenObjects *> other)
+                          Handle<LookupSeenObjects*> other)
 {
     // The given size should be enough to fit the other's pointers.
     WH_ASSERT(other->filled_ < (size * MaxFillRatio));
 
-    Local<LookupSeenObjects *> newSeen(acx);
+    Local<LookupSeenObjects*> newSeen(acx);
     if (!newSeen.setResult(Create(acx, size)))
         return ErrorVal();
 
     // Add old entries to new.
     for (uint32_t i = 0; i < other->size_; i++) {
-        Wobject *obj = other->seen_[i].get();
+        Wobject* obj = other->seen_[i].get();
         if (obj != nullptr) {
             WH_ASSERT(newSeen->canAdd());
             WH_ASSERT(!newSeen->contains(obj));
@@ -40,16 +40,16 @@ LookupSeenObjects::Create(AllocationContext acx, uint32_t size,
 }
 
 bool
-LookupSeenObjects::contains(Wobject *obj) const
+LookupSeenObjects::contains(Wobject* obj) const
 {
     // Hash the object.
-    std::hash<Wobject *> hasher;
+    std::hash<Wobject*> hasher;
     size_t index = hasher(obj) % size_;
 
     // Check partial hash.
     size_t probe = index;
     for (;;) {
-        Wobject *entry = seen_[probe].get();
+        Wobject* entry = seen_[probe].get();
         if (entry == nullptr)
             return false;
 
@@ -64,19 +64,19 @@ LookupSeenObjects::contains(Wobject *obj) const
 }
 
 void
-LookupSeenObjects::add(Wobject *obj)
+LookupSeenObjects::add(Wobject* obj)
 {
     WH_ASSERT(!contains(obj));
     WH_ASSERT(canAdd());
 
     // Hash the object.
-    std::hash<Wobject *> hasher;
+    std::hash<Wobject*> hasher;
     size_t index = hasher(obj) % size_;
 
     // Check partial hash.
     size_t probe = index;
     for (;;) {
-        Wobject *entry = seen_[probe].get();
+        Wobject* entry = seen_[probe].get();
         if (entry == nullptr || entry == SENTINEL()) {
             seen_[probe].set(obj, this);
             return;
@@ -95,7 +95,7 @@ LookupSeenObjects::rehashIndex(uint32_t index)
     WH_ASSERT(indexHasValue(index));
 
     // Save the old entry.
-    Wobject *obj = seen_[index].get();
+    Wobject* obj = seen_[index].get();
 
     // Replace with a sentinel.
     seen_[index].clear(SENTINEL(), this);
@@ -105,35 +105,35 @@ LookupSeenObjects::rehashIndex(uint32_t index)
     add(obj);
 }
 
-/* static */ Result<LookupNode *>
+/* static */ Result<LookupNode*>
 LookupNode::Create(AllocationContext acx,
-                   Handle<Wobject *> object)
+                   Handle<Wobject*> object)
 {
     return acx.create<LookupNode>(object);
 }
 
-/* static */ Result<LookupNode *>
+/* static */ Result<LookupNode*>
 LookupNode::Create(AllocationContext acx,
-                   Handle<LookupNode *> parent,
-                   Handle<Wobject *> object)
+                   Handle<LookupNode*> parent,
+                   Handle<Wobject*> object)
 {
     return acx.create<LookupNode>(parent, object);
 }
 
-/* static */ Result<LookupState *>
+/* static */ Result<LookupState*>
 LookupState::Create(AllocationContext acx,
-                    Handle<Wobject *> receiver,
-                    Handle<String *> name)
+                    Handle<Wobject*> receiver,
+                    Handle<String*> name)
 {
-    Local<LookupSeenObjects *> seen(acx);
+    Local<LookupSeenObjects*> seen(acx);
     if (!seen.setResult(LookupSeenObjects::Create(acx, 10)))
         return ErrorVal();
 
-    Local<LookupNode *> node(acx);
+    Local<LookupNode*> node(acx);
     if (!node.setResult(LookupNode::Create(acx, receiver)))
         return ErrorVal();
 
-    Local<LookupState *> lookupState(acx);
+    Local<LookupState*> lookupState(acx);
     if (!lookupState.setResult(acx.create<LookupState>(
                 receiver, name, seen.handle(), node.handle())))
     {
@@ -149,16 +149,16 @@ LookupState::Create(AllocationContext acx,
 
 /* static */ OkResult
 LookupState::NextNode(AllocationContext acx,
-                      Handle<LookupState *> lookupState,
-                      MutHandle<LookupNode *> nodeOut)
+                      Handle<LookupState*> lookupState,
+                      MutHandle<LookupNode*> nodeOut)
 {
     // node_ refers to a leaf-level node whose |delegates| field is null.
-    Local<LookupNode *> cur(acx, lookupState->node_);
+    Local<LookupNode*> cur(acx, lookupState->node_);
     WH_ASSERT(cur->delegates() == nullptr);
 
     // Check if current object has any unseen delegates.
-    Local<Wobject *> obj(acx, cur->object());
-    Local<Array<Wobject *> *> delgs(acx, nullptr);
+    Local<Wobject*> obj(acx, cur->object());
+    Local<Array<Wobject*>*> delgs(acx, nullptr);
     if (!Wobject::GetDelegates(acx, obj, &delgs))
         return ErrorVal();
 
@@ -200,14 +200,14 @@ LookupState::NextNode(AllocationContext acx,
 
 OkResult
 LookupState::LinkNextNode(AllocationContext acx,
-                          Handle<LookupState *> lookupState,
-                          Handle<LookupNode *> parent,
+                          Handle<LookupState*> lookupState,
+                          Handle<LookupNode*> parent,
                           uint32_t index,
-                          MutHandle<LookupNode *> nodeOut)
+                          MutHandle<LookupNode*> nodeOut)
 {
-    Local<Wobject *> obj(acx, parent->delegates()->get(index));
+    Local<Wobject*> obj(acx, parent->delegates()->get(index));
 
-    Local<LookupNode *> newNode(acx);
+    Local<LookupNode*> newNode(acx);
     if (!newNode.setResult(LookupNode::Create(acx, parent, obj)))
         return ErrorVal();
 
@@ -223,19 +223,19 @@ LookupState::LinkNextNode(AllocationContext acx,
 
 OkResult
 LookupState::AddToSeen(AllocationContext acx,
-                       Handle<LookupState *> lookupState,
-                       Handle<Wobject *> obj)
+                       Handle<LookupState*> lookupState,
+                       Handle<Wobject*> obj)
 {
     WH_ASSERT(!lookupState->seen_->contains(obj));
     if (lookupState->seen_->canAdd()) {
         lookupState->seen_->add(obj);
         return OkVal();
     }
-    Local<LookupSeenObjects *> oldSeen(acx, lookupState->seen_);
+    Local<LookupSeenObjects*> oldSeen(acx, lookupState->seen_);
 
     // Replace seen_ with a new larger-sized set.
     uint32_t newSize = oldSeen->size() * 2;
-    Local<LookupSeenObjects *> newSeen(acx);
+    Local<LookupSeenObjects*> newSeen(acx);
     if (!newSeen.setResult(LookupSeenObjects::Create(acx, newSize, oldSeen)))
         return ErrorVal();
 

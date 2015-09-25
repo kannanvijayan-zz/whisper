@@ -20,19 +20,19 @@ class RuntimeState
     friend struct TraceTraits<RuntimeState>;
 
   private:
-    HeapField<Array<String *> *> namePool_;
+    HeapField<Array<String*>*> namePool_;
 
   public:
-    RuntimeState(Array<String *> *namePool)
+    RuntimeState(Array<String*>* namePool)
       : namePool_(namePool)
     {
         WH_ASSERT(namePool != nullptr);
     }
 
-    static Result<RuntimeState *> Create(AllocationContext acx);
+    static Result<RuntimeState*> Create(AllocationContext acx);
 
 #define NAME_METH_(name, str) \
-    String *nm_##name() const { \
+    String* nm_##name() const { \
         return namePool_->get(NamePool::IndexOfId(NamePool::Id::name)); \
     }
     WHISPER_DEFN_NAME_POOL(NAME_METH_)
@@ -55,15 +55,15 @@ struct TraceTraits<VM::RuntimeState>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::RuntimeState &rtState,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::RuntimeState const& rtState,
+                     void const* start, void const* end)
     {
         rtState.namePool_.scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::RuntimeState &rtState,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::RuntimeState& rtState,
+                       void const* start, void const* end)
     {
         rtState.namePool_.update(updater, start, end);
     }

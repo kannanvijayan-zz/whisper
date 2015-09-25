@@ -14,30 +14,30 @@ class GlobalScope : public ScopeObject
 {
   friend class TraceTraits<GlobalScope>;
   public:
-    GlobalScope(Handle<Array<Wobject *> *> delegates,
-                Handle<PropertyDict *> dict)
+    GlobalScope(Handle<Array<Wobject*>*> delegates,
+                Handle<PropertyDict*> dict)
       : ScopeObject(delegates, dict)
     {}
 
-    static Result<GlobalScope *> Create(AllocationContext acx);
+    static Result<GlobalScope*> Create(AllocationContext acx);
 
     static void GetDelegates(AllocationContext acx,
-                             Handle<GlobalScope *> obj,
-                             MutHandle<Array<Wobject *> *> delegatesOut);
+                             Handle<GlobalScope*> obj,
+                             MutHandle<Array<Wobject*>*> delegatesOut);
 
     static bool GetProperty(AllocationContext acx,
-                            Handle<GlobalScope *> obj,
-                            Handle<String *> name,
+                            Handle<GlobalScope*> obj,
+                            Handle<String*> name,
                             MutHandle<PropertyDescriptor> result);
 
     static OkResult DefineProperty(AllocationContext acx,
-                                   Handle<GlobalScope *> obj,
-                                   Handle<String *> name,
+                                   Handle<GlobalScope*> obj,
+                                   Handle<String*> name,
                                    Handle<PropertyDescriptor> defn);
 
   private:
     static OkResult BindSyntaxHandlers(AllocationContext acx,
-                                       Handle<GlobalScope *> obj);
+                                       Handle<GlobalScope*> obj);
 };
 
 
@@ -57,15 +57,15 @@ struct TraceTraits<VM::GlobalScope>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::GlobalScope &scope,
-                     const void *start, const void *end)
+    static void Scan(Scanner&scanner, VM::GlobalScope const& scope,
+                     void const* start, void const* end)
     {
         TraceTraits<VM::HashObject>::Scan(scanner, scope, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::GlobalScope &scope,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::GlobalScope& scope,
+                       void const* start, void const* end)
     {
         TraceTraits<VM::HashObject>::Update(updater, scope, start, end);
     }

@@ -56,21 +56,21 @@ class Frame
 
   private:
     // The caller frame.
-    HeapField<Frame *> caller_;
+    HeapField<Frame*> caller_;
 
     // The scripted function being interpreted in this frame.
-    HeapField<ScriptedFunction *> func_;
+    HeapField<ScriptedFunction*> func_;
 
     // The call object in effect for this frame.
-    HeapField<CallScope *> scope_;
+    HeapField<CallScope*> scope_;
 
     // The maximal stack and eval depth.
     uint32_t maxStackDepth_;
     uint32_t maxEvalDepth_;
 
     // The current stack top, and expression eval top.
-    HeapField<Box> *stackTop_;
-    OffsetAndKind *evalTop_;
+    HeapField<Box>* stackTop_;
+    OffsetAndKind* evalTop_;
 
     // Implicit following fields:
     //
@@ -82,9 +82,9 @@ class Frame
     //   scripted function's packed syntax tree buffer.
 
   public:
-    Frame(Frame *caller,
-          ScriptedFunction *func,
-          CallScope *scope,
+    Frame(Frame* caller,
+          ScriptedFunction* func,
+          CallScope* scope,
           uint32_t maxStackDepth,
           uint32_t maxEvalDepth)
       : caller_(caller),
@@ -117,17 +117,17 @@ class Frame
         return EvalEndOffset(maxStackDepth, maxEvalDepth);
     }
 
-    static Result<Frame *> Create(AllocationContext acx,
-                                  Handle<Frame *> caller,
-                                  Handle<ScriptedFunction *> func,
-                                  Handle<CallScope *> scope,
+    static Result<Frame*> Create(AllocationContext acx,
+                                  Handle<Frame*> caller,
+                                  Handle<ScriptedFunction*> func,
+                                  Handle<CallScope*> scope,
                                   uint32_t maxStackDepth,
                                   uint32_t maxEvalDepth);
 
-    Frame *caller() const {
+    Frame* caller() const {
         return caller_;
     }
-    ScriptedFunction *func() const {
+    ScriptedFunction* func() const {
         return func_;
     }
     uint32_t maxStackDepth() const {
@@ -143,41 +143,41 @@ class Frame
         return evalTop_ - evalStart();
     }
 
-    const HeapField<Box> &stackVal(uint32_t idx) const {
+    HeapField<Box> const& stackVal(uint32_t idx) const {
         WH_ASSERT(idx < stackDepth());
         return stackTop_[-ToInt32(idx)];
     }
-    HeapField<Box> &stackVal(uint32_t idx) {
+    HeapField<Box>& stackVal(uint32_t idx) {
         WH_ASSERT(idx < stackDepth());
         return stackTop_[-ToInt32(idx)];
     }
 
-    const OffsetAndKind &evalElement(uint32_t idx) const {
+    OffsetAndKind const& evalElement(uint32_t idx) const {
         WH_ASSERT(idx < evalDepth());
         return evalTop_[-ToInt32(idx)];
     }
-    OffsetAndKind &evalElement(uint32_t idx) {
+    OffsetAndKind& evalElement(uint32_t idx) {
         WH_ASSERT(idx < evalDepth());
         return evalTop_[-ToInt32(idx)];
     }
 
   private:
-    const HeapField<Box> *stackStart() const {
-        const uint8_t *ptr = reinterpret_cast<const uint8_t *>(this);
-        return reinterpret_cast<const HeapField<Box> *>(ptr + StackOffset());
+    HeapField<Box> const* stackStart() const {
+        uint8_t const* ptr = reinterpret_cast<uint8_t const*>(this);
+        return reinterpret_cast<HeapField<Box> const*>(ptr + StackOffset());
     }
-    HeapField<Box> *stackStart() {
-        uint8_t *ptr = reinterpret_cast<uint8_t *>(this);
-        return reinterpret_cast<HeapField<Box> *>(ptr + StackOffset());
+    HeapField<Box>* stackStart() {
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(this);
+        return reinterpret_cast<HeapField<Box>*>(ptr + StackOffset());
     }
-    const OffsetAndKind *evalStart() const {
-        const uint8_t *ptr = reinterpret_cast<const uint8_t *>(this);
-        return reinterpret_cast<const OffsetAndKind *>(
+    OffsetAndKind const* evalStart() const {
+        uint8_t const* ptr = reinterpret_cast<uint8_t const*>(this);
+        return reinterpret_cast<OffsetAndKind const*>(
                 ptr + EvalOffset(maxStackDepth_));
     }
-    OffsetAndKind *evalStart() {
-        uint8_t *ptr = reinterpret_cast<uint8_t *>(this);
-        return reinterpret_cast<OffsetAndKind *>(
+    OffsetAndKind* evalStart() {
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(this);
+        return reinterpret_cast<OffsetAndKind*>(
                 ptr + EvalOffset(maxStackDepth_));
     }
 };
@@ -199,8 +199,8 @@ struct TraceTraits<VM::Frame>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::Frame &obj,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::Frame const& obj,
+                     void const* start, void const* end)
     {
         obj.caller_.scan(scanner, start, end);
         obj.func_.scan(scanner, start, end);
@@ -209,8 +209,8 @@ struct TraceTraits<VM::Frame>
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::Frame &obj,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::Frame& obj,
+                       void const* start, void const* end)
     {
         obj.caller_.update(updater, start, end);
         obj.func_.update(updater, start, end);

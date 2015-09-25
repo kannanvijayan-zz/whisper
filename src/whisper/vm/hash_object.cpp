@@ -8,16 +8,16 @@ namespace VM {
 
 /* static */ void
 HashObject::GetDelegates(AllocationContext acx,
-                         Handle<HashObject *> obj,
-                         MutHandle<Array<Wobject *> *> delegatesOut)
+                         Handle<HashObject*> obj,
+                         MutHandle<Array<Wobject*>*> delegatesOut)
 {
     delegatesOut = obj->delegates_;
 }
 
 /* static */ bool
-HashObject::GetPropertyIndex(Handle<HashObject *> obj,
-                             Handle<String *> name,
-                             uint32_t *indexOut)
+HashObject::GetPropertyIndex(Handle<HashObject*> obj,
+                             Handle<String*> name,
+                             uint32_t* indexOut)
 {
     WH_ASSERT(indexOut);
     for (uint32_t i = 0; i < obj->dict_->size(); i++) {
@@ -31,8 +31,8 @@ HashObject::GetPropertyIndex(Handle<HashObject *> obj,
 
 /* static */ bool
 HashObject::GetProperty(AllocationContext acx,
-                        Handle<HashObject *> obj,
-                        Handle<String *> name,
+                        Handle<HashObject*> obj,
+                        Handle<String*> name,
                         MutHandle<PropertyDescriptor> result)
 {
     uint32_t idx = 0;
@@ -45,8 +45,8 @@ HashObject::GetProperty(AllocationContext acx,
 
 /* static */ OkResult
 HashObject::DefineProperty(AllocationContext acx,
-                           Handle<HashObject *> obj,
-                           Handle<String *> name,
+                           Handle<HashObject*> obj,
+                           Handle<String*> name,
                            Handle<PropertyDescriptor> defn)
 {
     uint32_t idx = 0;

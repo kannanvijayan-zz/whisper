@@ -20,19 +20,19 @@ class PropertyName
     uint32_t length_;
 
   public:
-    PropertyName(String *vmString)
+    PropertyName(String* vmString)
       : val_(reinterpret_cast<uintptr_t>(vmString) | 0x1u),
         length_(vmString->length())
     {
         WH_ASSERT(vmString != nullptr);
     }
-    PropertyName(const char *cString, uint32_t length)
+    PropertyName(char const* cString, uint32_t length)
       : val_(reinterpret_cast<uintptr_t>(cString)),
         length_(length)
     {
         WH_ASSERT(cString != nullptr);
     }
-    PropertyName(const char *cString)
+    PropertyName(char const* cString)
       : val_(reinterpret_cast<uintptr_t>(cString)),
         length_(strlen(cString))
     {
@@ -45,20 +45,20 @@ class PropertyName
     bool isCString() const {
         return (val_ & 1) == 1;
     }
-    String *vmString() const {
+    String* vmString() const {
         WH_ASSERT(isVMString());
-        return reinterpret_cast<String *>(val_ ^ 1u);
+        return reinterpret_cast<String*>(val_ ^ 1u);
     }
-    const char *cString() const {
+    char const* cString() const {
         WH_ASSERT(isCString());
-        return reinterpret_cast<const char *>(val_);
+        return reinterpret_cast<char const*>(val_);
     }
 
     uint32_t length() const {
         return length_;
     }
 
-    bool equals(String *str) const {
+    bool equals(String* str) const {
         if (isVMString())
             return vmString()->equals(str);
 
@@ -66,14 +66,14 @@ class PropertyName
         return str->equals(cString(), length());
     }
 
-    Result<String *> createString(AllocationContext acx) const {
+    Result<String*> createString(AllocationContext acx) const {
         if (isVMString())
             return OkVal(vmString());
         return String::Create(acx, length(), cString());
     }
 
   private:
-    void gcUpdateVMString(String *str) {
+    void gcUpdateVMString(String* str) {
         WH_ASSERT(str->length() == length_);
         val_ = reinterpret_cast<uintptr_t>(str) | 0x1u;
     }
@@ -89,13 +89,13 @@ class PropertyDescriptor
     PropertyDescriptor()
       : value_()
     {}
-    explicit PropertyDescriptor(const Box &value)
+    explicit PropertyDescriptor(Box const& value)
       : value_(value)
     {}
-    explicit PropertyDescriptor(const ValBox &value)
+    explicit PropertyDescriptor(ValBox const& value)
       : value_(value)
     {}
-    explicit PropertyDescriptor(Function *func)
+    explicit PropertyDescriptor(Function* func)
       : value_(Box::Pointer(func))
     {}
 
@@ -103,15 +103,15 @@ class PropertyDescriptor
     bool isValue() const;
     bool isMethod() const;
 
-    const Box &box() const {
+    Box const& box() const {
         WH_ASSERT(isValid());
         return value_;
     }
-    const Box &value() const {
+    Box const& value() const {
         WH_ASSERT(isValue());
         return value_;
     }
-    Function *method() const {
+    Function* method() const {
         WH_ASSERT(isMethod());
         return value_->pointer<Function>();
     }
@@ -139,8 +139,8 @@ struct TraceTraits<VM::PropertyName>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::PropertyName &propName,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::PropertyName const& propName,
+                     void const* start, void const* end)
     {
         if (!propName.isVMString())
             return;
@@ -148,15 +148,15 @@ struct TraceTraits<VM::PropertyName>
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::PropertyName &propName,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::PropertyName& propName,
+                       void const* start, void const* end)
     {
         if (!propName.isVMString())
             return;
-        HeapThing *old = HeapThing::From(propName.vmString());
-        HeapThing *repl = updater(&propName.val_, old);
+        HeapThing* old = HeapThing::From(propName.vmString());
+        HeapThing* repl = updater(&propName.val_, old);
         if (repl != old) {
-            VM::String *replStr = reinterpret_cast<VM::String *>(repl);
+            VM::String* replStr = reinterpret_cast<VM::String*>(repl);
             propName.gcUpdateVMString(replStr);
         }
     }
@@ -170,17 +170,17 @@ struct TraceTraits<VM::PropertyDescriptor>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner,
-                     const VM::PropertyDescriptor &propDesc,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner,
+                     VM::PropertyDescriptor const& propDesc,
+                     void const* start, void const* end)
     {
         propDesc.value_.scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater,
-                       VM::PropertyDescriptor &propDesc,
-                       const void *start, const void *end)
+    static void Update(Updater& updater,
+                       VM::PropertyDescriptor& propDesc,
+                       void const* start, void const* end)
     {
         propDesc.value_.update(updater, start, end);
     }

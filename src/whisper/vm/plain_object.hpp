@@ -13,26 +13,26 @@ class PlainObject : public HashObject
 {
   friend class TraceTraits<PlainObject>;
   public:
-    PlainObject(Handle<Array<Wobject *> *> delegates,
-                Handle<PropertyDict *> dict)
+    PlainObject(Handle<Array<Wobject*>*> delegates,
+                Handle<PropertyDict*> dict)
       : HashObject(delegates, dict)
     {}
 
-    static Result<PlainObject *> Create(AllocationContext acx,
-                                        Handle<Array<Wobject *> *> delegates);
+    static Result<PlainObject*> Create(AllocationContext acx,
+                                       Handle<Array<Wobject*>*> delegates);
 
     static void GetDelegates(AllocationContext acx,
-                             Handle<PlainObject *> obj,
-                             MutHandle<Array<Wobject *> *> delegatesOut);
+                             Handle<PlainObject*> obj,
+                             MutHandle<Array<Wobject*>*> delegatesOut);
 
     static bool GetProperty(AllocationContext acx,
-                            Handle<PlainObject *> obj,
-                            Handle<String *> name,
+                            Handle<PlainObject*> obj,
+                            Handle<String*> name,
                             MutHandle<PropertyDescriptor> result);
 
     static OkResult DefineProperty(AllocationContext acx,
-                                   Handle<PlainObject *> obj,
-                                   Handle<String *> name,
+                                   Handle<PlainObject*> obj,
+                                   Handle<String*> name,
                                    Handle<PropertyDescriptor> defn);
 };
 
@@ -53,15 +53,15 @@ struct TraceTraits<VM::PlainObject>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::PlainObject &obj,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::PlainObject const& obj,
+                     void const* start, void const* end)
     {
         TraceTraits<VM::HashObject>::Scan(scanner, obj, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::PlainObject &obj,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::PlainObject& obj,
+                       void const* start, void const* end)
     {
         TraceTraits<VM::HashObject>::Update(updater, obj, start, end);
     }

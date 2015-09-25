@@ -19,7 +19,7 @@ namespace Whisper {
 struct KeywordTableEntry
 {
     Token::Type token;
-    const char *keywordString;
+    char const* keywordString;
     uint32_t lastBytesPacked;
     uint8_t priority;
     uint8_t length;
@@ -40,7 +40,7 @@ static constexpr unsigned KEYWORD_MAX_LENGTH = 10;
 static unsigned KEYWORD_TABLE_SECTIONS[KEYWORD_MAX_LENGTH+2];
 
 static uint32_t
-ComputeLastBytesPacked(const char *str, uint8_t length)
+ComputeLastBytesPacked(char const* str, uint8_t length)
 {
     if (length == 2) {
         return (ToUInt32(str[0]) << 8)
@@ -99,8 +99,8 @@ InitializeKeywordTable()
     // Keywords are sorted by (length, priority)
     struct Less {
         inline Less() {}
-        inline bool operator ()(const KeywordTableEntry &a,
-                                const KeywordTableEntry &b)
+        inline bool operator ()(KeywordTableEntry const& a,
+                                KeywordTableEntry const& b)
         {
             if (a.length < b.length)
                 return true;
@@ -122,7 +122,7 @@ InitializeKeywordTable()
 }
 
 Token::Type
-CheckKeywordTable(const uint8_t *text, unsigned length,
+CheckKeywordTable(uint8_t const* text, unsigned length,
                   uint32_t lastBytesPacked)
 {
     WH_ASSERT(KEYWORD_TABLE_INITIALIZED);
@@ -214,7 +214,7 @@ InitializeTokenizer()
 // Token implementation.
 //
 
-const char *
+char const*
 Token::TypeString(Type type)
 {
     switch (type) {
@@ -247,7 +247,7 @@ Tokenizer::mark() const
 }
 
 void
-Tokenizer::gotoMark(const TokenizerMark &mark)
+Tokenizer::gotoMark(TokenizerMark const& mark)
 {
     reader_.rewindTo(mark.position());
     line_ = mark.line();
@@ -275,7 +275,7 @@ Tokenizer::pushBackLastToken()
     tok_.debug_markPushedBack();
 }
 
-const Token &
+Token const&
 Tokenizer::readToken()
 {
     if (pushedBackToken_) {
@@ -294,7 +294,7 @@ Tokenizer::readToken()
     }
 }
 
-const Token &
+Token const&
 Tokenizer::readTokenImpl()
 {
     WH_ASSERT(!hasError());
@@ -388,13 +388,13 @@ Tokenizer::readTokenImpl()
 }
 
 void
-Tokenizer::rewindToToken(const Token &tok)
+Tokenizer::rewindToToken(Token const& tok)
 {
     rewindToToken(tok, /* forPushBack = */ false);
 }
 
 void
-Tokenizer::rewindToToken(const Token &tok, bool forPushBack)
+Tokenizer::rewindToToken(Token const& tok, bool forPushBack)
 {
     // Find the stream position to rewind to.
     reader_.rewindTo(tok.offset());
@@ -406,7 +406,7 @@ Tokenizer::rewindToToken(const Token &tok, bool forPushBack)
 }
 
 void
-Tokenizer::advancePastToken(const Token &tok)
+Tokenizer::advancePastToken(Token const& tok)
 {
     // Find the stream position to advance to.
     reader_.advanceTo(tok.endOffset());
@@ -417,7 +417,7 @@ Tokenizer::advancePastToken(const Token &tok)
     pushedBackToken_ = false;
 }
 
-const Token &
+Token const&
 Tokenizer::readWhitespace()
 {
     for (;;) {
@@ -432,7 +432,7 @@ Tokenizer::readWhitespace()
     return emitToken(Token::Whitespace);
 }
 
-const Token &
+Token const&
 Tokenizer::readLineTerminatorSequence(unic_t ch)
 {
     finishLineTerminator(ch);
@@ -440,7 +440,7 @@ Tokenizer::readLineTerminatorSequence(unic_t ch)
     return emitToken(Token::LineTerminatorSequence);
 }
 
-const Token &
+Token const&
 Tokenizer::readMultiLineComment()
 {
     bool sawStar = false;
@@ -460,7 +460,7 @@ Tokenizer::readMultiLineComment()
     return emitToken(Token::MultiLineComment);
 }
 
-const Token &
+Token const&
 Tokenizer::readSingleLineComment()
 {
     for (;;) {
@@ -474,7 +474,7 @@ Tokenizer::readSingleLineComment()
     return emitToken(Token::SingleLineComment);
 }
 
-const Token &
+Token const&
 Tokenizer::readIdentifierName()
 {
     for (;;) {
@@ -515,7 +515,7 @@ Tokenizer::readIdentifierName()
     return emitToken(Token::Identifier);
 }
 
-const Token &
+Token const&
 Tokenizer::readIdentifier(unic_t firstChar)
 {
     WH_ASSERT(IsKeywordChar(firstChar));
@@ -587,7 +587,7 @@ Tokenizer::consumeUnicodeEscapeSequence()
     }
 }
 
-const Token &
+Token const&
 Tokenizer::readNumericLiteral(bool startsWithZero)
 {
     unic_t ch = readAsciiChar();
@@ -692,7 +692,7 @@ Tokenizer::readNumericLiteral(bool startsWithZero)
     return emitToken(Token::IntegerLiteral);
 }
 
-const Token &
+Token const&
 Tokenizer::readHexIntegerLiteral()
 {
     // Must read at least one valid digit char.
@@ -740,7 +740,7 @@ Tokenizer::readHexIntegerLiteral()
     return emitToken(Token::IntegerLiteral, Token::Int_HexPrefix);
 }
 
-const Token &
+Token const&
 Tokenizer::readDecIntegerLiteral()
 {
     // Must read at least one valid digit char.
@@ -788,7 +788,7 @@ Tokenizer::readDecIntegerLiteral()
     return emitToken(Token::IntegerLiteral, Token::Int_DecPrefix);
 }
 
-const Token &
+Token const&
 Tokenizer::readOctIntegerLiteral()
 {
     // Must read at least one valid digit char.
@@ -839,7 +839,7 @@ Tokenizer::readOctIntegerLiteral()
     return emitToken(Token::IntegerLiteral, Token::Int_OctPrefix);
 }
 
-const Token &
+Token const&
 Tokenizer::readBinIntegerLiteral()
 {
     // Must read at least one valid digit char.
@@ -890,7 +890,7 @@ Tokenizer::readBinIntegerLiteral()
     return emitToken(Token::IntegerLiteral, Token::Int_BinPrefix);
 }
 
-const Token &
+Token const&
 Tokenizer::emitToken(Token::Type type, Token::Flags flags)
 {
     WH_ASSERT(Token::IsValidType(type));
@@ -906,8 +906,8 @@ Tokenizer::emitToken(Token::Type type, Token::Flags flags)
     return tok_;
 }
 
-const Token &
-Tokenizer::emitError(const char *msg)
+Token const&
+Tokenizer::emitError(char const* msg)
 {
     WH_ASSERT(!error_);
     error_ = msg;

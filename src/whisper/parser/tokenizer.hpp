@@ -48,7 +48,7 @@ class Token
                (type <= WHISPER_LAST_KEYWORD_TOKEN);
     }
 
-    static const char *TypeString(Type type);
+    static char const* TypeString(Type type);
 
     // The flags enum allows annotating a token with
     // particular flags.  Different flags may use the same
@@ -106,7 +106,7 @@ class Token
         debug_used_(false), debug_pushedBack_(false)
     {}
 
-    Token(const Token &other)
+    Token(Token const& other)
       : type_(other.type_), flags_(other.flags_),
         offset_(other.offset_), length_(other.length_),
         startLine_(other.startLine_), startLineOffset_(other.startLineOffset_),
@@ -120,7 +120,7 @@ class Token
     enum PreserveDebugUsed_ {
         PreserveDebugUsed
     };
-    Token(const Token &other, PreserveDebugUsed_ preserve)
+    Token(Token const& other, PreserveDebugUsed_ preserve)
       : type_(other.type_), flags_(other.flags_),
         offset_(other.offset_), length_(other.length_),
         startLine_(other.startLine_), startLineOffset_(other.startLineOffset_),
@@ -130,7 +130,7 @@ class Token
     {
     }
 
-    Token &operator =(const Token &other)
+    Token& operator =(Token const& other)
     {
         type_ = other.type_;
         offset_ = other.offset_;
@@ -168,7 +168,7 @@ class Token
         return flags_ & flag;
     }
 
-    inline const char *typeString() const {
+    inline char const* typeString() const {
         return TypeString(type_);
     }
 
@@ -196,7 +196,7 @@ class Token
         return endLineOffset_;
     }
 
-    inline const uint8_t *text(const SourceReader &src) const {
+    inline uint8_t const* text(SourceReader const& src) const {
         return src.dataAt(offset_);
     }
 
@@ -263,7 +263,7 @@ class TypedToken : public Token
     }
 
   public:
-    inline explicit TypedToken(const Token &token)
+    inline explicit TypedToken(Token const& token)
       : Token(token)
     {
         WH_ASSERT(CheckType<TYPES...>(type_) || token.isINVALID());
@@ -300,7 +300,7 @@ class TokenizerMark {
                          uint32_t line,
                          uint32_t lineOffset,
                          bool pushedBackToken,
-                         const Token &tok)
+                         Token const& tok)
       : position_(position),
         line_(line),
         lineOffset_(lineOffset),
@@ -324,7 +324,7 @@ class TokenizerMark {
         return pushedBackToken_;
     }
 
-    inline const Token &token() const {
+    inline Token const& token() const {
         return tok_;
     }
 };
@@ -332,27 +332,27 @@ class TokenizerMark {
 class Tokenizer
 {
   private:
-    CodeSource &source_;
+    CodeSource& source_;
     SourceReader reader_;
     Token tok_;
 
     // Parsing state.
     uint32_t line_ = 0;
-    const uint8_t *lineStart_ = 0;
+    uint8_t const* lineStart_ = 0;
 
     // Current token state.
-    const uint8_t *tokStart_ = nullptr;
+    uint8_t const* tokStart_ = nullptr;
     uint32_t tokStartLine_ = 0;
     uint32_t tokStartLineOffset_ = 0;
 
     // Error message.
-    const char *error_ = nullptr;
+    char const* error_ = nullptr;
 
     // Flag indicating pushed-back token.
     bool pushedBackToken_ = false;
 
   public:
-    Tokenizer(CodeSource &source)
+    Tokenizer(CodeSource& source)
       : source_(source),
         reader_(source_),
         tok_()
@@ -363,10 +363,10 @@ class Tokenizer
 
     inline ~Tokenizer() {}
 
-    inline CodeSource &source() const {
+    inline CodeSource& source() const {
         return source_;
     }
-    inline const SourceReader &sourceReader() const {
+    inline SourceReader const& sourceReader() const {
         return reader_;
     }
 
@@ -375,48 +375,48 @@ class Tokenizer
     }
 
     TokenizerMark mark() const;
-    void gotoMark(const TokenizerMark &mark);
+    void gotoMark(TokenizerMark const& mark);
     Token getAutomaticSemicolon() const;
     void pushBackLastToken();
 
     inline bool hasError() const {
         return error_ != nullptr;
     }
-    inline const char *error() const {
+    inline char const* error() const {
         WH_ASSERT(hasError());
         return error_;
     }
 
-    const Token &readTokenImpl();
-    const Token &readToken();
-    void rewindToToken(const Token &tok);
-    void advancePastToken(const Token &tok);
+    Token const& readTokenImpl();
+    Token const& readToken();
+    void rewindToToken(Token const& tok);
+    void advancePastToken(Token const& tok);
 
   private:
     // Token parsing.
-    const Token &readWhitespace();
-    const Token &readLineTerminatorSequence(unic_t ch);
-    const Token &readMultiLineComment();
-    const Token &readSingleLineComment();
+    Token const& readWhitespace();
+    Token const& readLineTerminatorSequence(unic_t ch);
+    Token const& readMultiLineComment();
+    Token const& readSingleLineComment();
 
-    const Token &readIdentifier(unic_t firstChar);
-    const Token &readIdentifierName();
+    Token const& readIdentifier(unic_t firstChar);
+    Token const& readIdentifierName();
 
     // Consume a unicode escape sequence.
     void consumeUnicodeEscapeSequence();
 
-    const Token &readNumericLiteral(bool startsWithZero);
-    const Token &readBinIntegerLiteral();
-    const Token &readOctIntegerLiteral();
-    const Token &readDecIntegerLiteral();
-    const Token &readHexIntegerLiteral();
+    Token const& readNumericLiteral(bool startsWithZero);
+    Token const& readBinIntegerLiteral();
+    Token const& readOctIntegerLiteral();
+    Token const& readDecIntegerLiteral();
+    Token const& readHexIntegerLiteral();
 
     // Emit methods.
-    const Token &emitToken(Token::Type type, Token::Flags flags);
-    inline const Token &emitToken(Token::Type type) {
+    Token const& emitToken(Token::Type type, Token::Flags flags);
+    inline Token const& emitToken(Token::Type type) {
         return emitToken(type, Token::NoFlags);
     }
-    const Token &emitError(const char *msg);
+    Token const& emitError(char const* msg);
 
     // Token tracking during parsing.
     inline void startToken() {
@@ -425,7 +425,7 @@ class Tokenizer
         tokStartLineOffset_ = tokStart_ - lineStart_;
     }
 
-    void rewindToToken(const Token &tok, bool forPushBack);
+    void rewindToToken(Token const& tok, bool forPushBack);
 
     inline void startNewLine() {
         line_++;

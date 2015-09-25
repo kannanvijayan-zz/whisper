@@ -45,7 +45,7 @@ namespace VM {
 // Specialize arrays for general pointer types.
 // Treat them by default as arrays of pointers-to-alloc-things.
 template <typename P>
-struct ArrayTraits<P *> {
+struct ArrayTraits<P*> {
     static_assert(IsHeapThingType<P>(), "P is not a HeapThing type.");
     ArrayTraits() = delete;
     static constexpr bool Specialized = true;
@@ -75,7 +75,7 @@ template <>
 struct HeapFormatTraits<HeapFormat::HeapPointerArray>
 {
     HeapFormatTraits() = delete;
-    typedef VM::Array<HeapThing *> Type;
+    typedef VM::Array<HeapThing*> Type;
 };
 
 template <typename T>
@@ -89,8 +89,8 @@ struct TraceTraits<VM::Array<T>>
     typedef VM::Array<T> Array_;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const Array_ &array,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, Array_ const& array,
+                     void const* start, void const* end)
     {
         if (!IsLeaf) {
             // Scan each pointer in the array.
@@ -100,8 +100,8 @@ struct TraceTraits<VM::Array<T>>
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, Array_ &array,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, Array_& array,
+                       void const* start, void const* end)
     {
         if (!IsLeaf) {
             // Update each pointer in the array.

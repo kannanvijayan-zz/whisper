@@ -19,12 +19,12 @@ class SourceFile
     friend struct TraceTraits<SourceFile>;
 
   private:
-    HeapField<String *> path_;
-    HeapField<PackedSyntaxTree *> syntaxTree_;
-    HeapField<ModuleScope *> scope_;
+    HeapField<String*> path_;
+    HeapField<PackedSyntaxTree*> syntaxTree_;
+    HeapField<ModuleScope*> scope_;
 
   public:
-    SourceFile(String *path)
+    SourceFile(String* path)
       : path_(path),
         syntaxTree_(nullptr),
         scope_(nullptr)
@@ -32,36 +32,36 @@ class SourceFile
         WH_ASSERT(path != nullptr);
     }
 
-    static Result<SourceFile *> Create(AllocationContext acx,
-                                       Handle<String *> path);
+    static Result<SourceFile*> Create(AllocationContext acx,
+                                      Handle<String*> path);
 
-    String *path() const {
+    String* path() const {
         return path_;
     }
 
     bool hasSyntaxTree() const {
         return syntaxTree_.get() != nullptr;
     }
-    PackedSyntaxTree *syntaxTree() const {
+    PackedSyntaxTree* syntaxTree() const {
         WH_ASSERT(hasSyntaxTree());
         return syntaxTree_;
     }
-    static Result<PackedSyntaxTree *> ParseSyntaxTree(
-            ThreadContext *cx, Handle<SourceFile *> sourceFile);
+    static Result<PackedSyntaxTree*> ParseSyntaxTree(
+            ThreadContext* cx, Handle<SourceFile*> sourceFile);
 
     bool hasScope() const {
         return scope_.get() != nullptr;
     }
-    ModuleScope *scope() const {
+    ModuleScope* scope() const {
         WH_ASSERT(hasScope());
         return scope_;
     }
-    static Result<ModuleScope *> CreateScope(
-            ThreadContext *cx, Handle<SourceFile *> sourceFile);
+    static Result<ModuleScope*> CreateScope(
+            ThreadContext* cx, Handle<SourceFile*> sourceFile);
 
 
   private:
-    void setSyntaxTree(PackedSyntaxTree *tree) {
+    void setSyntaxTree(PackedSyntaxTree* tree) {
         WH_ASSERT(!hasSyntaxTree());
         syntaxTree_.set(tree, this);
     }
@@ -83,8 +83,8 @@ struct TraceTraits<VM::SourceFile>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::SourceFile &sourceFile,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::SourceFile const& sourceFile,
+                     void const* start, void const* end)
     {
         // Scan the path string.
         sourceFile.path_.scan(scanner, start, end);
@@ -92,8 +92,8 @@ struct TraceTraits<VM::SourceFile>
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::SourceFile &sourceFile,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::SourceFile& sourceFile,
+                       void const* start, void const* end)
     {
         // Scan the path string.
         sourceFile.path_.update(updater, start, end);

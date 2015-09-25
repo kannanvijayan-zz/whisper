@@ -12,7 +12,7 @@ namespace Whisper {
 
 
 inline
-LocalBase::LocalBase(ThreadContext *threadContext,
+LocalBase::LocalBase(ThreadContext* threadContext,
                      StackFormat format, uint32_t size)
   : threadContext_(threadContext),
     next_(threadContext_->locals()),
@@ -22,7 +22,7 @@ LocalBase::LocalBase(ThreadContext *threadContext,
 }
 
 inline
-LocalBase::LocalBase(const AllocationContext &acx,
+LocalBase::LocalBase(AllocationContext const& acx,
                      StackFormat format, uint32_t size)
   : LocalBase(acx.threadContext(), format, size)
 {}
@@ -36,14 +36,14 @@ LocalBase::~LocalBase()
 
 template <typename Scanner>
 void
-LocalBase::scan(Scanner &scanner, void *start, void *end) const
+LocalBase::scan(Scanner& scanner, void* start, void* end) const
 {
     GC::ScanStackThing(format(), stackThing(), scanner, start, end);
 }
 
 template <typename Updater>
 void
-LocalBase::update(Updater &updater, void *start, void *end)
+LocalBase::update(Updater& updater, void* start, void* end)
 {
     GC::UpdateStackThing(format(), stackThing(), updater, start, end);
 }

@@ -30,14 +30,14 @@ class SyntaxAnnotator
 {
   private:
     STLBumpAllocator<uint8_t> allocator_;
-    BaseNode *root_;
-    const CodeSource &source_;
+    BaseNode* root_;
+    CodeSource const& source_;
 
-    const char *error_ = nullptr;
+    char const* error_ = nullptr;
 
   public:
     SyntaxAnnotator(STLBumpAllocator<uint8_t> allocator,
-                    BaseNode *root, const CodeSource &source)
+                    BaseNode* root, CodeSource const& source)
       : allocator_(allocator), root_(root), source_(source)
     {}
 
@@ -45,21 +45,21 @@ class SyntaxAnnotator
         return error_ != nullptr;
     }
 
-    const char *error() const {
+    char const* error() const {
         return error_;
     }
 
     bool annotate();
 
   private:
-    void annotate(BaseNode *node, BaseNode *parent);
+    void annotate(BaseNode* node, BaseNode* parent);
 
 #define DEF_ANNOT_(name) \
-    void annotate##name(name##Node *node, BaseNode *parent);
+    void annotate##name(name##Node* node, BaseNode* parent);
       WHISPER_DEFN_SYNTAX_NODES(DEF_ANNOT_);
 #undef DEF_ANNOT_
 
-    void emitError(const char *msg);
+    void emitError(char const* msg);
 
     template <typename T>
     inline STLBumpAllocator<T> allocatorFor() const {
@@ -67,7 +67,7 @@ class SyntaxAnnotator
     }
 
     template <typename T, typename... ARGS>
-    inline T *make(ARGS... args)
+    inline T* make(ARGS... args)
     {
         return new (allocatorFor<T>().allocate(1)) T(
             std::forward<ARGS>(args)...);

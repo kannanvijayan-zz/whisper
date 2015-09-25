@@ -11,7 +11,7 @@ namespace Whisper {
 namespace Interp {
 
 OkResult BindSyntaxHandlers(AllocationContext acx,
-                            VM::GlobalScope *global);
+                            VM::GlobalScope* global);
 
 
 } // namespace Interp

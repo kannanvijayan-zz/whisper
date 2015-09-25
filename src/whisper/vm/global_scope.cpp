@@ -13,21 +13,21 @@ namespace Whisper {
 namespace VM {
 
 
-/* static */ Result<GlobalScope *>
+/* static */ Result<GlobalScope*>
 GlobalScope::Create(AllocationContext acx)
 {
     // Allocate empty array of delegates.
-    Local<Array<Wobject *> *> delegates(acx);
-    if (!delegates.setResult(Array<Wobject *>::CreateEmpty(acx)))
+    Local<Array<Wobject*>*> delegates(acx);
+    if (!delegates.setResult(Array<Wobject*>::CreateEmpty(acx)))
         return ErrorVal();
 
     // Allocate a dictionary.
-    Local<PropertyDict *> props(acx);
+    Local<PropertyDict*> props(acx);
     if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
         return ErrorVal();
 
     // Allocate global.
-    Local<GlobalScope *> global(acx);
+    Local<GlobalScope*> global(acx);
     if (!global.setResult(acx.create<GlobalScope>(delegates.handle(),
                                                   props.handle())))
     {
@@ -39,33 +39,33 @@ GlobalScope::Create(AllocationContext acx)
 
 /* static */ void
 GlobalScope::GetDelegates(AllocationContext acx,
-                          Handle<GlobalScope *> obj,
-                          MutHandle<Array<Wobject *> *> delegatesOut)
+                          Handle<GlobalScope*> obj,
+                          MutHandle<Array<Wobject*>*> delegatesOut)
 {
     HashObject::GetDelegates(acx,
-        Handle<HashObject *>::Convert(obj),
+        Handle<HashObject*>::Convert(obj),
         delegatesOut);
 }
 
 /* static */ bool
 GlobalScope::GetProperty(AllocationContext acx,
-                         Handle<GlobalScope *> obj,
-                         Handle<String *> name,
+                         Handle<GlobalScope*> obj,
+                         Handle<String*> name,
                          MutHandle<PropertyDescriptor> result)
 {
     return HashObject::GetProperty(acx,
-        Handle<HashObject *>::Convert(obj),
+        Handle<HashObject*>::Convert(obj),
         name, result);
 }
 
 /* static */ OkResult
 GlobalScope::DefineProperty(AllocationContext acx,
-                            Handle<GlobalScope *> obj,
-                            Handle<String *> name,
+                            Handle<GlobalScope*> obj,
+                            Handle<String*> name,
                             Handle<PropertyDescriptor> defn)
 {
     return HashObject::DefineProperty(acx,
-        Handle<HashObject *>::Convert(obj),
+        Handle<HashObject*>::Convert(obj),
         name, defn);
 }
 

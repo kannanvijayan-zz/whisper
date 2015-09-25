@@ -23,7 +23,7 @@ enum NodeType : uint8_t
     LIMIT
 };
 
-const char *NodeTypeString(NodeType nodeType);
+char const* NodeTypeString(NodeType nodeType);
 
 //
 // Pre-declarations.
@@ -93,7 +93,7 @@ class BaseNode
         return type_;
     }
 
-    inline const char *typeString() const {
+    inline char const* typeString() const {
         return NodeTypeString(type_);
     }
 
@@ -101,23 +101,23 @@ class BaseNode
     inline bool is##node() const { \
         return type_ == node; \
     } \
-    inline const node##Node *to##node() const { \
+    inline node##Node const* to##node() const { \
         WH_ASSERT(is##node()); \
-        return reinterpret_cast<const node##Node *>(this); \
+        return reinterpret_cast<node##Node const*>(this); \
     } \
-    inline node##Node *to##node() { \
+    inline node##Node* to##node() { \
         WH_ASSERT(is##node()); \
-        return reinterpret_cast<node##Node *>(this); \
+        return reinterpret_cast<node##Node*>(this); \
     }
     WHISPER_DEFN_SYNTAX_NODES(METHODS_)
 #undef METHODS_
 };
 
 template <typename Writer>
-void WritePacked(const CodeSource &src, const BaseNode *node, Writer &wr);
+void WritePacked(CodeSource const& src, BaseNode const* node, Writer& wr);
 
 template <typename Printer>
-void PrintNode(const CodeSource &src, const BaseNode *node, Printer pr,
+void PrintNode(CodeSource const& src, BaseNode const* node, Printer pr,
                int tabDepth);
 
 ///////////////////////////////////////
@@ -144,8 +144,8 @@ class LiteralExpression : public Expression
     LiteralExpression(NodeType type) : Expression(type) {}
 };
 
-typedef BaseNode::List<Expression *> ExpressionList;
-typedef BaseNode::List<Statement *> StatementList;
+typedef BaseNode::List<Expression*> ExpressionList;
+typedef BaseNode::List<Statement*> StatementList;
 typedef BaseNode::List<IdentifierToken> IdentifierList;
 
 
@@ -161,12 +161,12 @@ typedef BaseNode::List<IdentifierToken> IdentifierList;
 class PropertyExpression : public Expression
 {
   private:
-    Expression *target_;
+    Expression* target_;
     IdentifierToken name_;
 
   public:
-    PropertyExpression(NodeType type, Expression *target,
-                       const IdentifierToken &name)
+    PropertyExpression(NodeType type, Expression* target,
+                       IdentifierToken const& name)
       : Expression(type),
         target_(target),
         name_(name)
@@ -178,12 +178,12 @@ class PropertyExpression : public Expression
         return target_ != nullptr;
     }
 
-    const Expression *target() const {
+    Expression const* target() const {
         WH_ASSERT(hasTarget());
         return target_;
     }
 
-    const IdentifierToken &name() const {
+    IdentifierToken const& name() const {
         return name_;
     }
 };
@@ -194,7 +194,7 @@ class PropertyExpression : public Expression
 class ArrowExprNode : public PropertyExpression
 {
   public:
-    ArrowExprNode(Expression *target, const IdentifierToken &name)
+    ArrowExprNode(Expression* target, IdentifierToken const& name)
       : PropertyExpression(ArrowExpr, target, name)
     {}
 };
@@ -205,7 +205,7 @@ class ArrowExprNode : public PropertyExpression
 class DotExprNode : public PropertyExpression
 {
   public:
-    DotExprNode(Expression *target, const IdentifierToken &name)
+    DotExprNode(Expression* target, IdentifierToken const& name)
       : PropertyExpression(DotExpr, target, name)
     {}
 };
@@ -216,21 +216,21 @@ class DotExprNode : public PropertyExpression
 class CallExprNode : public Expression
 {
   private:
-    PropertyExpression *callee_;
+    PropertyExpression* callee_;
     ExpressionList args_;
 
   public:
-    CallExprNode(PropertyExpression *callee, ExpressionList &&args)
+    CallExprNode(PropertyExpression* callee, ExpressionList&& args)
       : Expression(CallExpr),
         callee_(callee),
         args_(std::move(args))
     {}
 
-    const PropertyExpression *callee() const {
+    PropertyExpression const* callee() const {
         return callee_;
     }
 
-    const ExpressionList &args() const {
+    ExpressionList const& args() const {
         return args_;
     }
 };
@@ -242,11 +242,11 @@ template <NodeType TYPE>
 class BinaryExpression : public Expression
 {
   private:
-    Expression *lhs_;
-    Expression *rhs_;
+    Expression* lhs_;
+    Expression* rhs_;
 
   public:
-    BinaryExpression(Expression *lhs, Expression *rhs)
+    BinaryExpression(Expression* lhs, Expression* rhs)
       : Expression(TYPE),
         lhs_(lhs),
         rhs_(rhs)
@@ -255,11 +255,11 @@ class BinaryExpression : public Expression
         WH_ASSERT(rhs_);
     }
 
-    const Expression *lhs() const {
+    Expression const* lhs() const {
         return lhs_;
     }
 
-    const Expression *rhs() const {
+    Expression const* rhs() const {
         return rhs_;
     }
 };
@@ -271,17 +271,17 @@ template <NodeType TYPE>
 class UnaryExpression : public Expression
 {
   private:
-    Expression *subexpr_;
+    Expression* subexpr_;
 
   public:
-    UnaryExpression(Expression *subexpr)
+    UnaryExpression(Expression* subexpr)
       : Expression(TYPE),
         subexpr_(subexpr)
     {
         WH_ASSERT(subexpr);
     }
 
-    const Expression *subexpr() const {
+    Expression const* subexpr() const {
         return subexpr_;
     }
 };
@@ -292,7 +292,7 @@ class UnaryExpression : public Expression
 class NameExprNode : public PropertyExpression
 {
   public:
-    NameExprNode(const IdentifierToken &name)
+    NameExprNode(IdentifierToken const& name)
       : PropertyExpression(NameExpr, nullptr, name)
     {}
 };
@@ -306,12 +306,12 @@ class IntegerExprNode : public LiteralExpression
     IntegerLiteralToken token_;
 
   public:
-    IntegerExprNode(const IntegerLiteralToken &token)
+    IntegerExprNode(IntegerLiteralToken const& token)
       : LiteralExpression(IntegerExpr),
         token_(token)
     {}
 
-    const IntegerLiteralToken &token() const {
+    IntegerLiteralToken const& token() const {
         return token_;
     }
 };
@@ -322,17 +322,17 @@ class IntegerExprNode : public LiteralExpression
 class ParenExprNode : public Expression
 {
   private:
-    Expression *subexpr_;
+    Expression* subexpr_;
 
   public:
-    ParenExprNode(Expression *subexpr)
+    ParenExprNode(Expression* subexpr)
       : Expression(ParenExpr),
         subexpr_(subexpr)
     {
         WH_ASSERT(subexpr);
     }
 
-    const Expression *subexpr() const {
+    Expression const* subexpr() const {
         return subexpr_;
     }
 };
@@ -364,15 +364,15 @@ class BindingStatement : public Statement
     {
       private:
         IdentifierToken name_;
-        Expression *value_;
+        Expression* value_;
 
       public:
-        Binding(const IdentifierToken &name, Expression *value)
+        Binding(IdentifierToken const& name, Expression* value)
           : name_(name),
             value_(value)
         {}
 
-        const IdentifierToken &name() const {
+        IdentifierToken const& name() const {
             return name_;
         }
 
@@ -380,7 +380,7 @@ class BindingStatement : public Statement
             return value_ != nullptr;
         }
 
-        const Expression *value() const {
+        Expression const* value() const {
             WH_ASSERT(hasValue());
             return value_;
         }
@@ -392,12 +392,12 @@ class BindingStatement : public Statement
     BindingList bindings_;
 
   public:
-    explicit BindingStatement(NodeType type, BindingList &&bindings)
+    explicit BindingStatement(NodeType type, BindingList&& bindings)
       : Statement(type),
         bindings_(std::move(bindings))
     {}
 
-    const BindingList &bindings() const {
+    BindingList const& bindings() const {
         return bindings_;
     }
 };
@@ -411,11 +411,11 @@ class Block
     StatementList statements_;
 
   public:
-    inline Block(StatementList &&statements)
+    inline Block(StatementList&& statements)
       : statements_(std::move(statements))
     {}
 
-    const StatementList &statements() const {
+    StatementList const& statements() const {
         return statements_;
     }
 };
@@ -435,17 +435,17 @@ class EmptyStmtNode : public Statement
 class ExprStmtNode : public Statement
 {
   private:
-    Expression *expr_;
+    Expression* expr_;
 
   public:
-    explicit inline ExprStmtNode(Expression *expr)
+    explicit inline ExprStmtNode(Expression* expr)
       : Statement(ExprStmt),
         expr_(expr)
     {
         WH_ASSERT(expr_);
     }
 
-    inline Expression *expr() const {
+    inline Expression* expr() const {
         return expr_;
     }
 };
@@ -456,10 +456,10 @@ class ExprStmtNode : public Statement
 class ReturnStmtNode : public Statement
 {
   private:
-    Expression *expr_;
+    Expression* expr_;
 
   public:
-    explicit inline ReturnStmtNode(Expression *expr)
+    explicit inline ReturnStmtNode(Expression* expr)
       : Statement(ReturnStmt),
         expr_(expr)
     {}
@@ -468,7 +468,7 @@ class ReturnStmtNode : public Statement
         return expr_ != nullptr;
     }
 
-    inline Expression *expr() const {
+    inline Expression* expr() const {
         WH_ASSERT(hasExpr());
         return expr_;
     }
@@ -483,11 +483,11 @@ class IfStmtNode : public Statement
     class CondPair
     {
       private:
-        Expression *cond_;
-        Block *block_;
+        Expression* cond_;
+        Block* block_;
 
       public:
-        CondPair(Expression *cond, Block *block)
+        CondPair(Expression* cond, Block* block)
           : cond_(cond),
             block_(block)
         {
@@ -495,10 +495,10 @@ class IfStmtNode : public Statement
             WH_ASSERT(block_);
         }
 
-        const Expression *cond() const {
+        Expression const* cond() const {
             return cond_;
         }
-        const Block *block() const {
+        Block const* block() const {
             return block_;
         }
     };
@@ -507,23 +507,23 @@ class IfStmtNode : public Statement
   private:
     CondPair ifPair_;
     CondPairList elsifPairs_;
-    Block *elseBlock_;
+    Block* elseBlock_;
 
   public:
-    explicit IfStmtNode(const CondPair &ifPair,
-                        CondPairList &&elsifPairs,
-                        Block *elseBlock)
+    explicit IfStmtNode(CondPair const& ifPair,
+                        CondPairList&& elsifPairs,
+                        Block* elseBlock)
       : Statement(IfStmt),
         ifPair_(ifPair),
         elsifPairs_(std::move(elsifPairs)),
         elseBlock_(elseBlock)
     {}
 
-    const CondPair &ifPair() const {
+    CondPair const& ifPair() const {
         return ifPair_;
     }
 
-    const CondPairList &elsifPairs() const {
+    CondPairList const& elsifPairs() const {
         return elsifPairs_;
     }
 
@@ -531,7 +531,7 @@ class IfStmtNode : public Statement
         return elseBlock_ != nullptr;
     }
 
-    Block *elseBlock() const {
+    Block* elseBlock() const {
         WH_ASSERT(hasElseBlock());
         return elseBlock_;
     }
@@ -545,12 +545,12 @@ class DefStmtNode : public Statement
   private:
     IdentifierToken name_;
     IdentifierList paramNames_;
-    Block *bodyBlock_;
+    Block* bodyBlock_;
 
   public:
-    explicit DefStmtNode(const IdentifierToken &name,
-                         IdentifierList &&paramNames,
-                         Block *bodyBlock)
+    explicit DefStmtNode(IdentifierToken const& name,
+                         IdentifierList&& paramNames,
+                         Block* bodyBlock)
       : Statement(DefStmt),
         name_(name),
         paramNames_(std::move(paramNames)),
@@ -559,15 +559,15 @@ class DefStmtNode : public Statement
         WH_ASSERT(bodyBlock_);
     }
 
-    const IdentifierToken &name() const {
+    IdentifierToken const& name() const {
         return name_;
     }
 
-    const IdentifierList &paramNames() const {
+    IdentifierList const& paramNames() const {
         return paramNames_;
     }
 
-    const Block *bodyBlock() const {
+    Block const* bodyBlock() const {
         return bodyBlock_;
     }
 };
@@ -578,7 +578,7 @@ class DefStmtNode : public Statement
 class ConstStmtNode : public BindingStatement
 {
   public:
-    explicit ConstStmtNode(BindingList &&bindings)
+    explicit ConstStmtNode(BindingList&& bindings)
       : BindingStatement(ConstStmt, std::move(bindings))
     {}
 };
@@ -589,7 +589,7 @@ class ConstStmtNode : public BindingStatement
 class VarStmtNode : public BindingStatement
 {
   public:
-    explicit VarStmtNode(BindingList &&bindings)
+    explicit VarStmtNode(BindingList&& bindings)
       : BindingStatement(VarStmt, std::move(bindings))
     {}
 };
@@ -600,17 +600,17 @@ class VarStmtNode : public BindingStatement
 class LoopStmtNode : public Statement
 {
   private:
-    Block *bodyBlock_;
+    Block* bodyBlock_;
 
   public:
-    explicit LoopStmtNode(Block *bodyBlock)
+    explicit LoopStmtNode(Block* bodyBlock)
       : Statement(LoopStmt),
         bodyBlock_(bodyBlock)
     {
         WH_ASSERT(bodyBlock_);
     }
 
-    const Block *bodyBlock() const {
+    Block const* bodyBlock() const {
         return bodyBlock_;
     }
 };
@@ -631,12 +631,12 @@ class FileNode : public BaseNode
     StatementList statements_;
 
   public:
-    explicit inline FileNode(StatementList &&statements)
+    explicit inline FileNode(StatementList&& statements)
       : BaseNode(File),
         statements_(std::move(statements))
     {}
 
-    inline const StatementList &statements() const {
+    inline StatementList const& statements() const {
         return statements_;
     }
 };

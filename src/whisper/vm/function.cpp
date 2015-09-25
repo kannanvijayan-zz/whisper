@@ -22,24 +22,24 @@ Function::isApplicative() const
 }
 
 
-/* static */ Result<NativeFunction *>
+/* static */ Result<NativeFunction*>
 NativeFunction::Create(AllocationContext acx, NativeApplicativeFuncPtr app)
 {
     return acx.create<NativeFunction>(app);
 }
 
-/* static */ Result<NativeFunction *>
+/* static */ Result<NativeFunction*>
 NativeFunction::Create(AllocationContext acx, NativeOperativeFuncPtr oper)
 {
     return acx.create<NativeFunction>(oper);
 }
 
 
-/* static */ Result<ScriptedFunction *>
+/* static */ Result<ScriptedFunction*>
 ScriptedFunction::Create(AllocationContext acx,
-                         Handle<PackedSyntaxTree *> pst,
+                         Handle<PackedSyntaxTree*> pst,
                          uint32_t offset,
-                         Handle<ScopeObject *> scopeChain,
+                         Handle<ScopeObject*> scopeChain,
                          bool isOperative)
 {
     WH_ASSERT(SyntaxTreeRef(pst, offset).nodeType() == AST::DefStmt);
@@ -47,16 +47,16 @@ ScriptedFunction::Create(AllocationContext acx,
 }
 
 
-/* static */ Result<FunctionObject *>
-FunctionObject::Create(AllocationContext acx, Handle<Function *> func)
+/* static */ Result<FunctionObject*>
+FunctionObject::Create(AllocationContext acx, Handle<Function*> func)
 {
     // Allocate empty array of delegates.
-    Local<Array<Wobject *> *> delegates(acx);
-    if (!delegates.setResult(Array<Wobject *>::CreateEmpty(acx)))
+    Local<Array<Wobject*>*> delegates(acx);
+    if (!delegates.setResult(Array<Wobject*>::CreateEmpty(acx)))
         return ErrorVal();
 
     // Allocate a dictionary.
-    Local<PropertyDict *> props(acx);
+    Local<PropertyDict*> props(acx);
     if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
         return ErrorVal();
 
@@ -66,33 +66,33 @@ FunctionObject::Create(AllocationContext acx, Handle<Function *> func)
 
 /* static */ void
 FunctionObject::GetDelegates(AllocationContext acx,
-                             Handle<FunctionObject *> obj,
-                             MutHandle<Array<Wobject *> *> delegatesOut)
+                             Handle<FunctionObject*> obj,
+                             MutHandle<Array<Wobject*>*> delegatesOut)
 {
     HashObject::GetDelegates(acx,
-        Handle<HashObject *>::Convert(obj),
+        Handle<HashObject*>::Convert(obj),
         delegatesOut);
 }
 
 /* static */ bool
 FunctionObject::GetProperty(AllocationContext acx,
-                            Handle<FunctionObject *> obj,
-                            Handle<String *> name,
+                            Handle<FunctionObject*> obj,
+                            Handle<String*> name,
                             MutHandle<PropertyDescriptor> result)
 {
     return HashObject::GetProperty(acx,
-        Handle<HashObject *>::Convert(obj),
+        Handle<HashObject*>::Convert(obj),
         name, result);
 }
 
 /* static */ OkResult
 FunctionObject::DefineProperty(AllocationContext acx,
-                               Handle<FunctionObject *> obj,
-                               Handle<String *> name,
+                               Handle<FunctionObject*> obj,
+                               Handle<String*> name,
                                Handle<PropertyDescriptor> defn)
 {
     return HashObject::DefineProperty(acx,
-        Handle<HashObject *>::Convert(obj),
+        Handle<HashObject*>::Convert(obj),
         name, defn);
 }
 

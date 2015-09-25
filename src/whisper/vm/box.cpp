@@ -7,7 +7,7 @@ namespace VM {
 
 
 void
-Box::snprint(char *buf, size_t n) const
+Box::snprint(char* buf, size_t n) const
 {
     if (isPointer()) {
         snprintf(buf, n, "ptr(%p)", pointer<HeapThing>());
@@ -32,7 +32,7 @@ Box::snprint(char *buf, size_t n) const
     WH_UNREACHABLE("Unknown box kind.");
 }
 
-ValBox::ValBox(const Box &box)
+ValBox::ValBox(Box const& box)
   : Box(box)
 {
     WH_ASSERT_IF(isPointer() && pointer<HeapThing>() != nullptr,

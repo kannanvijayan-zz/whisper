@@ -25,7 +25,7 @@
 // To support this, traced types allocated on stack must be wrapped
 // with Local<>, e.g.:
 //
-//      Local<VM::String *> stringPtr(cx, str);
+//      Local<VM::String*> stringPtr(cx, str);
 //
 // The Local<> instance uses |cx| to add itself to a linked-list of
 // all traced types on stack on construction, and remove itself on
@@ -60,7 +60,7 @@ inline constexpr bool IsValidStackFormat(StackFormat fmt) {
 inline constexpr uint16_t StackFormatValue(StackFormat fmt) {
     return static_cast<uint16_t>(fmt);
 }
-const char *StackFormatString(StackFormat fmt);
+char const* StackFormatString(StackFormat fmt);
 
 
 // StackHeader
@@ -110,18 +110,18 @@ class alignas(8) StackHeader
     inline StackFormat format() const {
         return static_cast<StackFormat>(formatBitfield().value());
     }
-    inline const char *formatString() const {
+    inline char const* formatString() const {
         return StackFormatString(format());
     }
     inline uint32_t size() const {
         return size_;
     }
 
-    const void *payload() const {
-        return reinterpret_cast<const uint8_t *>(this) + sizeof(StackHeader);
+    void const* payload() const {
+        return reinterpret_cast<uint8_t const*>(this) + sizeof(StackHeader);
     }
-    void *payload() {
-        return reinterpret_cast<uint8_t *>(this) + sizeof(StackHeader);
+    void* payload() {
+        return reinterpret_cast<uint8_t*>(this) + sizeof(StackHeader);
     }
 
 #define METHOD_(fmt) \
@@ -226,43 +226,43 @@ class StackThing
 
   public:
     template <typename T>
-    static inline StackThing *From(T *ptr) {
+    static inline StackThing* From(T* ptr) {
         static_assert(IsStackThingType<T>(), "T is not StackThingType.");
-        return reinterpret_cast<StackThing *>(ptr);
+        return reinterpret_cast<StackThing*>(ptr);
     }
     template <typename T>
-    static inline const StackThing *From(const T *ptr) {
+    static inline StackThing const* From(T const* ptr) {
         static_assert(IsStackThingType<T>(), "T is not StackThingType.");
-        return reinterpret_cast<const StackThing *>(ptr);
+        return reinterpret_cast<StackThing const*>(ptr);
     }
 
     template <typename T>
-    inline T *to() {
+    inline T* to() {
         static_assert(IsStackThingType<T>(), "T is not StackThingType.");
-        return reinterpret_cast<T *>(this);
+        return reinterpret_cast<T*>(this);
     }
     template <typename T>
-    inline const T *to() const {
+    inline T const* to() const {
         static_assert(IsStackThingType<T>(), "T is not StackThingType.");
-        return reinterpret_cast<const T *>(this);
+        return reinterpret_cast<T const*>(this);
     }
 
-    inline StackHeader &header() {
-        return reinterpret_cast<StackHeader *>(this)[-1];
+    inline StackHeader& header() {
+        return reinterpret_cast<StackHeader*>(this)[-1];
     }
-    inline const StackHeader &header() const {
-        return reinterpret_cast<const StackHeader *>(this)[-1];
+    inline StackHeader const& header() const {
+        return reinterpret_cast<StackHeader const*>(this)[-1];
     }
 
     inline uint32_t size() const {
         return header().size();
     }
 
-    inline const void *end() const {
-        return reinterpret_cast<const uint8_t *>(this) + size();
+    inline void const* end() const {
+        return reinterpret_cast<uint8_t const*>(this) + size();
     }
-    inline void *end() {
-        return reinterpret_cast<uint8_t *>(this) + size();
+    inline void* end() {
+        return reinterpret_cast<uint8_t*>(this) + size();
     }
 
     inline StackFormat format() const {

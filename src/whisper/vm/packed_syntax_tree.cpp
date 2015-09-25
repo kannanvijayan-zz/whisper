@@ -9,18 +9,18 @@ namespace Whisper {
 namespace VM {
 
 
-/* static */ Result<PackedSyntaxTree *>
+/* static */ Result<PackedSyntaxTree*>
 PackedSyntaxTree::Create(AllocationContext acx,
                          ArrayHandle<uint32_t> data,
                          ArrayHandle<Box> constPool)
 {
     // Allocate data array.
-    Local<Array<uint32_t> *> dataArray(acx);
+    Local<Array<uint32_t>*> dataArray(acx);
     if (!dataArray.setResult(Array<uint32_t>::CreateCopy(acx, data)))
         return ErrorVal();
 
     // Allocate constPool array.
-    Local<Array<Box> *> constPoolArray(acx);
+    Local<Array<Box>*> constPoolArray(acx);
     if (!constPoolArray.setResult(Array<Box>::CreateCopy(acx, constPool)))
         return ErrorVal();
 
@@ -28,9 +28,9 @@ PackedSyntaxTree::Create(AllocationContext acx,
                                         constPoolArray.handle());
 }
 
-/* static */ Result<SyntaxTreeFragment *>
+/* static */ Result<SyntaxTreeFragment*>
 SyntaxTreeFragment::Create(AllocationContext acx,
-                           Handle<PackedSyntaxTree *> pst,
+                           Handle<PackedSyntaxTree*> pst,
                            uint32_t offset)
 {
     return acx.create<SyntaxTreeFragment>(pst, offset);
@@ -44,7 +44,7 @@ SyntaxTreeFragment::nodeType() const
     return node.type();
 }
 
-const char *
+char const*
 SyntaxTreeFragment::nodeTypeCString() const
 {
     return AST::NodeTypeString(nodeType());
@@ -56,7 +56,7 @@ SyntaxTreeRef::nodeType() const
     return AST::PackedBaseNode(pst_->data(), offset_).type();
 }
 
-const char *
+char const*
 SyntaxTreeRef::nodeTypeCString() const
 {
     return AST::NodeTypeString(nodeType());

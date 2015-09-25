@@ -26,41 +26,41 @@ class Parser
 {
   private:
     STLBumpAllocator<uint8_t> allocator_;
-    Tokenizer &tokenizer_;
+    Tokenizer& tokenizer_;
 
     // Error message.
-    const char *error_ = nullptr;
+    char const* error_ = nullptr;
 
   public:
-    Parser(const STLBumpAllocator<uint8_t> &allocator,
-           Tokenizer &tokenizer);
+    Parser(STLBumpAllocator<uint8_t> const& allocator,
+           Tokenizer& tokenizer);
     ~Parser();
 
-    FileNode *parseFile();
+    FileNode* parseFile();
 
     inline bool hasError() const {
         return error_;
     }
 
-    inline const char *error() const {
+    inline char const* error() const {
         WH_ASSERT(hasError());
         return error_;
     }
 
   private:
-    void tryParseStatementList(StatementList &stmts);
+    void tryParseStatementList(StatementList& stmts);
 
-    Statement *tryParseStatement();
+    Statement* tryParseStatement();
 
-    VarStmtNode *parseVarStatement();
-    ConstStmtNode *parseConstStatement();
-    DefStmtNode *parseDefStatement();
-    ReturnStmtNode *parseReturnStatement();
-    IfStmtNode *parseIfStatement();
-    LoopStmtNode *parseLoopStatement();
+    VarStmtNode* parseVarStatement();
+    ConstStmtNode* parseConstStatement();
+    DefStmtNode* parseDefStatement();
+    ReturnStmtNode* parseReturnStatement();
+    IfStmtNode* parseIfStatement();
+    LoopStmtNode* parseLoopStatement();
     IfStmtNode::CondPair parseIfCondPair();
 
-    Block *parseBlock();
+    Block* parseBlock();
 
     // Enum for expression precedence, from highest precedence to
     // lowest.
@@ -75,30 +75,30 @@ class Parser
         Prec_Lowest
     };
 
-    Expression *parseExpression(const Token &startToken, Precedence prec);
+    Expression* parseExpression(Token const& startToken, Precedence prec);
 
-    Expression *parseExpression(Precedence prec) {
+    Expression* parseExpression(Precedence prec) {
         return parseExpression(nextToken(), prec);
     }
 
-    Expression *tryParseExpression(const Token &startToken,
+    Expression* tryParseExpression(Token const& startToken,
                                    Precedence prec);
 
-    Expression *parseExpressionRest(Expression *seedExpr,
+    Expression* parseExpressionRest(Expression* seedExpr,
                                     Precedence prec);
 
-    Expression *parseCallTrailer(PropertyExpression *propExpr);
+    Expression* parseCallTrailer(PropertyExpression* propExpr);
 
     // Push back token.
     inline void pushBackLastToken() {
         tokenizer_.pushBackLastToken();
     }
-    inline void rewindToToken(const Token &tok) {
+    inline void rewindToToken(Token const& tok) {
         tokenizer_.rewindToToken(tok);
     }
 
     // Read next token.
-    const Token &nextToken();
+    Token const& nextToken();
 
     // Check to see if upcoming token matches expected type,
     // but also return the token that was checked for.
@@ -119,9 +119,9 @@ class Parser
     }
 
     template <Token::Type... TYPES>
-    inline const Token *checkGetNextToken()
+    inline Token const* checkGetNextToken()
     {
-        const Token &tok = nextToken();
+        Token const& tok = nextToken();
         if (TestTokenType<TYPES...>(tok.type()))
             return &tok;
         tokenizer_.pushBackLastToken();
@@ -129,9 +129,9 @@ class Parser
     }
 
     template <Token::Type... TYPES>
-    inline const Token::Type checkTypeNextToken()
+    inline Token::Type checkTypeNextToken()
     {
-        const Token &tok = nextToken();
+        Token const& tok = nextToken();
         if (TestTokenType<TYPES...>(tok.type())) {
             tok.debug_markUsed();
             return tok.type();
@@ -143,7 +143,7 @@ class Parser
     // Check to see if upcoming token matches expected type.
     template <Token::Type... TYPES>
     inline bool checkNextToken() {
-        const Token *tok = checkGetNextToken<TYPES...>();
+        Token const* tok = checkGetNextToken<TYPES...>();
         if (tok)
             tok->debug_markUsed();
         return tok;
@@ -159,7 +159,7 @@ class Parser
             throw false;
         }
     };
-    MorphError emitError(const char *msg);
+    MorphError emitError(char const* msg);
 
     // Allocation helpers.
 
@@ -169,7 +169,7 @@ class Parser
     }
 
     template <typename T, typename... ARGS>
-    inline T *make(ARGS... args) {
+    inline T* make(ARGS... args) {
         return new (allocatorFor<T>().allocate(1)) T(
             std::forward<ARGS>(args)...);
     }

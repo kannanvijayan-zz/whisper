@@ -17,7 +17,7 @@ class PropertyDict
   private:
     struct Entry
     {
-        HeapField<String *> name;
+        HeapField<String*> name;
         HeapField<Box> value;
     };
 
@@ -35,7 +35,7 @@ class PropertyDict
         return sizeof(PropertyDict) + (sizeof(Entry) * capacity);
     }
 
-    static Result<PropertyDict *> Create(AllocationContext acx,
+    static Result<PropertyDict*> Create(AllocationContext acx,
                                          uint32_t capacity);
 
     uint32_t capacity() const {
@@ -45,7 +45,7 @@ class PropertyDict
         return size_;
     }
 
-    String *name(uint32_t idx) const {
+    String* name(uint32_t idx) const {
         WH_ASSERT(idx < size());
         return entries_[idx].name;
     }
@@ -54,12 +54,12 @@ class PropertyDict
         return entries_[idx].value;
     }
 
-    void setValue(uint32_t idx, const PropertyDescriptor &descr) {
+    void setValue(uint32_t idx, PropertyDescriptor const& descr) {
         WH_ASSERT(idx < size());
         entries_[idx].value.set(descr.value(), this);
     }
 
-    bool addEntry(String *name, const PropertyDescriptor &descr) {
+    bool addEntry(String* name, PropertyDescriptor const& descr) {
         WH_ASSERT(size() <= capacity());
 
         uint32_t idx = size();
@@ -90,8 +90,8 @@ struct TraceTraits<VM::PropertyDict>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::PropertyDict &pd,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::PropertyDict const& pd,
+                     void const* start, void const* end)
     {
         for (uint32_t i = 0; i < pd.size_; i++) {
             pd.entries_[i].name.scan(scanner, start, end);
@@ -100,8 +100,8 @@ struct TraceTraits<VM::PropertyDict>
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::PropertyDict &pd,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::PropertyDict& pd,
+                       void const* start, void const* end)
     {
         for (uint32_t i = 0; i < pd.size_; i++) {
             pd.entries_[i].name.update(updater, start, end);

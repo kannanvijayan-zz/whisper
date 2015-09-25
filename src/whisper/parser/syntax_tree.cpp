@@ -6,7 +6,7 @@ namespace Whisper {
 namespace AST {
 
 
-const char *
+char const*
 NodeTypeString(NodeType nodeType)
 {
     switch (nodeType) {

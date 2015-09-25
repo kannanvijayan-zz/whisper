@@ -6,7 +6,7 @@ namespace Whisper {
 namespace VM {
 
 
-/* static */ Result<PropertyDict *>
+/* static */ Result<PropertyDict*>
 PropertyDict::Create(AllocationContext acx, uint32_t capacity)
 {
     return acx.createSized<PropertyDict>(CalculateSize(capacity), capacity);

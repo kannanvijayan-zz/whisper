@@ -20,14 +20,14 @@ class LookupSeenObjects
 {
     friend class TraceTraits<LookupSeenObjects>;
   public:
-    static inline Wobject *SENTINEL() {
-        return reinterpret_cast<Wobject *>(0x1u);
+    static inline Wobject* SENTINEL() {
+        return reinterpret_cast<Wobject*>(0x1u);
     }
 
   private:
     uint32_t size_;
     uint32_t filled_;
-    HeapField<Wobject *> seen_[0];
+    HeapField<Wobject*> seen_[0];
 
     static constexpr float MaxFillRatio = 0.75;
 
@@ -41,16 +41,16 @@ class LookupSeenObjects
     }
 
     static uint32_t CalculateSize(uint32_t size) {
-        return sizeof(LookupSeenObjects) + (sizeof(Wobject *) * size);
+        return sizeof(LookupSeenObjects) + (sizeof(Wobject*) * size);
     }
 
-    static Result<LookupSeenObjects *> Create(
+    static Result<LookupSeenObjects*> Create(
         AllocationContext acx, uint32_t size);
 
-    static Result<LookupSeenObjects *> Create(
+    static Result<LookupSeenObjects*> Create(
         AllocationContext acx,
         uint32_t size,
-        Handle<LookupSeenObjects *> other);
+        Handle<LookupSeenObjects*> other);
 
     uint32_t size() const {
         return size_;
@@ -58,16 +58,16 @@ class LookupSeenObjects
     uint32_t filled() const {
         return filled_;
     }
-    bool contains(Wobject *obj) const;
+    bool contains(Wobject* obj) const;
 
     bool canAdd() const {
         return filled_ < (size_ * MaxFillRatio);
     }
-    void add(Wobject *obj);
+    void add(Wobject* obj);
 
     bool indexHasValue(uint32_t index) const {
         WH_ASSERT(index < size());
-        Wobject *ptr = seen_[index].get();
+        Wobject* ptr = seen_[index].get();
         return (ptr != nullptr) && (ptr != SENTINEL());
     }
   private:
@@ -79,13 +79,13 @@ class LookupNode
 {
     friend class TraceTraits<LookupNode>;
   private:
-    HeapField<LookupNode *> parent_;
-    HeapField<Wobject *> object_;
-    HeapField<Array<Wobject *> *> delegates_;
+    HeapField<LookupNode*> parent_;
+    HeapField<Wobject*> object_;
+    HeapField<Array<Wobject*>*> delegates_;
     uint32_t index_;
 
   public:
-    LookupNode(Handle<Wobject *> object)
+    LookupNode(Handle<Wobject*> object)
       : parent_(nullptr),
         object_(object),
         delegates_(nullptr),
@@ -93,8 +93,8 @@ class LookupNode
     {
         WH_ASSERT(object.get() != nullptr);
     }
-    LookupNode(Handle<LookupNode *> parent,
-               Handle<Wobject *> object)
+    LookupNode(Handle<LookupNode*> parent,
+               Handle<Wobject*> object)
       : parent_(parent),
         object_(object),
         delegates_(nullptr),
@@ -104,23 +104,23 @@ class LookupNode
         WH_ASSERT(object.get() != nullptr);
     }
 
-    static Result<LookupNode *> Create(AllocationContext acx,
-                                       Handle<Wobject *> object);
+    static Result<LookupNode*> Create(AllocationContext acx,
+                                      Handle<Wobject*> object);
 
-    static Result<LookupNode *> Create(AllocationContext acx,
-                                       Handle<LookupNode *> parent,
-                                       Handle<Wobject *> object);
+    static Result<LookupNode*> Create(AllocationContext acx,
+                                      Handle<LookupNode*> parent,
+                                      Handle<Wobject*> object);
 
-    LookupNode *parent() const {
+    LookupNode* parent() const {
         return parent_;
     }
-    Wobject *object() const {
+    Wobject* object() const {
         return object_;
     }
-    Array<Wobject *> *delegates() const {
+    Array<Wobject*>* delegates() const {
         return delegates_;
     }
-    void setDelegates(Array<Wobject *> *delgs) {
+    void setDelegates(Array<Wobject*>* delgs) {
         delegates_.set(delgs, this);
     }
     uint32_t index() const {
@@ -138,16 +138,16 @@ class LookupState
 {
     friend class TraceTraits<LookupState>;
   private:
-    HeapField<Wobject *> receiver_;
-    HeapField<String *> name_;
-    HeapField<LookupSeenObjects *> seen_;
-    HeapField<LookupNode *> node_;
+    HeapField<Wobject*> receiver_;
+    HeapField<String*> name_;
+    HeapField<LookupSeenObjects*> seen_;
+    HeapField<LookupNode*> node_;
 
   public:
-    LookupState(Handle<Wobject *> receiver,
-                Handle<String *> name,
-                Handle<LookupSeenObjects *> seen,
-                Handle<LookupNode *> node)
+    LookupState(Handle<Wobject*> receiver,
+                Handle<String*> name,
+                Handle<LookupSeenObjects*> seen,
+                Handle<LookupNode*> node)
       : receiver_(receiver),
         name_(name),
         seen_(seen),
@@ -159,41 +159,41 @@ class LookupState
         WH_ASSERT(node != nullptr);
     }
 
-    static Result<LookupState *> Create(AllocationContext acx,
-                                        Handle<Wobject *> receiver,
-                                        Handle<String *> name);
+    static Result<LookupState*> Create(AllocationContext acx,
+                                       Handle<Wobject*> receiver,
+                                       Handle<String*> name);
 
-    Wobject *receiver() const {
+    Wobject* receiver() const {
         return receiver_;
     }
-    String *name() const {
+    String* name() const {
         return name_;
     }
-    LookupSeenObjects *seen() const {
+    LookupSeenObjects* seen() const {
         return seen_;
     }
-    LookupNode *node() const {
+    LookupNode* node() const {
         return node_;
     }
 
     static OkResult NextNode(AllocationContext acx,
-                             Handle<LookupState *> lookupState,
-                             MutHandle<LookupNode *> nodeOut);
+                             Handle<LookupState*> lookupState,
+                             MutHandle<LookupNode*> nodeOut);
 
     static OkResult LinkNextNode(AllocationContext acx,
-                                 Handle<LookupState *> lookupState,
-                                 Handle<LookupNode *> parent,
+                                 Handle<LookupState*> lookupState,
+                                 Handle<LookupNode*> parent,
                                  uint32_t index,
-                                 MutHandle<LookupNode *> nodeOut);
+                                 MutHandle<LookupNode*> nodeOut);
 
   private:
-    bool wasSeen(Wobject *obj) const {
+    bool wasSeen(Wobject* obj) const {
         return seen_->contains(obj);
     }
 
     static OkResult AddToSeen(AllocationContext acx,
-                              Handle<LookupState *> lookupState,
-                              Handle<Wobject *> obj);
+                              Handle<LookupState*> lookupState,
+                              Handle<Wobject*> obj);
 };
 
 
@@ -213,9 +213,9 @@ struct TraceTraits<VM::LookupSeenObjects>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    inline static void Scan(Scanner &scanner,
-                            const VM::LookupSeenObjects &lookupSeenObjects,
-                            const void *start, const void *end)
+    inline static void Scan(Scanner& scanner,
+                            VM::LookupSeenObjects const& lookupSeenObjects,
+                            void const* start, void const* end)
     {
         for (uint32_t i = 0; i < lookupSeenObjects.size_; i++) {
             if (!lookupSeenObjects.indexHasValue(i))
@@ -225,17 +225,17 @@ struct TraceTraits<VM::LookupSeenObjects>
     }
 
     template <typename Updater>
-    inline static void Update(Updater &updater,
-                              VM::LookupSeenObjects &lookupSeenObjects,
-                              const void *start, const void *end)
+    inline static void Update(Updater& updater,
+                              VM::LookupSeenObjects& lookupSeenObjects,
+                              void const* start, void const* end)
     {
         for (uint32_t i = 0; i < lookupSeenObjects.size_; i++) {
             if (!lookupSeenObjects.indexHasValue(i))
                 continue;
             // Save old value before checking.
-            VM::Wobject *oldValue = lookupSeenObjects.seen_[i].get();
+            VM::Wobject* oldValue = lookupSeenObjects.seen_[i].get();
             lookupSeenObjects.seen_[i].update(updater, start, end);
-            VM::Wobject *newValue = lookupSeenObjects.seen_[i].get();
+            VM::Wobject* newValue = lookupSeenObjects.seen_[i].get();
 
             // If value changed, rehash it.
             if (newValue != oldValue)
@@ -253,9 +253,9 @@ struct TraceTraits<VM::LookupNode>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    inline static void Scan(Scanner &scanner,
-                            const VM::LookupNode &lookupNode,
-                            const void *start, const void *end)
+    inline static void Scan(Scanner& scanner,
+                            VM::LookupNode const& lookupNode,
+                            void const* start, void const* end)
     {
         lookupNode.parent_.scan(scanner, start, end);
         lookupNode.object_.scan(scanner, start, end);
@@ -263,9 +263,9 @@ struct TraceTraits<VM::LookupNode>
     }
 
     template <typename Updater>
-    inline static void Update(Updater &updater,
-                              VM::LookupNode &lookupNode,
-                              const void *start, const void *end)
+    inline static void Update(Updater& updater,
+                              VM::LookupNode& lookupNode,
+                              void const* start, void const* end)
     {
         lookupNode.parent_.update(updater, start, end);
         lookupNode.object_.update(updater, start, end);
@@ -282,9 +282,9 @@ struct TraceTraits<VM::LookupState>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    inline static void Scan(Scanner &scanner,
-                            const VM::LookupState &lookupState,
-                            const void *start, const void *end)
+    inline static void Scan(Scanner& scanner,
+                            VM::LookupState const& lookupState,
+                            void const* start, void const* end)
     {
         lookupState.receiver_.scan(scanner, start, end);
         lookupState.name_.scan(scanner, start, end);
@@ -293,9 +293,9 @@ struct TraceTraits<VM::LookupState>
     }
 
     template <typename Updater>
-    inline static void Update(Updater &updater,
-                              VM::LookupState &lookupState,
-                              const void *start, const void *end)
+    inline static void Update(Updater& updater,
+                              VM::LookupState& lookupState,
+                              void const* start, void const* end)
     {
         lookupState.receiver_.update(updater, start, end);
         lookupState.name_.update(updater, start, end);

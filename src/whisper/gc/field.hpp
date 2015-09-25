@@ -76,47 +76,47 @@ class BaseField
     inline BaseField()
       : val_()
     {}
-    inline BaseField(const T &val)
+    inline BaseField(T const& val)
       : val_(val)
     {}
-    inline BaseField(T &&val)
+    inline BaseField(T&& val)
       : val_(std::move(val))
     {}
 
-    inline const T &get() const {
+    inline T const& get() const {
         return val_;
     }
-    inline T &getRaw() {
+    inline T& getRaw() {
         return val_;
     }
-    inline const T *address() const {
+    inline T const* address() const {
         return &val_;
     }
-    inline T *address() {
+    inline T* address() {
         return &val_;
     }
 
-    inline operator const T &() const {
+    inline operator T const&() const {
         return get();
     }
 
-    inline ConstDerefType *operator ->() const {
+    inline ConstDerefType* operator ->() const {
         return DerefTraits<T>::Deref(val_);
     }
-    inline DerefType *operator ->() {
+    inline DerefType* operator ->() {
         return DerefTraits<T>::Deref(val_);
     }
 
-    T &operator =(const BaseField<T> &other) = delete;
+    T& operator =(BaseField<T> const& other) = delete;
 
     template <typename Scanner>
-    inline void scan(Scanner &scanner, const void *start, const void *end) const
+    inline void scan(Scanner& scanner, void const* start, void const* end) const
     {
         TraceTraits<T>::Scan(scanner, val_, start, end);
     }
 
     template <typename Updater>
-    inline void update(Updater &updater, const void *start, const void *end)
+    inline void update(Updater& updater, void const* start, void const* end)
     {
         TraceTraits<T>::Update(updater, val_, start, end);
     }
@@ -137,70 +137,70 @@ class HeapField : public BaseField<T>
     inline HeapField()
       : BaseField<T>()
     {}
-    explicit inline HeapField(const T &val)
+    explicit inline HeapField(T const& val)
       : BaseField<T>(val)
     {}
-    explicit inline HeapField(T &&val)
+    explicit inline HeapField(T&& val)
       : BaseField<T>(std::move(val))
     {}
 
     template <typename HeapT>
-    inline void notifySetPre(HeapT *container) {
+    inline void notifySetPre(HeapT* container) {
         // TODO: Use TraceTraits to scan val_, and register any
         // existing pointers.
     }
 
     template <typename HeapT>
-    inline void notifySetPost(HeapT *container) {
+    inline void notifySetPost(HeapT* container) {
         // TODO: Use TraceTraits to scan val_, and register any
         // new pointers.
     }
 
     template <typename HeapT>
-    inline void set(const T &ref, HeapT *container) {
+    inline void set(T const& ref, HeapT* container) {
         notifySetPre(container);
         this->val_ = ref;
         notifySetPost(container);
     }
     template <typename HeapT>
-    inline void set(T &&ref, HeapT *container) {
+    inline void set(T&& ref, HeapT* container) {
         notifySetPre(container);
         this->val_ = ref;
         notifySetPost(container);
     }
 
     template <typename HeapT>
-    inline void init(const T &val, HeapT *container) {
+    inline void init(T const& val, HeapT* container) {
         // Pre-notification not required as value is not initialized.
         new (&this->val_) T(val);
         notifySetPost(container);
     }
     template <typename HeapT>
-    inline void init(const T &&val, HeapT *container) {
+    inline void init(T&& val, HeapT* container) {
         // Pre-notification not required as value is not initialized.
         new (&this->val_) T(std::move(val));
         notifySetPost(container);
     }
 
     template <typename HeapT>
-    inline void clear(const T &ref, HeapT *container) {
+    inline void clear(T const& ref, HeapT* container) {
         notifySetPre(container);
         this->val_ = ref;
     }
     template <typename HeapT>
-    inline void clear(T &&ref, HeapT *container) {
+    inline void clear(T&& ref, HeapT* container) {
         notifySetPre(container);
         this->val_ = ref;
     }
 
     template <typename HeapT>
-    inline void destroy(HeapT *container) {
+    inline void destroy(HeapT* container) {
         notifySetPre(container);
         this->val_.~T();
         // Post-notification not required as value is destroyed.
     }
 
-    T &operator =(const HeapField<T> &other) = delete;
+    T& operator =(HeapField<T> const& other) = delete;
 };
 
 
@@ -216,25 +216,25 @@ class StackField : public BaseField<T>
     inline StackField()
       : BaseField<T>()
     {}
-    explicit inline StackField(const T &val)
+    explicit inline StackField(T const& val)
       : BaseField<T>(val)
     {}
-    explicit inline StackField(T &&val)
+    explicit inline StackField(T&& val)
       : BaseField<T>(std::move(val))
     {}
 
-    inline void set(const T &ref) {
+    inline void set(T const& ref) {
         this->val_ = ref;
     }
 
-    inline void set(T &&ref) {
+    inline void set(T&& ref) {
         this->val_ = ref;
     }
 
-    inline void init(const T &ref) {
+    inline void init(T const& ref) {
         new (&this->val_) T(ref);
     }
-    inline void init(T &&ref) {
+    inline void init(T&& ref) {
         new (&this->val_) T(std::move(ref));
     }
 
@@ -242,15 +242,15 @@ class StackField : public BaseField<T>
         this->val_.~T();
     }
 
-    T &operator =(const StackField<T> &other) {
+    T& operator =(StackField<T> const& other) {
         this->val_ = other.val_;
         return this->val_;
     }
-    T &operator =(const T &other) {
+    T& operator =(T const& other) {
         this->val_ = other.val_;
         return this->val_;
     }
-    T &operator =(T &&other) {
+    T& operator =(T&& other) {
         this->val_ = std::move(other.val_);
         return this->val_;
     }

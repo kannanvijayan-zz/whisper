@@ -85,15 +85,15 @@ class Box
         return (value_ & PointerTagMask) == PointerTag;
     }
     template <typename T>
-    T *pointer() const {
+    T* pointer() const {
         static_assert(PointerTag == 0, "");
         static_assert(IsHeapThingType<T>(), "T is not a HeapThing type.");
         WH_ASSERT(isPointer());
-        WH_ASSERT(reinterpret_cast<T *>(value_) != nullptr);
-        return reinterpret_cast<T *>(value_);
+        WH_ASSERT(reinterpret_cast<T*>(value_) != nullptr);
+        return reinterpret_cast<T*>(value_);
     }
     template <typename T>
-    static Box Pointer(T *ptr) {
+    static Box Pointer(T* ptr) {
         static_assert(IsHeapThingType<T>(), "T is not a HeapThing type.");
         WH_ASSERT(ptr != nullptr);
         WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
@@ -137,11 +137,11 @@ class Box
         return Box((val ? BooleanBit : 0u) | BooleanTag);
     }
 
-    void snprint(char *buf, size_t n) const;
+    void snprint(char* buf, size_t n) const;
 
   protected:
     template <typename T>
-    void setPointer(T *ptr) {
+    void setPointer(T* ptr) {
         static_assert(IsHeapThingType<T>(), "T is not a HeapThing type.");
         WH_ASSERT(ptr != nullptr);
         WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
@@ -164,22 +164,22 @@ class ValBox : public Box
 
   public:
     ValBox() : Box() {}
-    explicit ValBox(const Box &box);
+    explicit ValBox(Box const& box);
 
     static ValBox Invalid() {
         return ValBox();
     }
 
     template <typename T>
-    static ValBox Pointer(T *ptr) {
+    static ValBox Pointer(T* ptr) {
         // Ensure ptr converts to Wobject.
-        static_assert(std::is_convertible<T *, Wobject *>(),
+        static_assert(std::is_convertible<T*, Wobject*>(),
                       "T is not a Wobject type.");
         WH_ASSERT(ptr != nullptr);
         WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
         return ValBox(reinterpret_cast<uint64_t>(ptr));
     }
-    Wobject *objectPointer() const {
+    Wobject* objectPointer() const {
         return pointer<Wobject>();
     }
 
@@ -205,7 +205,7 @@ class ValBox : public Box
 
   private:
     template <typename T>
-    void setPointer(T *ptr) {
+    void setPointer(T* ptr) {
         static_assert(IsHeapThingType<T>(), "T is not a HeapThing type.");
         WH_ASSERT(ptr != nullptr);
         WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
@@ -274,25 +274,25 @@ struct TraceTraits<VM::Box>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::Box &box,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::Box const& box,
+                     void const* start, void const* end)
     {
         if (!box.isPointer())
             return;
-        HeapThing *heapThing = box.pointer<HeapThing>();
+        HeapThing* heapThing = box.pointer<HeapThing>();
         WH_ASSERT(heapThing != nullptr);
         scanner(&(box.value_), heapThing);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::Box &box,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::Box& box,
+                       void const* start, void const* end)
     {
         if (!box.isPointer())
             return;
-        HeapThing *heapThing = box.pointer<HeapThing>();
+        HeapThing* heapThing = box.pointer<HeapThing>();
         WH_ASSERT(heapThing != nullptr);
-        HeapThing *updated = updater(&(box.value_), heapThing);
+        HeapThing* updated = updater(&(box.value_), heapThing);
         if (updated != heapThing)
             box.setPointer(updated);
     }
@@ -306,15 +306,15 @@ struct TraceTraits<VM::ValBox>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::ValBox &box,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::ValBox const& box,
+                     void const* start, void const* end)
     {
         TraceTraits<VM::Box>::Scan<Scanner>(scanner, box, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::Box &box,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::Box& box,
+                       void const* start, void const* end)
     {
         TraceTraits<VM::Box>::Update<Updater>(updater, box, start, end);
     }

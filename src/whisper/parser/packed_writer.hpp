@@ -24,16 +24,16 @@ class PackedWriterError
 class IdentifierKey
 {
   private:
-    const uint8_t *text_;
+    uint8_t const* text_;
     uint32_t length_;
 
   public:
-    IdentifierKey(const uint8_t *text, uint32_t length)
+    IdentifierKey(uint8_t const* text, uint32_t length)
       : text_(text),
         length_(length)
     {}
 
-    const uint8_t *text() const {
+    uint8_t const* text() const {
         return text_;
     }
 
@@ -49,12 +49,12 @@ class IdentifierKey
     }
     struct Hash
     {
-        size_t operator ()(const IdentifierKey &info) const {
+        size_t operator ()(IdentifierKey const& info) const {
             return info.hash();
         }
     };
 
-    bool operator ==(const IdentifierKey &other) const {
+    bool operator ==(IdentifierKey const& other) const {
         if (length_ != other.length_)
             return false;
         for (uint32_t i = 0; i < length_; i++) {
@@ -65,8 +65,8 @@ class IdentifierKey
     }
     struct Equal
     {
-        size_t operator ()(const IdentifierKey &a,
-                           const IdentifierKey &b) const
+        size_t operator ()(IdentifierKey const& a,
+                           IdentifierKey const& b) const
         {
             return a == b;
         }
@@ -77,7 +77,7 @@ class PackedWriter
 {
     friend class TraceTraits<PackedWriter>;
   public:
-    typedef uint32_t *Position;
+    typedef uint32_t* Position;
 
     // The maximum number size of the packed buffer and
     // the constant array, is 0x0fffffff == ((1 << 28) - 1).
@@ -87,23 +87,23 @@ class PackedWriter
 
   private:
     STLBumpAllocator<uint32_t> allocator_;
-    const SourceReader &src_;
-    AllocationContext &acx_;
+    SourceReader const& src_;
+    AllocationContext& acx_;
 
     // Output packed syntax tree.
     static constexpr uint32_t InitialBufferSize = 128;
-    uint32_t *start_;
-    uint32_t *end_;
-    uint32_t *cursor_;
+    uint32_t* start_;
+    uint32_t* end_;
+    uint32_t* cursor_;
 
     // Output constPool array.
     static constexpr uint32_t InitialConstPoolSize = 16;
-    VM::Box *constPool_;
+    VM::Box* constPool_;
     uint32_t constPoolCapacity_;
     uint32_t constPoolSize_;
 
     // Hash table mapping identifier names
-    typedef STLBumpAllocator<std::pair<const IdentifierKey, uint32_t>>
+    typedef STLBumpAllocator<std::pair<IdentifierKey const, uint32_t>>
             IdentifierMapAllocator;
     typedef std::unordered_map<IdentifierKey,
                                uint32_t,
@@ -113,12 +113,12 @@ class PackedWriter
             IdentifierMap;
     IdentifierMap identifierMap_;
 
-    const char *error_;
+    char const* error_;
 
   public:
-    PackedWriter(const STLBumpAllocator<uint32_t> &allocator,
-                 const SourceReader &src,
-                 AllocationContext &acx)
+    PackedWriter(STLBumpAllocator<uint32_t> const& allocator,
+                 SourceReader const& src,
+                 AllocationContext& acx)
       : allocator_(allocator),
         src_(src),
         acx_(acx),
@@ -132,7 +132,7 @@ class PackedWriter
         error_(nullptr)
     {}
 
-    bool writeNode(const BaseNode *node);
+    bool writeNode(BaseNode const* node);
 
     uint32_t bufferSize() const {
         return (cursor_ - start_);
@@ -165,7 +165,7 @@ class PackedWriter
         WH_ASSERT(pos >= start_ && pos < cursor_);
         *pos = word;
     }
-    void writeOffsetDistance(Position *writePos, bool increment=true) {
+    void writeOffsetDistance(Position* writePos, bool increment=true) {
         writeAt(*writePos, cursor_ - *writePos);
         if (increment)
             ++*writePos;
@@ -189,11 +189,11 @@ class PackedWriter
     bool hasError() const {
         return error_ != nullptr;
     }
-    const char *error() const {
+    char const* error() const {
         WH_ASSERT(hasError());
         return error_;
     }
-    void emitError(const char *msg) {
+    void emitError(char const* msg) {
         WH_ASSERT(!hasError());
         error_ = msg;
         throw PackedWriterError();
@@ -208,21 +208,21 @@ class PackedWriter
     static constexpr uint32_t MaxBindings = 0xffffu;
 
     static constexpr uint32_t MaxConstants = 0xffffffu;
-    uint32_t addIdentifier(const IdentifierToken &ident);
+    uint32_t addIdentifier(IdentifierToken const& ident);
     uint32_t addToConstPool(VM::Box thing);
     void expandConstPool();
 
-    void parseInteger(const IntegerLiteralToken &token, int32_t *resultOut);
-    void parseBinInteger(const IntegerLiteralToken &token, int32_t *resultOut);
-    void parseOctInteger(const IntegerLiteralToken &token, int32_t *resultOut);
-    void parseDecInteger(const IntegerLiteralToken &token, int32_t *resultOut);
-    void parseHexInteger(const IntegerLiteralToken &token, int32_t *resultOut);
+    void parseInteger(IntegerLiteralToken const& token, int32_t* resultOut);
+    void parseBinInteger(IntegerLiteralToken const& token, int32_t* resultOut);
+    void parseOctInteger(IntegerLiteralToken const& token, int32_t* resultOut);
+    void parseDecInteger(IntegerLiteralToken const& token, int32_t* resultOut);
+    void parseHexInteger(IntegerLiteralToken const& token, int32_t* resultOut);
 
-    void writeBinaryExpr(const Expression *lhs, const Expression *rhs);
-    void writeBlock(const Block *block);
-    void writeSizedBlock(const Block *block);
+    void writeBinaryExpr(Expression const* lhs, Expression const* rhs);
+    void writeBlock(Block const* block);
+    void writeSizedBlock(Block const* block);
 
-#define METHOD_(ntype) void write##ntype(const ntype##Node *n);
+#define METHOD_(ntype) void write##ntype(ntype##Node const* n);
     WHISPER_DEFN_SYNTAX_NODES(METHOD_)
 #undef METHOD_
 };
@@ -256,8 +256,8 @@ struct TraceTraits<AST::PackedWriter>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const AST::PackedWriter &pw,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, AST::PackedWriter const& pw,
+                     void const* start, void const* end)
     {
         for (uint32_t i = 0; i < pw.constPoolSize_; i++) {
             TraceTraits<VM::Box>::Scan(scanner, pw.constPool_[i],
@@ -266,8 +266,8 @@ struct TraceTraits<AST::PackedWriter>
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, AST::PackedWriter &pw,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, AST::PackedWriter& pw,
+                       void const* start, void const* end)
     {
         for (uint32_t i = 0; i < pw.constPoolSize_; i++) {
             TraceTraits<VM::Box>::Update(updater, pw.constPool_[i],

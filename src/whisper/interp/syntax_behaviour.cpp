@@ -16,7 +16,7 @@ namespace Interp {
 // Declare a lift function for each syntax node type.
 #define DECLARE_LIFT_FN_(name) \
     static VM::ControlFlow Lift_##name( \
-        ThreadContext *cx, \
+        ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::SyntaxTreeRef> args);
 
@@ -34,14 +34,14 @@ namespace Interp {
 
 static OkResult
 BindGlobalMethod(AllocationContext acx,
-                 Handle<VM::GlobalScope *> obj,
-                 VM::String *name,
+                 Handle<VM::GlobalScope*> obj,
+                 VM::String* name,
                  VM::NativeOperativeFuncPtr opFunc)
 {
-    Local<VM::String *> rootedName(acx, name);
+    Local<VM::String*> rootedName(acx, name);
 
     // Allocate NativeFunction object.
-    Local<VM::NativeFunction *> natF(acx);
+    Local<VM::NativeFunction*> natF(acx);
     if (!natF.setResult(VM::NativeFunction::Create(acx, opFunc)))
         return ErrorVal();
     Local<VM::PropertyDescriptor> desc(acx, VM::PropertyDescriptor(natF.get()));
@@ -54,12 +54,12 @@ BindGlobalMethod(AllocationContext acx,
 }
 
 OkResult
-BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope *scope)
+BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 {
-    Local<VM::GlobalScope *> rootedScope(acx, scope);
+    Local<VM::GlobalScope*> rootedScope(acx, scope);
 
-    ThreadContext *cx = acx.threadContext();
-    Local<VM::RuntimeState *> rtState(acx, cx->runtimeState());
+    ThreadContext* cx = acx.threadContext();
+    Local<VM::RuntimeState*> rtState(acx, cx->runtimeState());
 
 #define BIND_GLOBAL_METHOD_(name) \
     do { \
@@ -86,7 +86,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope *scope)
 
 #define IMPL_LIFT_FN_(name) \
     static VM::ControlFlow Lift_##name( \
-        ThreadContext *cx, \
+        ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::SyntaxTreeRef> args)
 
@@ -100,7 +100,7 @@ IMPL_LIFT_FN_(File)
     WH_ASSERT(args.get(0).nodeType() == AST::File);
 
     Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
-    Local<VM::PackedSyntaxTree *> pst(cx, stRef->pst());
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedFileNode> fileNode(cx,
         AST::PackedFileNode(pst->data(), stRef->offset()));
 
@@ -145,7 +145,7 @@ IMPL_LIFT_FN_(ExprStmt)
     WH_ASSERT(args.get(0).nodeType() == AST::ExprStmt);
 
     Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
-    Local<VM::PackedSyntaxTree *> pst(cx, stRef->pst());
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedExprStmtNode> exprStmtNode(cx,
         AST::PackedExprStmtNode(pst->data(), stRef->offset()));
 
@@ -168,7 +168,7 @@ IMPL_LIFT_FN_(ReturnStmt)
     WH_ASSERT(args.get(0).nodeType() == AST::ReturnStmt);
 
     Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
-    Local<VM::PackedSyntaxTree *> pst(cx, stRef->pst());
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedReturnStmtNode> returnStmtNode(cx,
         AST::PackedReturnStmtNode(pst->data(), stRef->offset()));
 
@@ -204,17 +204,17 @@ IMPL_LIFT_FN_(DefStmt)
     Local<VM::ValBox> receiverBox(cx, callInfo->receiver());
     if (receiverBox->isPrimitive())
         return cx->setExceptionRaised("Cannot define method on primitive.");
-    Local<VM::Wobject *> receiver(cx, receiverBox->objectPointer());
+    Local<VM::Wobject*> receiver(cx, receiverBox->objectPointer());
 
     Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
-    Local<VM::PackedSyntaxTree *> pst(cx, stRef->pst());
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedDefStmtNode> defStmtNode(cx,
         AST::PackedDefStmtNode(pst->data(), stRef->offset()));
 
     AllocationContext acx = cx->inHatchery();
 
     // Create the scripted function.
-    Local<VM::ScriptedFunction *> func(cx);
+    Local<VM::ScriptedFunction*> func(cx);
     if (!func.setResult(VM::ScriptedFunction::Create(
             acx, pst, stRef->offset(), callInfo->callerScope(), false)))
     {
@@ -225,7 +225,7 @@ IMPL_LIFT_FN_(DefStmt)
     Local<VM::Box> funcnameBox(cx, pst->getConstant(defStmtNode->nameCid()));
     WH_ASSERT(funcnameBox->isPointer());
     WH_ASSERT(funcnameBox->pointer<HeapThing>()->header().isFormat_String());
-    Local<VM::String *> funcname(cx, funcnameBox->pointer<VM::String>());
+    Local<VM::String*> funcname(cx, funcnameBox->pointer<VM::String>());
     Local<VM::PropertyDescriptor> descr(cx, VM::PropertyDescriptor(func.get()));
     if (!VM::Wobject::DefineProperty(acx, receiver, funcname, descr))
         return ErrorVal();
@@ -245,14 +245,14 @@ IMPL_LIFT_FN_(VarStmt)
     Local<VM::ValBox> receiverBox(cx, callInfo->receiver());
     if (receiverBox->isPrimitive())
         return cx->setExceptionRaised("Cannot define var on primitive.");
-    Local<VM::Wobject *> receiver(cx, receiverBox->objectPointer());
+    Local<VM::Wobject*> receiver(cx, receiverBox->objectPointer());
 
     Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
-    Local<VM::PackedSyntaxTree *> pst(cx, stRef->pst());
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedVarStmtNode> varStmtNode(cx,
         AST::PackedVarStmtNode(pst->data(), stRef->offset()));
     Local<VM::Box> varnameBox(cx);
-    Local<VM::String *> varname(cx);
+    Local<VM::String*> varname(cx);
     Local<VM::ValBox> varvalBox(cx);
 
     AllocationContext acx = cx->inHatchery();
@@ -310,22 +310,22 @@ IMPL_LIFT_FN_(NameExpr)
     WH_ASSERT(args.get(0).nodeType() == AST::NameExpr);
 
     Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
-    Local<VM::PackedSyntaxTree *> pst(cx, stRef->pst());
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedNameExprNode> nameExpr(cx,
         AST::PackedNameExprNode(pst->data(), stRef->offset()));
 
     // Get the scope to look up on.
-    Local<VM::Wobject *> scopeObj(cx,
-        callInfo->callerScope().convertTo<VM::Wobject *>());
+    Local<VM::Wobject*> scopeObj(cx,
+        callInfo->callerScope().convertTo<VM::Wobject*>());
 
     // Get the constant name to look up.
     Local<VM::Box> nameBox(cx, pst->getConstant(nameExpr->nameCid()));
     WH_ASSERT(nameBox->isPointer());
     WH_ASSERT(nameBox->pointer<HeapThing>()->header().isFormat_String());
-    Local<VM::String *> name(cx, nameBox->pointer<VM::String>());
+    Local<VM::String*> name(cx, nameBox->pointer<VM::String>());
 
     // Do the lookup.
-    Local<VM::LookupState *> lookupState(cx);
+    Local<VM::LookupState*> lookupState(cx);
     Local<VM::PropertyDescriptor> propDesc(cx);
 
     VM::ControlFlow propFlow = GetObjectProperty(cx, scopeObj, name);
@@ -346,7 +346,7 @@ IMPL_LIFT_FN_(IntegerExpr)
     WH_ASSERT(args.get(0).nodeType() == AST::IntegerExpr);
 
     Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
-    Local<VM::PackedSyntaxTree *> pst(cx, stRef->pst());
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedIntegerExprNode> intExpr(cx,
         AST::PackedIntegerExprNode(pst->data(), stRef->offset()));
 

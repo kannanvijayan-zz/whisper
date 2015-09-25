@@ -25,8 +25,8 @@ class ControlFlow
     static constexpr size_t ValBoxSize = sizeof(ValBox);
     static constexpr size_t ValBoxAlign = alignof(ValBox);
 
-    static constexpr size_t CStringSize = sizeof(const char *);
-    static constexpr size_t CStringAlign = alignof(const char *);
+    static constexpr size_t CStringSize = sizeof(char const*);
+    static constexpr size_t CStringAlign = alignof(char const*);
 
     static constexpr size_t PayloadSize =
         ConstExprMax<size_t, ValBoxSize, CStringSize>();
@@ -37,44 +37,44 @@ class ControlFlow
     alignas(PayloadAlign)
     uint8_t payload_[PayloadSize];
 
-    ValBox *valBoxPayload() {
-        return reinterpret_cast<ValBox *>(payload_);
+    ValBox* valBoxPayload() {
+        return reinterpret_cast<ValBox*>(payload_);
     }
-    const ValBox *valBoxPayload() const {
-        return reinterpret_cast<const ValBox *>(payload_);
-    }
-
-    const char **cStringPayload() {
-        return reinterpret_cast<const char **>(payload_);
-    }
-    const char * const *cStringPayload() const {
-        return reinterpret_cast<const char * const*>(payload_);
+    ValBox const* valBoxPayload() const {
+        return reinterpret_cast<ValBox const*>(payload_);
     }
 
-    void initCStringPayload(const char *msg) {
-        new (cStringPayload()) (const char *)(msg);
+    char const** cStringPayload() {
+        return reinterpret_cast<char const**>(payload_);
     }
-    void initValBoxPayload(const ValBox &val) {
+    char const* const* cStringPayload() const {
+        return reinterpret_cast<char const* const*>(payload_);
+    }
+
+    void initCStringPayload(char const* msg) {
+        new (cStringPayload()) (char const*)(msg);
+    }
+    void initValBoxPayload(ValBox const& val) {
         new (valBoxPayload()) ValBox(val);
     }
 
   private:
     ControlFlow(Kind kind) : kind_(Kind::Void) {}
 
-    ControlFlow(Kind kind, const char *msg)
+    ControlFlow(Kind kind, char const* msg)
       : kind_(kind)
     {
         initCStringPayload(msg);
     }
 
-    ControlFlow(Kind kind, const ValBox &val)
+    ControlFlow(Kind kind, ValBox const& val)
       : kind_(kind)
     {
         initValBoxPayload(val);
     }
 
   public:
-    ControlFlow(const ControlFlow &other)
+    ControlFlow(ControlFlow const& other)
       : kind_(other.kind_)
     {
         switch (kind_) {
@@ -92,15 +92,15 @@ class ControlFlow
             WH_UNREACHABLE("Bad ControlFlow Kind.");
         }
     }
-    ControlFlow(const ErrorT_ &err)
+    ControlFlow(ErrorT_ const& err)
       : kind_(Kind::Error)
     {}
-    ControlFlow(const OkT_ &ok)
+    ControlFlow(OkT_ const& ok)
       : kind_(Kind::Value)
     {
         initValBoxPayload(ValBox::Undefined());
     }
-    ControlFlow(const OkValT_<ValBox> &okVal)
+    ControlFlow(OkValT_<ValBox> const& okVal)
       : kind_(Kind::Value)
     {
         initValBoxPayload(okVal.val());
@@ -130,13 +130,13 @@ class ControlFlow
     static ControlFlow Error() {
         return ControlFlow(Kind::Error);
     }
-    static ControlFlow Value(const ValBox &val) {
+    static ControlFlow Value(ValBox const& val) {
         return ControlFlow(Kind::Value, val);
     }
-    static ControlFlow Return(const ValBox &val) {
+    static ControlFlow Return(ValBox const& val) {
         return ControlFlow(Kind::Return, val);
     }
-    static ControlFlow Exception(const ValBox &val) {
+    static ControlFlow Exception(ValBox const& val) {
         return ControlFlow(Kind::Exception, val);
     }
 
@@ -163,15 +163,15 @@ class ControlFlow
         return isValue() || isError() || isException();
     }
 
-    const ValBox &value() const {
+    ValBox const& value() const {
         WH_ASSERT(isValue());
         return *valBoxPayload();
     }
-    const ValBox &returnValue() const {
+    ValBox const& returnValue() const {
         WH_ASSERT(isReturn());
         return *valBoxPayload();
     }
-    const ValBox &exceptionValue() const {
+    ValBox const& exceptionValue() const {
         WH_ASSERT(isException());
         return *valBoxPayload();
     }
@@ -194,8 +194,8 @@ struct TraceTraits<VM::ControlFlow>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::ControlFlow &cf,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::ControlFlow const& cf,
+                     void const* start, void const* end)
     {
         switch (cf.kind()) {
           case VM::ControlFlow::Kind::Void:
@@ -211,8 +211,8 @@ struct TraceTraits<VM::ControlFlow>
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::ControlFlow &cf,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::ControlFlow& cf,
+                       void const* start, void const* end)
     {
         switch (cf.kind()) {
           case VM::ControlFlow::Kind::Void:

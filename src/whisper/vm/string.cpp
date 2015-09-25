@@ -24,7 +24,7 @@ namespace VM {
 
 template <typename Handler>
 static inline void
-StringReadUTF8Codepoint(const uint8_t *utf8Bytes, Handler &handler)
+StringReadUTF8Codepoint(uint8_t const* utf8Bytes, Handler& handler)
 {
     uint8_t ch0 = utf8Bytes[0];
 
@@ -67,7 +67,7 @@ StringReadUTF8Codepoint(const uint8_t *utf8Bytes, Handler &handler)
     handler(4, result);
 }
 
-String::String(uint32_t byteLength, const uint8_t *data)
+String::String(uint32_t byteLength, uint8_t const* data)
   : length_(0)
 {
     std::copy(data, data + byteLength, data_);
@@ -79,54 +79,54 @@ String::String(uint32_t byteLength, const uint8_t *data)
         length_++;
 }
 
-/* static */ Result<String *>
-String::Create(AllocationContext acx, uint32_t byteLength, const uint8_t *data)
+/* static */ Result<String*>
+String::Create(AllocationContext acx, uint32_t byteLength, uint8_t const* data)
 {
     return acx.createSized<String>(CalculateSize(byteLength),
                                    byteLength, data);
 }
 
-/* static */ Result<String *>
-String::Create(AllocationContext acx, uint32_t byteLength, const char *data)
+/* static */ Result<String*>
+String::Create(AllocationContext acx, uint32_t byteLength, char const* data)
 {
-    return Create(acx, byteLength, reinterpret_cast<const uint8_t *>(data));
+    return Create(acx, byteLength, reinterpret_cast<uint8_t const*>(data));
 }
 
-/* static */ Result<String *>
-String::Create(AllocationContext acx, const char *data)
+/* static */ Result<String*>
+String::Create(AllocationContext acx, char const* data)
 {
     return Create(acx, strlen(data), data);
 }
 
-/* static */ Result<String *>
-String::Create(AllocationContext acx, const String *other)
+/* static */ Result<String*>
+String::Create(AllocationContext acx, String const* other)
 {
     return Create(acx, other->byteLength(), other->bytes());
 }
 
 bool
-String::equals(const String *other) const
+String::equals(String const* other) const
 {
     return (byteLength() == other->byteLength()) &&
            (memcmp(bytes(), other->bytes(), byteLength()) == 0);
 }
 
 bool
-String::equals(const char *str, uint32_t length) const
+String::equals(char const* str, uint32_t length) const
 {
     return (byteLength() == length) &&
            (memcmp(bytes(), str, length) == 0);
 }
 
 void
-String::advance(Cursor &cursor) const
+String::advance(Cursor& cursor) const
 {
     WH_ASSERT(cursor.offset() < byteLength());
 
     struct Handler {
-        const String *str;
-        Cursor &curs;
-        Handler(const String *s, Cursor &c) : str(s), curs(c) {}
+        String const* str;
+        Cursor& curs;
+        Handler(String const* s, Cursor& c) : str(s), curs(c) {}
         void operator ()(unsigned bytes, uint32_t codepoint) {
             WH_ASSERT(bytes > 0);
             WH_ASSERT(curs.offset() <= str->byteLength() - bytes);
@@ -139,15 +139,15 @@ String::advance(Cursor &cursor) const
 }
 
 unic_t
-String::read(const Cursor &cursor) const
+String::read(Cursor const& cursor) const
 {
     WH_ASSERT(cursor.offset() < byteLength());
 
     struct Handler {
-        const String *str;
-        const Cursor &curs;
+        String const* str;
+        Cursor const& curs;
         unic_t codepointOut;
-        Handler(const String *s, const Cursor &c)
+        Handler(String const* s, Cursor const& c)
           : str(s), curs(c), codepointOut(InvalidUnicode)
         {}
 
@@ -166,15 +166,15 @@ String::read(const Cursor &cursor) const
 }
 
 unic_t
-String::readAdvance(Cursor &cursor) const
+String::readAdvance(Cursor& cursor) const
 {
     WH_ASSERT(cursor.offset() < byteLength());
 
     struct Handler {
-        const String *str;
-        Cursor &curs;
+        String const* str;
+        Cursor& curs;
         unic_t codepointOut;
-        Handler(const String *s, Cursor &c)
+        Handler(String const* s, Cursor& c)
           : str(s), curs(c), codepointOut(InvalidUnicode)
         {}
 

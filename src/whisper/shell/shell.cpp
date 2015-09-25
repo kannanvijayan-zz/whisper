@@ -39,11 +39,11 @@ using namespace Whisper;
 // HeapTracer calculates the rooted object graph.
 struct HeapPrintVisitor : public TracerVisitor
 {
-    StackThing *lastRoot;
+    StackThing* lastRoot;
 
     HeapPrintVisitor() : lastRoot(nullptr) {}
 
-    virtual void visitStackRoot(StackThing *rootPtr) override {
+    virtual void visitStackRoot(StackThing* rootPtr) override {
         fprintf(stderr, "stack_%p [label=\"%s\\n@%p\"; shape=box];\n",
                 rootPtr, StackFormatString(rootPtr->format()), rootPtr);
         if (lastRoot) {
@@ -52,24 +52,24 @@ struct HeapPrintVisitor : public TracerVisitor
         }
         lastRoot = rootPtr;
     }
-    virtual void visitStackChild(StackThing *rootPtr, HeapThing *child)
+    virtual void visitStackChild(StackThing* rootPtr, HeapThing* child)
         override
     {
         fprintf(stderr, "stack_%p -> heap_%p;\n", rootPtr, child);
     }
 
-    virtual void visitHeapThing(HeapThing *heapThing) override {
+    virtual void visitHeapThing(HeapThing* heapThing) override {
         fprintf(stderr, "heap_%p [label=\"%s\\n@%p\"];\n",
                 heapThing, HeapFormatString(heapThing->format()), heapThing);
     }
-    virtual void visitHeapChild(HeapThing *parent, HeapThing *child)
+    virtual void visitHeapChild(HeapThing* parent, HeapThing* child)
         override
     {
         fprintf(stderr, "heap_%p -> heap_%p;\n", parent, child);
     }
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     std::cout << "Whisper says hello." << std::endl;
 
     // Open input file.
@@ -95,33 +95,33 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    ThreadContext *cx = runtime.threadContext();
+    ThreadContext* cx = runtime.threadContext();
     AllocationContext acx(cx->inTenured());
     Interp::BindSyntaxHandlers(acx, cx->global());
 
     // Create a new String containing the file name.
-    Local<VM::String *> filename(cx);
+    Local<VM::String*> filename(cx);
     if (!filename.setResult(VM::String::Create(acx, argv[1]))) {
         std::cerr << "Error creating filename string." << std::endl;
         return 1;
     }
 
     // Create a new SourceFile.
-    Local<VM::SourceFile *> sourceFile(cx);
+    Local<VM::SourceFile*> sourceFile(cx);
     if (!sourceFile.setResult(VM::SourceFile::Create(acx, filename))) {
         std::cerr << "Error creating source file." << std::endl;
         return 1;
     }
 
     // Parse a syntax tree from the source file.
-    Local<VM::PackedSyntaxTree *> packedSt(cx);
+    Local<VM::PackedSyntaxTree*> packedSt(cx);
     if (!packedSt.setResult(VM::SourceFile::ParseSyntaxTree(cx, sourceFile))) {
         std::cerr << "Error parsing syntax tree." << std::endl;
         return 1;
     }
 
     // Create a module scope object for the file.
-    Local<VM::ModuleScope *> module(cx);
+    Local<VM::ModuleScope*> module(cx);
     if (!module.setResult(VM::SourceFile::CreateScope(cx, sourceFile))) {
         std::cerr << "Error creating module scope." << std::endl;
         return 1;
@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
     // Interpret the file.
     Local<VM::ControlFlow> result(cx,
         Interp::InterpretSourceFile(cx, sourceFile,
-            module.handle().convertTo<VM::ScopeObject *>()));
+            module.handle().convertTo<VM::ScopeObject*>()));
 
     if (result->isError()) {
         std::cerr << "Error interpreting code!" << std::endl;

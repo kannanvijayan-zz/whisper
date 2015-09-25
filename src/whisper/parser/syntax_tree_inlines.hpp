@@ -16,14 +16,14 @@ namespace AST {
 
 #define PREDEC_(ntype) \
     template <typename Printer> \
-    void Print##ntype(const SourceReader &src, const ntype##Node *n, \
+    void Print##ntype(SourceReader const& src, ntype##Node const* n, \
                       Printer pr, int tabDepth);
     WHISPER_DEFN_SYNTAX_NODES(PREDEC_)
 #undef PREDEC_
 
 template <typename Printer>
 void
-PrintNode(const SourceReader &src, const BaseNode *node, Printer pr,
+PrintNode(SourceReader const& src, BaseNode const* node, Printer pr,
           int tabDepth)
 {
     switch (node->type()) {
@@ -39,7 +39,7 @@ PrintNode(const SourceReader &src, const BaseNode *node, Printer pr,
 
 template <typename Printer>
 void
-PrintToken(const SourceReader &src, const Token &token, Printer pr)
+PrintToken(SourceReader const& src, Token const& token, Printer pr)
 {
     pr(token.text(src), token.length());
 }
@@ -54,8 +54,8 @@ PrintTabDepth(int tabDepth, Printer pr)
 
 template <typename Printer>
 void
-PrintParenExpr(const SourceReader &src,
-               const ParenExprNode *node,
+PrintParenExpr(SourceReader const& src,
+               ParenExprNode const* node,
                Printer pr, int tabDepth)
 {
     pr("(");
@@ -65,8 +65,8 @@ PrintParenExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintNameExpr(const SourceReader &src,
-              const NameExprNode *node,
+PrintNameExpr(SourceReader const& src,
+              NameExprNode const* node,
               Printer pr, int tabDepth)
 {
     PrintToken(src, node->name(), pr);
@@ -74,8 +74,8 @@ PrintNameExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintIntegerExpr(const SourceReader &src,
-                 const IntegerExprNode *node,
+PrintIntegerExpr(SourceReader const& src,
+                 IntegerExprNode const* node,
                  Printer pr, int tabDepth)
 {
     PrintToken(src, node->token(), pr);
@@ -83,8 +83,8 @@ PrintIntegerExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintDotExpr(const SourceReader &src,
-             const DotExprNode *node,
+PrintDotExpr(SourceReader const& src,
+             DotExprNode const* node,
              Printer pr, int tabDepth)
 {
     PrintNode(src, node->target(), pr, tabDepth);
@@ -94,8 +94,8 @@ PrintDotExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintArrowExpr(const SourceReader &src,
-               const ArrowExprNode *node,
+PrintArrowExpr(SourceReader const& src,
+               ArrowExprNode const* node,
                Printer pr, int tabDepth)
 {
     PrintNode(src, node->target(), pr, tabDepth);
@@ -105,14 +105,14 @@ PrintArrowExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintCallExpr(const SourceReader &src,
-              const CallExprNode *node,
+PrintCallExpr(SourceReader const& src,
+              CallExprNode const* node,
               Printer pr, int tabDepth)
 {
     PrintNode(src, node->callee(), pr, tabDepth);
     pr("(");
     uint32_t i = 0;
-    for (const Expression *arg : node->args()) {
+    for (Expression const* arg : node->args()) {
         if (i > 0)
             pr(", ");
         PrintNode(src, arg, pr, tabDepth);
@@ -123,8 +123,8 @@ PrintCallExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintPosExpr(const SourceReader &src,
-             const PosExprNode *node,
+PrintPosExpr(SourceReader const& src,
+             PosExprNode const* node,
              Printer pr, int tabDepth)
 {
     pr("+");
@@ -133,8 +133,8 @@ PrintPosExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintNegExpr(const SourceReader &src,
-             const NegExprNode *node,
+PrintNegExpr(SourceReader const& src,
+             NegExprNode const* node,
              Printer pr, int tabDepth)
 {
     pr("-");
@@ -143,8 +143,8 @@ PrintNegExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintMulExpr(const SourceReader &src,
-             const MulExprNode *node,
+PrintMulExpr(SourceReader const& src,
+             MulExprNode const* node,
              Printer pr, int tabDepth)
 {
     pr("(");
@@ -156,8 +156,8 @@ PrintMulExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintDivExpr(const SourceReader &src,
-             const DivExprNode *node,
+PrintDivExpr(SourceReader const& src,
+             DivExprNode const* node,
              Printer pr, int tabDepth)
 {
     pr("(");
@@ -169,8 +169,8 @@ PrintDivExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintAddExpr(const SourceReader &src,
-             const AddExprNode *node,
+PrintAddExpr(SourceReader const& src,
+             AddExprNode const* node,
              Printer pr, int tabDepth)
 {
     pr("(");
@@ -182,8 +182,8 @@ PrintAddExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintSubExpr(const SourceReader &src,
-             const SubExprNode *node,
+PrintSubExpr(SourceReader const& src,
+             SubExprNode const* node,
              Printer pr, int tabDepth)
 {
     pr("(");
@@ -195,7 +195,7 @@ PrintSubExpr(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintEmptyStmt(const SourceReader &src, const EmptyStmtNode *node,
+PrintEmptyStmt(SourceReader const& src, EmptyStmtNode const* node,
                Printer pr, int tabDepth)
 {
     pr(";\n");
@@ -203,8 +203,8 @@ PrintEmptyStmt(const SourceReader &src, const EmptyStmtNode *node,
 
 template <typename Printer>
 void
-PrintExprStmt(const SourceReader &src,
-              const ExprStmtNode *node,
+PrintExprStmt(SourceReader const& src,
+              ExprStmtNode const* node,
               Printer pr, int tabDepth)
 {
     PrintNode(src, node->expr(), pr, tabDepth);
@@ -213,8 +213,8 @@ PrintExprStmt(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintReturnStmt(const SourceReader &src,
-                const ReturnStmtNode *node,
+PrintReturnStmt(SourceReader const& src,
+                ReturnStmtNode const* node,
                 Printer pr, int tabDepth)
 {
     pr("return");
@@ -227,12 +227,12 @@ PrintReturnStmt(const SourceReader &src,
 
 template <typename Printer>
 static void
-PrintBlock(const SourceReader &src,
-           const Block *block,
+PrintBlock(SourceReader const& src,
+           Block const* block,
            Printer pr, int tabDepth)
 {
     pr("{\n");
-    for (const Statement *stmt : block->statements()) {
+    for (Statement const* stmt : block->statements()) {
         PrintTabDepth(tabDepth+1, pr);
         PrintNode(src, stmt, pr, tabDepth+1);
     }
@@ -242,8 +242,8 @@ PrintBlock(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintIfStmt(const SourceReader &src,
-            const IfStmtNode *node,
+PrintIfStmt(SourceReader const& src,
+            IfStmtNode const* node,
             Printer pr, int tabDepth)
 {
     pr("if (");
@@ -251,7 +251,7 @@ PrintIfStmt(const SourceReader &src,
     pr(") ");
     PrintBlock(src, node->ifPair().block(), pr, tabDepth);
 
-    for (const IfStmtNode::CondPair &elsifPair : node->elsifPairs()) {
+    for (IfStmtNode::CondPair const& elsifPair : node->elsifPairs()) {
         pr(" elsif (");
         PrintNode(src, elsifPair.cond(), pr, tabDepth);
         pr(") ");
@@ -267,15 +267,15 @@ PrintIfStmt(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintDefStmt(const SourceReader &src,
-             const DefStmtNode *node,
+PrintDefStmt(SourceReader const& src,
+             DefStmtNode const* node,
              Printer pr, int tabDepth)
 {
     pr("def ");
     PrintToken(src, node->name(), pr);
     pr("(");
     unsigned i = 0;
-    for (const IdentifierToken &paramName : node->paramNames()) {
+    for (IdentifierToken const& paramName : node->paramNames()) {
         if (i > 0)
             pr(", ");
         PrintToken(src, paramName, pr);
@@ -288,13 +288,13 @@ PrintDefStmt(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintVarStmt(const SourceReader &src,
-             const VarStmtNode *node,
+PrintVarStmt(SourceReader const& src,
+             VarStmtNode const* node,
              Printer pr, int tabDepth)
 {
     pr("var ");
     unsigned i = 0;
-    for (const BindingStatement::Binding &binding : node->bindings()) {
+    for (BindingStatement::Binding const& binding : node->bindings()) {
         if (i > 0)
             pr(", ");
         PrintToken(src, binding.name(), pr);
@@ -309,13 +309,13 @@ PrintVarStmt(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintConstStmt(const SourceReader &src,
-               const ConstStmtNode *node,
+PrintConstStmt(SourceReader const& src,
+               ConstStmtNode const* node,
                Printer pr, int tabDepth)
 {
     pr("const ");
     unsigned i = 0;
-    for (const BindingStatement::Binding &binding : node->bindings()) {
+    for (BindingStatement::Binding const& binding : node->bindings()) {
         if (i > 0)
             pr(", ");
         PrintToken(src, binding.name(), pr);
@@ -329,8 +329,8 @@ PrintConstStmt(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintLoopStmt(const SourceReader &src,
-              const LoopStmtNode *node,
+PrintLoopStmt(SourceReader const& src,
+              LoopStmtNode const* node,
               Printer pr, int tabDepth)
 {
     pr("loop ");
@@ -340,10 +340,10 @@ PrintLoopStmt(const SourceReader &src,
 
 template <typename Printer>
 void
-PrintFile(const SourceReader &src, const FileNode *node,
+PrintFile(SourceReader const& src, FileNode const* node,
           Printer pr, int tabDepth)
 {
-    for (const Statement *stmt : node->statements()) {
+    for (Statement const* stmt : node->statements()) {
         PrintTabDepth(tabDepth, pr);
         PrintNode(src, stmt, pr, tabDepth);
     }

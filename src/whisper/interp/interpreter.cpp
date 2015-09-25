@@ -12,16 +12,16 @@ namespace Interp {
 
 
 VM::ControlFlow
-InterpretSourceFile(ThreadContext *cx,
-                    Handle<VM::SourceFile *> file,
-                    Handle<VM::ScopeObject *> scope)
+InterpretSourceFile(ThreadContext* cx,
+                    Handle<VM::SourceFile*> file,
+                    Handle<VM::ScopeObject*> scope)
 {
     WH_ASSERT(!cx->hasLastFrame());
     WH_ASSERT(file.get() != nullptr);
     WH_ASSERT(scope.get() != nullptr);
 
     // Try to make a function for the script.
-    Local<VM::PackedSyntaxTree *> st(cx);
+    Local<VM::PackedSyntaxTree*> st(cx);
     if (!st.setResult(VM::SourceFile::ParseSyntaxTree(cx, file)))
         return ErrorVal();
 
@@ -30,9 +30,9 @@ InterpretSourceFile(ThreadContext *cx,
 }
 
 VM::ControlFlow
-InterpretSyntax(ThreadContext *cx,
-                Handle<VM::ScopeObject *> scope,
-                Handle<VM::PackedSyntaxTree *> pst,
+InterpretSyntax(ThreadContext* cx,
+                Handle<VM::ScopeObject*> scope,
+                Handle<VM::PackedSyntaxTree*> pst,
                 uint32_t offset)
 {
     WH_ASSERT(!cx->hasLastFrame());
@@ -44,7 +44,7 @@ InterpretSyntax(ThreadContext *cx,
     SpewInterpNote("InterpretSyntax %s", AST::NodeTypeString(node->type()));
 
     // Interpret values based on type.
-    Local<VM::String *> name(cx);
+    Local<VM::String*> name(cx);
     switch (node->type()) {
       case AST::File:
         // scope.@File(...)
@@ -161,14 +161,14 @@ InterpretSyntax(ThreadContext *cx,
 }
 
 VM::ControlFlow
-DispatchSyntaxMethod(ThreadContext *cx,
-                     Handle<VM::ScopeObject *> scope,
-                     Handle<VM::String *> name,
-                     Handle<VM::PackedSyntaxTree *> pst,
+DispatchSyntaxMethod(ThreadContext* cx,
+                     Handle<VM::ScopeObject*> scope,
+                     Handle<VM::String*> name,
+                     Handle<VM::PackedSyntaxTree*> pst,
                      Handle<AST::PackedBaseNode> node)
 {
-    Local<VM::Wobject *> scopeObj(cx, scope.convertTo<VM::Wobject *>());
-    Local<VM::LookupState *> lookupState(cx);
+    Local<VM::Wobject*> scopeObj(cx, scope.convertTo<VM::Wobject*>());
+    Local<VM::LookupState*> lookupState(cx);
     Local<VM::PropertyDescriptor> propDesc(cx);
 
     // Lookup method name on scope.
@@ -190,7 +190,7 @@ DispatchSyntaxMethod(ThreadContext *cx,
         return cx->setExceptionRaised("Syntax method binding is not a method.",
                                       name.get());
     }
-    Local<VM::Function *> func(cx, propDesc->method());
+    Local<VM::Function*> func(cx, propDesc->method());
 
     // Function must be an operative.
     if (!func->isOperative()) {
@@ -207,11 +207,11 @@ DispatchSyntaxMethod(ThreadContext *cx,
 }
 
 VM::ControlFlow
-InvokeOperativeFunction(ThreadContext *cx,
-                        Handle<VM::LookupState *> lookupState,
-                        Handle<VM::ScopeObject *> callerScope,
-                        Handle<VM::Function *> func,
-                        Handle<VM::Wobject *> receiver,
+InvokeOperativeFunction(ThreadContext* cx,
+                        Handle<VM::LookupState*> lookupState,
+                        Handle<VM::ScopeObject*> callerScope,
+                        Handle<VM::Function*> func,
+                        Handle<VM::Wobject*> receiver,
                         Handle<VM::SyntaxTreeRef> stRef)
 {
     // Call native if native.
@@ -240,9 +240,9 @@ InvokeOperativeFunction(ThreadContext *cx,
 }
 
 VM::ControlFlow
-GetValueProperty(ThreadContext *cx,
+GetValueProperty(ThreadContext* cx,
                  Handle<VM::ValBox> value,
-                 Handle<VM::String *> name)
+                 Handle<VM::String*> name)
 {
     // Check if the value is an object.
     if (!value->isPointer()) {
@@ -251,16 +251,16 @@ GetValueProperty(ThreadContext *cx,
     }
 
     // Convert to wobject.
-    Local<VM::Wobject *> object(cx, value->objectPointer());
+    Local<VM::Wobject*> object(cx, value->objectPointer());
     return GetObjectProperty(cx, object, name);
 }
 
 VM::ControlFlow
-GetObjectProperty(ThreadContext *cx,
-                  Handle<VM::Wobject *> object,
-                  Handle<VM::String *> name)
+GetObjectProperty(ThreadContext* cx,
+                  Handle<VM::Wobject*> object,
+                  Handle<VM::String*> name)
 {
-    Local<VM::LookupState *> lookupState(cx);
+    Local<VM::LookupState*> lookupState(cx);
     Local<VM::PropertyDescriptor> propDesc(cx);
 
     Result<bool> lookupResult = VM::Wobject::LookupProperty(

@@ -16,18 +16,18 @@ using namespace Whisper;
 
 struct StackTracer
 {
-    std::unordered_set<HeapThing *> *seen;
-    std::list<HeapThing *> *remaining;
-    StackThing *node;
-    TracerVisitor *visitor;
+    std::unordered_set<HeapThing*>* seen;
+    std::list<HeapThing*>* remaining;
+    StackThing* node;
+    TracerVisitor* visitor;
 
-    StackTracer(std::unordered_set<HeapThing *> *seen,
-                std::list<HeapThing *> *remaining,
-                StackThing *node, TracerVisitor *visitor)
+    StackTracer(std::unordered_set<HeapThing*>* seen,
+                std::list<HeapThing*>* remaining,
+                StackThing* node, TracerVisitor* visitor)
       : seen(seen), remaining(remaining), node(node), visitor(visitor)
     {}
 
-    inline void operator () (const void *addr, HeapThing *ptr) {
+    inline void operator () (void const* addr, HeapThing* ptr) {
         if (seen->find(ptr) == seen->end()) {
             visitor->visitHeapThing(ptr);
             seen->insert(ptr);
@@ -39,18 +39,18 @@ struct StackTracer
 
 struct HeapTracer
 {
-    std::unordered_set<HeapThing *> *seen;
-    std::list<HeapThing *> *remaining;
-    HeapThing *node;
-    TracerVisitor *visitor;
+    std::unordered_set<HeapThing*>* seen;
+    std::list<HeapThing*>* remaining;
+    HeapThing* node;
+    TracerVisitor* visitor;
 
-    HeapTracer(std::unordered_set<HeapThing *> *seen,
-               std::list<HeapThing *> *remaining,
-               HeapThing *node, TracerVisitor *visitor)
+    HeapTracer(std::unordered_set<HeapThing*>* seen,
+               std::list<HeapThing*>* remaining,
+               HeapThing* node, TracerVisitor* visitor)
       : seen(seen), remaining(remaining), node(node), visitor(visitor)
     {}
 
-    inline void operator () (const void *addr, HeapThing *ptr) {
+    inline void operator () (void const* addr, HeapThing* ptr) {
         if (seen->find(ptr) == seen->end()) {
             visitor->visitHeapThing(ptr);
             seen->insert(ptr);
@@ -61,31 +61,31 @@ struct HeapTracer
 };
 
 void
-trace_heap(ThreadContext *cx, TracerVisitor *visitor)
+trace_heap(ThreadContext* cx, TracerVisitor* visitor)
 {
     // Set of seen heap-things.
-    std::unordered_set<HeapThing *> seen;
+    std::unordered_set<HeapThing*> seen;
 
     // List of heap-things left to visit in queue.
-    std::list<HeapThing *> remaining;
+    std::list<HeapThing*> remaining;
 
     // Add unrooted heap things hanging directly off of cx.
     if (cx->hasLastFrame()) {
-        HeapThing *lastFrameThing = HeapThing::From(cx->lastFrame());
+        HeapThing* lastFrameThing = HeapThing::From(cx->lastFrame());
         visitor->visitHeapThing(lastFrameThing);
         remaining.push_back(lastFrameThing);
         seen.insert(lastFrameThing);
     }
     if (cx->hasGlobal()) {
-        HeapThing *globalThing = HeapThing::From(cx->global());
+        HeapThing* globalThing = HeapThing::From(cx->global());
         visitor->visitHeapThing(globalThing);
         remaining.push_back(globalThing);
         seen.insert(globalThing);
     }
 
     // Visit all stack things.
-    for (LocalBase *loc = cx->locals(); loc != nullptr; loc = loc->next()) {
-        StackThing *stackThing = loc->stackThing();
+    for (LocalBase* loc = cx->locals(); loc != nullptr; loc = loc->next()) {
+        StackThing* stackThing = loc->stackThing();
         visitor->visitStackRoot(stackThing);
 
         StackTracer tracer(&seen, &remaining, stackThing, visitor);
@@ -94,7 +94,7 @@ trace_heap(ThreadContext *cx, TracerVisitor *visitor)
 
     // Process heap thing queue.
     while (!remaining.empty()) {
-        HeapThing *heapThing = remaining.front();
+        HeapThing* heapThing = remaining.front();
         remaining.pop_front();
 
         HeapTracer tracer(&seen, &remaining, heapThing, visitor);

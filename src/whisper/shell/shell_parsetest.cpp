@@ -18,16 +18,16 @@ using namespace Whisper;
 
 struct Printer
 {
-    void operator ()(const char *s) {
+    void operator ()(char const* s) {
         std::cerr << s;
     }
-    void operator ()(const uint8_t *s, uint32_t len) {
+    void operator ()(uint8_t const* s, uint32_t len) {
         for (size_t i = 0; i < len; i++)
             std::cerr << static_cast<char>(s[i]);
     }
 };
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     if (argc <= 1) {
         std::cerr << "No input file provided!" << std::endl;
@@ -50,32 +50,32 @@ int main(int argc, char **argv)
         std::cerr << "ThreadContext error: " << runtime.error() << std::endl;
         return 1;
     }
-    ThreadContext *cx = runtime.threadContext();
+    ThreadContext* cx = runtime.threadContext();
     AllocationContext acx(cx->inTenured());
 
     // Create a new String containing the file name.
-    Local<VM::String *> filename(cx);
+    Local<VM::String*> filename(cx);
     if (!filename.setResult(VM::String::Create(acx, argv[1]))) {
         std::cerr << "Error creating filename string." << std::endl;
         return 1;
     }
 
     // Create a new SourceFile.
-    Local<VM::SourceFile *> sourceFile(cx);
+    Local<VM::SourceFile*> sourceFile(cx);
     if (!sourceFile.setResult(VM::SourceFile::Create(acx, filename))) {
         std::cerr << "Error creating source file." << std::endl;
         return 1;
     }
 
     // Prase a syntax tree from the source file.
-    Local<VM::PackedSyntaxTree *> packedSt(cx);
+    Local<VM::PackedSyntaxTree*> packedSt(cx);
     if (!packedSt.setResult(VM::SourceFile::ParseSyntaxTree(cx, sourceFile))) {
         std::cerr << "Error parsing syntax tree." << std::endl;
         return 1;
     }
 
     // Print packed raw data.
-    Local<VM::Array<uint32_t> *> stData(cx, packedSt->data());
+    Local<VM::Array<uint32_t>*> stData(cx, packedSt->data());
     fprintf(stderr, "Packed Syntax Tree:\n");
     for (uint32_t bufi = 0; bufi < stData->length(); bufi += 4) {
         if (stData->length() - bufi >= 4) {
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
     }
 
     // Print constant pool.
-    Local<VM::Array<VM::Box> *> stConstants(cx, packedSt->constants());
+    Local<VM::Array<VM::Box>*> stConstants(cx, packedSt->constants());
     fprintf(stderr, "Constant Pool:\n");
     for (uint32_t i = 0; i < stConstants->length(); i++) {
         VM::Box box = stConstants->get(i);
@@ -107,7 +107,7 @@ int main(int argc, char **argv)
         box.snprint(buf, 50);
         fprintf(stderr, "[%04d]  %p\n", i, buf);
         if (box.isPointer()) {
-            HeapThing *thing = box.pointer<HeapThing>();
+            HeapThing* thing = box.pointer<HeapThing>();
             fprintf(stderr, "    Ptr to %s (size=%d)\n",
                     thing->header().formatString(),
                     thing->header().size());

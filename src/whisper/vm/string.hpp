@@ -30,22 +30,22 @@ class String
             return offset_;
         }
 
-        bool operator <(const Cursor &other) const {
+        bool operator <(Cursor const& other) const {
             return offset_ < other.offset_;
         }
-        bool operator <=(const Cursor &other) const {
+        bool operator <=(Cursor const& other) const {
             return offset_ <= other.offset_;
         }
-        bool operator >(const Cursor &other) const {
+        bool operator >(Cursor const& other) const {
             return offset_ > other.offset_;
         }
-        bool operator >=(const Cursor &other) const {
+        bool operator >=(Cursor const& other) const {
             return offset_ >= other.offset_;
         }
-        bool operator ==(const Cursor &other) const {
+        bool operator ==(Cursor const& other) const {
             return offset_ == other.offset_;
         }
-        bool operator !=(const Cursor &other) const {
+        bool operator !=(Cursor const& other) const {
             return offset_ != other.offset_;
         }
     };
@@ -58,18 +58,18 @@ class String
     uint8_t data_[0];
 
   public:
-    String(uint32_t byteLength, const uint8_t *data);
+    String(uint32_t byteLength, uint8_t const* data);
 
-    static Result<String *> Create(AllocationContext acx,
+    static Result<String*> Create(AllocationContext acx,
                                    uint32_t byteLength,
-                                   const uint8_t *data);
-    static Result<String *> Create(AllocationContext acx,
+                                   uint8_t const* data);
+    static Result<String*> Create(AllocationContext acx,
                                    uint32_t byteLength,
-                                   const char *data);
-    static Result<String *> Create(AllocationContext acx,
-                                   const char *data);
-    static Result<String *> Create(AllocationContext acx,
-                                   const String *other);
+                                   char const* data);
+    static Result<String*> Create(AllocationContext acx,
+                                   char const* data);
+    static Result<String*> Create(AllocationContext acx,
+                                   String const* other);
 
     static uint32_t CalculateSize(uint32_t byteLength) {
         // Always add 1 byte to the byteLength to allow for a terminating
@@ -93,15 +93,15 @@ class String
         return CalculateByteLength(size);
     }
 
-    const uint8_t *bytes() const {
+    uint8_t const* bytes() const {
         return data_;
     }
-    const char *c_chars() const {
-        return reinterpret_cast<const char *>(bytes());
+    char const* c_chars() const {
+        return reinterpret_cast<char const*>(bytes());
     }
 
-    bool equals(const String *other) const;
-    bool equals(const char *str, uint32_t length) const;
+    bool equals(String const* other) const;
+    bool equals(char const* str, uint32_t length) const;
 
     Cursor begin() const {
         return Cursor(0);
@@ -110,9 +110,9 @@ class String
         return Cursor(byteLength());
     }
 
-    void advance(Cursor &cursor) const;
-    unic_t read(const Cursor &cursor) const;
-    unic_t readAdvance(Cursor &cursor) const;
+    void advance(Cursor& cursor) const;
+    unic_t read(Cursor const& cursor) const;
+    unic_t readAdvance(Cursor& cursor) const;
 };
 
 

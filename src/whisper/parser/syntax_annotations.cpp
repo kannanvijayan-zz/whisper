@@ -15,14 +15,14 @@ SyntaxAnnotator::annotate()
     try {
         annotate(root_, nullptr);
         return true;
-    } catch (SyntaxAnnotatorError &err) {
+    } catch (SyntaxAnnotatorError& err) {
         WH_ASSERT(hasError());
         return false;
     }
 }
 
 void
-SyntaxAnnotator::annotate(BaseNode *node, BaseNode *parent)
+SyntaxAnnotator::annotate(BaseNode* node, BaseNode* parent)
 {
     WH_ASSERT(node != nullptr);
     switch (node->type()) {
@@ -38,37 +38,37 @@ SyntaxAnnotator::annotate(BaseNode *node, BaseNode *parent)
 }
 
 void
-SyntaxAnnotator::annotateThis(ThisNode *node, BaseNode *parent)
+SyntaxAnnotator::annotateThis(ThisNode* node, BaseNode* parent)
 {
 }
 
 void
-SyntaxAnnotator::annotateIdentifier(IdentifierNode *node, BaseNode *parent)
+SyntaxAnnotator::annotateIdentifier(IdentifierNode* node, BaseNode* parent)
 {
 }
 
 void
-SyntaxAnnotator::annotateNullLiteral(NullLiteralNode *node, BaseNode *parent)
+SyntaxAnnotator::annotateNullLiteral(NullLiteralNode* node, BaseNode* parent)
 {
 }
 
 void
-SyntaxAnnotator::annotateBooleanLiteral(BooleanLiteralNode *node,
-                                        BaseNode *parent)
+SyntaxAnnotator::annotateBooleanLiteral(BooleanLiteralNode* node,
+                                        BaseNode* parent)
 {
 }
 
 void
-SyntaxAnnotator::annotateNumericLiteral(NumericLiteralNode *node,
-                                        BaseNode *parent)
+SyntaxAnnotator::annotateNumericLiteral(NumericLiteralNode* node,
+                                        BaseNode* parent)
 {
     //
     // FIXME FIXME  Handle hex, values. FIXME FIXME
     //
 
     // Parse the numeric literal.
-    const NumericLiteralToken &tok = node->value();
-    const char *text = reinterpret_cast<const char *>(tok.text(source_));
+    NumericLiteralToken const& tok = node->value();
+    char const* text = reinterpret_cast<char const*>(tok.text(source_));
     uint32_t length = tok.length();
 
     WH_ASSERT(length > 0);
@@ -81,7 +81,7 @@ SyntaxAnnotator::annotateNumericLiteral(NumericLiteralNode *node,
     }
 
     // Try to parse an int32
-    const char *cur = text;
+    char const* cur = text;
     bool neg = false;
     if (*cur == '-') {
         neg = true;
@@ -123,19 +123,19 @@ SyntaxAnnotator::annotateNumericLiteral(NumericLiteralNode *node,
 }
 
 void
-SyntaxAnnotator::annotateStringLiteral(StringLiteralNode *node,
-                                       BaseNode *parent)
+SyntaxAnnotator::annotateStringLiteral(StringLiteralNode* node,
+                                       BaseNode* parent)
 {}
 
 void
 SyntaxAnnotator::annotateRegularExpressionLiteral(
-        RegularExpressionLiteralNode *node, BaseNode *parent)
+        RegularExpressionLiteralNode* node, BaseNode* parent)
 {}
 
 void
-SyntaxAnnotator::annotateArrayLiteral(ArrayLiteralNode *node, BaseNode *parent)
+SyntaxAnnotator::annotateArrayLiteral(ArrayLiteralNode* node, BaseNode* parent)
 {
-    for (ExpressionNode *expr : node->elements()) {
+    for (ExpressionNode* expr : node->elements()) {
         // expr may be null for array hole entries (e.g. [a,,b])
         if (expr)
             annotate(expr, node);
@@ -143,24 +143,24 @@ SyntaxAnnotator::annotateArrayLiteral(ArrayLiteralNode *node, BaseNode *parent)
 }
 
 void
-SyntaxAnnotator::annotateObjectLiteral(ObjectLiteralNode *node,
-                                       BaseNode *parent)
+SyntaxAnnotator::annotateObjectLiteral(ObjectLiteralNode* node,
+                                       BaseNode* parent)
 {
     emitError("Cannot handle object literal yet!");
 }
 
 void
 SyntaxAnnotator::annotateParenthesizedExpression(
-        ParenthesizedExpressionNode *node, BaseNode *parent)
+        ParenthesizedExpressionNode* node, BaseNode* parent)
 {
     annotate(node->subexpression(), node);
 }
 
 void
 SyntaxAnnotator::annotateFunctionExpression(
-        FunctionExpressionNode *node, BaseNode *parent)
+        FunctionExpressionNode* node, BaseNode* parent)
 {
-    for (SourceElementNode *sourceElem : node->functionBody()) {
+    for (SourceElementNode* sourceElem : node->functionBody()) {
         WH_ASSERT(sourceElem != nullptr);
         annotate(sourceElem, node);
     }
@@ -168,7 +168,7 @@ SyntaxAnnotator::annotateFunctionExpression(
 
 void
 SyntaxAnnotator::annotateGetElementExpression(
-        GetElementExpressionNode *node, BaseNode *parent)
+        GetElementExpressionNode* node, BaseNode* parent)
 {
     annotate(node->object(), node);
     annotate(node->element(), node);
@@ -176,17 +176,17 @@ SyntaxAnnotator::annotateGetElementExpression(
 
 void
 SyntaxAnnotator::annotateGetPropertyExpression(
-        GetPropertyExpressionNode *node, BaseNode *parent)
+        GetPropertyExpressionNode* node, BaseNode* parent)
 {
     annotate(node->object(), node);
 }
 
 void
 SyntaxAnnotator::annotateNewExpression(
-        NewExpressionNode *node, BaseNode *parent)
+        NewExpressionNode* node, BaseNode* parent)
 {
     annotate(node->constructor(), node);
-    for (ExpressionNode *arg : node->arguments()) {
+    for (ExpressionNode* arg : node->arguments()) {
         WH_ASSERT(arg != nullptr);
         annotate(arg, node);
     }
@@ -194,10 +194,10 @@ SyntaxAnnotator::annotateNewExpression(
 
 void
 SyntaxAnnotator::annotateCallExpression(
-        CallExpressionNode *node, BaseNode *parent)
+        CallExpressionNode* node, BaseNode* parent)
 {
     annotate(node->function(), node);
-    for (ExpressionNode *arg : node->arguments()) {
+    for (ExpressionNode* arg : node->arguments()) {
         WH_ASSERT(arg != nullptr);
         annotate(arg, node);
     }
@@ -205,7 +205,7 @@ SyntaxAnnotator::annotateCallExpression(
 
 #define DEF_UNARY_(name) \
 void \
-SyntaxAnnotator::annotate##name(name##Node *node, BaseNode *parent) \
+SyntaxAnnotator::annotate##name(name##Node* node, BaseNode* parent) \
 { \
     annotate(node->subexpression(), node); \
 }
@@ -227,7 +227,7 @@ DEF_UNARY_(LogicalNotExpression)
 
 #define DEF_BINARY_(name) \
 void \
-SyntaxAnnotator::annotate##name(name##Node *node, BaseNode *parent) \
+SyntaxAnnotator::annotate##name(name##Node* node, BaseNode* parent) \
 { \
     annotate(node->lhs(), node); \
     annotate(node->rhs(), node); \
@@ -262,7 +262,7 @@ DEF_BINARY_(CommaExpression)
 
 void
 SyntaxAnnotator::annotateConditionalExpression(
-        ConditionalExpressionNode *node, BaseNode *parent)
+        ConditionalExpressionNode* node, BaseNode* parent)
 {
     annotate(node->condition(), node);
     annotate(node->trueExpression(), node);
@@ -272,7 +272,7 @@ SyntaxAnnotator::annotateConditionalExpression(
 
 #define DEF_ASSIGN_(name) \
 void \
-SyntaxAnnotator::annotate##name(name##Node *node, BaseNode *parent) \
+SyntaxAnnotator::annotate##name(name##Node* node, BaseNode* parent) \
 { \
     annotate(node->lhs(), node); \
     annotate(node->rhs(), node); \
@@ -294,9 +294,9 @@ DEF_ASSIGN_(DivideAssignExpression)
 #undef DEF_ASSIGN_
 
 void
-SyntaxAnnotator::annotateBlock(BlockNode *node, BaseNode *parent)
+SyntaxAnnotator::annotateBlock(BlockNode* node, BaseNode* parent)
 {
-    for (SourceElementNode *sourceElem : node->sourceElements()) {
+    for (SourceElementNode* sourceElem : node->sourceElements()) {
         WH_ASSERT(sourceElem != nullptr);
         annotate(sourceElem, node);
     }
@@ -304,9 +304,9 @@ SyntaxAnnotator::annotateBlock(BlockNode *node, BaseNode *parent)
 
 void
 SyntaxAnnotator::annotateVariableStatement(
-        VariableStatementNode *node, BaseNode *parent)
+        VariableStatementNode* node, BaseNode* parent)
 {
-    for (const VariableDeclaration &decl : node->declarations()) {
+    for (VariableDeclaration const& decl : node->declarations()) {
         if (decl.initialiser())
             annotate(decl.initialiser(), node);
     }
@@ -314,19 +314,19 @@ SyntaxAnnotator::annotateVariableStatement(
 
 void
 SyntaxAnnotator::annotateEmptyStatement(
-        EmptyStatementNode *node, BaseNode *parent)
+        EmptyStatementNode* node, BaseNode* parent)
 {
 }
 
 void
 SyntaxAnnotator::annotateExpressionStatement(
-        ExpressionStatementNode *node, BaseNode *parent)
+        ExpressionStatementNode* node, BaseNode* parent)
 {
     annotate(node->expression(), node);
 }
 
 void
-SyntaxAnnotator::annotateIfStatement(IfStatementNode *node, BaseNode *parent)
+SyntaxAnnotator::annotateIfStatement(IfStatementNode* node, BaseNode* parent)
 {
     annotate(node->condition(), node);
     annotate(node->trueBody(), node);
@@ -335,7 +335,7 @@ SyntaxAnnotator::annotateIfStatement(IfStatementNode *node, BaseNode *parent)
 
 void
 SyntaxAnnotator::annotateDoWhileStatement(
-        DoWhileStatementNode *node, BaseNode *parent)
+        DoWhileStatementNode* node, BaseNode* parent)
 {
     annotate(node->body(), node);
     annotate(node->condition(), node);
@@ -343,7 +343,7 @@ SyntaxAnnotator::annotateDoWhileStatement(
 
 void
 SyntaxAnnotator::annotateWhileStatement(
-        WhileStatementNode *node, BaseNode *parent)
+        WhileStatementNode* node, BaseNode* parent)
 {
     annotate(node->condition(), node);
     annotate(node->body(), node);
@@ -351,7 +351,7 @@ SyntaxAnnotator::annotateWhileStatement(
 
 void
 SyntaxAnnotator::annotateForLoopStatement(
-        ForLoopStatementNode *node, BaseNode *parent)
+        ForLoopStatementNode* node, BaseNode* parent)
 {
     if (node->initial())
         annotate(node->initial(), node);
@@ -367,9 +367,9 @@ SyntaxAnnotator::annotateForLoopStatement(
 
 void
 SyntaxAnnotator::annotateForLoopVarStatement(
-        ForLoopVarStatementNode *node, BaseNode *parent)
+        ForLoopVarStatementNode* node, BaseNode* parent)
 {
-    for (const VariableDeclaration &decl : node->initial()) {
+    for (VariableDeclaration const& decl : node->initial()) {
         if (decl.initialiser())
             annotate(decl.initialiser(), node);
     }
@@ -385,7 +385,7 @@ SyntaxAnnotator::annotateForLoopVarStatement(
 
 void
 SyntaxAnnotator::annotateForInStatement(
-        ForInStatementNode *node, BaseNode *parent)
+        ForInStatementNode* node, BaseNode* parent)
 {
     annotate(node->lhs(), node);
     annotate(node->object(), node);
@@ -394,7 +394,7 @@ SyntaxAnnotator::annotateForInStatement(
 
 void
 SyntaxAnnotator::annotateForInVarStatement(
-        ForInVarStatementNode *node, BaseNode *parent)
+        ForInVarStatementNode* node, BaseNode* parent)
 {
     annotate(node->object(), node);
     annotate(node->body(), node);
@@ -402,19 +402,19 @@ SyntaxAnnotator::annotateForInVarStatement(
 
 void
 SyntaxAnnotator::annotateContinueStatement(
-        ContinueStatementNode *node, BaseNode *parent)
+        ContinueStatementNode* node, BaseNode* parent)
 {
 }
 
 void
 SyntaxAnnotator::annotateBreakStatement(
-        BreakStatementNode *node, BaseNode *parent)
+        BreakStatementNode* node, BaseNode* parent)
 {
 }
 
 void
 SyntaxAnnotator::annotateReturnStatement(
-        ReturnStatementNode *node, BaseNode *parent)
+        ReturnStatementNode* node, BaseNode* parent)
 {
     if (node->value())
         annotate(node->value(), node);
@@ -422,7 +422,7 @@ SyntaxAnnotator::annotateReturnStatement(
 
 void
 SyntaxAnnotator::annotateWithStatement(
-        WithStatementNode *node, BaseNode *parent)
+        WithStatementNode* node, BaseNode* parent)
 {
     annotate(node->value(), node);
     annotate(node->body(), node);
@@ -430,34 +430,34 @@ SyntaxAnnotator::annotateWithStatement(
 
 void
 SyntaxAnnotator::annotateSwitchStatement(
-        SwitchStatementNode *node, BaseNode *parent)
+        SwitchStatementNode* node, BaseNode* parent)
 {
     annotate(node->value(), node);
-    for (const SwitchStatementNode::CaseClause &clause : node->caseClauses()) {
+    for (SwitchStatementNode::CaseClause const& clause : node->caseClauses()) {
         if (clause.expression())
             annotate(clause.expression(), node);
-        for (StatementNode *stmt : clause.statements())
+        for (StatementNode* stmt : clause.statements())
             annotate(stmt, node);
     }
 }
 
 void
 SyntaxAnnotator::annotateLabelledStatement(
-        LabelledStatementNode *node, BaseNode *parent)
+        LabelledStatementNode* node, BaseNode* parent)
 {
     annotate(node->statement(), node);
 }
 
 void
 SyntaxAnnotator::annotateThrowStatement(
-        ThrowStatementNode *node, BaseNode *parent)
+        ThrowStatementNode* node, BaseNode* parent)
 {
     annotate(node->value(), node);
 }
 
 void
 SyntaxAnnotator::annotateTryCatchStatement(
-        TryCatchStatementNode *node, BaseNode *parent)
+        TryCatchStatementNode* node, BaseNode* parent)
 {
     annotate(node->tryBlock(), node);
     annotate(node->catchBlock(), node);
@@ -465,7 +465,7 @@ SyntaxAnnotator::annotateTryCatchStatement(
 
 void
 SyntaxAnnotator::annotateTryFinallyStatement(
-        TryFinallyStatementNode *node, BaseNode *parent)
+        TryFinallyStatementNode* node, BaseNode* parent)
 {
     annotate(node->tryBlock(), node);
     annotate(node->finallyBlock(), node);
@@ -473,7 +473,7 @@ SyntaxAnnotator::annotateTryFinallyStatement(
 
 void
 SyntaxAnnotator::annotateTryCatchFinallyStatement(
-        TryCatchFinallyStatementNode *node, BaseNode *parent)
+        TryCatchFinallyStatementNode* node, BaseNode* parent)
 {
     annotate(node->tryBlock(), node);
     annotate(node->catchBlock(), node);
@@ -482,36 +482,36 @@ SyntaxAnnotator::annotateTryCatchFinallyStatement(
 
 void
 SyntaxAnnotator::annotateDebuggerStatement(
-        DebuggerStatementNode *node, BaseNode *parent)
+        DebuggerStatementNode* node, BaseNode* parent)
 {
 }
 
 void
-SyntaxAnnotator::annotateProgram(ProgramNode *node, BaseNode *parent)
+SyntaxAnnotator::annotateProgram(ProgramNode* node, BaseNode* parent)
 {
     // Program nodes are always root nodes.
     WH_ASSERT(parent == nullptr);
 
-    for (SourceElementNode *sourceElem : node->sourceElements()) {
+    for (SourceElementNode* sourceElem : node->sourceElements()) {
         annotate(sourceElem, node);
     }
 }
 
 void
-SyntaxAnnotator::annotateFunctionDeclaration(FunctionDeclarationNode *node,
-                                               BaseNode *parent)
+SyntaxAnnotator::annotateFunctionDeclaration(FunctionDeclarationNode* node,
+                                               BaseNode* parent)
 {
     // Visit the FunctionExpression body source elems, but with the
     // declaration node as parent.
-    FunctionExpressionNode *func = node->func();
-    for (SourceElementNode *sourceElem : func->functionBody()) {
+    FunctionExpressionNode* func = node->func();
+    for (SourceElementNode* sourceElem : func->functionBody()) {
         annotate(sourceElem, node);
     }
 }
 
 
 void
-SyntaxAnnotator::emitError(const char *error)
+SyntaxAnnotator::emitError(char const* error)
 {
     WH_ASSERT(!error_);
     error_ = error;

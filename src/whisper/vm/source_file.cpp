@@ -14,14 +14,14 @@ namespace Whisper {
 namespace VM {
 
 
-/* static */ Result<SourceFile *>
-SourceFile::Create(AllocationContext acx, Handle<String *> path)
+/* static */ Result<SourceFile*>
+SourceFile::Create(AllocationContext acx, Handle<String*> path)
 {
     return acx.create<SourceFile>(path);
 }
 
-/* static */ Result<PackedSyntaxTree *>
-SourceFile::ParseSyntaxTree(ThreadContext *cx, Handle<SourceFile *> sourceFile)
+/* static */ Result<PackedSyntaxTree*>
+SourceFile::ParseSyntaxTree(ThreadContext* cx, Handle<SourceFile*> sourceFile)
 {
     if (sourceFile->hasSyntaxTree())
         return OkVal(sourceFile->syntaxTree());
@@ -41,7 +41,7 @@ SourceFile::ParseSyntaxTree(ThreadContext *cx, Handle<SourceFile *> sourceFile)
 
     Tokenizer tokenizer(inputFile);
     Parser parser(wrappedAllocator, tokenizer);
-    FileNode *fileNode = parser.parseFile();
+    FileNode* fileNode = parser.parseFile();
     if (!fileNode) {
         WH_ASSERT(parser.hasError());
         SpewParserError("Error during parse: %s", parser.error());
@@ -62,7 +62,7 @@ SourceFile::ParseSyntaxTree(ThreadContext *cx, Handle<SourceFile *> sourceFile)
     ArrayHandle<uint32_t> buffer = packedWriter->buffer();
     ArrayHandle<Box> constPool = packedWriter->constPool();
 
-    Local<PackedSyntaxTree *> packedSt(cx);
+    Local<PackedSyntaxTree*> packedSt(cx);
     if (!packedSt.setResult(PackedSyntaxTree::Create(acx, buffer, constPool)))
         return ErrorVal();
 
@@ -70,20 +70,20 @@ SourceFile::ParseSyntaxTree(ThreadContext *cx, Handle<SourceFile *> sourceFile)
     return OkVal(sourceFile->syntaxTree());
 }
 
-/* static */ Result<ModuleScope *>
-SourceFile::CreateScope(ThreadContext *cx, Handle<SourceFile *> sourceFile)
+/* static */ Result<ModuleScope*>
+SourceFile::CreateScope(ThreadContext* cx, Handle<SourceFile*> sourceFile)
 {
     AllocationContext acx = cx->inTenured();
 
     // Ensure we have a packed syntax tree.
-    Local<PackedSyntaxTree *> pst(cx);
+    Local<PackedSyntaxTree*> pst(cx);
     if (!pst.setResult(SourceFile::ParseSyntaxTree(cx, sourceFile)))
         return ErrorVal();
 
     // Create a module object for the file.  The caller scope for
     // the module is the global.
-    Local<GlobalScope *> global(cx, cx->global());
-    Local<ModuleScope *> module(acx);
+    Local<GlobalScope*> global(cx, cx->global());
+    Local<ModuleScope*> module(acx);
     if (!module.setResult(ModuleScope::Create(acx, global)))
         return ErrorVal();
 

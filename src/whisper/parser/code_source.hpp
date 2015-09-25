@@ -33,13 +33,13 @@ class CodeSource
   public:
     virtual ~CodeSource() {}
 
-    virtual const char *name() const = 0;
+    virtual char const* name() const = 0;
     virtual uint32_t size() const = 0;
 
-    virtual bool read(const uint8_t **dataOut, uint32_t *dataSizeOut) = 0;
+    virtual bool read(uint8_t const** dataOut, uint32_t* dataSizeOut) = 0;
 
     virtual bool hasError() const = 0;
-    virtual const char *error() const = 0;
+    virtual char const* error() const = 0;
 };
 
 //
@@ -53,15 +53,15 @@ class FileCodeSource : public CodeSource
     static constexpr unsigned ErrorMaxLength = 128;
 
   private:
-    const char *filename_;
+    char const* filename_;
     int fd_;
     uint32_t size_;
-    void *data_;
+    void* data_;
     bool hasError_;
     char error_[ErrorMaxLength];
 
   public:
-    FileCodeSource(const char *filename)
+    FileCodeSource(char const* filename)
       : CodeSource(),
         filename_(filename),
         fd_(-1),
@@ -79,7 +79,7 @@ class FileCodeSource : public CodeSource
         finalize();
     }
 
-    virtual const char *name() const override {
+    virtual char const* name() const override {
         WH_ASSERT(!hasError_);
         return filename_;
     }
@@ -88,12 +88,12 @@ class FileCodeSource : public CodeSource
         return size_;
     }
 
-    virtual bool read(const uint8_t **dataOut,
-                      uint32_t *dataSizeOut)
+    virtual bool read(uint8_t const** dataOut,
+                      uint32_t* dataSizeOut)
         override
     {
         WH_ASSERT(!hasError_);
-        *dataOut = reinterpret_cast<const uint8_t *>(data_);
+        *dataOut = reinterpret_cast<uint8_t const*>(data_);
         *dataSizeOut = size_;
         return true;
     }
@@ -101,7 +101,7 @@ class FileCodeSource : public CodeSource
     virtual bool hasError() const override {
         return hasError_;
     }
-    virtual const char *error() const override {
+    virtual char const* error() const override {
         WH_ASSERT(hasError_);
         return error_;
     }
@@ -110,8 +110,8 @@ class FileCodeSource : public CodeSource
     bool initialize();
     void finalize();
 
-    void setError(const char *msg);
-    void setError(const char *msg, const char *data);
+    void setError(char const* msg);
+    void setError(char const* msg, char const* data);
 };
 
 
@@ -124,19 +124,19 @@ class FileCodeSource : public CodeSource
 class SourceReader
 {
   private:
-    CodeSource &source_;
+    CodeSource& source_;
     uint32_t size_;
-    const uint8_t *start_;
-    const uint8_t *end_;
-    const uint8_t *cursor_;
+    uint8_t const* start_;
+    uint8_t const* end_;
+    uint8_t const* cursor_;
     bool atEndOfInput_;
 
-    const char *error_;
+    char const* error_;
 
   public:
-    SourceReader(CodeSource &source);
+    SourceReader(CodeSource& source);
 
-    CodeSource &source() const {
+    CodeSource& source() const {
         WH_ASSERT(!error_);
         return source_;
     }
@@ -145,16 +145,16 @@ class SourceReader
         return end_ - start_;
     }
 
-    const uint8_t *cursor() const {
+    uint8_t const* cursor() const {
         WH_ASSERT(!error_);
         return cursor_;
     }
-    const uint8_t *dataAt(uint32_t posn) const {
+    uint8_t const* dataAt(uint32_t posn) const {
         WH_ASSERT(posn <= bufferSize());
         return start_ + posn;
     }
 
-    uint32_t positionOf(const uint8_t *ptr) const {
+    uint32_t positionOf(uint8_t const* ptr) const {
         WH_ASSERT(!error_);
         WH_ASSERT(ptr >= start_ && ptr <= end_);
         return ptr - start_;
@@ -191,7 +191,7 @@ class SourceReader
     }
 
   private:
-    void installBuffer(const uint8_t *start, uint32_t size, uint32_t posn) {
+    void installBuffer(uint8_t const* start, uint32_t size, uint32_t posn) {
         WH_ASSERT(posn <= size);
         start_ = start;
         end_ = start_ + size;

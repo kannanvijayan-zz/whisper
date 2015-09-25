@@ -91,17 +91,17 @@ class TraceableThing
 
   public:
     template <typename T>
-    static TraceableThing *From(T *ptr) {
+    static TraceableThing* From(T* ptr) {
         static_assert(IsTraceableThingType<T>(),
                       "T is not TraceableThingType");
-        return reinterpret_cast<TraceableThing *>(ptr);
+        return reinterpret_cast<TraceableThing*>(ptr);
     }
 
     template <typename T>
-    static const TraceableThing *From(const T *ptr) {
+    static TraceableThing const* From(T const* ptr) {
         static_assert(IsTraceableThingType<T>(),
                       "T is not TraceableThingType");
-        return reinterpret_cast<const TraceableThing *>(ptr);
+        return reinterpret_cast<TraceableThing const*>(ptr);
     }
 };
 
@@ -126,12 +126,12 @@ class TraceableThing
 //      static constexpr bool IsLeaf;
 //
 //  template <typename Scanner>
-//  void Scan(Scanner &scanner, const T &t, void *start, void *end);
+//  void Scan(Scanner& scanner, T const& t, void const* start, void const* end);
 //      Scan the a thing of type T for references.
 //
 //      Assume |scanner| is a callable with the following signature:
 //
-//          void scanner(const void *addr, HeapThing *ptr);
+//          void scanner(void const* addr, HeapThing* ptr);
 //
 //      The |scanner| should be called for every reference to an HeapThing
 //      contained within T.  For each call, |addr| should be the address
@@ -148,12 +148,12 @@ class TraceableThing
 //      be a no-op.
 //
 //  template <typename Updater>
-//  void Update(Updater &updater, T &t, void *start, void *end);
+//  void Update(Updater& updater, T& t, void const* start, void const* end);
 //      Method to update a previously-scanned value with moved pointers.
 //
 //      Assume |updater| is a callable with the following signature:
 //
-//          HeapThing *updater(void *addr, HeapThing *ptr);
+//          HeapThing* updater(void* addr, HeapThing* ptr);
 //
 //      The |updater| should be called for every reference to an HeapThing
 //      contained within T (as with |SCAN| above).  If the returned pointer
@@ -185,12 +185,12 @@ struct TraceTraits
     // static constexpr bool IsLeaf = false;
 
     // template <typename Scanner>
-    // static void Scan(Scanner &scanner, const T &t,
-    //                  const void *start, const void *end);
+    // static void Scan(Scanner& scanner, T const& t,
+    //                  void const* start, void const* end);
 
     // template <typename Updater>
-    // static void Update(Updater &updater, T &t,
-    //                    const void *start, const void *end);
+    // static void Update(Updater& updater, T& t,
+    //                    void const* start, void const* end);
 };
 
 template <typename T>
@@ -202,13 +202,13 @@ struct UntracedTraceTraits
     static constexpr bool IsLeaf = true;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const T &t,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, T const& t,
+                     void const* start, void const* end)
     {}
 
     template <typename Updater>
-    static void Update(Updater &updater, T &t,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, T& t,
+                       void const* start, void const* end)
     {}
 };
 
@@ -235,13 +235,13 @@ struct DerefTraits
     DerefTraits() = delete;
 
     typedef T Type;
-    typedef const T ConstType;
+    typedef T const ConstType;
 
     // Given an reference to T, return a pointer to Type.
-    static inline ConstType *Deref(const T &t) {
+    static inline ConstType* Deref(T const& t) {
         return &t;
     }
-    static inline Type *Deref(T &t) {
+    static inline Type* Deref(T& t) {
         return &t;
     }
 };
@@ -263,9 +263,9 @@ class ScannerBox
     ScannerBox() {}
 
   public:
-    virtual void scanImpl(const void *addr, HeapThing *ptr) = 0;
+    virtual void scanImpl(void const* addr, HeapThing* ptr) = 0;
 
-    inline void operator () (const void *addr, HeapThing *ptr) {
+    inline void operator () (void const* addr, HeapThing* ptr) {
         scanImpl(addr, ptr);
     }
 };
@@ -274,15 +274,15 @@ template <typename Scanner>
 class ScannerBoxFor : public ScannerBox
 {
   private:
-    Scanner &scanner_;
+    Scanner& scanner_;
 
   public:
-    ScannerBoxFor(Scanner &scanner)
+    ScannerBoxFor(Scanner& scanner)
       : ScannerBox(),
         scanner_(scanner)
     {}
 
-    virtual void scanImpl(const void *addr, HeapThing *ptr) {
+    virtual void scanImpl(void const* addr, HeapThing* ptr) {
         scanner_(addr, ptr);
     }
 };
@@ -293,9 +293,9 @@ class UpdaterBox
     UpdaterBox() {}
 
   public:
-    virtual HeapThing *updateImpl(void *addr, HeapThing *ptr) = 0;
+    virtual HeapThing* updateImpl(void* addr, HeapThing* ptr) = 0;
 
-    inline HeapThing *operator () (void *addr, HeapThing *ptr) {
+    inline HeapThing* operator () (void* addr, HeapThing* ptr) {
         return updateImpl(addr, ptr);
     }
 };
@@ -304,32 +304,32 @@ template <typename Updater>
 class UpdaterBoxFor : public UpdaterBox
 {
   private:
-    Updater &updater_;
+    Updater& updater_;
 
   public:
-    UpdaterBoxFor(Updater &updater)
+    UpdaterBoxFor(Updater& updater)
       : UpdaterBox(),
         updater_(updater)
     {}
 
-    virtual HeapThing *updateImpl(void *addr, HeapThing *ptr) {
+    virtual HeapThing* updateImpl(void* addr, HeapThing* ptr) {
         return updater_(addr, ptr);
     }
 };
 
 
 void
-ScanStackThingImpl(ScannerBox &scanner, const StackThing *thing,
-                   const void *start, const void *end);
+ScanStackThingImpl(ScannerBox& scanner, StackThing const* thing,
+                   void const* start, void const* end);
 
 void
-UpdateStackThingImpl(UpdaterBox &updater, StackThing *thing,
-                     const void *start, const void *end);
+UpdateStackThingImpl(UpdaterBox& updater, StackThing* thing,
+                     void const* start, void const* end);
 
 template <typename Scanner>
 void
-ScanStackThing(Scanner &scanner, const StackThing *thing,
-               const void *start, const void *end)
+ScanStackThing(Scanner& scanner, StackThing const* thing,
+               void const* start, void const* end)
 {
     ScannerBoxFor<Scanner> scannerBox(scanner);
     ScanStackThingImpl(scannerBox, thing, start, end);
@@ -337,8 +337,8 @@ ScanStackThing(Scanner &scanner, const StackThing *thing,
 
 template <typename Updater>
 void
-UpdateStackThing(Updater &updater, StackThing *thing,
-                 const void *start, const void *end)
+UpdateStackThing(Updater& updater, StackThing* thing,
+                 void const* start, void const* end)
 {
     UpdaterBoxFor<Updater> updaterBox(updater);
     UpdateStackThingImpl(updaterBox, thing, start, end);
@@ -346,17 +346,17 @@ UpdateStackThing(Updater &updater, StackThing *thing,
 
 
 void
-ScanHeapThingImpl(ScannerBox &scanner, const HeapThing *thing,
-                  const void *start, const void *end);
+ScanHeapThingImpl(ScannerBox& scanner, HeapThing const* thing,
+                  void const* start, void const* end);
 
 void
-UpdateHeapThingImpl(UpdaterBox &updater, HeapThing *thing,
-                    const void *start, const void *end);
+UpdateHeapThingImpl(UpdaterBox& updater, HeapThing* thing,
+                    void const* start, void const* end);
 
 template <typename Scanner>
 void
-ScanHeapThing(Scanner &scanner, const HeapThing *thing,
-              const void *start, const void *end)
+ScanHeapThing(Scanner& scanner, HeapThing const* thing,
+              void const* start, void const* end)
 {
     ScannerBoxFor<Scanner> scannerBox(scanner);
     ScanHeapThingImpl(scannerBox, thing, start, end);
@@ -364,8 +364,8 @@ ScanHeapThing(Scanner &scanner, const HeapThing *thing,
 
 template <typename Updater>
 void
-UpdateHeapThing(Updater &updater, HeapThing *thing,
-                const void *start, const void *end)
+UpdateHeapThing(Updater& updater, HeapThing* thing,
+                void const* start, void const* end)
 {
     UpdaterBoxFor<Updater> updaterBox(updater);
     UpdateHeapThingImpl(updaterBox, thing, start, end);

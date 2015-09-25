@@ -12,35 +12,35 @@ namespace Whisper {
 namespace Interp {
 
 
-VM::ControlFlow InterpretSourceFile(ThreadContext *cx,
-                                Handle<VM::SourceFile *> file,
-                                Handle<VM::ScopeObject *> scope);
+VM::ControlFlow InterpretSourceFile(ThreadContext* cx,
+                                Handle<VM::SourceFile*> file,
+                                Handle<VM::ScopeObject*> scope);
 
-VM::ControlFlow InterpretSyntax(ThreadContext *cx,
-                            Handle<VM::ScopeObject *> scope,
-                            Handle<VM::PackedSyntaxTree *> pst,
+VM::ControlFlow InterpretSyntax(ThreadContext* cx,
+                            Handle<VM::ScopeObject*> scope,
+                            Handle<VM::PackedSyntaxTree*> pst,
                             uint32_t offset);
 
-VM::ControlFlow DispatchSyntaxMethod(ThreadContext *cx,
-                                 Handle<VM::ScopeObject *> scope,
-                                 Handle<VM::String *> name,
-                                 Handle<VM::PackedSyntaxTree *> pst,
+VM::ControlFlow DispatchSyntaxMethod(ThreadContext* cx,
+                                 Handle<VM::ScopeObject*> scope,
+                                 Handle<VM::String*> name,
+                                 Handle<VM::PackedSyntaxTree*> pst,
                                  Handle<AST::PackedBaseNode> node);
 
-VM::ControlFlow InvokeOperativeFunction(ThreadContext *cx,
-                                    Handle<VM::LookupState *> lookupState,
-                                    Handle<VM::ScopeObject *> callerScope,
-                                    Handle<VM::Function *> func,
-                                    Handle<VM::Wobject *> receiver,
+VM::ControlFlow InvokeOperativeFunction(ThreadContext* cx,
+                                    Handle<VM::LookupState*> lookupState,
+                                    Handle<VM::ScopeObject*> callerScope,
+                                    Handle<VM::Function*> func,
+                                    Handle<VM::Wobject*> receiver,
                                     Handle<VM::SyntaxTreeRef> stRef);
 
-VM::ControlFlow GetValueProperty(ThreadContext *cx,
+VM::ControlFlow GetValueProperty(ThreadContext* cx,
                                  Handle<VM::ValBox> value,
-                                 Handle<VM::String *> name);
+                                 Handle<VM::String*> name);
 
-VM::ControlFlow GetObjectProperty(ThreadContext *cx,
-                                  Handle<VM::Wobject *> object,
-                                  Handle<VM::String *> name);
+VM::ControlFlow GetObjectProperty(ThreadContext* cx,
+                                  Handle<VM::Wobject*> object,
+                                  Handle<VM::String*> name);
 
 
 } // namespace Interp

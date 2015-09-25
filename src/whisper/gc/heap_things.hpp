@@ -58,7 +58,7 @@ inline constexpr bool IsValidHeapFormat(HeapFormat fmt) {
 inline constexpr uint16_t HeapFormatValue(HeapFormat fmt) {
     return static_cast<uint16_t>(fmt);
 }
-const char *HeapFormatString(HeapFormat fmt);
+char const* HeapFormatString(HeapFormat fmt);
 
 
 // GC Generation
@@ -78,7 +78,7 @@ enum class Gen : uint8_t
 static constexpr bool IsValidGen(Gen gen) {
     return (gen >= Gen::None) && (gen < Gen::LIMIT);
 }
-const char *GenString(Gen gen);
+char const* GenString(Gen gen);
 
 // HeapHeader
 // ----------
@@ -175,7 +175,7 @@ class alignas(8) HeapHeader
     inline HeapFormat format() const {
         return static_cast<HeapFormat>(formatBitfield().value());
     }
-    inline const char *formatString() const {
+    inline char const* formatString() const {
         return HeapFormatString(format());
     }
     inline uint16_t card() const {
@@ -188,7 +188,7 @@ class alignas(8) HeapHeader
     inline Gen gen() const {
         return static_cast<Gen>(gcBitfield().value());
     }
-    inline const char *genString() const {
+    inline char const* genString() const {
         return GenString(gen());
     }
     inline bool inGen(Gen g) const {
@@ -205,11 +205,11 @@ class alignas(8) HeapHeader
         userBitfield().setValue(val);
     }
 
-    const void *payload() const {
-        return reinterpret_cast<const uint8_t *>(this) + sizeof(HeapHeader);
+    void const* payload() const {
+        return reinterpret_cast<uint8_t const*>(this) + sizeof(HeapHeader);
     }
-    void *payload() {
-        return reinterpret_cast<uint8_t *>(this) + sizeof(HeapHeader);
+    void* payload() {
+        return reinterpret_cast<uint8_t*>(this) + sizeof(HeapHeader);
     }
 
 #define METHOD_(fmt) \
@@ -316,43 +316,43 @@ class HeapThing
 
   public:
     template <typename T>
-    static inline HeapThing *From(T *ptr) {
+    static inline HeapThing* From(T* ptr) {
         static_assert(IsHeapThingType<T>(), "T is not HeapThingType.");
-        return reinterpret_cast<HeapThing *>(ptr);
+        return reinterpret_cast<HeapThing*>(ptr);
     }
     template <typename T>
-    static inline const HeapThing *From(const T *ptr) {
+    static inline const HeapThing* From(T const* ptr) {
         static_assert(IsHeapThingType<T>(), "T is not HeapThingType.");
-        return reinterpret_cast<const HeapThing *>(ptr);
+        return reinterpret_cast<HeapThing const*>(ptr);
     }
 
     template <typename T>
-    inline T *to() {
+    inline T* to() {
         static_assert(IsHeapThingType<T>(), "T is not HeapThingType.");
-        return reinterpret_cast<T *>(this);
+        return reinterpret_cast<T*>(this);
     }
     template <typename T>
-    inline const T *to() const {
+    inline T const* to() const {
         static_assert(IsHeapThingType<T>(), "T is not HeapThingType.");
-        return reinterpret_cast<const T *>(this);
+        return reinterpret_cast<T const*>(this);
     }
 
-    inline HeapHeader &header() {
-        return reinterpret_cast<HeapHeader *>(this)[-1];
+    inline HeapHeader& header() {
+        return reinterpret_cast<HeapHeader*>(this)[-1];
     }
-    inline const HeapHeader &header() const {
-        return reinterpret_cast<const HeapHeader *>(this)[-1];
+    inline HeapHeader const& header() const {
+        return reinterpret_cast<HeapHeader const*>(this)[-1];
     }
 
     inline uint32_t size() const {
         return header().size();
     }
 
-    inline const void *end() const {
-        return reinterpret_cast<const uint8_t *>(this) + size();
+    inline void const* end() const {
+        return reinterpret_cast<uint8_t const*>(this) + size();
     }
-    inline void *end() {
-        return reinterpret_cast<uint8_t *>(this) + size();
+    inline void* end() {
+        return reinterpret_cast<uint8_t*>(this) + size();
     }
 
     inline HeapFormat format() const {

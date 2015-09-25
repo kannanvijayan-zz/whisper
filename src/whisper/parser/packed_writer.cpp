@@ -8,7 +8,7 @@ namespace AST {
 
 
 bool
-PackedWriter::writeNode(const BaseNode *node)
+PackedWriter::writeNode(BaseNode const* node)
 {
     WH_ASSERT(!hasError());
     try {
@@ -50,7 +50,7 @@ PackedWriter::expandBuffer()
     if (newSize > MaxBufferSize)
         newSize = MaxBufferSize;
 
-    uint32_t *data = allocator_.allocate(newSize);
+    uint32_t* data = allocator_.allocate(newSize);
     std::copy(start_, end_, data);
     if (start_)
         allocator_.deallocate(start_, oldSize);
@@ -60,7 +60,7 @@ PackedWriter::expandBuffer()
 }
 
 uint32_t
-PackedWriter::addIdentifier(const IdentifierToken &ident)
+PackedWriter::addIdentifier(IdentifierToken const& ident)
 {
     // Ensure capacity in const pool.
     if (constPoolSize_ == constPoolCapacity_)
@@ -73,7 +73,7 @@ PackedWriter::addIdentifier(const IdentifierToken &ident)
     if (iter != identifierMap_.end())
         return iter->second;
 
-    Result<VM::String *> str =
+    Result<VM::String*> str =
         VM::String::Create(acx_, bytes, ident.text(src_));
     if (str.isError())
         emitError("Could not allocate identifier.");
@@ -108,7 +108,7 @@ PackedWriter::expandConstPool()
     else if (newCapacity > MaxConstPoolSize)
         newCapacity = MaxConstPoolSize;
 
-    VM::Box *newConstPool = alloc.allocate(newCapacity);
+    VM::Box* newConstPool = alloc.allocate(newCapacity);
     std::copy(constPool_, constPool_ + constPoolSize_, newConstPool);
     if (constPool_)
         alloc.deallocate(constPool_, constPoolCapacity_);
@@ -117,25 +117,25 @@ PackedWriter::expandConstPool()
 }
 
 void
-PackedWriter::writeParenExpr(const ParenExprNode *node)
+PackedWriter::writeParenExpr(ParenExprNode const* node)
 {
     writeNode(node->subexpr());
 }
 
 void
-PackedWriter::writeNameExpr(const NameExprNode *node)
+PackedWriter::writeNameExpr(NameExprNode const* node)
 {
     uint32_t identIdx = addIdentifier(node->name());
     write(identIdx);
 }
 
 void
-PackedWriter::parseInteger(const IntegerLiteralToken &token,
-                           int32_t *resultOut)
+PackedWriter::parseInteger(IntegerLiteralToken const& token,
+                           int32_t* resultOut)
 {
     WH_ASSERT(resultOut != nullptr);
 
-    const uint8_t *text = token.text(src_);
+    uint8_t const* text = token.text(src_);
     uint32_t len = token.length();
     if (token.hasFlag(Token::Int_BinPrefix)) {
         parseBinInteger(token, resultOut);
@@ -170,10 +170,10 @@ PackedWriter::parseInteger(const IntegerLiteralToken &token,
 }
 
 void
-PackedWriter::parseBinInteger(const IntegerLiteralToken &token,
-                              int32_t *resultOut)
+PackedWriter::parseBinInteger(IntegerLiteralToken const& token,
+                              int32_t* resultOut)
 {
-    const uint8_t *text = token.text(src_);
+    uint8_t const* text = token.text(src_);
     uint32_t len = token.length();
     WH_ASSERT(len > 2);
     WH_ASSERT(text[0] == '0');
@@ -197,10 +197,10 @@ PackedWriter::parseBinInteger(const IntegerLiteralToken &token,
 }
 
 void
-PackedWriter::parseOctInteger(const IntegerLiteralToken &token,
-                              int32_t *resultOut)
+PackedWriter::parseOctInteger(IntegerLiteralToken const& token,
+                              int32_t* resultOut)
 {
-    const uint8_t *text = token.text(src_);
+    uint8_t const* text = token.text(src_);
     uint32_t len = token.length();
     WH_ASSERT(len > 2);
     WH_ASSERT(text[0] == '0');
@@ -224,10 +224,10 @@ PackedWriter::parseOctInteger(const IntegerLiteralToken &token,
 }
 
 void
-PackedWriter::parseDecInteger(const IntegerLiteralToken &token,
-                              int32_t *resultOut)
+PackedWriter::parseDecInteger(IntegerLiteralToken const& token,
+                              int32_t* resultOut)
 {
-    const uint8_t *text = token.text(src_);
+    uint8_t const* text = token.text(src_);
     uint32_t len = token.length();
     WH_ASSERT(len > 2);
     WH_ASSERT(text[0] == '0');
@@ -252,10 +252,10 @@ PackedWriter::parseDecInteger(const IntegerLiteralToken &token,
 }
 
 void
-PackedWriter::parseHexInteger(const IntegerLiteralToken &token,
-                              int32_t *resultOut)
+PackedWriter::parseHexInteger(IntegerLiteralToken const& token,
+                              int32_t* resultOut)
 {
-    const uint8_t *text = token.text(src_);
+    uint8_t const* text = token.text(src_);
     uint32_t len = token.length();
     WH_ASSERT(len > 2);
     WH_ASSERT(text[0] == '0');
@@ -282,7 +282,7 @@ PackedWriter::parseHexInteger(const IntegerLiteralToken &token,
 }
 
 void
-PackedWriter::writeIntegerExpr(const IntegerExprNode *node)
+PackedWriter::writeIntegerExpr(IntegerExprNode const* node)
 {
     int32_t val;
     parseInteger(node->token(), &val);
@@ -290,7 +290,7 @@ PackedWriter::writeIntegerExpr(const IntegerExprNode *node)
 }
 
 void
-PackedWriter::writeDotExpr(const DotExprNode *node)
+PackedWriter::writeDotExpr(DotExprNode const* node)
 {
     // Write name index, followed by target expression.
     uint32_t identIdx = addIdentifier(node->name());
@@ -299,7 +299,7 @@ PackedWriter::writeDotExpr(const DotExprNode *node)
 }
 
 void
-PackedWriter::writeArrowExpr(const ArrowExprNode *node)
+PackedWriter::writeArrowExpr(ArrowExprNode const* node)
 {
     // Write name index, followed by target expression.
     uint32_t identIdx = addIdentifier(node->name());
@@ -308,7 +308,7 @@ PackedWriter::writeArrowExpr(const ArrowExprNode *node)
 }
 
 void
-PackedWriter::writeCallExpr(const CallExprNode *node)
+PackedWriter::writeCallExpr(CallExprNode const* node)
 {
     // TypeExtra: nargs
     // Format [argOffset1, ..., argOffsetN, callee..., arg1..., ..., argN...]
@@ -323,26 +323,26 @@ PackedWriter::writeCallExpr(const CallExprNode *node)
 
     // Write out callee, then arguments.
     writeNode(node->callee());
-    for (const Expression *arg : node->args()) {
+    for (Expression const* arg : node->args()) {
         writeOffsetDistance(&argOffsetPos);
         writeNode(arg);
     }
 }
 
 void
-PackedWriter::writePosExpr(const PosExprNode *node)
+PackedWriter::writePosExpr(PosExprNode const* node)
 {
     writeNode(node->subexpr());
 }
 
 void
-PackedWriter::writeNegExpr(const NegExprNode *node)
+PackedWriter::writeNegExpr(NegExprNode const* node)
 {
     writeNode(node->subexpr());
 }
 
 void
-PackedWriter::writeBinaryExpr(const Expression *lhs, const Expression *rhs)
+PackedWriter::writeBinaryExpr(Expression const* lhs, Expression const* rhs)
 {
     Position rhsOffsetPos = position();
     writeDummy();
@@ -352,42 +352,42 @@ PackedWriter::writeBinaryExpr(const Expression *lhs, const Expression *rhs)
 }
 
 void
-PackedWriter::writeMulExpr(const MulExprNode *node)
+PackedWriter::writeMulExpr(MulExprNode const* node)
 {
     writeBinaryExpr(node->lhs(), node->rhs());
 }
 
 void
-PackedWriter::writeDivExpr(const DivExprNode *node)
+PackedWriter::writeDivExpr(DivExprNode const* node)
 {
     writeBinaryExpr(node->lhs(), node->rhs());
 }
 
 void
-PackedWriter::writeAddExpr(const AddExprNode *node)
+PackedWriter::writeAddExpr(AddExprNode const* node)
 {
     writeBinaryExpr(node->lhs(), node->rhs());
 }
 
 void
-PackedWriter::writeSubExpr(const SubExprNode *node)
+PackedWriter::writeSubExpr(SubExprNode const* node)
 {
     writeBinaryExpr(node->lhs(), node->rhs());
 }
 
 void
-PackedWriter::writeEmptyStmt(const EmptyStmtNode *node)
+PackedWriter::writeEmptyStmt(EmptyStmtNode const* node)
 {
 }
 
 void
-PackedWriter::writeExprStmt(const ExprStmtNode *node)
+PackedWriter::writeExprStmt(ExprStmtNode const* node)
 {
     writeNode(node->expr());
 }
 
 void
-PackedWriter::writeReturnStmt(const ReturnStmtNode *node)
+PackedWriter::writeReturnStmt(ReturnStmtNode const* node)
 {
     if (node->hasExpr()) {
         writeTypeExtra(1);
@@ -396,7 +396,7 @@ PackedWriter::writeReturnStmt(const ReturnStmtNode *node)
 }
 
 void
-PackedWriter::writeBlock(const Block *block)
+PackedWriter::writeBlock(Block const* block)
 {
     WH_ASSERT(block->statements().size() <= MaxBlockStatements);
     Position offsetPosn = position();
@@ -405,7 +405,7 @@ PackedWriter::writeBlock(const Block *block)
         writeDummy();
 
     uint32_t i = 0;
-    for (const Statement *stmt : block->statements()) {
+    for (Statement const* stmt : block->statements()) {
         if (i > 0)
             writeOffsetDistance(&offsetPosn);
         writeNode(stmt);
@@ -414,7 +414,7 @@ PackedWriter::writeBlock(const Block *block)
 }
 
 void
-PackedWriter::writeSizedBlock(const Block *block)
+PackedWriter::writeSizedBlock(Block const* block)
 {
     if (block->statements().size() > MaxBlockStatements)
         emitError("Too many block statements.");
@@ -423,7 +423,7 @@ PackedWriter::writeSizedBlock(const Block *block)
 }
 
 void
-PackedWriter::writeIfStmt(const IfStmtNode *node)
+PackedWriter::writeIfStmt(IfStmtNode const* node)
 {
     // TypeExtra contains:
     // (NumElsifClauses << 1) | HasElseClause
@@ -451,7 +451,7 @@ PackedWriter::writeIfStmt(const IfStmtNode *node)
     writeOffsetDistance(&offsetPos);
     writeSizedBlock(node->ifPair().block());
 
-    for (const IfStmtNode::CondPair &elsifPair : node->elsifPairs()) {
+    for (IfStmtNode::CondPair const& elsifPair : node->elsifPairs()) {
         writeOffsetDistance(&offsetPos);
         writeNode(elsifPair.cond());
         writeOffsetDistance(&offsetPos);
@@ -465,7 +465,7 @@ PackedWriter::writeIfStmt(const IfStmtNode *node)
 }
 
 void
-PackedWriter::writeDefStmt(const DefStmtNode *node)
+PackedWriter::writeDefStmt(DefStmtNode const* node)
 {
     uint32_t numParams = node->paramNames().size();
     if (numParams > MaxParams)
@@ -476,7 +476,7 @@ PackedWriter::writeDefStmt(const DefStmtNode *node)
     uint32_t nameIdx = addIdentifier(node->name());
     write(nameIdx);
 
-    for (const IdentifierToken &paramName : node->paramNames()) {
+    for (IdentifierToken const& paramName : node->paramNames()) {
         uint32_t paramIdx = addIdentifier(paramName);
         write(paramIdx);
     }
@@ -485,7 +485,7 @@ PackedWriter::writeDefStmt(const DefStmtNode *node)
 }
 
 void
-PackedWriter::writeVarStmt(const VarStmtNode *node)
+PackedWriter::writeVarStmt(VarStmtNode const* node)
 {
     uint32_t numBindings = node->bindings().size();
     if (numBindings > MaxBindings)
@@ -494,12 +494,12 @@ PackedWriter::writeVarStmt(const VarStmtNode *node)
     writeTypeExtra(numBindings);
 
     Position offsetPos = position();
-    for (const BindingStatement::Binding &binding : node->bindings()) {
+    for (BindingStatement::Binding const& binding : node->bindings()) {
         write(addIdentifier(binding.name()));
         writeDummy();
     }
 
-    for (const BindingStatement::Binding &binding : node->bindings()) {
+    for (BindingStatement::Binding const& binding : node->bindings()) {
         offsetPos++;
         if (binding.hasValue()) {
             writeOffsetDistance(&offsetPos);
@@ -520,12 +520,12 @@ PackedWriter::writeConstStmt(const ConstStmtNode *node)
     writeTypeExtra(numBindings);
 
     Position offsetPos = position();
-    for (const BindingStatement::Binding &binding : node->bindings()) {
+    for (BindingStatement::Binding const& binding : node->bindings()) {
         write(addIdentifier(binding.name()));
         writeDummy();
     }
 
-    for (const BindingStatement::Binding &binding : node->bindings()) {
+    for (BindingStatement::Binding const& binding : node->bindings()) {
         WH_ASSERT(binding.hasValue());
         offsetPos++;
         writeOffsetDistance(&offsetPos);
@@ -534,14 +534,14 @@ PackedWriter::writeConstStmt(const ConstStmtNode *node)
 }
 
 void
-PackedWriter::writeLoopStmt(const LoopStmtNode *node)
+PackedWriter::writeLoopStmt(LoopStmtNode const* node)
 {
     writeTypeExtra(node->bodyBlock()->statements().size());
     writeBlock(node->bodyBlock());
 }
 
 void
-PackedWriter::writeFile(const FileNode *node)
+PackedWriter::writeFile(FileNode const* node)
 {
     uint32_t numStatements = node->statements().size();
     writeTypeExtra(numStatements);
@@ -552,7 +552,7 @@ PackedWriter::writeFile(const FileNode *node)
         writeDummy();
 
     int32_t i = 0;
-    for (const Statement *stmt : node->statements()) {
+    for (Statement const* stmt : node->statements()) {
         if (i > 0)
             writeOffsetDistance(&offsetPosn);
         writeNode(stmt);

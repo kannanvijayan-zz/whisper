@@ -34,22 +34,22 @@ class Function
         return HeapThing::From(this)->isScriptedFunction();
     }
 
-    const NativeFunction *asNative() const {
+    NativeFunction const* asNative() const {
         WH_ASSERT(isNative());
-        return reinterpret_cast<const NativeFunction *>(this);
+        return reinterpret_cast<NativeFunction const*>(this);
     }
-    NativeFunction *asNative() {
+    NativeFunction* asNative() {
         WH_ASSERT(isNative());
-        return reinterpret_cast<NativeFunction *>(this);
+        return reinterpret_cast<NativeFunction*>(this);
     }
 
-    const ScriptedFunction *asScripted() const {
+    ScriptedFunction const* asScripted() const {
         WH_ASSERT(isScripted());
-        return reinterpret_cast<const ScriptedFunction *>(this);
+        return reinterpret_cast<ScriptedFunction const*>(this);
     }
-    ScriptedFunction *asScripted() {
+    ScriptedFunction* asScripted() {
         WH_ASSERT(isScripted());
-        return reinterpret_cast<ScriptedFunction *>(this);
+        return reinterpret_cast<ScriptedFunction*>(this);
     }
 
     bool isApplicative() const;
@@ -65,7 +65,7 @@ class Function
             return false;
         }
     }
-    static bool IsFunction(HeapThing *heapThing) {
+    static bool IsFunction(HeapThing* heapThing) {
         return IsFunctionFormat(heapThing->format());
     }
 };
@@ -75,15 +75,15 @@ class NativeCallInfo
     friend struct TraceTraits<NativeCallInfo>;
 
   private:
-    StackField<LookupState *> lookupState_;
-    StackField<ScopeObject *> callerScope_;
-    StackField<NativeFunction *> calleeFunc_;
+    StackField<LookupState*> lookupState_;
+    StackField<ScopeObject*> callerScope_;
+    StackField<NativeFunction*> calleeFunc_;
     StackField<ValBox> receiver_;
 
   public:
-    NativeCallInfo(LookupState *lookupState,
-                   ScopeObject *callerScope,
-                   NativeFunction *calleeFunc,
+    NativeCallInfo(LookupState* lookupState,
+                   ScopeObject* callerScope,
+                   NativeFunction* calleeFunc,
                    ValBox receiver)
       : lookupState_(lookupState),
         callerScope_(callerScope),
@@ -96,13 +96,13 @@ class NativeCallInfo
         WH_ASSERT(receiver_->isValid());
     }
 
-    Handle<LookupState *> lookupState() const {
+    Handle<LookupState*> lookupState() const {
         return lookupState_;
     }
-    Handle<ScopeObject *> callerScope() const {
+    Handle<ScopeObject*> callerScope() const {
         return callerScope_;
     }
-    Handle<NativeFunction *> calleeFunc() const {
+    Handle<NativeFunction*> calleeFunc() const {
         return calleeFunc_;
     }
     Handle<ValBox> receiver() const {
@@ -111,13 +111,13 @@ class NativeCallInfo
 };
 
 typedef OkResult (*NativeApplicativeFuncPtr)(
-        ThreadContext *cx,
+        ThreadContext* cx,
         Handle<NativeCallInfo> callInfo,
         ArrayHandle<ValBox> args,
         MutHandle<ValBox> result);
 
 typedef ControlFlow (*NativeOperativeFuncPtr)(
-        ThreadContext *cx,
+        ThreadContext* cx,
         Handle<NativeCallInfo> callInfo,
         ArrayHandle<SyntaxTreeRef> args);
 
@@ -133,10 +133,10 @@ class NativeFunction : public Function
         NativeOperativeFuncPtr operative_;
     };
 
-    HeapHeader &header() {
+    HeapHeader& header() {
         return HeapThing::From(this)->header();
     }
-    const HeapHeader &header() const {
+    HeapHeader const& header() const {
         return HeapThing::From(this)->header();
     }
 
@@ -150,9 +150,9 @@ class NativeFunction : public Function
         operative_ = operative;
     }
 
-    static Result<NativeFunction *> Create(AllocationContext acx,
+    static Result<NativeFunction*> Create(AllocationContext acx,
                                            NativeApplicativeFuncPtr app);
-    static Result<NativeFunction *> Create(AllocationContext acx,
+    static Result<NativeFunction*> Create(AllocationContext acx,
                                            NativeOperativeFuncPtr oper);
 
     bool isApplicative() const {
@@ -179,22 +179,22 @@ class ScriptedFunction : public Function
     static constexpr uint8_t OperativeFlag = 0x1;
 
     // The syntax tree of the definition.
-    HeapField<PackedSyntaxTree *> pst_;
+    HeapField<PackedSyntaxTree*> pst_;
     uint32_t offset_;
 
     // The scope chain for the function.
-    HeapField<ScopeObject *> scopeChain_;
+    HeapField<ScopeObject*> scopeChain_;
 
-    HeapHeader &header() {
+    HeapHeader& header() {
         return HeapThing::From(this)->header();
     }
-    const HeapHeader &header() const {
+    HeapHeader const& header() const {
         return HeapThing::From(this)->header();
     }
   public:
-    ScriptedFunction(PackedSyntaxTree *pst,
+    ScriptedFunction(PackedSyntaxTree* pst,
                      uint32_t offset,
-                     ScopeObject *scopeChain,
+                     ScopeObject* scopeChain,
                      bool isOperative)
       : pst_(pst),
         offset_(offset),
@@ -207,11 +207,11 @@ class ScriptedFunction : public Function
             header().setUserData(OperativeFlag);
     }
 
-    static Result<ScriptedFunction *> Create(
+    static Result<ScriptedFunction*> Create(
             AllocationContext acx,
-            Handle<PackedSyntaxTree *> pst,
+            Handle<PackedSyntaxTree*> pst,
             uint32_t offset,
-            Handle<ScopeObject *> scopeChain,
+            Handle<ScopeObject*> scopeChain,
             bool isOperative);
 
     bool isApplicative() const {
@@ -221,13 +221,13 @@ class ScriptedFunction : public Function
         return (header().userData() & OperativeFlag) != 0;
     }
 
-    PackedSyntaxTree *pst() const {
+    PackedSyntaxTree* pst() const {
         return pst_;
     }
     uint32_t offset() const {
         return offset_;
     }
-    ScopeObject *scopeChain() const {
+    ScopeObject* scopeChain() const {
         return scopeChain_;
     }
 };
@@ -237,36 +237,36 @@ class FunctionObject : public HashObject
 {
     friend struct TraceTraits<FunctionObject>;
   private:
-    HeapField<Function *> func_;
+    HeapField<Function*> func_;
 
   public:
-    FunctionObject(Handle<Array<Wobject *> *> delegates,
-                   Handle<PropertyDict *> dict,
-                   Handle<Function *> func)
+    FunctionObject(Handle<Array<Wobject*>*> delegates,
+                   Handle<PropertyDict*> dict,
+                   Handle<Function*> func)
       : HashObject(delegates, dict),
         func_(func)
     {}
 
-    static Result<FunctionObject *> Create(
+    static Result<FunctionObject*> Create(
             AllocationContext acx,
-            Handle<Function *> func);
+            Handle<Function*> func);
 
-    Function *func() const {
+    Function* func() const {
         return func_;
     }
 
     static void GetDelegates(AllocationContext acx,
-                             Handle<FunctionObject *> obj,
-                             MutHandle<Array<Wobject *> *> delegatesOut);
+                             Handle<FunctionObject*> obj,
+                             MutHandle<Array<Wobject*>*> delegatesOut);
 
     static bool GetProperty(AllocationContext acx,
-                            Handle<FunctionObject *> obj,
-                            Handle<String *> name,
+                            Handle<FunctionObject*> obj,
+                            Handle<String*> name,
                             MutHandle<PropertyDescriptor> result);
 
     static OkResult DefineProperty(AllocationContext acx,
-                                   Handle<FunctionObject *> obj,
-                                   Handle<String *> name,
+                                   Handle<FunctionObject*> obj,
+                                   Handle<String*> name,
                                    Handle<PropertyDescriptor> defn);
 };
 
@@ -292,16 +292,16 @@ struct TraceTraits<VM::ScriptedFunction>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::ScriptedFunction &func,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::ScriptedFunction const& func,
+                     void const* start, void const* end)
     {
         func.pst_.scan(scanner, start, end);
         func.scopeChain_.scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::ScriptedFunction &func,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::ScriptedFunction& func,
+                       void const* start, void const* end)
     {
         func.pst_.update(updater, start, end);
         func.scopeChain_.update(updater, start, end);
@@ -317,15 +317,15 @@ struct TraceTraits<VM::FunctionObject>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::FunctionObject &obj,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::FunctionObject const& obj,
+                     void const* start, void const* end)
     {
         obj.func_.scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::FunctionObject &obj,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::FunctionObject& obj,
+                       void const* start, void const* end)
     {
         obj.func_.update(updater, start, end);
     }
@@ -340,8 +340,8 @@ struct TraceTraits<VM::NativeCallInfo>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::NativeCallInfo &info,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::NativeCallInfo const& info,
+                     void const* start, void const* end)
     {
         info.lookupState_.scan(scanner, start, end);
         info.callerScope_.scan(scanner, start, end);
@@ -350,8 +350,8 @@ struct TraceTraits<VM::NativeCallInfo>
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::NativeCallInfo &info,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::NativeCallInfo& info,
+                       void const* start, void const* end)
     {
         info.lookupState_.update(updater, start, end);
         info.callerScope_.update(updater, start, end);

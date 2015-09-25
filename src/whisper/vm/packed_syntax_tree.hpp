@@ -21,12 +21,12 @@ class PackedSyntaxTree
     friend struct TraceTraits<PackedSyntaxTree>;
 
   private:
-    HeapField<Array<uint32_t> *> data_;
-    HeapField<Array<Box> *> constants_;
+    HeapField<Array<uint32_t>*> data_;
+    HeapField<Array<Box>*> constants_;
 
   public:
-    PackedSyntaxTree(Handle<Array<uint32_t> *> data,
-                     Handle<Array<Box> *> constants)
+    PackedSyntaxTree(Handle<Array<uint32_t>*> data,
+                     Handle<Array<Box>*> constants)
       : data_(data),
         constants_(constants)
     {
@@ -34,11 +34,11 @@ class PackedSyntaxTree
         WH_ASSERT(constants.get() != nullptr);
     }
 
-    static Result<PackedSyntaxTree *> Create(AllocationContext acx,
-                                             ArrayHandle<uint32_t> data,
-                                             ArrayHandle<Box> constPool);
+    static Result<PackedSyntaxTree*> Create(AllocationContext acx,
+                                            ArrayHandle<uint32_t> data,
+                                            ArrayHandle<Box> constPool);
 
-    Array<uint32_t> *data() const {
+    Array<uint32_t>* data() const {
         return data_;
     }
     uint32_t dataSize() const {
@@ -48,7 +48,7 @@ class PackedSyntaxTree
     uint32_t numConstants() const {
         return constants_->length();
     }
-    Array<Box> *constants() const {
+    Array<Box>* constants() const {
         return constants_;
     }
 
@@ -67,18 +67,18 @@ class SyntaxTreeRef
     friend struct TraceTraits<SyntaxTreeRef>;
 
   private:
-    StackField<PackedSyntaxTree *> pst_;
+    StackField<PackedSyntaxTree*> pst_;
     uint32_t offset_;
 
   public:
-    SyntaxTreeRef(PackedSyntaxTree *pst, uint32_t offset)
+    SyntaxTreeRef(PackedSyntaxTree* pst, uint32_t offset)
       : pst_(pst),
         offset_(offset)
     {
         WH_ASSERT(pst_.get() != nullptr);
     }
 
-    Handle<PackedSyntaxTree *> pst() const {
+    Handle<PackedSyntaxTree*> pst() const {
         return pst_;
     }
 
@@ -87,7 +87,7 @@ class SyntaxTreeRef
     }
 
     AST::NodeType nodeType() const;
-    const char *nodeTypeCString() const;
+    char const* nodeTypeCString() const;
 };
 
 //
@@ -102,30 +102,30 @@ class SyntaxTreeFragment
     friend struct TraceTraits<SyntaxTreeFragment>;
 
   private:
-    HeapField<PackedSyntaxTree *> pst_;
+    HeapField<PackedSyntaxTree*> pst_;
     uint32_t offset_;
 
   public:
-    SyntaxTreeFragment(Handle<PackedSyntaxTree *> pst, uint32_t offset)
+    SyntaxTreeFragment(Handle<PackedSyntaxTree*> pst, uint32_t offset)
       : pst_(pst),
         offset_(offset)
     {
         WH_ASSERT(pst.get() != nullptr);
     }
 
-    static Result<SyntaxTreeFragment *> Create(
+    static Result<SyntaxTreeFragment*> Create(
             AllocationContext acx,
-            Handle<PackedSyntaxTree *> pst,
+            Handle<PackedSyntaxTree*> pst,
             uint32_t offset);
 
-    static Result<SyntaxTreeFragment *> Create(
+    static Result<SyntaxTreeFragment*> Create(
             AllocationContext acx,
             Handle<SyntaxTreeRef> ref)
     {
         return Create(acx, ref->pst(), ref->offset());
     }
 
-    PackedSyntaxTree *pst() const {
+    PackedSyntaxTree* pst() const {
         return pst_;
     }
 
@@ -134,7 +134,7 @@ class SyntaxTreeFragment
     }
 
     AST::NodeType nodeType() const;
-    const char *nodeTypeCString() const;
+    char const* nodeTypeCString() const;
 };
 
 
@@ -154,16 +154,16 @@ struct TraceTraits<VM::PackedSyntaxTree>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::PackedSyntaxTree &packedSt,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::PackedSyntaxTree const& packedSt,
+                     void const* start, void const* end)
     {
         packedSt.data_.scan(scanner, start, end);
         packedSt.constants_.scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::PackedSyntaxTree &packedSt,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::PackedSyntaxTree& packedSt,
+                       void const* start, void const* end)
     {
         packedSt.data_.update(updater, start, end);
         packedSt.constants_.update(updater, start, end);
@@ -179,15 +179,15 @@ struct TraceTraits<VM::SyntaxTreeRef>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::SyntaxTreeRef &stRef,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::SyntaxTreeRef const& stRef,
+                     void const* start, void const* end)
     {
         stRef.pst_.scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::SyntaxTreeRef &stRef,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::SyntaxTreeRef& stRef,
+                       void const* start, void const* end)
     {
         stRef.pst_.update(updater, start, end);
     }
@@ -202,15 +202,15 @@ struct TraceTraits<VM::SyntaxTreeFragment>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const VM::SyntaxTreeFragment &stFrag,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, VM::SyntaxTreeFragment const& stFrag,
+                     void const* start, void const* end)
     {
         stFrag.pst_.scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, VM::SyntaxTreeFragment &stFrag,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, VM::SyntaxTreeFragment& stFrag,
+                       void const* start, void const* end)
     {
         stFrag.pst_.update(updater, start, end);
     }

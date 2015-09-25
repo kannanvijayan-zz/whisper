@@ -49,7 +49,7 @@ DEF_PRIM_TRAITS_(double);
 
 // By default pointers are expected to point to HeapThing structures.
 template <typename P>
-struct StackTraits<P *>
+struct StackTraits<P*>
 {
     static_assert(IsHeapThingType<P>(), "P is not a HeapThingType.");
     StackTraits() = delete;
@@ -59,7 +59,7 @@ struct StackTraits<P *>
 };
 
 template <typename P>
-struct FieldTraits<P *>
+struct FieldTraits<P*>
 {
     static_assert(IsHeapThingType<P>(), "P is not a HeapThingType.");
     FieldTraits() = delete;
@@ -68,12 +68,12 @@ struct FieldTraits<P *>
 };
 
 template <typename P>
-struct DerefTraits<P *>
+struct DerefTraits<P*>
 {
     static_assert(IsHeapThingType<P>(), "P is not a HeapThingType.");
     DerefTraits() = delete;
 
-    typedef P *T_;
+    typedef P* T_;
 
     // Regardless of whether pointer value itself is const,
     // the deref type is underlying pointed-to-type without
@@ -81,10 +81,10 @@ struct DerefTraits<P *>
     typedef P  Type;
     typedef P  ConstType;
 
-    static inline ConstType *Deref(const T_ &ptr) {
+    static inline ConstType* Deref(T_ const& ptr) {
         return ptr;
     }
-    static inline Type *Deref(T_ &ptr) {
+    static inline Type* Deref(T_& ptr) {
         return ptr;
     }
 };
@@ -93,32 +93,32 @@ struct DerefTraits<P *>
 //
 // Specialize StackFormatTraits for heap pointers.
 //
-// This just maps HeapPointer to the type |HeapThing *| for
+// This just maps HeapPointer to the type |HeapThing*| for
 // tracing.
 //
 template <>
 struct StackFormatTraits<StackFormat::HeapPointer>
 {
     StackFormatTraits() = delete;
-    typedef HeapThing *Type;
+    typedef HeapThing* Type;
 };
 
 //
-// Specialize HeapThing * for TraceTraits
+// Specialize HeapThing* for TraceTraits
 //
 template <>
-struct TraceTraits<HeapThing *>
+struct TraceTraits<HeapThing*>
 {
     TraceTraits() = delete;
 
     static constexpr bool Specialized = true;
     static constexpr bool IsLeaf = false;
 
-    typedef HeapThing * T_;
+    typedef HeapThing* T_;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const T_ &t,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, T_ const& t,
+                     void const* start, void const* end)
     {
         if (!t)
             return;
@@ -126,23 +126,23 @@ struct TraceTraits<HeapThing *>
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, T_ &t,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, T_& t,
+                       void const* start, void const* end)
     {
         if (!t)
             return;
-        HeapThing *ht = updater(&t, t);
+        HeapThing* ht = updater(&t, t);
         if (ht != t)
             t = ht;
     }
 };
 
 //
-// Specialize other pointers for trace-traits, so that Field<P *>
+// Specialize other pointers for trace-traits, so that Field<P*>
 // specializations can use them.
 //
 template <typename P>
-struct TraceTraits<P *>
+struct TraceTraits<P*>
 {
     // Traced pointers are assumed to be pointers to heap-things by default.
     static_assert(IsHeapThingType<P>(), "P is not a HeapThing type.");
@@ -150,11 +150,11 @@ struct TraceTraits<P *>
 
     static constexpr bool Specialized = true;
 
-    typedef P * T_;
+    typedef P* T_;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const T_ &t,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, T_ const& t,
+                     void const* start, void const* end)
     {
         if (!t)
             return;
@@ -162,12 +162,12 @@ struct TraceTraits<P *>
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, T_ &t,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, T_& t,
+                       void const* start, void const* end)
     {
         if (!t)
             return;
-        HeapThing *ht = updater(&t, HeapThing::From(t));
+        HeapThing* ht = updater(&t, HeapThing::From(t));
         if (ht->to<P>() != t)
             t = ht->to<P>();
     }

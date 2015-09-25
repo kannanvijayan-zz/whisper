@@ -28,22 +28,22 @@ class PackedSyntaxElement
   public:
     class Position {
       private:
-        const uint32_t *ptr_;
+        uint32_t const* ptr_;
       public:
-        Position(const uint32_t *ptr) : ptr_(ptr) {}
-        const uint32_t *ptr() const { return ptr_; }
+        Position(uint32_t const* ptr) : ptr_(ptr) {}
+        uint32_t const* ptr() const { return ptr_; }
     };
 
   protected:
-    StackField<VM::Array<uint32_t> *> text_;
+    StackField<VM::Array<uint32_t>*> text_;
     uint32_t offset_;
 
-    PackedSyntaxElement(VM::Array<uint32_t> *text, uint32_t offset)
+    PackedSyntaxElement(VM::Array<uint32_t>* text, uint32_t offset)
       : text_(text), offset_(offset)
     {}
 
   public:
-    const VM::Array<uint32_t> *text() const {
+    VM::Array<uint32_t> const* text() const {
         return text_;
     }
     uint32_t offset() const {
@@ -51,11 +51,11 @@ class PackedSyntaxElement
     }
 
   protected:
-    const uint32_t valAt(uint32_t idx) const {
+    uint32_t valAt(uint32_t idx) const {
         WH_ASSERT(offset_ + idx < text_->length());
         return text_->get(offset_ + idx);
     }
-    const uint32_t adjustedOffset(uint32_t idx) const {
+    uint32_t adjustedOffset(uint32_t idx) const {
         WH_ASSERT(offset_ + idx < text_->length());
         return offset_ + idx;
     }
@@ -75,10 +75,10 @@ class PackedBaseNode : public PackedSyntaxElement
     typedef typename Bitfield<uint32_t, uint32_t, 20, 12>::Const ExtraBitfield;
 
   public:
-    PackedBaseNode(VM::Array<uint32_t> *text, uint32_t offset)
+    PackedBaseNode(VM::Array<uint32_t>* text, uint32_t offset)
       : PackedSyntaxElement(text, offset)
     {}
-    PackedBaseNode(const PackedBaseNode &base)
+    PackedBaseNode(PackedBaseNode const& base)
       : PackedSyntaxElement(base.text_, base.offset_)
     {}
 
@@ -110,7 +110,7 @@ class PackedBlock : public PackedSyntaxElement
     uint32_t numStatements_;
 
   public:
-    PackedBlock(VM::Array<uint32_t> *text,
+    PackedBlock(VM::Array<uint32_t>* text,
                 uint32_t offset,
                 uint32_t numStatements)
       : PackedSyntaxElement(text, offset),
@@ -132,7 +132,7 @@ class PackedBlock : public PackedSyntaxElement
 class PackedSizedBlock : public PackedSyntaxElement
 {
   public:
-    PackedSizedBlock(VM::Array<uint32_t> *text, uint32_t offset)
+    PackedSizedBlock(VM::Array<uint32_t>* text, uint32_t offset)
       : PackedSyntaxElement(text, offset)
     {}
 
@@ -566,7 +566,7 @@ class PackedIntegerExprNode : public PackedBaseNode
 #define PACKED_NODE_CAST_IMPL_(ntype) \
     inline Packed##ntype##Node PackedBaseNode::as##ntype() const { \
         WH_ASSERT(is##ntype()); \
-        return *(reinterpret_cast<const Packed##ntype##Node *>(this)); \
+        return *(reinterpret_cast<Packed##ntype##Node const*>(this)); \
     }
     WHISPER_DEFN_SYNTAX_NODES(PACKED_NODE_CAST_IMPL_)
 #undef PACKED_NODE_CAST_IMPL_
@@ -613,15 +613,15 @@ struct TraceTraits<AST::PackedSyntaxElement>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner &scanner, const AST::PackedSyntaxElement &pse,
-                     const void *start, const void *end)
+    static void Scan(Scanner& scanner, AST::PackedSyntaxElement const& pse,
+                     void const* start, void const* end)
     {
         pse.text_.scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater &updater, AST::PackedSyntaxElement &pse,
-                       const void *start, const void *end)
+    static void Update(Updater& updater, AST::PackedSyntaxElement& pse,
+                       void const* start, void const* end)
     {
         pse.text_.update(updater, start, end);
     }

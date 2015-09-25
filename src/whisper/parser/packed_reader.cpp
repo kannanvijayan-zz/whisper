@@ -7,7 +7,7 @@ namespace AST {
 
 
 void
-PackedReader::visitNode(PackedBaseNode node, PackedVisitor *visitor) const
+PackedReader::visitNode(PackedBaseNode node, PackedVisitor* visitor) const
 {
     WH_ASSERT(node.text() >= text());
 
