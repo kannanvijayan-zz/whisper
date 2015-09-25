@@ -15,6 +15,10 @@ class PropertyDict
 {
   friend class TraceTraits<PropertyDict>;
   private:
+    static inline String* SENTINEL() {
+        return reinterpret_cast<String*>(0x1u);
+    }
+
     struct Entry
     {
         HeapField<String*> name;
@@ -24,6 +28,8 @@ class PropertyDict
     uint32_t capacity_;
     uint32_t size_;
     Entry entries_[0];
+
+    static constexpr float MaxFillRatio = 0.75;
 
   public:
     PropertyDict(uint32_t capacity)
@@ -45,12 +51,21 @@ class PropertyDict
         return size_;
     }
 
+    static uint32_t NameHash(String const* name);
+    Maybe<uint32_t> lookup(String const* name) const;
+
+    bool isValidEntry(uint32_t idx) const {
+        WH_ASSERT(idx < capacity());
+        String *name = entries_[idx].name.get();
+        return (name != nullptr) && (name != SENTINEL());
+    }
+
     String* name(uint32_t idx) const {
-        WH_ASSERT(idx < size());
+        WH_ASSERT(isValidEntry(idx));
         return entries_[idx].name;
     }
     Box value(uint32_t idx) const {
-        WH_ASSERT(idx < size());
+        WH_ASSERT(isValidEntry(idx));
         return entries_[idx].value;
     }
 
@@ -59,18 +74,10 @@ class PropertyDict
         entries_[idx].value.set(descr.value(), this);
     }
 
-    bool addEntry(String* name, PropertyDescriptor const& descr) {
-        WH_ASSERT(size() <= capacity());
-
-        uint32_t idx = size();
-        if (idx == capacity())
-            return false;
-
-        entries_[idx].name.init(name, this);
-        entries_[idx].value.init(descr.box(), this);
-        size_++;
-        return true;
+    bool canAddEntry() const {
+        return capacity_ * MaxFillRatio > size_;
     }
+    Maybe<uint32_t> addEntry(String* name, PropertyDescriptor const& descr);
 };
 
 

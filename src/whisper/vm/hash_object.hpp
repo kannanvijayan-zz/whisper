@@ -37,10 +37,6 @@ class HashObject : public Wobject
                              Handle<HashObject*> obj,
                              MutHandle<Array<Wobject*>*> delegatesOut);
 
-    static bool GetPropertyIndex(Handle<HashObject*> obj,
-                                 Handle<String*> name,
-                                 uint32_t* indexOut);
-
     static bool GetProperty(AllocationContext acx,
                             Handle<HashObject*> obj,
                             Handle<String*> name,

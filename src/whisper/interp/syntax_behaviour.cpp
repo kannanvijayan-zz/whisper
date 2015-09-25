@@ -306,6 +306,7 @@ IMPL_LIFT_FN_(NameExpr)
         return cx->setExceptionRaised(
             "@NameExpr called with wrong number of arguments.");
     }
+    SpewInterpNote("Lift_NameExpr: Looking up name!");
 
     WH_ASSERT(args.get(0).nodeType() == AST::NameExpr);
 
@@ -342,6 +343,7 @@ IMPL_LIFT_FN_(IntegerExpr)
         return cx->setExceptionRaised(
             "@IntegerExpr called with wrong number of arguments.");
     }
+    SpewInterpNote("Lift_IntegerExpr: Returning integer!");
 
     WH_ASSERT(args.get(0).nodeType() == AST::IntegerExpr);
 
