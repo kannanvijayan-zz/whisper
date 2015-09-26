@@ -50,8 +50,18 @@ HashObject::DefineProperty(AllocationContext acx,
     if (maybeIdx.hasValue())
         return OkVal();
 
-    // TODO: Try to enlarge dict and add.
-    return ErrorVal();
+    // Enlarge property dictionary.
+    Local<PropertyDict*> dict(acx, obj->dict_);
+    Result<PropertyDict*> newDict = PropertyDict::CreateEnlarged(acx, dict);
+    if (!newDict)
+        return ErrorVal();
+    obj->dict_.set(newDict.value(), obj.get());
+
+    // Add entry again.
+    maybeIdx = obj->dict_->addEntry(name.get(), defn);
+    WH_ASSERT(maybeIdx.hasValue());
+
+    return OkVal();
 }
 
 

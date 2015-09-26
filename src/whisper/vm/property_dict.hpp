@@ -35,7 +35,10 @@ class PropertyDict
     PropertyDict(uint32_t capacity)
       : capacity_(capacity),
         size_(0)
-    {}
+    {
+        for (uint32_t i = 0; i < capacity_; i++)
+            entries_[i].name.init(nullptr, this);
+    }
 
     static uint32_t CalculateSize(uint32_t capacity) {
         return sizeof(PropertyDict) + (sizeof(Entry) * capacity);
@@ -43,6 +46,9 @@ class PropertyDict
 
     static Result<PropertyDict*> Create(AllocationContext acx,
                                          uint32_t capacity);
+
+    static Result<PropertyDict*> CreateEnlarged(AllocationContext acx,
+                                                Handle<PropertyDict*> propDict);
 
     uint32_t capacity() const {
         return capacity_;

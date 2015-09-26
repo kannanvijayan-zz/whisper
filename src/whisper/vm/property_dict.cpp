@@ -12,6 +12,27 @@ PropertyDict::Create(AllocationContext acx, uint32_t capacity)
     return acx.createSized<PropertyDict>(CalculateSize(capacity), capacity);
 }
 
+/* static */ Result<PropertyDict*>
+PropertyDict::CreateEnlarged(AllocationContext acx,
+                             Handle<PropertyDict*> propDict)
+{
+    uint32_t newCapacity = propDict->capacity() * 2;
+    Result<PropertyDict*> newDictResult = Create(acx, newCapacity);
+    if (!newDictResult)
+        return ErrorVal();
+
+    // Copy entries.
+    Local<PropertyDict*> newDict(acx, newDictResult.value());
+    for (uint32_t i = 0; i < propDict->capacity(); i++) {
+        Entry &ent = propDict->entries_[i];
+        if (!ent.name.get() || ent.name.get() == SENTINEL())
+            continue;
+
+        newDict->addEntry(ent.name.get(), PropertyDescriptor(ent.value.get()));
+    }
+    return OkVal(newDict.get());
+}
+
 /* static */ uint32_t
 PropertyDict::NameHash(String const* name)
 {
