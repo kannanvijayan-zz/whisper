@@ -71,19 +71,17 @@ Local<T>::handle() const
     return Handle<T>(*this);
 }
 
-template <typename T, unsigned N>
+template <typename T>
 inline MutHandle<T>
-LocalArray<T, N>::mutHandle(uint32_t idx)
+LocalArrayBase<T, UINT32_MAX>::mutHandle(uint32_t idx)
 {
-    WH_ASSERT(idx < N);
     return MutHandle<T>(*address(idx));
 }
 
-template <typename T, unsigned N>
+template <typename T>
 inline Handle<T>
-LocalArray<T, N>::handle(uint32_t idx) const
+LocalArrayBase<T, UINT32_MAX>::handle(uint32_t idx) const
 {
-    WH_ASSERT(idx < N);
     return Handle<T>(*address(idx));
 }
 

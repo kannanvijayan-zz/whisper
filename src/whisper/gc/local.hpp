@@ -67,7 +67,7 @@ class LocalBase
     template <typename Updater>
     void update(Updater& updater, void* start, void* end);
 
-  private:
+  protected:
     void* dataAfter() {
         return reinterpret_cast<uint8_t*>(&header_) + sizeof(StackHeader);
     }
@@ -183,73 +183,70 @@ class Local : public LocalBase
     inline Handle<T> handle() const;
 };
 
-// LocalArray
-// ----------
+template <typename T, unsigned N> class LocalArrayBase;
+
+// Specialization for LocalArrayBase<T, UINT32_MAX> behaves as a
+// dynamically sized array.
 //
-// Checked holder class that refers to an array of stack-rooted
-// structures.
-template <typename T, unsigned N>
-class LocalArray : public LocalBase
+// It cannot be constructed.
+template <typename T>
+class LocalArrayBase<T, UINT32_MAX> : public LocalBase
 {
     static_assert(alignof(T) <= 8, "Bad alignment for stack-rooted type.");
     static_assert(StackTraits<T>::Specialized,
                   "StackTraits<T> not specialized.");
 
+  private:
     typedef typename DerefTraits<T>::Type DerefType;
     typedef typename DerefTraits<T>::ConstType ConstDerefType;
 
-  private:
-    T vals_[N];
+    inline LocalArrayBase(LocalArrayBase const& other) = delete;
+    inline LocalArrayBase(LocalArrayBase&& other) = delete;
+
+    inline LocalArrayBase(ThreadContext* threadContext, uint32_t length)
+      : LocalBase(threadContext, StackTraits<T>::Format, length, sizeof(T))
+    {}
+    inline LocalArrayBase(AllocationContext const& acx, uint32_t length)
+      : LocalBase(acx, StackTraits<T>::Format, length, sizeof(T))
+    {}
 
   public:
-    inline LocalArray(LocalArray<T, N> const& other) = delete;
-    inline LocalArray(LocalArray<T, N>&& other) = delete;
-
-    inline LocalArray(ThreadContext* threadContext)
-      : LocalBase(threadContext, StackTraits<T>::Format, N, sizeof(T)),
-        vals_()
-    {}
-    inline LocalArray(AllocationContext const& acx)
-      : LocalBase(acx, StackTraits<T>::Format, N, sizeof(T)),
-        vals_()
-    {}
-
     inline uint32_t length() {
         return this->count();
     }
 
     inline T const& get(uint32_t idx) const {
-        WH_ASSERT(idx < N);
-        return reinterpret_cast<T const&>(vals_[idx]);
+        WH_ASSERT(idx < length());
+        return reinterpret_cast<T const&>(this->elementAt(idx));
     }
     inline T& get(uint32_t idx) {
-        WH_ASSERT(idx < N);
-        return reinterpret_cast<T&>(vals_[idx]);
+        WH_ASSERT(idx < length());
+        return reinterpret_cast<T&>(this->elementAt(idx));
     }
 
     inline void set(uint32_t idx, T const& ref) {
-        WH_ASSERT(idx < N);
-        vals_[idx] = ref;
+        WH_ASSERT(idx < length());
+        this->elementAt(idx) = ref;
     }
     inline void set(uint32_t idx, T&& ref) {
-        WH_ASSERT(idx < N);
-        vals_[idx] = std::move(ref);
+        WH_ASSERT(idx < length());
+        this->elementAt(idx) = std::move(ref);
     }
     OkResult setResult(uint32_t idx, Result<T> const& result) {
-        WH_ASSERT(idx < N);
+        WH_ASSERT(idx < length());
         if (result.isError())
             return ErrorVal();
-        vals_[idx] = result.value();
+        this->elementAt(idx) = result.value();
         return OkVal();
     }
 
     inline T const* address(uint32_t idx) const {
-        WH_ASSERT(idx < N);
-        return &vals_[idx];
+        WH_ASSERT(idx < length());
+        return &this->elementAt(idx);
     }
     inline T* address(uint32_t idx) {
-        WH_ASSERT(idx < N);
-        return &vals_[idx];
+        WH_ASSERT(idx < length());
+        return &this->elementAt(idx);
     }
 
     inline operator T const*() {
@@ -268,7 +265,55 @@ class LocalArray : public LocalBase
     inline Handle<T> operator[](uint32_t idx) const {
         return handle(idx);
     }
+
+  private:
+    T& elementAt(uint32_t idx) {
+        WH_ASSERT(idx < count());
+        return *(reinterpret_cast<T*>(dataAfter()) + idx);
+    }
+    T const& elementAt(uint32_t idx) const {
+        WH_ASSERT(idx < count());
+        return *(reinterpret_cast<T const*>(dataAfter()) + idx);
+    }
 };
+
+// LocalArrayBase
+// --------------
+//
+// Checked holder class that refers to an array of stack-rooted
+// structures.
+template <typename T, uint32_t N>
+class LocalArrayBase : public LocalArrayBase<T, UINT32_MAX>
+{
+    static_assert(alignof(T) <= 8, "Bad alignment for stack-rooted type.");
+    static_assert(StackTraits<T>::Specialized,
+                  "StackTraits<T> not specialized.");
+    static_assert(N < UINT32_MAX, "Array size too large.");
+
+    typedef LocalArrayBase<T, UINT32_MAX> BaseType;
+
+    typedef typename DerefTraits<T>::Type DerefType;
+    typedef typename DerefTraits<T>::ConstType ConstDerefType;
+
+  private:
+    T vals_[N];
+
+  public:
+    inline LocalArrayBase(LocalArrayBase<T, N> const& other) = delete;
+    inline LocalArrayBase(LocalArrayBase<T, N>&& other) = delete;
+
+    inline LocalArrayBase(ThreadContext* threadContext)
+      : BaseType(threadContext, StackTraits<T>::Format, N, sizeof(T)),
+        vals_()
+    {}
+    inline LocalArrayBase(AllocationContext const& acx)
+      : BaseType(acx, StackTraits<T>::Format, N, sizeof(T)),
+        vals_()
+    {}
+};
+
+template <typename T, uint32_t N=UINT32_MAX>
+using LocalArray = LocalArrayBase<T, N>;
 
 
 } // namespace Whisper
