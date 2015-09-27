@@ -214,6 +214,10 @@ class LocalArray : public LocalBase
         vals_()
     {}
 
+    inline uint32_t length() {
+        return this->count();
+    }
+
     inline T const& get(uint32_t idx) const {
         WH_ASSERT(idx < N);
         return reinterpret_cast<T const&>(vals_[idx]);
