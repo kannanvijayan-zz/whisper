@@ -8,6 +8,7 @@
 #include "vm/runtime_state.hpp"
 #include "vm/function.hpp"
 #include "interp/interpreter.hpp"
+#include "interp/syntax_behaviour.hpp"
 
 namespace Whisper {
 namespace Interp {
