@@ -330,11 +330,16 @@ IMPL_LIFT_FN_(NameExpr)
     Local<VM::PropertyDescriptor> propDesc(cx);
 
     VM::ControlFlow propFlow = GetObjectProperty(cx, scopeObj, name);
-    WH_ASSERT(propFlow.isExpressionResult());
-    if (!propFlow.isValue())
-        return propFlow;
+    WH_ASSERT(propFlow.isExpressionResult() || propFlow.isVoid());
+    if (propFlow.isValue())
+        return VM::ControlFlow::Value(propFlow.value());
 
-    return VM::ControlFlow::Value(propFlow.value());
+    // Void control flow means that property was not found.
+    // Throw an error.
+    if (propFlow.isVoid())
+        return cx->setExceptionRaised("Name not found", name.get());
+
+    return propFlow;
 }
 
 IMPL_LIFT_FN_(IntegerExpr)
