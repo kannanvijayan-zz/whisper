@@ -28,9 +28,13 @@ class LocalBase
     inline LocalBase(LocalBase const& other) = delete;
     inline LocalBase(LocalBase&& other) = delete;
     inline LocalBase(ThreadContext* threadContext,
-                     StackFormat format, uint32_t size);
+                     StackFormat format,
+                     uint32_t count,
+                     uint32_t size);
     inline LocalBase(AllocationContext const& acx,
-                     StackFormat format, uint32_t size);
+                     StackFormat format,
+                     uint32_t count,
+                     uint32_t size);
     inline ~LocalBase();
 
   public:
@@ -100,28 +104,28 @@ class Local : public LocalBase
     inline Local(Local<T>&& other) = delete;
 
     inline Local(ThreadContext* threadContext)
-      : LocalBase(threadContext, StackTraits<T>::Format, sizeof(T)),
+      : LocalBase(threadContext, StackTraits<T>::Format, 1, sizeof(T)),
         val_()
     {}
     inline Local(ThreadContext* threadContext, T const& val)
-      : LocalBase(threadContext, StackTraits<T>::Format, sizeof(T)),
+      : LocalBase(threadContext, StackTraits<T>::Format, 1, sizeof(T)),
         val_(val)
     {}
     inline Local(ThreadContext* threadContext, T&& val)
-      : LocalBase(threadContext, StackTraits<T>::Format, sizeof(T)),
+      : LocalBase(threadContext, StackTraits<T>::Format, 1, sizeof(T)),
         val_(std::move(val))
     {}
 
     inline Local(AllocationContext const& acx)
-      : LocalBase(acx, StackTraits<T>::Format, sizeof(T)),
+      : LocalBase(acx, StackTraits<T>::Format, 1, sizeof(T)),
         val_()
     {}
     inline Local(AllocationContext const& acx, T const& val)
-      : LocalBase(acx, StackTraits<T>::Format, sizeof(T)),
+      : LocalBase(acx, StackTraits<T>::Format, 1, sizeof(T)),
         val_(val)
     {}
     inline Local(AllocationContext const& acx, T&& val)
-      : LocalBase(acx, StackTraits<T>::Format, sizeof(T)),
+      : LocalBase(acx, StackTraits<T>::Format, 1, sizeof(T)),
         val_(std::move(val))
     {}
 
@@ -177,6 +181,89 @@ class Local : public LocalBase
 
     inline MutHandle<T> mutHandle();
     inline Handle<T> handle() const;
+};
+
+// LocalArray
+// ----------
+//
+// Checked holder class that refers to an array of stack-rooted
+// structures.
+template <typename T, unsigned N>
+class LocalArray : public LocalBase
+{
+    static_assert(alignof(T) <= 8, "Bad alignment for stack-rooted type.");
+    static_assert(StackTraits<T>::Specialized,
+                  "StackTraits<T> not specialized.");
+
+    typedef typename DerefTraits<T>::Type DerefType;
+    typedef typename DerefTraits<T>::ConstType ConstDerefType;
+
+  private:
+    T vals_[N];
+
+  public:
+    inline LocalArray(LocalArray<T, N> const& other) = delete;
+    inline LocalArray(LocalArray<T, N>&& other) = delete;
+
+    inline LocalArray(ThreadContext* threadContext)
+      : LocalBase(threadContext, StackTraits<T>::Format, N, sizeof(T)),
+        vals_()
+    {}
+    inline LocalArray(AllocationContext const& acx)
+      : LocalBase(acx, StackTraits<T>::Format, N, sizeof(T)),
+        vals_()
+    {}
+
+    inline T const& get(uint32_t idx) const {
+        WH_ASSERT(idx < N);
+        return reinterpret_cast<T const&>(vals_[idx]);
+    }
+    inline T& get(uint32_t idx) {
+        WH_ASSERT(idx < N);
+        return reinterpret_cast<T&>(vals_[idx]);
+    }
+
+    inline void set(uint32_t idx, T const& ref) {
+        WH_ASSERT(idx < N);
+        vals_[idx] = ref;
+    }
+    inline void set(uint32_t idx, T&& ref) {
+        WH_ASSERT(idx < N);
+        vals_[idx] = std::move(ref);
+    }
+    OkResult setResult(uint32_t idx, Result<T> const& result) {
+        WH_ASSERT(idx < N);
+        if (result.isError())
+            return ErrorVal();
+        vals_[idx] = result.value();
+        return OkVal();
+    }
+
+    inline T const* address(uint32_t idx) const {
+        WH_ASSERT(idx < N);
+        return &vals_[idx];
+    }
+    inline T* address(uint32_t idx) {
+        WH_ASSERT(idx < N);
+        return &vals_[idx];
+    }
+
+    inline operator T const*() {
+        return address(0);
+    }
+    inline operator T*() {
+        return address(0);
+    }
+
+    inline MutHandle<T> mutHandle(uint32_t idx);
+    inline Handle<T> handle(uint32_t idx) const;
+
+    inline MutHandle<T> operator[](uint32_t idx) {
+        return mutHandle(idx);
+    }
+    inline Handle<T> operator[](uint32_t idx) const {
+        return handle(idx);
+    }
 };
 
 

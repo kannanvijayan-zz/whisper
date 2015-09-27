@@ -13,18 +13,22 @@ namespace Whisper {
 
 inline
 LocalBase::LocalBase(ThreadContext* threadContext,
-                     StackFormat format, uint32_t size)
+                     StackFormat format,
+                     uint32_t count,
+                     uint32_t size)
   : threadContext_(threadContext),
     next_(threadContext_->locals()),
-    header_(format, size, 1)
+    header_(format, size, count)
 {
     threadContext_->locals_ = this;
 }
 
 inline
 LocalBase::LocalBase(AllocationContext const& acx,
-                     StackFormat format, uint32_t size)
-  : LocalBase(acx.threadContext(), format, size)
+                     StackFormat format,
+                     uint32_t count,
+                     uint32_t size)
+  : LocalBase(acx.threadContext(), format, count, size)
 {}
 
 inline 
@@ -65,6 +69,22 @@ inline Handle<T>
 Local<T>::handle() const
 {
     return Handle<T>(*this);
+}
+
+template <typename T, unsigned N>
+inline MutHandle<T>
+LocalArray<T, N>::mutHandle(uint32_t idx)
+{
+    WH_ASSERT(idx < N);
+    return MutHandle<T>(*address(idx));
+}
+
+template <typename T, unsigned N>
+inline Handle<T>
+LocalArray<T, N>::handle(uint32_t idx) const
+{
+    WH_ASSERT(idx < N);
+    return Handle<T>(*address(idx));
 }
 
 
