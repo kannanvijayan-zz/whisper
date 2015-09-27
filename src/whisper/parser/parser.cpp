@@ -139,6 +139,9 @@ Parser::parseVarStatement()
             break;
         }
 
+        // Push back empty binding for name.
+        bindings.push_back(BindingStatement::Binding(name, nullptr));
+
         if (nextType == Token::Type::Comma)
             continue;
 
