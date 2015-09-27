@@ -238,21 +238,32 @@ class FunctionObject : public HashObject
     friend struct TraceTraits<FunctionObject>;
   private:
     HeapField<Function*> func_;
+    HeapField<Wobject*> receiver_;
 
   public:
     FunctionObject(Handle<Array<Wobject*>*> delegates,
                    Handle<PropertyDict*> dict,
-                   Handle<Function*> func)
+                   Handle<Function*> func,
+                   Handle<Wobject*> receiver)
       : HashObject(delegates, dict),
-        func_(func)
-    {}
+        func_(func),
+        receiver_(receiver)
+    {
+        WH_ASSERT(func.get() != nullptr);
+        WH_ASSERT(receiver.get() != nullptr);
+    }
 
     static Result<FunctionObject*> Create(
             AllocationContext acx,
-            Handle<Function*> func);
+            Handle<Function*> func,
+            Handle<Wobject*> receiver);
 
     Function* func() const {
         return func_;
+    }
+
+    Wobject* receiver() const {
+        return receiver_;
     }
 
     static uint32_t NumDelegates(AllocationContext acx,
