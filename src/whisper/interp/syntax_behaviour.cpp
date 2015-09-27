@@ -26,6 +26,7 @@ namespace Interp {
     DECLARE_LIFT_FN_(ReturnStmt)
     DECLARE_LIFT_FN_(DefStmt)
     DECLARE_LIFT_FN_(VarStmt)
+    DECLARE_LIFT_FN_(ParenExpr)
     DECLARE_LIFT_FN_(NameExpr)
     DECLARE_LIFT_FN_(IntegerExpr)
     //WHISPER_DEFN_SYNTAX_NODES(DECLARE_LIFT_FN_)
@@ -76,6 +77,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(ReturnStmt);
     BIND_GLOBAL_METHOD_(DefStmt);
     BIND_GLOBAL_METHOD_(VarStmt);
+    BIND_GLOBAL_METHOD_(ParenExpr);
     BIND_GLOBAL_METHOD_(NameExpr);
     BIND_GLOBAL_METHOD_(IntegerExpr);
 
@@ -297,6 +299,28 @@ IMPL_LIFT_FN_(VarStmt)
     }
 
     return VM::ControlFlow::Void();
+}
+
+IMPL_LIFT_FN_(ParenExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@ParenExpr called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::ParenExpr);
+
+    Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedParenExprNode> parenExpr(cx,
+        AST::PackedParenExprNode(pst->data(), stRef->offset()));
+
+    Local<AST::PackedBaseNode> subexprNode(cx, parenExpr->subexpr());
+    VM::ControlFlow exprFlow =
+        InterpretSyntax(cx, callInfo->callerScope(), pst,
+                        subexprNode->offset());
+    WH_ASSERT(exprFlow.isExpressionResult());
+    return exprFlow;
 }
 
 IMPL_LIFT_FN_(NameExpr)

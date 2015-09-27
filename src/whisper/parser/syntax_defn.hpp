@@ -26,7 +26,7 @@
     _(SubExpr)                              \
     _(MulExpr)                              \
     _(DivExpr)                              \
-    _(ParenExpr)                            \
+    _(ParenExpr)         /* done */         \
     _(NameExpr)          /* done */         \
     _(IntegerExpr)       /* done */
 
