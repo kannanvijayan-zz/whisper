@@ -45,12 +45,16 @@ class LocalBase
     inline StackFormat format() const {
         return header_.format();
     }
-
-    StackThing const* stackThing() const {
-        return reinterpret_cast<StackThing const*>(dataAfter());
+    inline uint32_t count() const {
+        return header_.count();
     }
-    StackThing* stackThing() {
-        return reinterpret_cast<StackThing*>(dataAfter());
+
+    StackThing const* stackThing(uint32_t idx) const {
+        WH_ASSERT(idx < count());
+        return reinterpret_cast<StackThing const*>(dataAfter()) + idx;
+    }
+    StackThing* stackThing(uint32_t idx) {
+        return reinterpret_cast<StackThing*>(dataAfter()) + idx;
     }
 
     template <typename Scanner>

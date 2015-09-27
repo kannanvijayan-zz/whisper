@@ -40,10 +40,11 @@ using namespace Whisper;
 struct HeapPrintVisitor : public TracerVisitor
 {
     StackThing* lastRoot;
+    
 
     HeapPrintVisitor() : lastRoot(nullptr) {}
 
-    virtual void visitStackRoot(StackThing* rootPtr) override {
+    virtual void visitStackRoot(StackThing* rootPtr, uint32_t idx) override {
         fprintf(stderr, "stack_%p [label=\"%s\\n@%p\"; shape=box];\n",
                 rootPtr, StackFormatString(rootPtr->format()), rootPtr);
         if (lastRoot) {

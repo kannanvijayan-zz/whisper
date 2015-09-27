@@ -15,7 +15,7 @@ class TracerVisitor
     TracerVisitor() {}
 
   public:
-    virtual void visitStackRoot(Whisper::StackThing* root) = 0;
+    virtual void visitStackRoot(Whisper::StackThing* root, uint32_t idx) = 0;
     virtual void visitStackChild(Whisper::StackThing* holder,
                                  Whisper::HeapThing* child) = 0;
 

@@ -38,14 +38,18 @@ template <typename Scanner>
 void
 LocalBase::scan(Scanner& scanner, void* start, void* end) const
 {
-    GC::ScanStackThing(format(), stackThing(), scanner, start, end);
+    for (uint32_t i = 0; i < count(); i++) {
+        GC::ScanStackThing(format(), stackThing(i), scanner, start, end);
+    }
 }
 
 template <typename Updater>
 void
 LocalBase::update(Updater& updater, void* start, void* end)
 {
-    GC::UpdateStackThing(format(), stackThing(), updater, start, end);
+    for (uint32_t i = 0; i < count(); i++) {
+        GC::UpdateStackThing(format(), stackThing(i), updater, start, end);
+    }
 }
 
 

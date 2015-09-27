@@ -85,11 +85,13 @@ trace_heap(ThreadContext* cx, TracerVisitor* visitor)
 
     // Visit all stack things.
     for (LocalBase* loc = cx->locals(); loc != nullptr; loc = loc->next()) {
-        StackThing* stackThing = loc->stackThing();
-        visitor->visitStackRoot(stackThing);
+        for (uint32_t i = 0; i < loc->count(); i++) {
+            StackThing* stackThing = loc->stackThing(i);
+            visitor->visitStackRoot(stackThing, i);
 
-        StackTracer tracer(&seen, &remaining, stackThing, visitor);
-        GC::ScanStackThing(tracer, stackThing, nullptr, nullptr);
+            StackTracer tracer(&seen, &remaining, stackThing, visitor);
+            GC::ScanStackThing(tracer, stackThing, nullptr, nullptr);
+        }
     }
 
     // Process heap thing queue.
