@@ -22,11 +22,13 @@ namespace Interp {
         ArrayHandle<VM::SyntaxTreeRef> args);
 
     DECLARE_LIFT_FN_(File)
+
     DECLARE_LIFT_FN_(EmptyStmt)
     DECLARE_LIFT_FN_(ExprStmt)
     DECLARE_LIFT_FN_(ReturnStmt)
     DECLARE_LIFT_FN_(DefStmt)
     DECLARE_LIFT_FN_(VarStmt)
+
     DECLARE_LIFT_FN_(ParenExpr)
     DECLARE_LIFT_FN_(NameExpr)
     DECLARE_LIFT_FN_(IntegerExpr)
@@ -73,11 +75,13 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     } while(false)
 
     BIND_GLOBAL_METHOD_(File);
+
     BIND_GLOBAL_METHOD_(EmptyStmt);
     BIND_GLOBAL_METHOD_(ExprStmt);
     BIND_GLOBAL_METHOD_(ReturnStmt);
     BIND_GLOBAL_METHOD_(DefStmt);
     BIND_GLOBAL_METHOD_(VarStmt);
+
     BIND_GLOBAL_METHOD_(ParenExpr);
     BIND_GLOBAL_METHOD_(NameExpr);
     BIND_GLOBAL_METHOD_(IntegerExpr);
