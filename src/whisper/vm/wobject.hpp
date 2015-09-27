@@ -22,6 +22,10 @@ class Wobject
     }
 
   public:
+    static uint32_t NumDelegates(
+            AllocationContext acx,
+            Handle<Wobject*> obj);
+
     static OkResult GetDelegates(
             AllocationContext acx,
             Handle<Wobject*> obj,

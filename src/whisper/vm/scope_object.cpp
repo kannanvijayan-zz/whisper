@@ -25,6 +25,13 @@ CallScope::Create(AllocationContext acx,
     return acx.create<CallScope>(delegates.handle(), props.handle());
 }
 
+/* static */ uint32_t
+CallScope::NumDelegates(AllocationContext acx,
+                        Handle<CallScope*> obj)
+{
+    return HashObject::NumDelegates(acx, obj.convertTo<HashObject*>());
+}
+
 /* static */ void
 CallScope::GetDelegates(AllocationContext acx,
                         Handle<CallScope*> obj,
@@ -73,6 +80,13 @@ ModuleScope::Create(AllocationContext acx, Handle<GlobalScope*> global)
         return ErrorVal();
 
     return acx.create<ModuleScope>(delegates.handle(), props.handle());
+}
+
+/* static */ uint32_t
+ModuleScope::NumDelegates(AllocationContext acx,
+                          Handle<ModuleScope*> obj)
+{
+    return HashObject::NumDelegates(acx, obj.convertTo<HashObject*>());
 }
 
 /* static */ void

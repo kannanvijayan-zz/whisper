@@ -32,6 +32,9 @@ class CallScope : public ScopeObject
     static Result<CallScope*> Create(AllocationContext acx,
                                      Handle<ScopeObject*> callerScope);
 
+    static uint32_t NumDelegates(AllocationContext acx,
+                                 Handle<CallScope*> obj);
+
     static void GetDelegates(AllocationContext acx,
                              Handle<CallScope*> obj,
                              MutHandle<Array<Wobject*>*> delegatesOut);
@@ -58,6 +61,9 @@ class ModuleScope : public ScopeObject
 
     static Result<ModuleScope*> Create(AllocationContext acx,
                                         Handle<GlobalScope*> global);
+
+    static uint32_t NumDelegates(AllocationContext acx,
+                                 Handle<ModuleScope*> obj);
 
     static void GetDelegates(AllocationContext acx,
                              Handle<ModuleScope*> obj,

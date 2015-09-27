@@ -37,6 +37,13 @@ GlobalScope::Create(AllocationContext acx)
     return OkVal(global.get());
 }
 
+/* static */ uint32_t
+GlobalScope::NumDelegates(AllocationContext acx,
+                          Handle<GlobalScope*> obj)
+{
+    return HashObject::NumDelegates(acx, obj.convertTo<HashObject*>());
+}
+
 /* static */ void
 GlobalScope::GetDelegates(AllocationContext acx,
                           Handle<GlobalScope*> obj,

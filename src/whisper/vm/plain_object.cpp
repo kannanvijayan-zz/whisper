@@ -18,6 +18,13 @@ PlainObject::Create(AllocationContext acx,
     return acx.create<PlainObject>(delegates, props.handle());
 }
 
+/* static */ uint32_t
+PlainObject::NumDelegates(AllocationContext acx,
+                          Handle<PlainObject*> obj)
+{
+    return HashObject::NumDelegates(acx, obj.convertTo<HashObject*>());
+}
+
 /* static */ void
 PlainObject::GetDelegates(AllocationContext acx,
                           Handle<PlainObject*> obj,

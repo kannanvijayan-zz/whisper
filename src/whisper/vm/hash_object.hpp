@@ -33,6 +33,9 @@ class HashObject : public Wobject
         WH_ASSERT(dict_ != nullptr);
     }
 
+    static uint32_t NumDelegates(AllocationContext acx,
+                                 Handle<HashObject*> obj);
+
     static void GetDelegates(AllocationContext acx,
                              Handle<HashObject*> obj,
                              MutHandle<Array<Wobject*>*> delegatesOut);

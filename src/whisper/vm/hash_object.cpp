@@ -6,6 +6,13 @@ namespace Whisper {
 namespace VM {
 
 
+/* static */ uint32_t
+HashObject::NumDelegates(AllocationContext acx,
+                         Handle<HashObject*> obj)
+{
+    return obj->delegates_->length();
+}
+
 /* static */ void
 HashObject::GetDelegates(AllocationContext acx,
                          Handle<HashObject*> obj,

@@ -10,6 +10,39 @@ namespace Whisper {
 namespace VM {
 
 
+/* static */ uint32_t
+Wobject::NumDelegates(AllocationContext acx,
+                      Handle<Wobject*> obj)
+{
+    HeapThing* heapThing = HeapThing::From(obj.get());
+    if (heapThing->isPlainObject()) {
+        Local<PlainObject*> plainObj(acx,
+            reinterpret_cast<PlainObject*>(heapThing));
+        return PlainObject::NumDelegates(acx, plainObj);
+    }
+
+    if (heapThing->isCallScope()) {
+        Local<CallScope*> callObj(acx,
+            reinterpret_cast<CallScope*>(heapThing));
+        return CallScope::NumDelegates(acx, callObj);
+    }
+
+    if (heapThing->isModuleScope()) {
+        Local<ModuleScope*> moduleObj(acx,
+            reinterpret_cast<ModuleScope*>(heapThing));
+        return ModuleScope::NumDelegates(acx, moduleObj);
+    }
+
+    if (heapThing->isGlobalScope()) {
+        Local<GlobalScope*> globalObj(acx,
+            reinterpret_cast<GlobalScope*>(heapThing));
+        return GlobalScope::NumDelegates(acx, globalObj);
+    }
+
+    WH_UNREACHABLE("Unknown object kind");
+    return static_cast<uint32_t>(-1);
+}
+
 /* static */ OkResult
 Wobject::GetDelegates(AllocationContext acx,
                       Handle<Wobject*> obj,

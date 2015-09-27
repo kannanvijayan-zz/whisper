@@ -21,6 +21,9 @@ class GlobalScope : public ScopeObject
 
     static Result<GlobalScope*> Create(AllocationContext acx);
 
+    static uint32_t NumDelegates(AllocationContext acx,
+                                 Handle<GlobalScope*> obj);
+
     static void GetDelegates(AllocationContext acx,
                              Handle<GlobalScope*> obj,
                              MutHandle<Array<Wobject*>*> delegatesOut);
