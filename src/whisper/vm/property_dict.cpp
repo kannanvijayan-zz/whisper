@@ -106,6 +106,7 @@ PropertyDict::addEntry(String* name, PropertyDescriptor const& descr)
         // Empty entry found.  Set it.
         entries_[probe].name.init(name, this);
         entries_[probe].value.init(descr.box(), this);
+        size_++;
 
         return Maybe<uint32_t>::Some(probe);
     }
