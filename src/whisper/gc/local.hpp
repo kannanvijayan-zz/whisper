@@ -176,7 +176,6 @@ class Local : public LocalBase
 };
 
 
-
 } // namespace Whisper
 
 #endif // WHISPER__GC__LOCAL_HPP

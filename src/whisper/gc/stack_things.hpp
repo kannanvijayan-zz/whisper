@@ -75,17 +75,20 @@ char const* StackFormatString(StackFormat fmt);
 //
 //  The Low 32-bit word contains the StackFormat in the low 10 bits.
 //
-//                                StackFormat
-//                                  10 bits
-//                                    |
-//                                    |
-//                               ----------
+//              Count of Elements  StackFormat
+//                   16 bits         10 bits
+//                     |               |
+//                     |               |
+//             ------------------ ----------
 //
-//      00000000 00000000 000000 FFFFFFFFFF
-//      bit 31                        bit 0
+//      000000 CC CCCCCCCC CCCCCC FFFFFFFFFF
+//      bit 31                         bit 0
 //
 //
 //      The low 10 bits indicates StackFormat.
+//
+//      The next 16 bits indicate the number of elements
+//      in the stack-rooted item.
 class alignas(8) StackHeader
 {
   private:
@@ -93,6 +96,8 @@ class alignas(8) StackHeader
     uint32_t size_;
 
     typedef Bitfield<uint32_t, uint16_t, 10, 0> FormatBitfield;
+    typedef Bitfield<uint32_t, uint16_t, 16, 10> CountBitfield;
+    static constexpr uint32_t MaxCount = CountBitfield::MaxValue;
 
     inline FormatBitfield formatBitfield() {
         return FormatBitfield(header_);
@@ -101,14 +106,27 @@ class alignas(8) StackHeader
         return FormatBitfield::Const(header_);
     }
 
+    inline CountBitfield countBitfield() {
+        return CountBitfield(header_);
+    }
+    inline CountBitfield::Const countBitfield() const {
+        return CountBitfield::Const(header_);
+    }
+
   public:
-    StackHeader(StackFormat fmt, uint32_t size)
-      : header_(StackFormatValue(fmt)),
+    StackHeader(StackFormat fmt, uint32_t size, uint32_t count)
+      : header_(FormatBitfield::Lift(StackFormatValue(fmt)) |
+                CountBitfield::Lift(static_cast<uint16_t>(count))),
         size_(size)
-    {}
+    {
+        WH_ASSERT(count <= MaxCount);
+    }
 
     inline StackFormat format() const {
         return static_cast<StackFormat>(formatBitfield().value());
+    }
+    inline uint32_t count() const {
+        return countBitfield().value();
     }
     inline char const* formatString() const {
         return StackFormatString(format());

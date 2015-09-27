@@ -406,6 +406,11 @@ class BaseBitfield
     inline static bool ValueFits(FieldT value) {
         return (value >= MinValue) && (value <= MaxValue);
     }
+
+    inline static WordT Lift(FieldT value) {
+        WH_ASSERT(ValueFits(value));
+        return (value & LowMask) << Shift;
+    }
 };
 
 template <typename WordT, typename FieldT, unsigned Bits, unsigned Shift>

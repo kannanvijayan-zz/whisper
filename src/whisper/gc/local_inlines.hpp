@@ -16,7 +16,7 @@ LocalBase::LocalBase(ThreadContext* threadContext,
                      StackFormat format, uint32_t size)
   : threadContext_(threadContext),
     next_(threadContext_->locals()),
-    header_(format, size)
+    header_(format, size, 1)
 {
     threadContext_->locals_ = this;
 }
