@@ -268,6 +268,10 @@ GetObjectProperty(ThreadContext* cx,
     if (!lookupResult)
         return ErrorVal();
 
+    // If binding not found, return void control flow.
+    if (!lookupResult.value())
+        return VM::ControlFlow::Void();
+
     // Found binding.
     WH_ASSERT(propDesc->isValid());
 
