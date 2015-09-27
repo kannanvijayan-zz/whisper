@@ -64,6 +64,13 @@ FunctionObject::Create(AllocationContext acx, Handle<Function*> func)
                                       func);
 }
 
+/* static */ uint32_t
+FunctionObject::NumDelegates(AllocationContext acx,
+                             Handle<FunctionObject*> obj)
+{
+    return HashObject::NumDelegates(acx, Handle<HashObject*>::Convert(obj));
+}
+
 /* static */ void
 FunctionObject::GetDelegates(AllocationContext acx,
                              Handle<FunctionObject*> obj,

@@ -3,6 +3,7 @@
 #include "vm/plain_object.hpp"
 #include "vm/scope_object.hpp"
 #include "vm/global_scope.hpp"
+#include "vm/function.hpp"
 #include "vm/lookup_state.hpp"
 #include "vm/properties.hpp"
 
@@ -37,6 +38,12 @@ Wobject::NumDelegates(AllocationContext acx,
         Local<GlobalScope*> globalObj(acx,
             reinterpret_cast<GlobalScope*>(heapThing));
         return GlobalScope::NumDelegates(acx, globalObj);
+    }
+
+    if (heapThing->isFunctionObject()) {
+        Local<FunctionObject*> funcObj(acx,
+            reinterpret_cast<FunctionObject*>(heapThing));
+        return FunctionObject::NumDelegates(acx, funcObj);
     }
 
     WH_UNREACHABLE("Unknown object kind");
@@ -77,6 +84,13 @@ Wobject::GetDelegates(AllocationContext acx,
         return OkVal();
     }
 
+    if (heapThing->isFunctionObject()) {
+        Local<FunctionObject*> funcObj(acx,
+            reinterpret_cast<FunctionObject*>(heapThing));
+        FunctionObject::GetDelegates(acx, funcObj, delegatesOut);
+        return OkVal();
+    }
+
     WH_UNREACHABLE("Unknown object kind");
     return ErrorVal();
 }
@@ -112,6 +126,12 @@ Wobject::GetProperty(AllocationContext acx,
         return OkVal(GlobalScope::GetProperty(acx, globalObj, name, result));
     }
 
+    if (heapThing->isFunctionObject()) {
+        Local<FunctionObject*> funcObj(acx,
+            reinterpret_cast<FunctionObject*>(heapThing));
+        return OkVal(FunctionObject::GetProperty(acx, funcObj, name, result));
+    }
+
     WH_UNREACHABLE("Unknown object kind");
     return ErrorVal();
 }
@@ -145,6 +165,12 @@ Wobject::DefineProperty(AllocationContext acx,
         Local<GlobalScope*> globalObj(acx,
             reinterpret_cast<GlobalScope*>(heapThing));
         return GlobalScope::DefineProperty(acx, globalObj, name, defn);
+    }
+
+    if (heapThing->isFunctionObject()) {
+        Local<FunctionObject*> funcObj(acx,
+            reinterpret_cast<FunctionObject*>(heapThing));
+        return FunctionObject::DefineProperty(acx, funcObj, name, defn);
     }
 
     WH_UNREACHABLE("Unknown object kind");

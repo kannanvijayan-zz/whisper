@@ -255,6 +255,9 @@ class FunctionObject : public HashObject
         return func_;
     }
 
+    static uint32_t NumDelegates(AllocationContext acx,
+                                 Handle<FunctionObject*> obj);
+
     static void GetDelegates(AllocationContext acx,
                              Handle<FunctionObject*> obj,
                              MutHandle<Array<Wobject*>*> delegatesOut);
