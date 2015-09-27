@@ -375,6 +375,13 @@ Parser::tryParseExpression(Token const& startToken, Precedence prec)
         Expression* subexpr = parseExpression(Prec_Unary);
         expr = make<PosExprNode>(subexpr);
 
+    } else if (startToken.isOpenParen()) {
+        startToken.debug_markUsed();
+        Expression *subexpr = parseExpression(Prec_Parenthesis);
+        if (!checkNextToken<Token::Type::CloseParen>())
+            emitError("Expected close-paren after parenthetic expression.");
+        expr = make<ParenExprNode>(subexpr);
+
     } else {
         return nullptr;
 

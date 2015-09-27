@@ -71,6 +71,7 @@ class Parser
         Prec_Product,   /* Binary '*', '/' */
         Prec_Sum,       /* Binary '+', '-' */
         Prec_Comma,
+        Prec_Parenthesis,
         Prec_Statement,
         Prec_Lowest
     };
