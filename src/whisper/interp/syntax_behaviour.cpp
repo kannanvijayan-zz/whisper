@@ -296,7 +296,6 @@ IMPL_LIFT_FN_(VarStmt)
             return ErrorVal();
     }
 
-    // TODO: Implement VarStmt
     return VM::ControlFlow::Void();
 }
 
