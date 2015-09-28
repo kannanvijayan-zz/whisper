@@ -105,6 +105,11 @@ class ControlFlow
     {
         initValBoxPayload(okVal.val());
     }
+    ControlFlow(OkValT_<Wobject*> const& okVal)
+      : kind_(Kind::Value)
+    {
+        initValBoxPayload(ValBox::Pointer(okVal.val()));
+    }
 
     ~ControlFlow()
     {
@@ -132,6 +137,9 @@ class ControlFlow
     }
     static ControlFlow Value(ValBox const& val) {
         return ControlFlow(Kind::Value, val);
+    }
+    static ControlFlow Value(Wobject* obj) {
+        return ControlFlow(Kind::Value, ValBox::Pointer(obj));
     }
     static ControlFlow Return(ValBox const& val) {
         return ControlFlow(Kind::Return, val);
