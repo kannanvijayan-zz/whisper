@@ -236,7 +236,10 @@ IMPL_LIFT_FN_(DefStmt)
     Local<VM::PropertyDescriptor> descr(cx, VM::PropertyDescriptor(func.get()));
     if (!VM::Wobject::DefineProperty(acx, receiver, funcname, descr))
         return ErrorVal();
-    
+
+    SpewInterpNote("DefStmt defining '%s' on receiver %p",
+            funcname->c_chars(), receiver.get());
+
     return VM::ControlFlow::Void();
 }
 
@@ -334,7 +337,6 @@ IMPL_LIFT_FN_(NameExpr)
         return cx->setExceptionRaised(
             "@NameExpr called with wrong number of arguments.");
     }
-    SpewInterpNote("Lift_NameExpr: Looking up name!");
 
     WH_ASSERT(args.get(0).nodeType() == AST::NameExpr);
 
@@ -352,6 +354,9 @@ IMPL_LIFT_FN_(NameExpr)
     WH_ASSERT(nameBox->isPointer());
     WH_ASSERT(nameBox->pointer<HeapThing>()->header().isFormat_String());
     Local<VM::String*> name(cx, nameBox->pointer<VM::String>());
+
+    SpewInterpNote("Lift_NameExpr: Looking up '%s' on scope %p!",
+                name->c_chars(), scopeObj.get());
 
     // Do the lookup.
     Local<VM::LookupState*> lookupState(cx);
