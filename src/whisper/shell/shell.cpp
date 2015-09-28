@@ -60,8 +60,38 @@ struct HeapPrintVisitor : public TracerVisitor
     }
 
     virtual void visitHeapThing(HeapThing* heapThing) override {
-        fprintf(stderr, "heap_%p [label=\"%s\\n@%p\"];\n",
-                heapThing, HeapFormatString(heapThing->format()), heapThing);
+        if (heapThing->format() == HeapFormat::String) {
+            std::string stringContents(heapThing->to<VM::String>()->c_chars());
+            size_t stringLen = stringContents.length();
+            size_t idx = 0;
+            while (idx < stringLen) {
+                size_t quotePos = stringContents.find('"', idx);
+                size_t newlinePos = stringContents.find('\n', idx);
+                if (quotePos == std::string::npos)
+                    quotePos = stringLen;
+                if (newlinePos == std::string::npos)
+                    newlinePos = stringLen;
+                WH_ASSERT(quotePos <= stringLen);
+                WH_ASSERT(newlinePos <= stringLen);
+                WH_ASSERT_IF(quotePos == newlinePos, quotePos == stringLen);
+                if (quotePos < newlinePos) {
+                    stringContents.replace(quotePos, 1, "\\\"");
+                    idx = quotePos + 2;
+                } else if (newlinePos < quotePos) {
+                    stringContents.replace(newlinePos, 1, "\\n");
+                    idx = newlinePos + 2;
+                } else {
+                    idx = stringLen;
+                }
+            }
+            fprintf(stderr, "heap_%p [label=\"%s\\n@%p\\n%s\"];\n",
+                    heapThing, HeapFormatString(heapThing->format()),
+                    heapThing, heapThing->to<VM::String>()->c_chars());
+        } else {
+            fprintf(stderr, "heap_%p [label=\"%s\\n@%p\"];\n",
+                    heapThing, HeapFormatString(heapThing->format()),
+                    heapThing);
+        }
     }
     virtual void visitHeapChild(HeapThing* parent, HeapThing* child)
         override
