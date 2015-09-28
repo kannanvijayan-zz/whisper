@@ -275,14 +275,23 @@ GetObjectProperty(ThreadContext* cx,
     // Found binding.
     WH_ASSERT(propDesc->isValid());
 
-    // Handle a value binding.
+    // Handle a value binding by returning the value.
     if (propDesc->isValue())
         return VM::ControlFlow::Value(propDesc->valBox());
 
+    // Handle a method binding by creating a bound FunctionObject
+    // from the method.
     if (propDesc->isMethod()) {
-        return cx->setExceptionRaised(
-            "Can't handle method bindings for name lookups yet.",
-            name.get());
+        // Create a new function object bound to the scope.
+        Local<VM::Function*> func(cx, propDesc->method());
+        Local<VM::FunctionObject*> funcObj(cx);
+        if (!funcObj.setResult(VM::FunctionObject::Create(cx->inHatchery(),
+                                                          func, object)))
+        {
+            return ErrorVal();
+        }
+
+        return OkVal(static_cast<VM::Wobject*>(funcObj.get()));
     }
 
     return cx->setExceptionRaised(
