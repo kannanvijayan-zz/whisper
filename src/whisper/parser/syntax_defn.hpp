@@ -12,7 +12,7 @@
     _(ReturnStmt)        /* done */         \
     _(IfStmt)                               \
     _(DefStmt)           /* done */         \
-    _(ConstStmt)                            \
+    _(ConstStmt)         /* done */         \
     _(VarStmt)           /* done */         \
     _(LoopStmt)                             \
     \

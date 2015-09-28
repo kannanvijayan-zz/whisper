@@ -27,6 +27,7 @@ namespace Interp {
     DECLARE_LIFT_FN_(ExprStmt)
     DECLARE_LIFT_FN_(ReturnStmt)
     DECLARE_LIFT_FN_(DefStmt)
+    DECLARE_LIFT_FN_(ConstStmt)
     DECLARE_LIFT_FN_(VarStmt)
 
     DECLARE_LIFT_FN_(ParenExpr)
@@ -80,6 +81,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(ExprStmt);
     BIND_GLOBAL_METHOD_(ReturnStmt);
     BIND_GLOBAL_METHOD_(DefStmt);
+    BIND_GLOBAL_METHOD_(ConstStmt);
     BIND_GLOBAL_METHOD_(VarStmt);
 
     BIND_GLOBAL_METHOD_(ParenExpr);
@@ -243,6 +245,67 @@ IMPL_LIFT_FN_(DefStmt)
     return VM::ControlFlow::Void();
 }
 
+IMPL_LIFT_FN_(ConstStmt)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@ConstStmt called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::ConstStmt);
+
+    Local<VM::ValBox> receiverBox(cx, callInfo->receiver());
+    if (receiverBox->isPrimitive())
+        return cx->setExceptionRaised("Cannot define var on primitive.");
+    Local<VM::Wobject*> receiver(cx, receiverBox->objectPointer());
+
+    Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedConstStmtNode> constStmtNode(cx,
+        AST::PackedConstStmtNode(pst->data(), stRef->offset()));
+    Local<VM::Box> varnameBox(cx);
+    Local<VM::String*> varname(cx);
+
+    AllocationContext acx = cx->inHatchery();
+
+    // Iterate through all bindings.
+    SpewInterpNote("Lift_ConstStmt: Defining %u consts!",
+                   unsigned(constStmtNode->numBindings()));
+    for (uint32_t i = 0; i < constStmtNode->numBindings(); i++) {
+        varnameBox = pst->getConstant(constStmtNode->varnameCid(i));
+        WH_ASSERT(varnameBox->isPointer());
+        WH_ASSERT(varnameBox->pointer<HeapThing>()->header().isFormat_String());
+        varname = varnameBox->pointer<VM::String>();
+
+        SpewInterpNote("Lift_ConstStmt var %d evaluating initial value!",
+                       unsigned(i));
+        Local<AST::PackedBaseNode> exprNode(cx, constStmtNode->varexpr(i));
+        VM::ControlFlow varExprFlow =
+            InterpretSyntax(cx, callInfo->callerScope(), pst,
+                            exprNode->offset());
+
+        // The underlying expression can return a value, error out,
+        // or throw an exception.  It should never conclude with
+        // a void control flow, or a return control flow.
+        WH_ASSERT(varExprFlow.isExpressionResult());
+        if (!varExprFlow.isValue())
+            return varExprFlow;
+        Local<VM::ValBox> varvalBox(cx, varExprFlow.value());
+
+        WH_ASSERT_IF(varvalBox->isPointer(),
+            VM::Wobject::IsWobject(varvalBox->pointer<HeapThing>()));
+
+        // Bind the name and value onto the receiver.
+        Local<VM::PropertyDescriptor> descr(cx,
+            VM::PropertyDescriptor(varvalBox));
+        if (!VM::Wobject::DefineProperty(acx, receiver, varname, descr))
+            return ErrorVal();
+    }
+
+    return VM::ControlFlow::Void();
+}
+
+
 IMPL_LIFT_FN_(VarStmt)
 {
     if (args.length() != 1) {
@@ -275,7 +338,7 @@ IMPL_LIFT_FN_(VarStmt)
         WH_ASSERT(varnameBox->isPointer());
         WH_ASSERT(varnameBox->pointer<HeapThing>()->header().isFormat_String());
         varname = varnameBox->pointer<VM::String>();
-        
+
         if (varStmtNode->hasVarexpr(i)) {
             SpewInterpNote("Lift_VarStmt var %d evaluating initial value!",
                            unsigned(i));
