@@ -60,6 +60,7 @@ class Function
     static bool IsFunctionFormat(HeapFormat format) {
         switch (format) {
           case HeapFormat::NativeFunction:
+          case HeapFormat::ScriptedFunction:
             return true;
           default:
             return false;
