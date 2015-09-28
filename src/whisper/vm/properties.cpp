@@ -11,7 +11,19 @@ namespace VM {
 bool
 PropertyDescriptor::isValid() const
 {
-    return !value_->isInvalid();
+    if (value_->isInvalid())
+        return false;
+
+    if (!value_->isPointer())
+        return true;
+
+    // Pointer-based value must be either a HeapThing
+    // or a Function.
+    if (Wobject::IsWobject(value_->pointer<HeapThing>()))
+        return true;
+    if (Function::IsFunction(value_->pointer<HeapThing>()))
+        return true;
+    return false;
 }
 
 bool
