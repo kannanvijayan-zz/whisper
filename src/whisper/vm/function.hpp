@@ -16,6 +16,8 @@ namespace VM {
 
 
 class NativeFunction;
+class FunctionObject;
+class LookupState;
 
 //
 // Base type for either a native function or a scripted function.
@@ -78,13 +80,13 @@ class NativeCallInfo
   private:
     StackField<LookupState*> lookupState_;
     StackField<ScopeObject*> callerScope_;
-    StackField<NativeFunction*> calleeFunc_;
+    StackField<FunctionObject*> calleeFunc_;
     StackField<ValBox> receiver_;
 
   public:
     NativeCallInfo(LookupState* lookupState,
                    ScopeObject* callerScope,
-                   NativeFunction* calleeFunc,
+                   FunctionObject* calleeFunc,
                    ValBox receiver)
       : lookupState_(lookupState),
         callerScope_(callerScope),
@@ -103,7 +105,7 @@ class NativeCallInfo
     Handle<ScopeObject*> callerScope() const {
         return callerScope_;
     }
-    Handle<NativeFunction*> calleeFunc() const {
+    Handle<FunctionObject*> calleeFunc() const {
         return calleeFunc_;
     }
     Handle<ValBox> receiver() const {
@@ -240,24 +242,29 @@ class FunctionObject : public HashObject
   private:
     HeapField<Function*> func_;
     HeapField<Wobject*> receiver_;
+    HeapField<LookupState*> lookupState_;
 
   public:
     FunctionObject(Handle<Array<Wobject*>*> delegates,
                    Handle<PropertyDict*> dict,
                    Handle<Function*> func,
-                   Handle<Wobject*> receiver)
+                   Handle<Wobject*> receiver,
+                   Handle<LookupState*> lookupState)
       : HashObject(delegates, dict),
         func_(func),
-        receiver_(receiver)
+        receiver_(receiver),
+        lookupState_(lookupState)
     {
         WH_ASSERT(func.get() != nullptr);
         WH_ASSERT(receiver.get() != nullptr);
+        WH_ASSERT(lookupState.get() != nullptr);
     }
 
     static Result<FunctionObject*> Create(
             AllocationContext acx,
             Handle<Function*> func,
-            Handle<Wobject*> receiver);
+            Handle<Wobject*> receiver,
+            Handle<LookupState*> lookupState);
 
     Function* func() const {
         return func_;
@@ -265,6 +272,17 @@ class FunctionObject : public HashObject
 
     Wobject* receiver() const {
         return receiver_;
+    }
+
+    LookupState* lookupState() const {
+        return lookupState_;
+    }
+
+    bool isApplicative() const {
+        return func_->isApplicative();
+    }
+    bool isOperative() const {
+        return func_->isOperative();
     }
 
     static uint32_t NumDelegates(AllocationContext acx,

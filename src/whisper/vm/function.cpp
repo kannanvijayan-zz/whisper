@@ -50,7 +50,8 @@ ScriptedFunction::Create(AllocationContext acx,
 /* static */ Result<FunctionObject*>
 FunctionObject::Create(AllocationContext acx,
                        Handle<Function*> func,
-                       Handle<Wobject*> receiver)
+                       Handle<Wobject*> receiver,
+                       Handle<LookupState*> lookupState)
 {
     // Allocate empty array of delegates.
     // TODO: set delegates to the default function delegate.
@@ -64,7 +65,7 @@ FunctionObject::Create(AllocationContext acx,
         return ErrorVal();
 
     return acx.create<FunctionObject>(delegates.handle(), props.handle(),
-                                      func, receiver);
+                                      func, receiver, lookupState);
 }
 
 /* static */ uint32_t
