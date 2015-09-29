@@ -35,6 +35,9 @@ class MutHandle
     inline MutHandle(Local<T>* stackVal)
       : valAddr_(stackVal->address())
     {}
+    inline MutHandle(LocalArray<T>* stackArray, uint32_t idx)
+      : valAddr_(stackArray->address(idx))
+    {}
     inline MutHandle(StackField<T>* stackField)
       : valAddr_(stackField->address())
     {}
@@ -185,6 +188,9 @@ class Handle
     {}
     inline Handle(Local<T> const& stackVal)
       : valAddr_(stackVal.address())
+    {}
+    inline Handle(LocalArray<T> const& stackArray, uint32_t idx)
+      : valAddr_(stackArray->address(idx))
     {}
     inline Handle(StackField<T> const& stackField)
       : valAddr_(stackField.address())

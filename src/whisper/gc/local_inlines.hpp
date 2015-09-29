@@ -79,7 +79,7 @@ template <typename T>
 inline MutHandle<T>
 Local<T>::mutHandle()
 {
-    return MutHandle<T>(*this);
+    return MutHandle<T>(this);
 }
 
 template <typename T>
@@ -93,14 +93,14 @@ template <typename T>
 inline MutHandle<T>
 LocalArray<T>::mutHandle(uint32_t idx)
 {
-    return MutHandle<T>(*address(idx));
+    return MutHandle<T>(this, idx);
 }
 
 template <typename T>
 inline Handle<T>
 LocalArray<T>::handle(uint32_t idx) const
 {
-    return Handle<T>(*address(idx));
+    return Handle<T>(*this, idx);
 }
 
 
