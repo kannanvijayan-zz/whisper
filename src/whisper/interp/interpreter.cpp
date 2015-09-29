@@ -197,8 +197,8 @@ DispatchSyntaxMethod(ThreadContext* cx,
                                       name.get());
     }
 
-    // Create SyntaxTreeRef.
-    Local<VM::SyntaxTreeRef> stRef(cx, VM::SyntaxTreeRef(pst, node->offset()));
+    // Create SyntaxNodeRef.
+    Local<VM::SyntaxNodeRef> stRef(cx, VM::SyntaxNodeRef(pst, node->offset()));
 
     // Invoke operative function with given arguments.
     return InvokeOperativeFunction(cx, scope, funcObj, stRef);
@@ -208,7 +208,7 @@ VM::ControlFlow
 InvokeOperativeFunction(ThreadContext* cx,
                         Handle<VM::ScopeObject*> callerScope,
                         Handle<VM::FunctionObject*> funcObj,
-                        ArrayHandle<VM::SyntaxTreeRef> stRefs)
+                        ArrayHandle<VM::SyntaxNodeRef> stRefs)
 {
     WH_ASSERT(funcObj->isOperative());
 
@@ -244,7 +244,7 @@ VM::ControlFlow
 InvokeApplicativeFunction(ThreadContext* cx,
                           Handle<VM::ScopeObject*> callerScope,
                           Handle<VM::FunctionObject*> funcObj,
-                          ArrayHandle<VM::SyntaxTreeRef> stRefs)
+                          ArrayHandle<VM::SyntaxNodeRef> stRefs)
 {
     WH_ASSERT(funcObj->isApplicative());
 

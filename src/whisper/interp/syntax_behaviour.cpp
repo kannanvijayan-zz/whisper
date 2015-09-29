@@ -19,7 +19,7 @@ namespace Interp {
     static VM::ControlFlow Lift_##name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
-        ArrayHandle<VM::SyntaxTreeRef> args);
+        ArrayHandle<VM::SyntaxNodeRef> args);
 
     DECLARE_LIFT_FN_(File)
 
@@ -99,7 +99,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     static VM::ControlFlow Lift_##name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
-        ArrayHandle<VM::SyntaxTreeRef> args)
+        ArrayHandle<VM::SyntaxNodeRef> args)
 
 IMPL_LIFT_FN_(File)
 {
@@ -110,7 +110,7 @@ IMPL_LIFT_FN_(File)
 
     WH_ASSERT(args.get(0).nodeType() == AST::File);
 
-    Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedFileNode> fileNode(cx,
         AST::PackedFileNode(pst->data(), stRef->offset()));
@@ -155,7 +155,7 @@ IMPL_LIFT_FN_(ExprStmt)
 
     WH_ASSERT(args.get(0).nodeType() == AST::ExprStmt);
 
-    Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedExprStmtNode> exprStmtNode(cx,
         AST::PackedExprStmtNode(pst->data(), stRef->offset()));
@@ -178,7 +178,7 @@ IMPL_LIFT_FN_(ReturnStmt)
 
     WH_ASSERT(args.get(0).nodeType() == AST::ReturnStmt);
 
-    Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedReturnStmtNode> returnStmtNode(cx,
         AST::PackedReturnStmtNode(pst->data(), stRef->offset()));
@@ -217,7 +217,7 @@ IMPL_LIFT_FN_(DefStmt)
         return cx->setExceptionRaised("Cannot define method on primitive.");
     Local<VM::Wobject*> receiver(cx, receiverBox->objectPointer());
 
-    Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedDefStmtNode> defStmtNode(cx,
         AST::PackedDefStmtNode(pst->data(), stRef->offset()));
@@ -259,7 +259,7 @@ IMPL_LIFT_FN_(ConstStmt)
         return cx->setExceptionRaised("Cannot define var on primitive.");
     Local<VM::Wobject*> receiver(cx, receiverBox->objectPointer());
 
-    Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedConstStmtNode> constStmtNode(cx,
         AST::PackedConstStmtNode(pst->data(), stRef->offset()));
@@ -316,7 +316,7 @@ IMPL_LIFT_FN_(VarStmt)
         return cx->setExceptionRaised("Cannot define var on primitive.");
     Local<VM::Wobject*> receiver(cx, receiverBox->objectPointer());
 
-    Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedVarStmtNode> varStmtNode(cx,
         AST::PackedVarStmtNode(pst->data(), stRef->offset()));
@@ -373,7 +373,7 @@ IMPL_LIFT_FN_(CallExpr)
 
     WH_ASSERT(args.get(0).nodeType() == AST::CallExpr);
 
-    Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedCallExprNode> callExpr(cx,
         AST::PackedCallExprNode(pst->data(), stRef->offset()));
@@ -399,9 +399,9 @@ IMPL_LIFT_FN_(CallExpr)
 
     // Compose array of syntax tree references.
     uint32_t numArgs = callExpr->numArgs();
-    LocalArray<VM::SyntaxTreeRef> stRefs(cx, numArgs);
+    LocalArray<VM::SyntaxNodeRef> stRefs(cx, numArgs);
     for (uint32_t i = 0; i < numArgs; i++)
-        stRefs[i] = VM::SyntaxTreeRef(pst, callExpr->arg(i).offset());
+        stRefs[i] = VM::SyntaxNodeRef(pst, callExpr->arg(i).offset());
 
     // Check if callee is operative or applicaive.
     if (calleeFunc->isOperative()) {
@@ -424,7 +424,7 @@ IMPL_LIFT_FN_(ParenExpr)
 
     WH_ASSERT(args.get(0).nodeType() == AST::ParenExpr);
 
-    Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedParenExprNode> parenExpr(cx,
         AST::PackedParenExprNode(pst->data(), stRef->offset()));
@@ -446,7 +446,7 @@ IMPL_LIFT_FN_(NameExpr)
 
     WH_ASSERT(args.get(0).nodeType() == AST::NameExpr);
 
-    Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedNameExprNode> nameExpr(cx,
         AST::PackedNameExprNode(pst->data(), stRef->offset()));
@@ -488,7 +488,7 @@ IMPL_LIFT_FN_(IntegerExpr)
 
     WH_ASSERT(args.get(0).nodeType() == AST::IntegerExpr);
 
-    Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedIntegerExprNode> intExpr(cx,
         AST::PackedIntegerExprNode(pst->data(), stRef->offset()));

@@ -79,24 +79,24 @@ class PackedSyntaxTree
 };
 
 //
-// A SyntaxTreeRef is a on-stack version of SyntaxTreeFragment.
+// A SyntaxNodeRef is a on-stack version of SyntaxTreeFragment.
 //
 //
-class SyntaxTreeRef
+class SyntaxNodeRef
 {
-    friend struct TraceTraits<SyntaxTreeRef>;
+    friend struct TraceTraits<SyntaxNodeRef>;
 
   private:
     StackField<PackedSyntaxTree*> pst_;
     uint32_t offset_;
 
   public:
-    SyntaxTreeRef()
+    SyntaxNodeRef()
       : pst_(nullptr),
         offset_(0)
     {}
 
-    SyntaxTreeRef(PackedSyntaxTree* pst, uint32_t offset)
+    SyntaxNodeRef(PackedSyntaxTree* pst, uint32_t offset)
       : pst_(pst),
         offset_(offset)
     {
@@ -164,7 +164,7 @@ class SyntaxTreeFragment
 
     static Result<SyntaxTreeFragment*> Create(
             AllocationContext acx,
-            Handle<SyntaxTreeRef> ref)
+            Handle<SyntaxNodeRef> ref)
     {
         return Create(acx, ref->pst(), ref->offset());
     }
@@ -215,7 +215,7 @@ struct TraceTraits<VM::PackedSyntaxTree>
 };
 
 template <>
-struct TraceTraits<VM::SyntaxTreeRef>
+struct TraceTraits<VM::SyntaxNodeRef>
 {
     TraceTraits() = delete;
 
@@ -223,14 +223,14 @@ struct TraceTraits<VM::SyntaxTreeRef>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner& scanner, VM::SyntaxTreeRef const& stRef,
+    static void Scan(Scanner& scanner, VM::SyntaxNodeRef const& stRef,
                      void const* start, void const* end)
     {
         stRef.pst_.scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater& updater, VM::SyntaxTreeRef& stRef,
+    static void Update(Updater& updater, VM::SyntaxNodeRef& stRef,
                        void const* start, void const* end)
     {
         stRef.pst_.update(updater, start, end);

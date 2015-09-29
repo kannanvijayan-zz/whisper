@@ -121,7 +121,7 @@ typedef ControlFlow (*NativeApplicativeFuncPtr)(
 typedef ControlFlow (*NativeOperativeFuncPtr)(
         ThreadContext* cx,
         Handle<NativeCallInfo> callInfo,
-        ArrayHandle<SyntaxTreeRef> args);
+        ArrayHandle<SyntaxNodeRef> args);
 
 class NativeFunction : public Function
 {
@@ -233,8 +233,8 @@ class ScriptedFunction : public Function
         return scopeChain_;
     }
 
-    SyntaxTreeRef stRef() const {
-        return SyntaxTreeRef(pst_, offset_);
+    SyntaxNodeRef stRef() const {
+        return SyntaxNodeRef(pst_, offset_);
     }
 
     uint32_t numParams() const {

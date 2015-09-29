@@ -42,7 +42,7 @@ ScriptedFunction::Create(AllocationContext acx,
                          Handle<ScopeObject*> scopeChain,
                          bool isOperative)
 {
-    WH_ASSERT(SyntaxTreeRef(pst, offset).nodeType() == AST::DefStmt);
+    WH_ASSERT(SyntaxNodeRef(pst, offset).nodeType() == AST::DefStmt);
     return acx.create<ScriptedFunction>(pst, offset, scopeChain, isOperative);
 }
 

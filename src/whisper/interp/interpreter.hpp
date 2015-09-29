@@ -24,7 +24,7 @@ VM::ControlFlow InterpretSyntax(ThreadContext* cx,
 inline VM::ControlFlow InterpretSyntax(
         ThreadContext* cx,
         Handle<VM::ScopeObject*> scope,
-        Handle<VM::SyntaxTreeRef> stRef)
+        Handle<VM::SyntaxNodeRef> stRef)
 {
     return InterpretSyntax(cx, scope, stRef->pst(), stRef->offset());
 }
@@ -38,12 +38,12 @@ VM::ControlFlow DispatchSyntaxMethod(ThreadContext* cx,
 VM::ControlFlow InvokeOperativeFunction(ThreadContext* cx,
                                     Handle<VM::ScopeObject*> callerScope,
                                     Handle<VM::FunctionObject*> funcObj,
-                                    ArrayHandle<VM::SyntaxTreeRef> stRefs);
+                                    ArrayHandle<VM::SyntaxNodeRef> stRefs);
 
 VM::ControlFlow InvokeApplicativeFunction(ThreadContext* cx,
                                     Handle<VM::ScopeObject*> callerScope,
                                     Handle<VM::FunctionObject*> funcObj,
-                                    ArrayHandle<VM::SyntaxTreeRef> stRefs);
+                                    ArrayHandle<VM::SyntaxNodeRef> stRefs);
 
 VM::ControlFlow GetValueProperty(ThreadContext* cx,
                                  Handle<VM::ValBox> value,
