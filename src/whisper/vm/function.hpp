@@ -232,6 +232,19 @@ class ScriptedFunction : public Function
     ScopeObject* scopeChain() const {
         return scopeChain_;
     }
+
+    SyntaxTreeRef stRef() const {
+        return SyntaxTreeRef(pst_, offset_);
+    }
+
+    uint32_t numParams() const {
+        return stRef().astDefStmt().numParams();
+    }
+    VM::String *paramName(uint32_t paramNo) const {
+        WH_ASSERT(paramNo < numParams());
+        uint32_t paramCid = stRef().astDefStmt().paramCid(paramNo);
+        return pst_->getConstantString(paramCid);
+    }
 };
 
 
