@@ -30,6 +30,7 @@ namespace Interp {
     DECLARE_LIFT_FN_(ConstStmt)
     DECLARE_LIFT_FN_(VarStmt)
 
+    DECLARE_LIFT_FN_(CallExpr)
     DECLARE_LIFT_FN_(ParenExpr)
     DECLARE_LIFT_FN_(NameExpr)
     DECLARE_LIFT_FN_(IntegerExpr)
@@ -84,6 +85,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(ConstStmt);
     BIND_GLOBAL_METHOD_(VarStmt);
 
+    BIND_GLOBAL_METHOD_(CallExpr);
     BIND_GLOBAL_METHOD_(ParenExpr);
     BIND_GLOBAL_METHOD_(NameExpr);
     BIND_GLOBAL_METHOD_(IntegerExpr);
@@ -231,10 +233,8 @@ IMPL_LIFT_FN_(DefStmt)
     }
 
     // Bind the name to the function.
-    Local<VM::Box> funcnameBox(cx, pst->getConstant(defStmtNode->nameCid()));
-    WH_ASSERT(funcnameBox->isPointer());
-    WH_ASSERT(funcnameBox->pointer<HeapThing>()->header().isFormat_String());
-    Local<VM::String*> funcname(cx, funcnameBox->pointer<VM::String>());
+    Local<VM::String*> funcname(cx,
+        pst->getConstantString(defStmtNode->nameCid()));
     Local<VM::PropertyDescriptor> descr(cx, VM::PropertyDescriptor(func.get()));
     if (!VM::Wobject::DefineProperty(acx, receiver, funcname, descr))
         return ErrorVal();
@@ -263,7 +263,6 @@ IMPL_LIFT_FN_(ConstStmt)
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedConstStmtNode> constStmtNode(cx,
         AST::PackedConstStmtNode(pst->data(), stRef->offset()));
-    Local<VM::Box> varnameBox(cx);
     Local<VM::String*> varname(cx);
 
     AllocationContext acx = cx->inHatchery();
@@ -272,10 +271,7 @@ IMPL_LIFT_FN_(ConstStmt)
     SpewInterpNote("Lift_ConstStmt: Defining %u consts!",
                    unsigned(constStmtNode->numBindings()));
     for (uint32_t i = 0; i < constStmtNode->numBindings(); i++) {
-        varnameBox = pst->getConstant(constStmtNode->varnameCid(i));
-        WH_ASSERT(varnameBox->isPointer());
-        WH_ASSERT(varnameBox->pointer<HeapThing>()->header().isFormat_String());
-        varname = varnameBox->pointer<VM::String>();
+        varname = pst->getConstantString(constStmtNode->varnameCid(i));
 
         SpewInterpNote("Lift_ConstStmt var %d evaluating initial value!",
                        unsigned(i));
@@ -324,7 +320,6 @@ IMPL_LIFT_FN_(VarStmt)
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedVarStmtNode> varStmtNode(cx,
         AST::PackedVarStmtNode(pst->data(), stRef->offset()));
-    Local<VM::Box> varnameBox(cx);
     Local<VM::String*> varname(cx);
     Local<VM::ValBox> varvalBox(cx);
 
@@ -334,10 +329,7 @@ IMPL_LIFT_FN_(VarStmt)
     SpewInterpNote("Lift_VarStmt: Defining %u vars!",
                    unsigned(varStmtNode->numBindings()));
     for (uint32_t i = 0; i < varStmtNode->numBindings(); i++) {
-        varnameBox = pst->getConstant(varStmtNode->varnameCid(i));
-        WH_ASSERT(varnameBox->isPointer());
-        WH_ASSERT(varnameBox->pointer<HeapThing>()->header().isFormat_String());
-        varname = varnameBox->pointer<VM::String>();
+        varname = pst->getConstantString(varStmtNode->varnameCid(i));
 
         if (varStmtNode->hasVarexpr(i)) {
             SpewInterpNote("Lift_VarStmt var %d evaluating initial value!",
@@ -370,6 +362,57 @@ IMPL_LIFT_FN_(VarStmt)
     }
 
     return VM::ControlFlow::Void();
+}
+
+IMPL_LIFT_FN_(CallExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@CallExpr called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::CallExpr);
+
+    Local<VM::SyntaxTreeRef> stRef(cx, args.get(0));
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedCallExprNode> callExpr(cx,
+        AST::PackedCallExprNode(pst->data(), stRef->offset()));
+
+    // Evaluate the call target.
+    Local<AST::PackedBaseNode> calleeExpr(cx, callExpr->callee());
+    VM::ControlFlow calleeFlow =
+        InterpretSyntax(cx, callInfo->callerScope(), pst,
+                        calleeExpr->offset());
+
+    WH_ASSERT(calleeFlow.isExpressionResult());
+    if (!calleeFlow.isValue())
+        return calleeFlow;
+    Local<VM::ValBox> calleeBox(cx, calleeFlow.value());
+
+    // Ensure callee is a function object.
+    if (!calleeBox->isPointerTo<VM::FunctionObject>())
+        return cx->setExceptionRaised("Cannot call non-function");
+
+    // Obtain callee function.
+    Local<VM::FunctionObject*> calleeFunc(cx,
+        calleeBox->pointer<VM::FunctionObject>());
+
+    // Compose array of syntax tree references.
+    uint32_t numArgs = callExpr->numArgs();
+    LocalArray<VM::SyntaxTreeRef> stRefs(cx, numArgs);
+    for (uint32_t i = 0; i < numArgs; i++)
+        stRefs[i] = VM::SyntaxTreeRef(pst, callExpr->arg(i).offset());
+
+    // Check if callee is operative or applicaive.
+    if (calleeFunc->isOperative()) {
+        // Invoke the operative function.
+        return InvokeOperativeFunction(cx, callInfo->callerScope(),
+                                       calleeFunc, stRefs);
+    } else {
+        // Invoke the operative function.
+        return InvokeApplicativeFunction(cx, callInfo->callerScope(),
+                                         calleeFunc, stRefs);
+    }
 }
 
 IMPL_LIFT_FN_(ParenExpr)
@@ -413,10 +456,7 @@ IMPL_LIFT_FN_(NameExpr)
         callInfo->callerScope().convertTo<VM::Wobject*>());
 
     // Get the constant name to look up.
-    Local<VM::Box> nameBox(cx, pst->getConstant(nameExpr->nameCid()));
-    WH_ASSERT(nameBox->isPointer());
-    WH_ASSERT(nameBox->pointer<HeapThing>()->header().isFormat_String());
-    Local<VM::String*> name(cx, nameBox->pointer<VM::String>());
+    Local<VM::String*> name(cx, pst->getConstantString(nameExpr->nameCid()));
 
     SpewInterpNote("Lift_NameExpr: Looking up '%s' on scope %p!",
                 name->c_chars(), scopeObj.get());

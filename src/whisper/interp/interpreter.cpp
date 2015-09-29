@@ -168,32 +168,31 @@ DispatchSyntaxMethod(ThreadContext* cx,
                      Handle<AST::PackedBaseNode> node)
 {
     Local<VM::Wobject*> scopeObj(cx, scope.convertTo<VM::Wobject*>());
-    Local<VM::LookupState*> lookupState(cx);
     Local<VM::PropertyDescriptor> propDesc(cx);
 
     // Lookup method name on scope.
-    Result<bool> lookupResult = VM::Wobject::LookupProperty(
-        cx->inHatchery(), scopeObj, name, &lookupState, &propDesc);
-    if (!lookupResult)
-        return ErrorVal();
-
-    if (!lookupResult.value()) {
+    VM::ControlFlow propFlow = GetObjectProperty(cx, scopeObj, name);
+    WH_ASSERT(propFlow.isExpressionResult() || propFlow.isVoid());
+    if (propFlow.isVoid()) {
         return cx->setExceptionRaised("Syntax method binding not found.",
                                       name.get());
     }
+    if (!propFlow.isValue())
+        return propFlow;
 
-    // Found binding for scope.@integer
-    // Ensure it's a method.
-    WH_ASSERT(propDesc->isValid());
-
-    if (!propDesc->isMethod()) {
-        return cx->setExceptionRaised("Syntax method binding is not a method.",
-                                      name.get());
+    // Found binding for syntax name.  Ensure it's a method.
+    if (!propFlow.value().isPointerTo<VM::FunctionObject>()) {
+        return cx->setExceptionRaised(
+            "Syntax method binding is not a function.", name.get());
     }
-    Local<VM::Function*> func(cx, propDesc->method());
+
+    Local<VM::FunctionObject*> funcObj(cx,
+        propFlow.value().pointer<VM::FunctionObject>());
+    Local<VM::Wobject*> receiver(cx, funcObj->receiver());
+    Local<VM::LookupState*> lookupState(cx, funcObj->lookupState());
 
     // Function must be an operative.
-    if (!func->isOperative()) {
+    if (!funcObj->func()->isOperative()) {
         return cx->setExceptionRaised("Syntax method binding is applicative.",
                                       name.get());
     }
@@ -202,28 +201,30 @@ DispatchSyntaxMethod(ThreadContext* cx,
     Local<VM::SyntaxTreeRef> stRef(cx, VM::SyntaxTreeRef(pst, node->offset()));
 
     // Invoke operative function with given arguments.
-    return InvokeOperativeFunction(cx, lookupState, scope, func,
-                                   scopeObj, stRef);
+    return InvokeOperativeFunction(cx, scope, funcObj, stRef);
 }
 
 VM::ControlFlow
 InvokeOperativeFunction(ThreadContext* cx,
-                        Handle<VM::LookupState*> lookupState,
                         Handle<VM::ScopeObject*> callerScope,
-                        Handle<VM::Function*> func,
-                        Handle<VM::Wobject*> receiver,
-                        Handle<VM::SyntaxTreeRef> stRef)
+                        Handle<VM::FunctionObject*> funcObj,
+                        ArrayHandle<VM::SyntaxTreeRef> stRefs)
 {
+    WH_ASSERT(funcObj->isOperative());
+
     // Call native if native.
+    Local<VM::Function*> func(cx, funcObj->func());
     if (func->isNative()) {
-        WH_ASSERT(func->asNative()->isOperative());
+        Local<VM::LookupState*> lookupState(cx, funcObj->lookupState());
+        Local<VM::Wobject*> receiver(cx, funcObj->receiver());
+
         Local<VM::NativeCallInfo> callInfo(cx,
             VM::NativeCallInfo(lookupState, callerScope,
-                               func->asNative(),
+                               funcObj,
                                VM::ValBox::Pointer(receiver.get())));
 
         VM::NativeOperativeFuncPtr opNatF = func->asNative()->operative();
-        return opNatF(cx, callInfo, ArrayHandle<VM::SyntaxTreeRef>(stRef));
+        return opNatF(cx, callInfo, stRefs);
     }
 
     // If scripted, interpret the scripted function.
@@ -231,6 +232,78 @@ InvokeOperativeFunction(ThreadContext* cx,
         WH_ASSERT("Cannot interpret scripted operatives yet!");
         return cx->setError(RuntimeError::InternalError,
                             "Cannot interpret scripted operatives yet!");
+    }
+
+    WH_UNREACHABLE("Unknown function type!");
+    return cx->setError(RuntimeError::InternalError,
+                        "Unknown function type seen!",
+                        HeapThing::From(func.get()));
+}
+
+VM::ControlFlow
+InvokeApplicativeFunction(ThreadContext* cx,
+                          Handle<VM::ScopeObject*> callerScope,
+                          Handle<VM::FunctionObject*> funcObj,
+                          ArrayHandle<VM::SyntaxTreeRef> stRefs)
+{
+    WH_ASSERT(funcObj->isApplicative());
+
+    // Evaluate each argument stref.
+    LocalArray<VM::ValBox> args(cx, stRefs.length());
+    for (uint32_t i = 0; i < stRefs.length(); i++) {
+        VM::ControlFlow argFlow = InterpretSyntax(cx, callerScope,
+                                                  stRefs.handle(i));
+        // Must be an expression result.
+        WH_ASSERT(argFlow.isExpressionResult());
+        if (!argFlow.isValue())
+            return argFlow;
+        args[i] = argFlow.value();
+    }
+
+    // Call native if native.
+    Local<VM::Function*> func(cx, funcObj->func());
+    if (func->isNative()) {
+        Local<VM::LookupState*> lookupState(cx, funcObj->lookupState());
+        Local<VM::Wobject*> receiver(cx, funcObj->receiver());
+
+        Local<VM::NativeCallInfo> callInfo(cx,
+            VM::NativeCallInfo(lookupState, callerScope,
+                               funcObj,
+                               VM::ValBox::Pointer(receiver.get())));
+
+        VM::NativeApplicativeFuncPtr appNatF = func->asNative()->applicative();
+        return appNatF(cx, callInfo, args);
+    }
+
+    // If scripted, interpret the scripted function.
+    if (func->isScripted()) {
+        Local<VM::ScriptedFunction*> scriptedFunc(cx, func->asScripted());
+        if (scriptedFunc->numParams() != args.length())
+            return cx->setExceptionRaised("Arguments do not match params.");
+
+        // Create a new scope object for the call.
+        Local<VM::CallScope*> funcScope(cx);
+        if (!funcScope.setResult(VM::CallScope::Create(cx->inHatchery(),
+                                                       callerScope)))
+        {
+            return cx->setExceptionRaised("Error creating call scope.");
+        }
+
+        // Bind argument values to parameter names.
+        for (uint32_t i = 0; i < args.length(); i++) {
+            Local<VM::String*> paramName(cx, scriptedFunc->paramName(i));
+            Local<VM::PropertyDescriptor> propDesc(cx,
+                VM::PropertyDescriptor(args[i]));
+            if (!VM::CallScope::DefineProperty(cx->inHatchery(),
+                                               funcScope, paramName, propDesc))
+            {
+                return ErrorVal();
+            }
+        }
+
+        // Evaluate the function syntax.
+
+        return VM::ControlFlow::Void();
     }
 
     WH_UNREACHABLE("Unknown function type!");
@@ -285,8 +358,8 @@ GetObjectProperty(ThreadContext* cx,
         // Create a new function object bound to the scope.
         Local<VM::Function*> func(cx, propDesc->method());
         Local<VM::FunctionObject*> funcObj(cx);
-        if (!funcObj.setResult(VM::FunctionObject::Create(cx->inHatchery(),
-                                                          func, object)))
+        if (!funcObj.setResult(VM::FunctionObject::Create(
+                cx->inHatchery(), func, object, lookupState)))
         {
             return ErrorVal();
         }
