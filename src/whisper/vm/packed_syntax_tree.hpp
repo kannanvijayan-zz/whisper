@@ -2,6 +2,7 @@
 #define WHISPER__VM__PACKED_SYNTAX_TREE_HPP
 
 #include "parser/syntax_tree.hpp"
+#include "parser/packed_syntax.hpp"
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
 #include "vm/string.hpp"
@@ -56,6 +57,25 @@ class PackedSyntaxTree
         WH_ASSERT(idx < numConstants());
         return constants_->get(idx);
     }
+    VM::String* getConstantString(uint32_t idx) const {
+        WH_ASSERT(idx < numConstants());
+        Box box = getConstant(idx);
+        WH_ASSERT(box.isPointer());
+        WH_ASSERT(box.pointer<HeapThing>()->isString());
+        return box.pointer<VM::String>();
+    }
+
+    AST::PackedBaseNode astBaseNodeAt(uint32_t offset) {
+        WH_ASSERT(offset < dataSize());
+        return AST::PackedBaseNode(data_, offset);
+    }
+
+#define VM_PACKEDST_GET_(ntype) \
+    AST::Packed##ntype##Node ast##ntype##At(uint32_t offset) { \
+        return astBaseNodeAt(offset).as##ntype(); \
+    }
+    WHISPER_DEFN_SYNTAX_NODES(VM_PACKEDST_GET_)
+#undef VM_PACKEDST_GET_
 };
 
 //
@@ -99,7 +119,20 @@ class SyntaxTreeRef
 
     AST::NodeType nodeType() const;
     char const* nodeTypeCString() const;
+
+    AST::PackedBaseNode astBaseNode() {
+        WH_ASSERT(isValid());
+        return pst_->astBaseNodeAt(offset());
+    }
+
+#define VM_STREF_GET_(ntype) \
+    AST::Packed##ntype##Node ast##ntype() { \
+        return astBaseNode().as##ntype(); \
+    }
+    WHISPER_DEFN_SYNTAX_NODES(VM_STREF_GET_)
+#undef VM_STREF_GET_
 };
+
 
 //
 // A SyntaxTreeFragment combines the following things:
