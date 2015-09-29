@@ -9,6 +9,11 @@
 namespace Whisper {
 
 
+template <typename T> class MutHandle;
+template <typename T> class MutArrayHandle;
+template <typename T> class Handle;
+template <typename T> class ArrayHandle;
+
 //
 // MutHandles are lightweight pointers to rooted values.  They
 // allow for mutation of the stored value (i.e. assignment).
@@ -16,6 +21,8 @@ namespace Whisper {
 template <typename T>
 class MutHandle
 {
+    template <typename U> friend class MutArrayHandle;
+
     typedef typename DerefTraits<T>::Type DerefType;
 
   private:
@@ -155,6 +162,9 @@ class MutArrayHandle
     inline T& operator [](uint32_t idx) {
         return get(idx);
     }
+
+    Handle<T> handle(uint32_t idx);
+    MutHandle<T> mutHandle(uint32_t idx);
 };
 
 
@@ -166,6 +176,9 @@ template <typename T>
 class Handle
 {
     template <typename U> friend class Handle;
+    template <typename U> friend class ArrayHandle;
+    template <typename U> friend class MutArrayHandle;
+
     typedef typename DerefTraits<T>::Type DerefType;
     typedef typename DerefTraits<T>::ConstType ConstDerefType;
 
@@ -288,7 +301,33 @@ class ArrayHandle
     inline T const& operator [](uint32_t idx) const {
         return get(idx);
     }
+
+    Handle<T> handle(uint32_t idx);
 };
+
+template <typename T>
+inline Handle<T>
+MutArrayHandle<T>::handle(uint32_t idx)
+{
+    WH_ASSERT(idx < length());
+    return Handle<T>(&valAddr_[idx]);
+}
+
+template <typename T>
+inline MutHandle<T>
+MutArrayHandle<T>::mutHandle(uint32_t idx)
+{
+    WH_ASSERT(idx < length());
+    return MutHandle<T>(&valAddr_[idx]);
+}
+
+template <typename T>
+inline Handle<T>
+ArrayHandle<T>::handle(uint32_t idx)
+{
+    WH_ASSERT(idx < length());
+    return Handle<T>(&valAddr_[idx]);
+}
 
 
 } // namespace Whisper
