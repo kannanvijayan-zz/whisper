@@ -84,6 +84,18 @@ class Box
     bool isPointer() const {
         return (value_ & PointerTagMask) == PointerTag;
     }
+
+    template <typename T>
+    bool isPointerTo() const {
+        static_assert(IsHeapThingType<T>(), "T is not a HeapThing type.");
+
+        if (!isPointer())
+            return false;
+
+        HeapFormat format = pointer<HeapThing>()->format();
+        return HeapTraits<T>::Format == format;
+    }
+
     template <typename T>
     T* pointer() const {
         static_assert(PointerTag == 0, "");
