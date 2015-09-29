@@ -14,8 +14,26 @@ namespace Whisper {
 inline
 LocalBase::LocalBase(ThreadContext* threadContext,
                      StackFormat format,
-                     uint32_t count,
                      uint32_t size)
+  : threadContext_(threadContext),
+    next_(threadContext_->locals()),
+    header_(format, size)
+{
+    threadContext_->locals_ = this;
+}
+
+inline
+LocalBase::LocalBase(AllocationContext const& acx,
+                     StackFormat format,
+                     uint32_t size)
+  : LocalBase(acx.threadContext(), format, size)
+{}
+
+inline
+LocalBase::LocalBase(ThreadContext* threadContext,
+                     StackFormat format,
+                     uint32_t size,
+                     uint32_t count)
   : threadContext_(threadContext),
     next_(threadContext_->locals()),
     header_(format, size, count)
@@ -26,9 +44,9 @@ LocalBase::LocalBase(ThreadContext* threadContext,
 inline
 LocalBase::LocalBase(AllocationContext const& acx,
                      StackFormat format,
-                     uint32_t count,
-                     uint32_t size)
-  : LocalBase(acx.threadContext(), format, count, size)
+                     uint32_t size,
+                     uint32_t count)
+  : LocalBase(acx.threadContext(), format, size, count)
 {}
 
 inline 
@@ -73,14 +91,14 @@ Local<T>::handle() const
 
 template <typename T>
 inline MutHandle<T>
-LocalArrayBase<T, UINT32_MAX>::mutHandle(uint32_t idx)
+LocalArray<T>::mutHandle(uint32_t idx)
 {
     return MutHandle<T>(*address(idx));
 }
 
 template <typename T>
 inline Handle<T>
-LocalArrayBase<T, UINT32_MAX>::handle(uint32_t idx) const
+LocalArray<T>::handle(uint32_t idx) const
 {
     return Handle<T>(*address(idx));
 }

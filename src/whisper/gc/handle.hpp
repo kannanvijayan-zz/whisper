@@ -114,8 +114,7 @@ class MutArrayHandle
     inline MutArrayHandle(MutHandle<T>& handle)
       : MutArrayHandle(handle.address(), 1)
     {}
-    template <uint32_t N>
-    inline MutArrayHandle(LocalArray<T, N>& localArray)
+    inline MutArrayHandle(LocalArray<T>& localArray)
       : MutArrayHandle(localArray.address(0), localArray.length())
     {}
 
@@ -253,8 +252,7 @@ class ArrayHandle
     inline ArrayHandle(Handle<T>& handle)
       : ArrayHandle(handle.address(), 1)
     {}
-    template <uint32_t N>
-    inline ArrayHandle(LocalArray<T, N>& localArray)
+    inline ArrayHandle(LocalArray<T>& localArray)
       : ArrayHandle(localArray.address(0), localArray.length())
     {}
 

@@ -75,14 +75,14 @@ char const* StackFormatString(StackFormat fmt);
 //
 //  The Low 32-bit word contains the StackFormat in the low 10 bits.
 //
-//              Count of Elements  StackFormat
-//                   16 bits         10 bits
-//                     |               |
-//                     |               |
-//             ------------------ ----------
+//               Count of Elements    StackFormat
+//                    16 bits           10 bits
+//                      |                 |
+//                      |                 |
+//              -------------------- ------------
 //
-//      000000 CC CCCCCCCC CCCCCC FFFFFFFFFF
-//      bit 31                         bit 0
+//      0000-0A CC-CCCC-CCCC-CCCC-CC FF-FFFF-FFFF
+//      bit 31                              bit 0
 //
 //
 //      The low 10 bits indicates StackFormat.
@@ -97,6 +97,8 @@ class alignas(8) StackHeader
 
     typedef Bitfield<uint32_t, uint16_t, 10, 0> FormatBitfield;
     typedef Bitfield<uint32_t, uint16_t, 16, 10> CountBitfield;
+    typedef Bitfield<uint32_t, uint8_t, 1, 26> IsArrayBitfield;
+
     static constexpr uint32_t MaxCount = CountBitfield::MaxValue;
 
     inline FormatBitfield formatBitfield() {
@@ -113,10 +115,23 @@ class alignas(8) StackHeader
         return CountBitfield::Const(header_);
     }
 
+    inline IsArrayBitfield isArrayBitfield() {
+        return IsArrayBitfield(header_);
+    }
+    inline IsArrayBitfield::Const isArrayBitfield() const {
+        return IsArrayBitfield::Const(header_);
+    }
+
   public:
+    StackHeader(StackFormat fmt, uint32_t size)
+      : header_(FormatBitfield::Lift(StackFormatValue(fmt)) |
+                IsArrayBitfield::Lift(static_cast<uint8_t>(0))),
+        size_(size)
+    {}
     StackHeader(StackFormat fmt, uint32_t size, uint32_t count)
       : header_(FormatBitfield::Lift(StackFormatValue(fmt)) |
-                CountBitfield::Lift(static_cast<uint16_t>(count))),
+                CountBitfield::Lift(static_cast<uint16_t>(count)) |
+                IsArrayBitfield::Lift(static_cast<uint8_t>(1))),
         size_(size)
     {
         WH_ASSERT(count <= MaxCount);
@@ -125,7 +140,11 @@ class alignas(8) StackHeader
     inline StackFormat format() const {
         return static_cast<StackFormat>(formatBitfield().value());
     }
+    inline bool isArray() const {
+        return isArrayBitfield().value() == 1;
+    }
     inline uint32_t count() const {
+        WH_ASSERT(isArray());
         return countBitfield().value();
     }
     inline char const* formatString() const {
