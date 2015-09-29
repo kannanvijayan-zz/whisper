@@ -53,12 +53,14 @@ SyntaxTreeFragment::nodeTypeCString() const
 AST::NodeType
 SyntaxTreeRef::nodeType() const
 {
+    WH_ASSERT(isValid());
     return AST::PackedBaseNode(pst_->data(), offset_).type();
 }
 
 char const*
 SyntaxTreeRef::nodeTypeCString() const
 {
+    WH_ASSERT(isValid());
     return AST::NodeTypeString(nodeType());
 }
 

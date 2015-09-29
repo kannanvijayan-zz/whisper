@@ -71,6 +71,11 @@ class SyntaxTreeRef
     uint32_t offset_;
 
   public:
+    SyntaxTreeRef()
+      : pst_(nullptr),
+        offset_(0)
+    {}
+
     SyntaxTreeRef(PackedSyntaxTree* pst, uint32_t offset)
       : pst_(pst),
         offset_(offset)
@@ -78,11 +83,17 @@ class SyntaxTreeRef
         WH_ASSERT(pst_.get() != nullptr);
     }
 
+    bool isValid() const {
+        return pst_.get() != nullptr;
+    }
+
     Handle<PackedSyntaxTree*> pst() const {
+        WH_ASSERT(isValid());
         return pst_;
     }
 
     uint32_t offset() const {
+        WH_ASSERT(isValid());
         return offset_;
     }
 
