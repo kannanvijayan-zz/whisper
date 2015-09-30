@@ -245,6 +245,11 @@ class ScriptedFunction : public Function
         uint32_t paramCid = stRef().astDefStmt().paramCid(paramNo);
         return pst_->getConstantString(paramCid);
     }
+
+    SyntaxBlockRef bodyBlockRef() const {
+        AST::PackedSizedBlock block(stRef().astDefStmt().bodyBlock());
+        return SyntaxBlockRef(pst_, block.offset(), block.numStatements());
+    }
 };
 
 
