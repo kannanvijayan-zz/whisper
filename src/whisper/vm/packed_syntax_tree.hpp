@@ -79,30 +79,31 @@ class PackedSyntaxTree
 };
 
 //
-// A SyntaxNodeRef is a on-stack version of SyntaxTreeFragment.
+// A SyntaxTreeRef is a on-stack reference to some element
+// within a packed syntax tree.  It is subclassed by
+// SyntaxNodeRef and SyntaxBlockRef.
 //
-//
-class SyntaxNodeRef
+class SyntaxTreeRef
 {
-    friend struct TraceTraits<SyntaxNodeRef>;
+    friend struct TraceTraits<SyntaxTreeRef>;
 
-  private:
+  protected:
     StackField<PackedSyntaxTree*> pst_;
     uint32_t offset_;
 
-  public:
-    SyntaxNodeRef()
+    SyntaxTreeRef()
       : pst_(nullptr),
         offset_(0)
     {}
 
-    SyntaxNodeRef(PackedSyntaxTree* pst, uint32_t offset)
+    SyntaxTreeRef(PackedSyntaxTree* pst, uint32_t offset)
       : pst_(pst),
         offset_(offset)
     {
         WH_ASSERT(pst_.get() != nullptr);
     }
 
+  public:
     bool isValid() const {
         return pst_.get() != nullptr;
     }
@@ -115,6 +116,24 @@ class SyntaxNodeRef
     uint32_t offset() const {
         WH_ASSERT(isValid());
         return offset_;
+    }
+};
+
+//
+// A SyntaxNodeRef is a on-stack reference to a node in
+// a packed syntax tree.
+//
+class SyntaxNodeRef : public SyntaxTreeRef
+{
+    friend struct TraceTraits<SyntaxNodeRef>;
+
+  public:
+    SyntaxNodeRef() : SyntaxTreeRef() {}
+
+    SyntaxNodeRef(PackedSyntaxTree* pst, uint32_t offset)
+      : SyntaxTreeRef(pst, offset)
+    {
+        WH_ASSERT(pst_.get() != nullptr);
     }
 
     AST::NodeType nodeType() const;
@@ -131,6 +150,40 @@ class SyntaxNodeRef
     }
     WHISPER_DEFN_SYNTAX_NODES(VM_STREF_GET_)
 #undef VM_STREF_GET_
+};
+
+//
+// A SyntaxBlockRef is a on-stack reference to a block or
+// sized block in a packed syntax tree.
+//
+class SyntaxBlockRef : public SyntaxTreeRef
+{
+    friend struct TraceTraits<SyntaxBlockRef>;
+  private:
+    uint32_t numStatements_;
+
+  public:
+    SyntaxBlockRef() : SyntaxTreeRef() {}
+
+    SyntaxBlockRef(PackedSyntaxTree* pst, uint32_t offset,
+                   uint32_t numStatements)
+      : SyntaxTreeRef(pst, offset),
+        numStatements_(numStatements)
+    {}
+
+    uint32_t numStatements() const {
+        return numStatements_;
+    }
+
+    SyntaxNodeRef statement(uint32_t idx) const {
+        WH_ASSERT(idx < numStatements());
+        return SyntaxNodeRef(pst_, packedBlock().statement(idx).offset());
+    }
+
+  private:
+    AST::PackedBlock packedBlock() const {
+        return AST::PackedBlock(pst_->data(), offset(), numStatements_);
+    }
 };
 
 
@@ -215,6 +268,29 @@ struct TraceTraits<VM::PackedSyntaxTree>
 };
 
 template <>
+struct TraceTraits<VM::SyntaxTreeRef>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::SyntaxTreeRef const& stRef,
+                     void const* start, void const* end)
+    {
+        stRef.pst_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::SyntaxTreeRef& stRef,
+                       void const* start, void const* end)
+    {
+        stRef.pst_.update(updater, start, end);
+    }
+};
+
+template <>
 struct TraceTraits<VM::SyntaxNodeRef>
 {
     TraceTraits() = delete;
@@ -231,6 +307,29 @@ struct TraceTraits<VM::SyntaxNodeRef>
 
     template <typename Updater>
     static void Update(Updater& updater, VM::SyntaxNodeRef& stRef,
+                       void const* start, void const* end)
+    {
+        stRef.pst_.update(updater, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::SyntaxBlockRef>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::SyntaxBlockRef const& stRef,
+                     void const* start, void const* end)
+    {
+        stRef.pst_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::SyntaxBlockRef& stRef,
                        void const* start, void const* end)
     {
         stRef.pst_.update(updater, start, end);
