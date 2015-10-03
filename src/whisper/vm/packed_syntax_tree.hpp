@@ -171,6 +171,15 @@ class SyntaxBlockRef : public SyntaxTreeRef
         numStatements_(numStatements)
     {}
 
+    SyntaxBlockRef(PackedSyntaxTree *pst, const AST::PackedBlock &packedBlock)
+      : SyntaxBlockRef(pst, packedBlock.offset(), packedBlock.numStatements())
+    {}
+
+    SyntaxBlockRef(PackedSyntaxTree *pst,
+                   const AST::PackedSizedBlock &packedSizedBlock)
+      : SyntaxBlockRef(pst, packedSizedBlock.unsizedBlock())
+    {}
+
     uint32_t numStatements() const {
         return numStatements_;
     }
