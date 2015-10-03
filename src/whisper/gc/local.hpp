@@ -246,7 +246,7 @@ class LocalArray : public LocalBase
         delete[] vals_;
     }
 
-    inline uint32_t length() {
+    inline uint32_t length() const {
         return this->count();
     }
 
@@ -275,6 +275,9 @@ class LocalArray : public LocalBase
         return OkVal();
     }
 
+    inline T const* baseAddress() const {
+        return (this->length() == 0) ? nullptr : &vals_[0];
+    }
     inline T const* address(uint32_t idx) const {
         WH_ASSERT(idx < length());
         return &vals_[idx];

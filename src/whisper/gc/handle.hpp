@@ -125,7 +125,7 @@ class MutArrayHandle
       : MutArrayHandle(handle.address(), 1)
     {}
     inline MutArrayHandle(LocalArray<T>& localArray)
-      : MutArrayHandle(localArray.address(0), localArray.length())
+      : MutArrayHandle(localArray.baseAddress(), localArray.length())
     {}
 
     inline static MutArrayHandle<T> FromTrackedLocation(T* valAddr,
@@ -272,7 +272,7 @@ class ArrayHandle
       : ArrayHandle(handle.address(), 1)
     {}
     inline ArrayHandle(LocalArray<T>& localArray)
-      : ArrayHandle(localArray.address(0), localArray.length())
+      : ArrayHandle(localArray.baseAddress(), localArray.length())
     {}
 
     inline ArrayHandle(MutArrayHandle<T> const& mutHandle)
