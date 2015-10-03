@@ -54,6 +54,7 @@ class Wobject
         switch (format) {
           case HeapFormat::PlainObject:
           case HeapFormat::CallScope:
+          case HeapFormat::BlockScope:
           case HeapFormat::ModuleScope:
           case HeapFormat::GlobalScope:
           case HeapFormat::FunctionObject:

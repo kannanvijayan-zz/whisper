@@ -39,6 +39,7 @@
     _(PropertyDict)             \
     _(PlainObject)              \
     _(CallScope)                \
+    _(BlockScope)               \
     _(ModuleScope)              \
     _(GlobalScope)              \
     _(LookupSeenObjects)        \

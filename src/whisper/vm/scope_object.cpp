@@ -65,6 +65,64 @@ CallScope::DefineProperty(AllocationContext acx,
 }
 
 
+/* static */ Result<BlockScope*>
+BlockScope::Create(AllocationContext acx,
+                   Handle<ScopeObject*> callerScope)
+{
+    // Allocate array of delegates containing caller scope.
+    Local<Array<Wobject*>*> delegates(acx);
+    if (!delegates.setResult(Array<Wobject*>::CreateFill(acx, 1, nullptr)))
+        return ErrorVal();
+    delegates->set(0, callerScope.get());
+
+    // Allocate a dictionary.
+    Local<PropertyDict*> props(acx);
+    if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
+        return ErrorVal();
+
+    return acx.create<BlockScope>(delegates.handle(), props.handle());
+}
+
+/* static */ uint32_t
+BlockScope::NumDelegates(AllocationContext acx,
+                         Handle<BlockScope*> obj)
+{
+    return HashObject::NumDelegates(acx, obj.convertTo<HashObject*>());
+}
+
+/* static */ void
+BlockScope::GetDelegates(AllocationContext acx,
+                         Handle<BlockScope*> obj,
+                         MutHandle<Array<Wobject*>*> delegatesOut)
+{
+    HashObject::GetDelegates(acx,
+        Handle<HashObject*>::Convert(obj),
+        delegatesOut);
+}
+
+/* static */ bool
+BlockScope::GetProperty(AllocationContext acx,
+                        Handle<BlockScope*> obj,
+                        Handle<String*> name,
+                        MutHandle<PropertyDescriptor> result)
+{
+    return HashObject::GetProperty(acx,
+        Handle<HashObject*>::Convert(obj),
+        name, result);
+}
+
+/* static */ OkResult
+BlockScope::DefineProperty(AllocationContext acx,
+                           Handle<BlockScope*> obj,
+                           Handle<String*> name,
+                           Handle<PropertyDescriptor> defn)
+{
+    return HashObject::DefineProperty(acx,
+        Handle<HashObject*>::Convert(obj),
+        name, defn);
+}
+
+
 /* static */ Result<ModuleScope*>
 ModuleScope::Create(AllocationContext acx, Handle<GlobalScope*> global)
 {

@@ -28,6 +28,12 @@ Wobject::NumDelegates(AllocationContext acx,
         return CallScope::NumDelegates(acx, callObj);
     }
 
+    if (heapThing->isBlockScope()) {
+        Local<BlockScope*> blockObj(acx,
+            reinterpret_cast<BlockScope*>(heapThing));
+        return BlockScope::NumDelegates(acx, blockObj);
+    }
+
     if (heapThing->isModuleScope()) {
         Local<ModuleScope*> moduleObj(acx,
             reinterpret_cast<ModuleScope*>(heapThing));
@@ -67,6 +73,13 @@ Wobject::GetDelegates(AllocationContext acx,
         Local<CallScope*> callObj(acx,
             reinterpret_cast<CallScope*>(heapThing));
         CallScope::GetDelegates(acx, callObj, delegatesOut);
+        return OkVal();
+    }
+
+    if (heapThing->isBlockScope()) {
+        Local<BlockScope*> blockObj(acx,
+            reinterpret_cast<BlockScope*>(heapThing));
+        BlockScope::GetDelegates(acx, blockObj, delegatesOut);
         return OkVal();
     }
 
@@ -114,6 +127,12 @@ Wobject::GetProperty(AllocationContext acx,
         return OkVal(CallScope::GetProperty(acx, callObj, name, result));
     }
 
+    if (heapThing->isBlockScope()) {
+        Local<BlockScope*> blockObj(acx,
+            reinterpret_cast<BlockScope*>(heapThing));
+        return OkVal(BlockScope::GetProperty(acx, blockObj, name, result));
+    }
+
     if (heapThing->isModuleScope()) {
         Local<ModuleScope*> moduleObj(acx,
             reinterpret_cast<ModuleScope*>(heapThing));
@@ -153,6 +172,12 @@ Wobject::DefineProperty(AllocationContext acx,
         Local<CallScope*> callObj(acx,
             reinterpret_cast<CallScope*>(heapThing));
         return CallScope::DefineProperty(acx, callObj, name, defn);
+    }
+
+    if (heapThing->isBlockScope()) {
+        Local<BlockScope*> blockObj(acx,
+            reinterpret_cast<BlockScope*>(heapThing));
+        return BlockScope::DefineProperty(acx, blockObj, name, defn);
     }
 
     if (heapThing->isModuleScope()) {
