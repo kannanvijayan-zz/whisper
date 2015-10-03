@@ -163,7 +163,7 @@ class MutArrayHandle
         return get(idx);
     }
 
-    Handle<T> handle(uint32_t idx);
+    Handle<T> handle(uint32_t idx) const;
     MutHandle<T> mutHandle(uint32_t idx);
 };
 
@@ -302,12 +302,12 @@ class ArrayHandle
         return get(idx);
     }
 
-    Handle<T> handle(uint32_t idx);
+    Handle<T> handle(uint32_t idx) const;
 };
 
 template <typename T>
 inline Handle<T>
-MutArrayHandle<T>::handle(uint32_t idx)
+MutArrayHandle<T>::handle(uint32_t idx) const
 {
     WH_ASSERT(idx < length());
     return Handle<T>(&valAddr_[idx]);
@@ -323,7 +323,7 @@ MutArrayHandle<T>::mutHandle(uint32_t idx)
 
 template <typename T>
 inline Handle<T>
-ArrayHandle<T>::handle(uint32_t idx)
+ArrayHandle<T>::handle(uint32_t idx) const
 {
     WH_ASSERT(idx < length());
     return Handle<T>(&valAddr_[idx]);
