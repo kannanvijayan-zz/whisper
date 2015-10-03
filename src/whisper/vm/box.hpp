@@ -1,7 +1,7 @@
 #ifndef WHISPER__VM__BOX_HPP
 #define WHISPER__VM__BOX_HPP
 
-
+#include <sstream>
 #include <cstdio>
 
 #include "vm/predeclare.hpp"
@@ -214,6 +214,8 @@ class ValBox : public Box
     static ValBox Boolean(bool val) {
         return ValBox((val ? BooleanBit : 0u) | BooleanTag);
     }
+
+    OkResult toString(ThreadContext* cx, std::ostringstream &out) const;
 
   private:
     template <typename T>

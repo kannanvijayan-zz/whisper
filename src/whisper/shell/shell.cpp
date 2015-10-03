@@ -3,6 +3,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <sstream>
 
 #include "common.hpp"
 #include "allocators.hpp"
@@ -241,6 +242,13 @@ static VM::ControlFlow Shell_Print(
     Handle<VM::NativeCallInfo> callInfo,
     ArrayHandle<VM::ValBox> args)
 {
-    printf("Shell_Print called!!\n");
+    std::ostringstream out;
+
+    for (uint32_t i = 0; i < args.length(); i++) {
+        if (!args.handle(i)->toString(cx, out))
+            return ErrorVal();
+    }
+
+    std::cout << out.str() << std::endl;
     return VM::ControlFlow::Value(VM::ValBox::Undefined());
 }

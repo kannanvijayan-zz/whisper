@@ -39,6 +39,35 @@ ValBox::ValBox(Box const& box)
                  Wobject::IsWobject(pointer<HeapThing>()));
 }
 
+OkResult
+ValBox::toString(ThreadContext* cx, std::ostringstream &out) const
+{
+    WH_ASSERT(isValid());
+    if (isUndefined()) {
+        out << "undefined";
+        return OkVal();
+    }
+
+    if (isInteger()) {
+        out << integer();
+        return OkVal();
+    }
+
+    if (isBoolean()) {
+        out << (boolean() ? "true" : "false");
+        return OkVal();
+    }
+
+    if (isPointer()) {
+        HeapThing *heapThing = HeapThing::From(objectPointer());
+        out << "[Object " << heapThing->header().formatString() << "]";
+        return OkVal();
+    }
+
+    WH_UNREACHABLE("Invalid valbox value.");
+    return ErrorVal();
+}
+
 
 } // namespace VM
 } // namespace Whisper
