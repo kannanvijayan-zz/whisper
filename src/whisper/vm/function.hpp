@@ -282,6 +282,8 @@ class FunctionObject : public HashObject
             Handle<Wobject*> receiver,
             Handle<LookupState*> lookupState);
 
+    WobjectHooks const* getFunctionObjectHooks() const;
+
     Function* func() const {
         return func_;
     }

@@ -21,6 +21,8 @@ class PlainObject : public HashObject
     static Result<PlainObject*> Create(AllocationContext acx,
                                        Handle<Array<Wobject*>*> delegates);
 
+    WobjectHooks const* getPlainObjectHooks() const;
+
     static uint32_t NumDelegates(AllocationContext acx,
                                  Handle<PlainObject*> obj);
 

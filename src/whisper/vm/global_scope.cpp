@@ -37,6 +37,12 @@ GlobalScope::Create(AllocationContext acx)
     return OkVal(global.get());
 }
 
+WobjectHooks const*
+GlobalScope::getGlobalScopeHooks() const
+{
+    return hashObjectHooks();
+}
+
 /* static */ uint32_t
 GlobalScope::NumDelegates(AllocationContext acx,
                           Handle<GlobalScope*> obj)

@@ -6,6 +6,58 @@ namespace Whisper {
 namespace VM {
 
 
+static uint32_t
+HashObject_NumDelegates(AllocationContext acx,
+                        Handle<Wobject*> obj)
+{
+    return HashObject::NumDelegates(acx, obj.upConvertTo<HashObject*>());
+}
+
+static OkResult
+HashObject_GetDelegates(AllocationContext acx,
+                        Handle<Wobject*> obj,
+                        MutHandle<Array<Wobject*>*> delegatesOut)
+{
+    HashObject::GetDelegates(acx, obj.upConvertTo<HashObject*>(),
+                             delegatesOut);
+    return OkVal();
+}
+
+static Result<bool>
+HashObject_GetProperty(AllocationContext acx,
+                       Handle<Wobject*> obj,
+                       Handle<String*> name,
+                       MutHandle<PropertyDescriptor> result)
+{
+    return OkVal(HashObject::GetProperty(acx,
+                        obj.upConvertTo<HashObject*>(),
+                        name, result));
+}
+
+static OkResult
+HashObject_DefineProperty(AllocationContext acx,
+                          Handle<Wobject*> obj,
+                          Handle<String*> name,
+                          Handle<PropertyDescriptor> defn)
+{
+    return HashObject::DefineProperty(acx,
+        obj.upConvertTo<HashObject*>(), name, defn);
+}
+
+static WobjectHooks HashObjectHooks =
+{
+    HashObject_NumDelegates,
+    HashObject_GetDelegates,
+    HashObject_GetProperty,
+    HashObject_DefineProperty
+};
+
+WobjectHooks const*
+HashObject::hashObjectHooks() const
+{
+    return &HashObjectHooks;
+}
+
 /* static */ uint32_t
 HashObject::NumDelegates(AllocationContext acx,
                          Handle<HashObject*> obj)

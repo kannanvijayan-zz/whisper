@@ -21,6 +21,8 @@ class GlobalScope : public ScopeObject
 
     static Result<GlobalScope*> Create(AllocationContext acx);
 
+    WobjectHooks const* getGlobalScopeHooks() const;
+
     static uint32_t NumDelegates(AllocationContext acx,
                                  Handle<GlobalScope*> obj);
 

@@ -11,6 +11,21 @@ namespace Whisper {
 namespace VM {
 
 
+WobjectHooks const*
+Wobject::getHooks() const
+{
+    HeapThing const* heapThing = HeapThing::From(this);
+
+#define GET_HOOKS_(ObjKind) \
+    if (heapThing->is##ObjKind()) \
+        return reinterpret_cast<ObjKind const*>(this)->get##ObjKind##Hooks();
+    WHISPER_DEFN_WOBJECT_KINDS(GET_HOOKS_)
+#undef GET_HOOKS_
+
+    WH_UNREACHABLE("Unknown object kind");
+    return nullptr;
+}
+
 /* static */ uint32_t
 Wobject::NumDelegates(AllocationContext acx,
                       Handle<Wobject*> obj)

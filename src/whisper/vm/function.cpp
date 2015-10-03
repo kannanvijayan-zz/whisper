@@ -68,6 +68,12 @@ FunctionObject::Create(AllocationContext acx,
                                       func, receiver, lookupState);
 }
 
+WobjectHooks const*
+FunctionObject::getFunctionObjectHooks() const
+{
+    return hashObjectHooks();
+}
+
 /* static */ uint32_t
 FunctionObject::NumDelegates(AllocationContext acx,
                              Handle<FunctionObject*> obj)

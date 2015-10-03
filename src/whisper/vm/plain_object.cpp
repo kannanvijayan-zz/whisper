@@ -18,6 +18,12 @@ PlainObject::Create(AllocationContext acx,
     return acx.create<PlainObject>(delegates, props.handle());
 }
 
+WobjectHooks const*
+PlainObject::getPlainObjectHooks() const
+{
+    return hashObjectHooks();
+}
+
 /* static */ uint32_t
 PlainObject::NumDelegates(AllocationContext acx,
                           Handle<PlainObject*> obj)

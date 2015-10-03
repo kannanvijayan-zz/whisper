@@ -32,6 +32,8 @@ class CallScope : public ScopeObject
     static Result<CallScope*> Create(AllocationContext acx,
                                      Handle<ScopeObject*> callerScope);
 
+    WobjectHooks const* getCallScopeHooks() const;
+
     static uint32_t NumDelegates(AllocationContext acx,
                                  Handle<CallScope*> obj);
 
@@ -62,6 +64,8 @@ class BlockScope : public ScopeObject
     static Result<BlockScope*> Create(AllocationContext acx,
                                       Handle<ScopeObject*> callerScope);
 
+    WobjectHooks const* getBlockScopeHooks() const;
+
     static uint32_t NumDelegates(AllocationContext acx,
                                  Handle<BlockScope*> obj);
 
@@ -91,6 +95,8 @@ class ModuleScope : public ScopeObject
 
     static Result<ModuleScope*> Create(AllocationContext acx,
                                         Handle<GlobalScope*> global);
+
+    WobjectHooks const* getModuleScopeHooks() const;
 
     static uint32_t NumDelegates(AllocationContext acx,
                                  Handle<ModuleScope*> obj);

@@ -33,6 +33,8 @@ class HashObject : public Wobject
         WH_ASSERT(dict_ != nullptr);
     }
 
+    WobjectHooks const* hashObjectHooks() const;
+
     static uint32_t NumDelegates(AllocationContext acx,
                                  Handle<HashObject*> obj);
 

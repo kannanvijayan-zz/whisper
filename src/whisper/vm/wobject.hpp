@@ -13,6 +13,42 @@
 namespace Whisper {
 namespace VM {
 
+typedef uint32_t (*WobjectHook_NumDelegates)(
+        AllocationContext acx,
+        Handle<Wobject*> obj);
+
+typedef OkResult (*WobjectHook_GetDelegates)(
+        AllocationContext acx,
+        Handle<Wobject*> obj,
+        MutHandle<Array<Wobject*>*> delegatesOut);
+
+typedef Result<bool> (*WobjectHook_GetProperty)(
+        AllocationContext acx,
+        Handle<Wobject*> obj,
+        Handle<String*> name,
+        MutHandle<PropertyDescriptor> result);
+
+typedef OkResult (*WobjectHook_DefineProperty)(
+        AllocationContext acx,
+        Handle<Wobject*> obj,
+        Handle<String*> name,
+        Handle<PropertyDescriptor> defn);
+
+struct WobjectHooks
+{
+    WobjectHook_NumDelegates   numDelegates;
+    WobjectHook_GetDelegates   getDelegates;
+    WobjectHook_GetProperty    getProperty;
+    WobjectHook_DefineProperty defineProperty;
+};
+
+#define WHISPER_DEFN_WOBJECT_KINDS(_) \
+    _(PlainObject) \
+    _(CallScope) \
+    _(BlockScope) \
+    _(ModuleScope) \
+    _(GlobalScope) \
+    _(FunctionObject)
 
 class Wobject
 {
@@ -22,6 +58,8 @@ class Wobject
     }
 
   public:
+    WobjectHooks const* getHooks() const;
+
     static uint32_t NumDelegates(
             AllocationContext acx,
             Handle<Wobject*> obj);

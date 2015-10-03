@@ -229,6 +229,14 @@ class Handle
         return Handle<U>(reinterpret_cast<U const*>(address()));
     }
 
+    template <typename U>
+    inline Handle<U> upConvertTo()
+    {
+        static_assert(std::is_convertible<U, T>::value,
+                      "U is not convertible to T.");
+        return Handle<U>(reinterpret_cast<U const*>(address()));
+    }
+
     inline T const& get() const {
         return *valAddr_;
     }

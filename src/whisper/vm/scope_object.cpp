@@ -25,6 +25,12 @@ CallScope::Create(AllocationContext acx,
     return acx.create<CallScope>(delegates.handle(), props.handle());
 }
 
+WobjectHooks const*
+CallScope::getCallScopeHooks() const
+{
+    return hashObjectHooks();
+}
+
 /* static */ uint32_t
 CallScope::NumDelegates(AllocationContext acx,
                         Handle<CallScope*> obj)
@@ -83,6 +89,12 @@ BlockScope::Create(AllocationContext acx,
     return acx.create<BlockScope>(delegates.handle(), props.handle());
 }
 
+WobjectHooks const*
+BlockScope::getBlockScopeHooks() const
+{
+    return hashObjectHooks();
+}
+
 /* static */ uint32_t
 BlockScope::NumDelegates(AllocationContext acx,
                          Handle<BlockScope*> obj)
@@ -138,6 +150,12 @@ ModuleScope::Create(AllocationContext acx, Handle<GlobalScope*> global)
         return ErrorVal();
 
     return acx.create<ModuleScope>(delegates.handle(), props.handle());
+}
+
+WobjectHooks const*
+ModuleScope::getModuleScopeHooks() const
+{
+    return hashObjectHooks();
 }
 
 /* static */ uint32_t
