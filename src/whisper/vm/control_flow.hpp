@@ -182,8 +182,15 @@ class ControlFlow
     bool isExpressionResult() const {
         return isValue() || isError() || isException();
     }
+    bool isPropertyLookupResult() const {
+        return isExpressionResult() || isVoid();
+    }
     bool isCallResult() const {
         return isVoid() || isReturn() || isError() || isException();
+    }
+    bool isStatementResult() const {
+        return isVoid() || isValue() || isReturn() || isError()
+            || isException();
     }
 
     ValBox const& value() const {

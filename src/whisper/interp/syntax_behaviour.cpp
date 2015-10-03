@@ -124,6 +124,8 @@ IMPL_LIFT_FN_(File)
 
         VM::ControlFlow stmtFlow = InterpretSyntax(cx, callInfo->callerScope(),
                                                    pst, stmtNode->offset());
+        WH_ASSERT(stmtFlow.isStatementResult());
+
         // Statements can yield void or value control flows and still
         // continue.
         if (stmtFlow.isVoid() || stmtFlow.isValue())
@@ -466,7 +468,7 @@ IMPL_LIFT_FN_(NameExpr)
     Local<VM::PropertyDescriptor> propDesc(cx);
 
     VM::ControlFlow propFlow = GetObjectProperty(cx, scopeObj, name);
-    WH_ASSERT(propFlow.isExpressionResult() || propFlow.isVoid());
+    WH_ASSERT(propFlow.isPropertyLookupResult());
     if (propFlow.isValue())
         return VM::ControlFlow::Value(propFlow.value());
 

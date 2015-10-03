@@ -172,7 +172,7 @@ DispatchSyntaxMethod(ThreadContext* cx,
 
     // Lookup method name on scope.
     VM::ControlFlow propFlow = GetObjectProperty(cx, scopeObj, name);
-    WH_ASSERT(propFlow.isExpressionResult() || propFlow.isVoid());
+    WH_ASSERT(propFlow.isPropertyLookupResult());
     if (propFlow.isVoid()) {
         return cx->setExceptionRaised("Syntax method binding not found.",
                                       name.get());
@@ -332,6 +332,7 @@ EvaluateBlock(ThreadContext* cx,
     for (uint32_t i = 0; i < bodyBlock->numStatements(); i++) {
         Local<VM::SyntaxNodeRef> stmtNode(cx, bodyBlock->statement(i));
         VM::ControlFlow stmtFlow = InterpretSyntax(cx, scopeObj, stmtNode);
+        WH_ASSERT(stmtFlow.isStatementResult());
 
         // Statements can yield void or value control flows and still
         // continue.
