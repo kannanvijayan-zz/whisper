@@ -317,8 +317,9 @@ InvokeApplicativeFunction(ThreadContext* cx,
             Local<VM::String*> paramName(cx, scriptedFunc->paramName(i));
             Local<VM::PropertyDescriptor> propDesc(cx,
                 VM::PropertyDescriptor(args[i]));
-            if (!VM::CallScope::DefineProperty(cx->inHatchery(),
-                                               funcScope, paramName, propDesc))
+            if (!VM::Wobject::DefineProperty(cx->inHatchery(),
+                    funcScope.handle().convertTo<VM::Wobject*>(),
+                    paramName, propDesc))
             {
                 return ErrorVal();
             }

@@ -33,23 +33,6 @@ class CallScope : public ScopeObject
                                      Handle<ScopeObject*> callerScope);
 
     WobjectHooks const* getCallScopeHooks() const;
-
-    static uint32_t NumDelegates(AllocationContext acx,
-                                 Handle<CallScope*> obj);
-
-    static void GetDelegates(AllocationContext acx,
-                             Handle<CallScope*> obj,
-                             MutHandle<Array<Wobject*>*> delegatesOut);
-
-    static bool GetProperty(AllocationContext acx,
-                            Handle<CallScope*> obj,
-                            Handle<String*> name,
-                            MutHandle<PropertyDescriptor> result);
-
-    static OkResult DefineProperty(AllocationContext acx,
-                                   Handle<CallScope*> obj,
-                                   Handle<String*> name,
-                                   Handle<PropertyDescriptor> defn);
 };
 
 class BlockScope : public ScopeObject
@@ -65,23 +48,6 @@ class BlockScope : public ScopeObject
                                       Handle<ScopeObject*> callerScope);
 
     WobjectHooks const* getBlockScopeHooks() const;
-
-    static uint32_t NumDelegates(AllocationContext acx,
-                                 Handle<BlockScope*> obj);
-
-    static void GetDelegates(AllocationContext acx,
-                             Handle<BlockScope*> obj,
-                             MutHandle<Array<Wobject*>*> delegatesOut);
-
-    static bool GetProperty(AllocationContext acx,
-                            Handle<BlockScope*> obj,
-                            Handle<String*> name,
-                            MutHandle<PropertyDescriptor> result);
-
-    static OkResult DefineProperty(AllocationContext acx,
-                                   Handle<BlockScope*> obj,
-                                   Handle<String*> name,
-                                   Handle<PropertyDescriptor> defn);
 };
 
 class ModuleScope : public ScopeObject
@@ -97,23 +63,6 @@ class ModuleScope : public ScopeObject
                                         Handle<GlobalScope*> global);
 
     WobjectHooks const* getModuleScopeHooks() const;
-
-    static uint32_t NumDelegates(AllocationContext acx,
-                                 Handle<ModuleScope*> obj);
-
-    static void GetDelegates(AllocationContext acx,
-                             Handle<ModuleScope*> obj,
-                             MutHandle<Array<Wobject*>*> delegatesOut);
-
-    static bool GetProperty(AllocationContext acx,
-                            Handle<ModuleScope*> obj,
-                            Handle<String*> name,
-                            MutHandle<PropertyDescriptor> result);
-
-    static OkResult DefineProperty(AllocationContext acx,
-                                   Handle<ModuleScope*> obj,
-                                   Handle<String*> name,
-                                   Handle<PropertyDescriptor> defn);
 };
 
 

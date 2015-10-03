@@ -31,45 +31,6 @@ CallScope::getCallScopeHooks() const
     return hashObjectHooks();
 }
 
-/* static */ uint32_t
-CallScope::NumDelegates(AllocationContext acx,
-                        Handle<CallScope*> obj)
-{
-    return HashObject::NumDelegates(acx, obj.convertTo<HashObject*>());
-}
-
-/* static */ void
-CallScope::GetDelegates(AllocationContext acx,
-                        Handle<CallScope*> obj,
-                        MutHandle<Array<Wobject*>*> delegatesOut)
-{
-    HashObject::GetDelegates(acx,
-        Handle<HashObject*>::Convert(obj),
-        delegatesOut);
-}
-
-/* static */ bool
-CallScope::GetProperty(AllocationContext acx,
-                       Handle<CallScope*> obj,
-                       Handle<String*> name,
-                       MutHandle<PropertyDescriptor> result)
-{
-    return HashObject::GetProperty(acx,
-        Handle<HashObject*>::Convert(obj),
-        name, result);
-}
-
-/* static */ OkResult
-CallScope::DefineProperty(AllocationContext acx,
-                          Handle<CallScope*> obj,
-                           Handle<String*> name,
-                           Handle<PropertyDescriptor> defn)
-{
-    return HashObject::DefineProperty(acx,
-        Handle<HashObject*>::Convert(obj),
-        name, defn);
-}
-
 
 /* static */ Result<BlockScope*>
 BlockScope::Create(AllocationContext acx,
@@ -95,45 +56,6 @@ BlockScope::getBlockScopeHooks() const
     return hashObjectHooks();
 }
 
-/* static */ uint32_t
-BlockScope::NumDelegates(AllocationContext acx,
-                         Handle<BlockScope*> obj)
-{
-    return HashObject::NumDelegates(acx, obj.convertTo<HashObject*>());
-}
-
-/* static */ void
-BlockScope::GetDelegates(AllocationContext acx,
-                         Handle<BlockScope*> obj,
-                         MutHandle<Array<Wobject*>*> delegatesOut)
-{
-    HashObject::GetDelegates(acx,
-        Handle<HashObject*>::Convert(obj),
-        delegatesOut);
-}
-
-/* static */ bool
-BlockScope::GetProperty(AllocationContext acx,
-                        Handle<BlockScope*> obj,
-                        Handle<String*> name,
-                        MutHandle<PropertyDescriptor> result)
-{
-    return HashObject::GetProperty(acx,
-        Handle<HashObject*>::Convert(obj),
-        name, result);
-}
-
-/* static */ OkResult
-BlockScope::DefineProperty(AllocationContext acx,
-                           Handle<BlockScope*> obj,
-                           Handle<String*> name,
-                           Handle<PropertyDescriptor> defn)
-{
-    return HashObject::DefineProperty(acx,
-        Handle<HashObject*>::Convert(obj),
-        name, defn);
-}
-
 
 /* static */ Result<ModuleScope*>
 ModuleScope::Create(AllocationContext acx, Handle<GlobalScope*> global)
@@ -156,45 +78,6 @@ WobjectHooks const*
 ModuleScope::getModuleScopeHooks() const
 {
     return hashObjectHooks();
-}
-
-/* static */ uint32_t
-ModuleScope::NumDelegates(AllocationContext acx,
-                          Handle<ModuleScope*> obj)
-{
-    return HashObject::NumDelegates(acx, obj.convertTo<HashObject*>());
-}
-
-/* static */ void
-ModuleScope::GetDelegates(AllocationContext acx,
-                          Handle<ModuleScope*> obj,
-                          MutHandle<Array<Wobject*>*> delegatesOut)
-{
-    HashObject::GetDelegates(acx,
-        Handle<HashObject*>::Convert(obj),
-        delegatesOut);
-}
-
-/* static */ bool
-ModuleScope::GetProperty(AllocationContext acx,
-                         Handle<ModuleScope*> obj,
-                         Handle<String*> name,
-                         MutHandle<PropertyDescriptor> result)
-{
-    return HashObject::GetProperty(acx,
-        Handle<HashObject*>::Convert(obj),
-        name, result);
-}
-
-/* static */ OkResult
-ModuleScope::DefineProperty(AllocationContext acx,
-                            Handle<ModuleScope*> obj,
-                            Handle<String*> name,
-                            Handle<PropertyDescriptor> defn)
-{
-    return HashObject::DefineProperty(acx,
-        Handle<HashObject*>::Convert(obj),
-        name, defn);
 }
 
 

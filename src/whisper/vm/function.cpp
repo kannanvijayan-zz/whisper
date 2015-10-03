@@ -74,45 +74,6 @@ FunctionObject::getFunctionObjectHooks() const
     return hashObjectHooks();
 }
 
-/* static */ uint32_t
-FunctionObject::NumDelegates(AllocationContext acx,
-                             Handle<FunctionObject*> obj)
-{
-    return HashObject::NumDelegates(acx, Handle<HashObject*>::Convert(obj));
-}
-
-/* static */ void
-FunctionObject::GetDelegates(AllocationContext acx,
-                             Handle<FunctionObject*> obj,
-                             MutHandle<Array<Wobject*>*> delegatesOut)
-{
-    HashObject::GetDelegates(acx,
-        Handle<HashObject*>::Convert(obj),
-        delegatesOut);
-}
-
-/* static */ bool
-FunctionObject::GetProperty(AllocationContext acx,
-                            Handle<FunctionObject*> obj,
-                            Handle<String*> name,
-                            MutHandle<PropertyDescriptor> result)
-{
-    return HashObject::GetProperty(acx,
-        Handle<HashObject*>::Convert(obj),
-        name, result);
-}
-
-/* static */ OkResult
-FunctionObject::DefineProperty(AllocationContext acx,
-                               Handle<FunctionObject*> obj,
-                               Handle<String*> name,
-                               Handle<PropertyDescriptor> defn)
-{
-    return HashObject::DefineProperty(acx,
-        Handle<HashObject*>::Convert(obj),
-        name, defn);
-}
-
 
 } // namespace VM
 } // namespace Whisper

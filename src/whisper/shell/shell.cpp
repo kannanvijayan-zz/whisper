@@ -208,8 +208,11 @@ BindShellGlobal(AllocationContext acx,
     Local<VM::PropertyDescriptor> desc(acx, VM::PropertyDescriptor(natF.get()));
 
     // Bind method on global.
-    if (!VM::GlobalScope::DefineProperty(acx, obj, rootedName, desc))
+    if (!VM::Wobject::DefineProperty(acx, obj.convertTo<VM::Wobject*>(),
+                                     rootedName, desc))
+    {
         return ErrorVal();
+    }
 
     return OkVal();
 }

@@ -23,23 +23,6 @@ class GlobalScope : public ScopeObject
 
     WobjectHooks const* getGlobalScopeHooks() const;
 
-    static uint32_t NumDelegates(AllocationContext acx,
-                                 Handle<GlobalScope*> obj);
-
-    static void GetDelegates(AllocationContext acx,
-                             Handle<GlobalScope*> obj,
-                             MutHandle<Array<Wobject*>*> delegatesOut);
-
-    static bool GetProperty(AllocationContext acx,
-                            Handle<GlobalScope*> obj,
-                            Handle<String*> name,
-                            MutHandle<PropertyDescriptor> result);
-
-    static OkResult DefineProperty(AllocationContext acx,
-                                   Handle<GlobalScope*> obj,
-                                   Handle<String*> name,
-                                   Handle<PropertyDescriptor> defn);
-
   private:
     static OkResult BindSyntaxHandlers(AllocationContext acx,
                                        Handle<GlobalScope*> obj);

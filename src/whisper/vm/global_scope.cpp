@@ -43,45 +43,6 @@ GlobalScope::getGlobalScopeHooks() const
     return hashObjectHooks();
 }
 
-/* static */ uint32_t
-GlobalScope::NumDelegates(AllocationContext acx,
-                          Handle<GlobalScope*> obj)
-{
-    return HashObject::NumDelegates(acx, obj.convertTo<HashObject*>());
-}
-
-/* static */ void
-GlobalScope::GetDelegates(AllocationContext acx,
-                          Handle<GlobalScope*> obj,
-                          MutHandle<Array<Wobject*>*> delegatesOut)
-{
-    HashObject::GetDelegates(acx,
-        Handle<HashObject*>::Convert(obj),
-        delegatesOut);
-}
-
-/* static */ bool
-GlobalScope::GetProperty(AllocationContext acx,
-                         Handle<GlobalScope*> obj,
-                         Handle<String*> name,
-                         MutHandle<PropertyDescriptor> result)
-{
-    return HashObject::GetProperty(acx,
-        Handle<HashObject*>::Convert(obj),
-        name, result);
-}
-
-/* static */ OkResult
-GlobalScope::DefineProperty(AllocationContext acx,
-                            Handle<GlobalScope*> obj,
-                            Handle<String*> name,
-                            Handle<PropertyDescriptor> defn)
-{
-    return HashObject::DefineProperty(acx,
-        Handle<HashObject*>::Convert(obj),
-        name, defn);
-}
-
 
 } // namespace VM
 } // namespace Whisper

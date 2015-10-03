@@ -302,23 +302,6 @@ class FunctionObject : public HashObject
     bool isOperative() const {
         return func_->isOperative();
     }
-
-    static uint32_t NumDelegates(AllocationContext acx,
-                                 Handle<FunctionObject*> obj);
-
-    static void GetDelegates(AllocationContext acx,
-                             Handle<FunctionObject*> obj,
-                             MutHandle<Array<Wobject*>*> delegatesOut);
-
-    static bool GetProperty(AllocationContext acx,
-                            Handle<FunctionObject*> obj,
-                            Handle<String*> name,
-                            MutHandle<PropertyDescriptor> result);
-
-    static OkResult DefineProperty(AllocationContext acx,
-                                   Handle<FunctionObject*> obj,
-                                   Handle<String*> name,
-                                   Handle<PropertyDescriptor> defn);
 };
 
 

@@ -24,45 +24,6 @@ PlainObject::getPlainObjectHooks() const
     return hashObjectHooks();
 }
 
-/* static */ uint32_t
-PlainObject::NumDelegates(AllocationContext acx,
-                          Handle<PlainObject*> obj)
-{
-    return HashObject::NumDelegates(acx, obj.convertTo<HashObject*>());
-}
-
-/* static */ void
-PlainObject::GetDelegates(AllocationContext acx,
-                          Handle<PlainObject*> obj,
-                          MutHandle<Array<Wobject*>*> delegatesOut)
-{
-    HashObject::GetDelegates(acx,
-        obj.convertTo<HashObject*>(),
-        delegatesOut);
-}
-
-/* static */ bool
-PlainObject::GetProperty(AllocationContext acx,
-                         Handle<PlainObject*> obj,
-                         Handle<String*> name,
-                         MutHandle<PropertyDescriptor> result)
-{
-    return HashObject::GetProperty(acx,
-        obj.convertTo<HashObject*>(),
-        name, result);
-}
-
-/* static */ OkResult
-PlainObject::DefineProperty(AllocationContext acx,
-                            Handle<PlainObject*> obj,
-                            Handle<String*> name,
-                            Handle<PropertyDescriptor> defn)
-{
-    return HashObject::DefineProperty(acx,
-        obj.convertTo<HashObject*>(),
-        name, defn);
-}
-
 
 } // namespace VM
 } // namespace Whisper
