@@ -151,6 +151,18 @@ class ControlFlow
     Kind kind() const {
         return kind_;
     }
+    char const* kindString() const {
+        switch (kind()) {
+          case Kind::Void:        return "Void";
+          case Kind::Error:       return "Error";
+          case Kind::Value:       return "Value";
+          case Kind::Return:      return "Return";
+          case Kind::Exception:   return "Exception";
+          default:
+            WH_UNREACHABLE("Unknown kind");
+            return "UNKNOWN";
+        }
+    }
     bool isVoid() const {
         return kind() == Kind::Void;
     }
@@ -169,6 +181,9 @@ class ControlFlow
 
     bool isExpressionResult() const {
         return isValue() || isError() || isException();
+    }
+    bool isCallResult() const {
+        return isVoid() || isReturn() || isError() || isException();
     }
 
     ValBox const& value() const {

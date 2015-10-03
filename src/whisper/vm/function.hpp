@@ -247,8 +247,7 @@ class ScriptedFunction : public Function
     }
 
     SyntaxBlockRef bodyBlockRef() const {
-        AST::PackedSizedBlock block(stRef().astDefStmt().bodyBlock());
-        return SyntaxBlockRef(pst_, block.offset(), block.numStatements());
+        return SyntaxBlockRef(pst_, stRef().astDefStmt().bodyBlock());
     }
 };
 

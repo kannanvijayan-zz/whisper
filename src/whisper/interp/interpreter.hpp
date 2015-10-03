@@ -45,6 +45,10 @@ VM::ControlFlow InvokeApplicativeFunction(ThreadContext* cx,
                                     Handle<VM::FunctionObject*> funcObj,
                                     ArrayHandle<VM::SyntaxNodeRef> stRefs);
 
+VM::ControlFlow EvaluateBlock(ThreadContext* cx,
+                              Handle<VM::ScopeObject*> scopeObj,
+                              Handle<VM::SyntaxBlockRef> bodyBlock);
+
 VM::ControlFlow GetValueProperty(ThreadContext* cx,
                                  Handle<VM::ValBox> value,
                                  Handle<VM::String*> name);

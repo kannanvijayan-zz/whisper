@@ -301,15 +301,47 @@ InvokeApplicativeFunction(ThreadContext* cx,
             }
         }
 
-        // Evaluate the function syntax.
+        // Obtain the block to evaluate.
+        Local<VM::SyntaxBlockRef> bodyBlock(cx, scriptedFunc->bodyBlockRef());
 
-        return VM::ControlFlow::Void();
+        // Evaluate the function syntax.
+        VM::ControlFlow callFlow = EvaluateBlock(cx,
+            funcScope.handle().convertTo<VM::ScopeObject*>(),
+            bodyBlock);
+        WH_ASSERT(callFlow.isCallResult());
+        if (callFlow.isReturn())
+            return VM::ControlFlow::Value(callFlow.returnValue());
+
+        if (callFlow.isVoid())
+            return VM::ControlFlow::Value(VM::ValBox::Undefined());
+
+        return callFlow;
     }
 
     WH_UNREACHABLE("Unknown function type!");
     return cx->setError(RuntimeError::InternalError,
                         "Unknown function type seen!",
                         HeapThing::From(func.get()));
+}
+
+VM::ControlFlow
+EvaluateBlock(ThreadContext* cx,
+              Handle<VM::ScopeObject*> scopeObj,
+              Handle<VM::SyntaxBlockRef> bodyBlock)
+{
+    for (uint32_t i = 0; i < bodyBlock->numStatements(); i++) {
+        Local<VM::SyntaxNodeRef> stmtNode(cx, bodyBlock->statement(i));
+        VM::ControlFlow stmtFlow = InterpretSyntax(cx, scopeObj, stmtNode);
+
+        // Statements can yield void or value control flows and still
+        // continue.
+        if (stmtFlow.isVoid() || stmtFlow.isValue())
+            continue;
+
+        return stmtFlow;
+    }
+
+    return VM::ControlFlow::Void();
 }
 
 VM::ControlFlow

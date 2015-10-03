@@ -5,6 +5,7 @@
 #define WHISPER_DEFN_GC_STACK_FORMATS(_) \
     _(NativeCallInfo)           \
     _(SyntaxNodeRef)            \
+    _(SyntaxBlockRef)           \
     _(PropertyName)             \
     _(PropertyDescriptor)       \
     _(Box)                      \
