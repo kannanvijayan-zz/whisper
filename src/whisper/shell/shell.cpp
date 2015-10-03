@@ -100,7 +100,13 @@ struct HeapPrintVisitor : public TracerVisitor
     }
 };
 
-int main(int argc, char** argv) {
+
+static OkResult
+InitShellGlobals(AllocationContext acx, VM::GlobalScope* scope);
+
+int
+main(int argc, char** argv)
+{
     std::cout << "Whisper says hello." << std::endl;
 
     // Open input file.
@@ -129,6 +135,7 @@ int main(int argc, char** argv) {
     ThreadContext* cx = runtime.threadContext();
     AllocationContext acx(cx->inTenured());
     Interp::BindSyntaxHandlers(acx, cx->global());
+    InitShellGlobals(acx, cx->global());
 
     // Create a new String containing the file name.
     Local<VM::String*> filename(cx);
@@ -178,4 +185,62 @@ int main(int argc, char** argv) {
     fprintf(stderr, "}\n");
 
     return 0;
+}
+
+static VM::ControlFlow Shell_Print(
+    ThreadContext* cx,
+    Handle<VM::NativeCallInfo> callInfo,
+    ArrayHandle<VM::ValBox> args);
+
+static OkResult
+BindShellGlobal(AllocationContext acx,
+                Handle<VM::GlobalScope*> obj,
+                VM::String* name,
+                VM::NativeApplicativeFuncPtr appFunc)
+{
+    Local<VM::String*> rootedName(acx, name);
+
+    // Allocate NativeFunction object.
+    Local<VM::NativeFunction*> natF(acx);
+    if (!natF.setResult(VM::NativeFunction::Create(acx, appFunc)))
+        return ErrorVal();
+    Local<VM::PropertyDescriptor> desc(acx, VM::PropertyDescriptor(natF.get()));
+
+    // Bind method on global.
+    if (!VM::GlobalScope::DefineProperty(acx, obj, rootedName, desc))
+        return ErrorVal();
+
+    return OkVal();
+}
+
+static OkResult
+InitShellGlobals(AllocationContext acx, VM::GlobalScope* scope)
+{
+    Local<VM::GlobalScope*> rootedScope(acx, scope);
+
+#define BIND_SHELL_METHOD_(name, proc) \
+    do { \
+        /* allocate the name string. */ \
+        Local<VM::String*> nameString(acx); \
+        if (!nameString.setResult(VM::String::Create(acx, name))) \
+            return ErrorVal(); \
+        \
+        if (!BindShellGlobal(acx, rootedScope, nameString, proc)) \
+            return ErrorVal(); \
+    } while(false)
+
+    BIND_SHELL_METHOD_("print", Shell_Print);
+
+#undef BIND_SHELL_METHOD_
+
+    return OkVal();
+}
+
+static VM::ControlFlow Shell_Print(
+    ThreadContext* cx,
+    Handle<VM::NativeCallInfo> callInfo,
+    ArrayHandle<VM::ValBox> args)
+{
+    printf("Shell_Print called!!\n");
+    return VM::ControlFlow::Value(VM::ValBox::Undefined());
 }
