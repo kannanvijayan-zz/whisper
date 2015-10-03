@@ -17,8 +17,8 @@
     _(LoopStmt)                             \
     \
     /* Expressions. */                      \
-    _(CallExpr)                             \
-    _(DotExpr)                              \
+    _(CallExpr)          /* done */         \
+    _(DotExpr)           /* done */         \
     _(ArrowExpr)                            \
     _(PosExpr)                              \
     _(NegExpr)                              \

@@ -31,6 +31,7 @@ namespace Interp {
     DECLARE_LIFT_FN_(VarStmt)
 
     DECLARE_LIFT_FN_(CallExpr)
+    DECLARE_LIFT_FN_(DotExpr)
     DECLARE_LIFT_FN_(ParenExpr)
     DECLARE_LIFT_FN_(NameExpr)
     DECLARE_LIFT_FN_(IntegerExpr)
@@ -86,6 +87,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(VarStmt);
 
     BIND_GLOBAL_METHOD_(CallExpr);
+    BIND_GLOBAL_METHOD_(DotExpr);
     BIND_GLOBAL_METHOD_(ParenExpr);
     BIND_GLOBAL_METHOD_(NameExpr);
     BIND_GLOBAL_METHOD_(IntegerExpr);
@@ -415,6 +417,48 @@ IMPL_LIFT_FN_(CallExpr)
         return InvokeApplicativeFunction(cx, callInfo->callerScope(),
                                          calleeFunc, stRefs);
     }
+}
+
+IMPL_LIFT_FN_(DotExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@DotExpr called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::DotExpr);
+
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedDotExprNode> dotExpr(cx,
+        AST::PackedDotExprNode(pst->data(), stRef->offset()));
+
+    // Evaluate the lookup target.
+    Local<AST::PackedBaseNode> targetExpr(cx, dotExpr->target());
+    VM::ControlFlow targetFlow =
+        InterpretSyntax(cx, callInfo->callerScope(), pst,
+                        targetExpr->offset());
+    WH_ASSERT(targetFlow.isExpressionResult());
+    if (!targetFlow.isValue())
+        return targetFlow;
+
+    // Look up the '@DotExpr' method on the target.
+    Local<VM::ValBox> targetBox(cx, targetFlow.value());
+    Local<VM::String*> dotExprName(cx, cx->runtimeState()->nm_AtDotExpr());
+    VM::ControlFlow lookupFlow = GetValueProperty(cx, targetBox, dotExprName);
+    WH_ASSERT(lookupFlow.isPropertyLookupResult());
+
+    if (lookupFlow.isVoid())
+        return cx->setExceptionRaised("@DotExpr() not found on object.");
+
+    if (!lookupFlow.isValue())
+        return lookupFlow;
+
+    // Invoke "@DotExpr" result as an operative.
+    Local<VM::ValBox> dotHandler(cx, lookupFlow.value());
+
+    return InvokeOperativeValue(cx, callInfo->callerScope(),
+                                dotHandler, stRef);
 }
 
 IMPL_LIFT_FN_(ParenExpr)
