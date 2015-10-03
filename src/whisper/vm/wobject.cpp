@@ -30,45 +30,7 @@ Wobject::getHooks() const
 Wobject::NumDelegates(AllocationContext acx,
                       Handle<Wobject*> obj)
 {
-    HeapThing* heapThing = HeapThing::From(obj.get());
-    if (heapThing->isPlainObject()) {
-        Local<PlainObject*> plainObj(acx,
-            reinterpret_cast<PlainObject*>(heapThing));
-        return PlainObject::NumDelegates(acx, plainObj);
-    }
-
-    if (heapThing->isCallScope()) {
-        Local<CallScope*> callObj(acx,
-            reinterpret_cast<CallScope*>(heapThing));
-        return CallScope::NumDelegates(acx, callObj);
-    }
-
-    if (heapThing->isBlockScope()) {
-        Local<BlockScope*> blockObj(acx,
-            reinterpret_cast<BlockScope*>(heapThing));
-        return BlockScope::NumDelegates(acx, blockObj);
-    }
-
-    if (heapThing->isModuleScope()) {
-        Local<ModuleScope*> moduleObj(acx,
-            reinterpret_cast<ModuleScope*>(heapThing));
-        return ModuleScope::NumDelegates(acx, moduleObj);
-    }
-
-    if (heapThing->isGlobalScope()) {
-        Local<GlobalScope*> globalObj(acx,
-            reinterpret_cast<GlobalScope*>(heapThing));
-        return GlobalScope::NumDelegates(acx, globalObj);
-    }
-
-    if (heapThing->isFunctionObject()) {
-        Local<FunctionObject*> funcObj(acx,
-            reinterpret_cast<FunctionObject*>(heapThing));
-        return FunctionObject::NumDelegates(acx, funcObj);
-    }
-
-    WH_UNREACHABLE("Unknown object kind");
-    return static_cast<uint32_t>(-1);
+    return obj->getHooks()->numDelegates(acx, obj);
 }
 
 /* static */ OkResult
@@ -76,51 +38,7 @@ Wobject::GetDelegates(AllocationContext acx,
                       Handle<Wobject*> obj,
                       MutHandle<Array<Wobject*>*> delegatesOut)
 {
-    HeapThing* heapThing = HeapThing::From(obj.get());
-    if (heapThing->isPlainObject()) {
-        Local<PlainObject*> plainObj(acx,
-            reinterpret_cast<PlainObject*>(heapThing));
-        PlainObject::GetDelegates(acx, plainObj, delegatesOut);
-        return OkVal();
-    }
-
-    if (heapThing->isCallScope()) {
-        Local<CallScope*> callObj(acx,
-            reinterpret_cast<CallScope*>(heapThing));
-        CallScope::GetDelegates(acx, callObj, delegatesOut);
-        return OkVal();
-    }
-
-    if (heapThing->isBlockScope()) {
-        Local<BlockScope*> blockObj(acx,
-            reinterpret_cast<BlockScope*>(heapThing));
-        BlockScope::GetDelegates(acx, blockObj, delegatesOut);
-        return OkVal();
-    }
-
-    if (heapThing->isModuleScope()) {
-        Local<ModuleScope*> moduleObj(acx,
-            reinterpret_cast<ModuleScope*>(heapThing));
-        ModuleScope::GetDelegates(acx, moduleObj, delegatesOut);
-        return OkVal();
-    }
-
-    if (heapThing->isGlobalScope()) {
-        Local<GlobalScope*> globalObj(acx,
-            reinterpret_cast<GlobalScope*>(heapThing));
-        GlobalScope::GetDelegates(acx, globalObj, delegatesOut);
-        return OkVal();
-    }
-
-    if (heapThing->isFunctionObject()) {
-        Local<FunctionObject*> funcObj(acx,
-            reinterpret_cast<FunctionObject*>(heapThing));
-        FunctionObject::GetDelegates(acx, funcObj, delegatesOut);
-        return OkVal();
-    }
-
-    WH_UNREACHABLE("Unknown object kind");
-    return ErrorVal();
+    return obj->getHooks()->getDelegates(acx, obj, delegatesOut);
 }
 
 /* static */ Result<bool>
@@ -129,45 +47,7 @@ Wobject::GetProperty(AllocationContext acx,
                      Handle<String*> name,
                      MutHandle<PropertyDescriptor> result)
 {
-    HeapThing* heapThing = HeapThing::From(obj.get());
-    if (heapThing->isPlainObject()) {
-        Local<PlainObject*> plainObj(acx,
-            reinterpret_cast<PlainObject*>(heapThing));
-        return OkVal(PlainObject::GetProperty(acx, plainObj, name, result));
-    }
-
-    if (heapThing->isCallScope()) {
-        Local<CallScope*> callObj(acx,
-            reinterpret_cast<CallScope*>(heapThing));
-        return OkVal(CallScope::GetProperty(acx, callObj, name, result));
-    }
-
-    if (heapThing->isBlockScope()) {
-        Local<BlockScope*> blockObj(acx,
-            reinterpret_cast<BlockScope*>(heapThing));
-        return OkVal(BlockScope::GetProperty(acx, blockObj, name, result));
-    }
-
-    if (heapThing->isModuleScope()) {
-        Local<ModuleScope*> moduleObj(acx,
-            reinterpret_cast<ModuleScope*>(heapThing));
-        return OkVal(ModuleScope::GetProperty(acx, moduleObj, name, result));
-    }
-
-    if (heapThing->isGlobalScope()) {
-        Local<GlobalScope*> globalObj(acx,
-            reinterpret_cast<GlobalScope*>(heapThing));
-        return OkVal(GlobalScope::GetProperty(acx, globalObj, name, result));
-    }
-
-    if (heapThing->isFunctionObject()) {
-        Local<FunctionObject*> funcObj(acx,
-            reinterpret_cast<FunctionObject*>(heapThing));
-        return OkVal(FunctionObject::GetProperty(acx, funcObj, name, result));
-    }
-
-    WH_UNREACHABLE("Unknown object kind");
-    return ErrorVal();
+    return obj->getHooks()->getProperty(acx, obj, name, result);
 }
 
 /* static */ OkResult
@@ -176,45 +56,7 @@ Wobject::DefineProperty(AllocationContext acx,
                         Handle<String*> name,
                         Handle<PropertyDescriptor> defn)
 {
-    HeapThing* heapThing = HeapThing::From(obj.get());
-    if (heapThing->isPlainObject()) {
-        Local<PlainObject*> plainObj(acx,
-            reinterpret_cast<PlainObject*>(heapThing));
-        return PlainObject::DefineProperty(acx, plainObj, name, defn);
-    }
-
-    if (heapThing->isCallScope()) {
-        Local<CallScope*> callObj(acx,
-            reinterpret_cast<CallScope*>(heapThing));
-        return CallScope::DefineProperty(acx, callObj, name, defn);
-    }
-
-    if (heapThing->isBlockScope()) {
-        Local<BlockScope*> blockObj(acx,
-            reinterpret_cast<BlockScope*>(heapThing));
-        return BlockScope::DefineProperty(acx, blockObj, name, defn);
-    }
-
-    if (heapThing->isModuleScope()) {
-        Local<ModuleScope*> moduleObj(acx,
-            reinterpret_cast<ModuleScope*>(heapThing));
-        return ModuleScope::DefineProperty(acx, moduleObj, name, defn);
-    }
-
-    if (heapThing->isGlobalScope()) {
-        Local<GlobalScope*> globalObj(acx,
-            reinterpret_cast<GlobalScope*>(heapThing));
-        return GlobalScope::DefineProperty(acx, globalObj, name, defn);
-    }
-
-    if (heapThing->isFunctionObject()) {
-        Local<FunctionObject*> funcObj(acx,
-            reinterpret_cast<FunctionObject*>(heapThing));
-        return FunctionObject::DefineProperty(acx, funcObj, name, defn);
-    }
-
-    WH_UNREACHABLE("Unknown object kind");
-    return ErrorVal();
+    return obj->getHooks()->defineProperty(acx, obj, name, defn);
 }
 
 
