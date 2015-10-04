@@ -34,6 +34,7 @@ namespace Interp {
     DECLARE_SYNTAX_FN_(DotExpr)
     DECLARE_SYNTAX_FN_(PosExpr)
     DECLARE_SYNTAX_FN_(NegExpr)
+    DECLARE_SYNTAX_FN_(AddExpr)
     DECLARE_SYNTAX_FN_(ParenExpr)
     DECLARE_SYNTAX_FN_(NameExpr)
     DECLARE_SYNTAX_FN_(IntegerExpr)
@@ -95,6 +96,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(DotExpr);
     BIND_GLOBAL_METHOD_(PosExpr);
     BIND_GLOBAL_METHOD_(NegExpr);
+    BIND_GLOBAL_METHOD_(AddExpr);
     BIND_GLOBAL_METHOD_(ParenExpr);
     BIND_GLOBAL_METHOD_(NameExpr);
     BIND_GLOBAL_METHOD_(IntegerExpr);
@@ -490,7 +492,7 @@ IMPL_SYNTAX_FN_(PosExpr)
     if (!subFlow.isValue())
         return subFlow;
 
-    // Look up the '@SubExpr' method on the target.
+    // Look up the '@PosExpr' method on the target.
     Local<VM::ValBox> value(cx, subFlow.value());
     Local<VM::String*> posExprName(cx, cx->runtimeState()->nm_AtPosExpr());
     VM::ControlFlow lookupFlow = GetValueProperty(cx, value, posExprName);
@@ -532,7 +534,7 @@ IMPL_SYNTAX_FN_(NegExpr)
     if (!subFlow.isValue())
         return subFlow;
 
-    // Look up the '@SubExpr' method on the target.
+    // Look up the '@NegExpr' method on the target.
     Local<VM::ValBox> value(cx, subFlow.value());
     Local<VM::String*> negExprName(cx, cx->runtimeState()->nm_AtNegExpr());
     VM::ControlFlow lookupFlow = GetValueProperty(cx, value, negExprName);
@@ -550,6 +552,51 @@ IMPL_SYNTAX_FN_(NegExpr)
     return InvokeValue(cx,
         callInfo->callerScope(), negHandler,
         ArrayHandle<VM::SyntaxNodeRef>::Empty());
+}
+
+IMPL_SYNTAX_FN_(AddExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@AddExpr called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::AddExpr);
+
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedAddExprNode> addExpr(cx,
+        AST::PackedAddExprNode(pst->data(), stRef->offset()));
+
+    // Evaluate the lookup target.
+    Local<AST::PackedBaseNode> lhsExpr(cx, addExpr->lhs());
+    VM::ControlFlow lhsFlow =
+        InterpretSyntax(cx, callInfo->callerScope(), pst, lhsExpr->offset());
+    WH_ASSERT(lhsFlow.isExpressionResult());
+    if (!lhsFlow.isValue())
+        return lhsFlow;
+
+    // Look up the '@AddExpr' method on the target.
+    Local<VM::ValBox> lhsValue(cx, lhsFlow.value());
+    Local<VM::String*> addExprName(cx, cx->runtimeState()->nm_AtAddExpr());
+    VM::ControlFlow lookupFlow = GetValueProperty(cx, lhsValue, addExprName);
+    WH_ASSERT(lookupFlow.isPropertyLookupResult());
+
+    if (lookupFlow.isVoid())
+        return cx->setExceptionRaised("@AddExpr() not found on object.");
+
+    if (!lookupFlow.isValue())
+        return lookupFlow;
+
+    Local<VM::ValBox> addHandler(cx, lookupFlow.value());
+
+    // Invoke "@AddExpr" method, pass rhs as argument.
+    Local<VM::SyntaxNodeRef> rhsExpr(cx,
+        VM::SyntaxNodeRef(pst, addExpr->rhs().offset()));
+
+    return InvokeValue(cx,
+        callInfo->callerScope(), addHandler,
+        ArrayHandle<VM::SyntaxNodeRef>(rhsExpr));
 }
 
 IMPL_SYNTAX_FN_(ParenExpr)
