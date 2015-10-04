@@ -325,7 +325,7 @@ class ThreadContext
     uint32_t spoiler() const;
 
   private:
-    OkResult makeGlobal();
+    OkResult initialize();
 };
 
 

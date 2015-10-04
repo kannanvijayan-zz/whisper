@@ -135,7 +135,6 @@ main(int argc, char** argv)
 
     ThreadContext* cx = runtime.threadContext();
     AllocationContext acx(cx->inTenured());
-    Interp::BindSyntaxHandlers(acx, cx->global());
     InitShellGlobals(acx, cx->global());
 
     // Create a new String containing the file name.

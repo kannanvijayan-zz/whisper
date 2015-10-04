@@ -15,6 +15,7 @@
 #include "vm/global_scope.hpp"
 #include "vm/runtime_state.hpp"
 #include "name_pool.hpp"
+#include "interp/syntax_behaviour.hpp"
 
 namespace Whisper {
 
@@ -97,9 +98,9 @@ Runtime::registerThread()
     }
 
     // Allocate a new global object for the thread.
-    if (!ctx->makeGlobal()) {
+    if (!ctx->initialize()) {
         delete ctx;
-        return okFail("Failed to allocate global object for thread.");
+        return okFail("Failed to initialize thread context.");
     }
 
     // Associate the thread context with the thread.
@@ -312,12 +313,18 @@ ThreadContext::spoiler() const
 }
 
 OkResult
-ThreadContext::makeGlobal()
+ThreadContext::initialize()
 {
+    // Initialize the global.
     Local<VM::GlobalScope*> glob(this);
-    if (!glob.setResult(VM::GlobalScope::Create(this->inTenured())))
+    if (!glob.setResult(VM::GlobalScope::Create(inTenured())))
         return ErrorVal();
+
+    if (!Interp::BindSyntaxHandlers(inTenured(), glob))
+        return ErrorVal();
+
     global_ = glob.get();
+
     return OkVal();
 }
 
