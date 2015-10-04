@@ -215,6 +215,10 @@ class ValBox : public Box
         return ValBox((val ? BooleanBit : 0u) | BooleanTag);
     }
 
+    static ValBox Object(Wobject* obj) {
+        return Pointer<Wobject>(obj);
+    }
+
     OkResult toString(ThreadContext* cx, std::ostringstream &out) const;
 
   private:
