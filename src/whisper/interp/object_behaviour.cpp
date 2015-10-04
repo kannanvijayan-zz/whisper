@@ -100,6 +100,7 @@ CreateImmIntDelegate(AllocationContext acx,
     DECLARE_APPLICATIVE_FN_(ImmInt_PosExpr)
     DECLARE_APPLICATIVE_FN_(ImmInt_NegExpr)
     DECLARE_APPLICATIVE_FN_(ImmInt_AddExpr)
+    DECLARE_APPLICATIVE_FN_(ImmInt_SubExpr)
 
 #undef DECLARE_OPERATIVE_FN_
 #undef DECLARE_APPLICATIVE_FN_
@@ -190,6 +191,7 @@ BindImmIntMethods(AllocationContext acx, VM::Wobject* obj)
     BIND_IMM_INT_METHOD_(PosExpr);
     BIND_IMM_INT_METHOD_(NegExpr);
     BIND_IMM_INT_METHOD_(AddExpr);
+    BIND_IMM_INT_METHOD_(SubExpr);
 
 #undef BIND_IMM_INT_METHOD_
 
@@ -306,8 +308,39 @@ IMPL_APPLICATIVE_FN_(ImmInt_AddExpr)
     }
 
     // TODO: On ImmInt negate overflow, create and return BigInt object.
-    return cx->setExceptionRaised("Integer add can only handle immediates "
-                                  "for now");
+    return cx->setExceptionRaised("Integer add can only handle "
+                                  "integer immediates for now");
+}
+
+IMPL_APPLICATIVE_FN_(ImmInt_SubExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "immInt.@SubExpr called with wrong number of arguments.");
+    }
+
+    // Receiver should be immediate integer.
+    Local<VM::ValBox> receiver(cx, callInfo->receiver());
+    if (!receiver->isInteger()) {
+        return cx->setExceptionRaised(
+            "immInt.@SubExpr called on non-immediate-integer.");
+    }
+
+    // Check args[0].
+    Local<VM::ValBox> arg(cx, args[0]);
+    if (arg->isInteger()) {
+        int64_t lhsInt = receiver->integer();
+        int64_t rhsInt = arg->integer();
+        int64_t diffInt = lhsInt - rhsInt;
+        // TODO: Handle overflow.
+        if (!VM::ValBox::IntegerInRange(diffInt))
+            return cx->setExceptionRaised("immInt.@SubExpr result overflows.");
+        return VM::ControlFlow::Value(VM::ValBox::Integer(diffInt));
+    }
+
+    // TODO: On ImmInt negate overflow, create and return BigInt object.
+    return cx->setExceptionRaised("Integer subtract can only handle "
+                                  "integer immediates for now");
 }
 
 

@@ -23,7 +23,7 @@
     _(PosExpr)           /* done */         \
     _(NegExpr)           /* done */         \
     _(AddExpr)           /* done */         \
-    _(SubExpr)                              \
+    _(SubExpr)           /* done */         \
     _(MulExpr)                              \
     _(DivExpr)                              \
     _(ParenExpr)         /* done */         \

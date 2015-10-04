@@ -35,6 +35,7 @@ namespace Interp {
     DECLARE_SYNTAX_FN_(PosExpr)
     DECLARE_SYNTAX_FN_(NegExpr)
     DECLARE_SYNTAX_FN_(AddExpr)
+    DECLARE_SYNTAX_FN_(SubExpr)
     DECLARE_SYNTAX_FN_(ParenExpr)
     DECLARE_SYNTAX_FN_(NameExpr)
     DECLARE_SYNTAX_FN_(IntegerExpr)
@@ -97,6 +98,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(PosExpr);
     BIND_GLOBAL_METHOD_(NegExpr);
     BIND_GLOBAL_METHOD_(AddExpr);
+    BIND_GLOBAL_METHOD_(SubExpr);
     BIND_GLOBAL_METHOD_(ParenExpr);
     BIND_GLOBAL_METHOD_(NameExpr);
     BIND_GLOBAL_METHOD_(IntegerExpr);
@@ -596,6 +598,51 @@ IMPL_SYNTAX_FN_(AddExpr)
 
     return InvokeValue(cx,
         callInfo->callerScope(), addHandler,
+        ArrayHandle<VM::SyntaxNodeRef>(rhsExpr));
+}
+
+IMPL_SYNTAX_FN_(SubExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@SubExpr called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::SubExpr);
+
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedSubExprNode> subExpr(cx,
+        AST::PackedSubExprNode(pst->data(), stRef->offset()));
+
+    // Evaluate the lookup target.
+    Local<AST::PackedBaseNode> lhsExpr(cx, subExpr->lhs());
+    VM::ControlFlow lhsFlow =
+        InterpretSyntax(cx, callInfo->callerScope(), pst, lhsExpr->offset());
+    WH_ASSERT(lhsFlow.isExpressionResult());
+    if (!lhsFlow.isValue())
+        return lhsFlow;
+
+    // Look up the '@SubExpr' method on the target.
+    Local<VM::ValBox> lhsValue(cx, lhsFlow.value());
+    Local<VM::String*> subExprName(cx, cx->runtimeState()->nm_AtSubExpr());
+    VM::ControlFlow lookupFlow = GetValueProperty(cx, lhsValue, subExprName);
+    WH_ASSERT(lookupFlow.isPropertyLookupResult());
+
+    if (lookupFlow.isVoid())
+        return cx->setExceptionRaised("@SubExpr() not found on object.");
+
+    if (!lookupFlow.isValue())
+        return lookupFlow;
+
+    Local<VM::ValBox> subHandler(cx, lookupFlow.value());
+
+    // Invoke "@SubExpr" method, pass rhs as argument.
+    Local<VM::SyntaxNodeRef> rhsExpr(cx,
+        VM::SyntaxNodeRef(pst, subExpr->rhs().offset()));
+
+    return InvokeValue(cx,
+        callInfo->callerScope(), subHandler,
         ArrayHandle<VM::SyntaxNodeRef>(rhsExpr));
 }
 
