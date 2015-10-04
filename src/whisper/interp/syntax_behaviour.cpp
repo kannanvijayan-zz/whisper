@@ -503,7 +503,7 @@ IMPL_SYNTAX_FN_(NegExpr)
     // Invoke "@NegExpr" result as an operative, no arguments.
     Local<VM::ValBox> negHandler(cx, lookupFlow.value());
 
-    return InvokeApplicativeValue(cx,
+    return InvokeValue(cx,
         callInfo->callerScope(), negHandler,
         ArrayHandle<VM::SyntaxNodeRef>::Empty());
 }
