@@ -240,7 +240,6 @@ ThreadContext::ThreadContext(Runtime* runtime, uint32_t rtid,
     tenuredList_(),
     locals_(nullptr),
     lastFrame_(nullptr),
-    global_(nullptr),
     suppressGC_(false),
     randSeed_(NewRandSeed()),
     spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16)),
@@ -266,6 +265,20 @@ ThreadContext::popLastFrame()
 {
     WH_ASSERT(lastFrame_ != nullptr);
     lastFrame_ = lastFrame_->caller();
+}
+
+VM::GlobalScope*
+ThreadContext::global() const
+{
+    WH_ASSERT(hasGlobal());
+    return threadState()->global();
+}
+
+VM::Wobject*
+ThreadContext::rootDelegate() const
+{
+    WH_ASSERT(hasRootDelegate());
+    return threadState()->rootDelegate();
 }
 
 size_t
@@ -316,22 +329,12 @@ ThreadContext::spoiler() const
 OkResult
 ThreadContext::initialize()
 {
-    // Initialize the global.
-    Local<VM::GlobalScope*> glob(this);
-    if (!glob.setResult(VM::GlobalScope::Create(inTenured())))
+    // Initialize the thread state.
+    Local<VM::ThreadState*> threadState(this);
+    if (!threadState.setResult(VM::ThreadState::Create(inTenured())))
         return ErrorVal();
 
-    if (!Interp::BindSyntaxHandlers(inTenured(), glob))
-        return ErrorVal();
-
-    global_ = glob.get();
-
-    // Initialize the root delegate.
-    Local<VM::Wobject*> rootDelegate(this);
-    if (!rootDelegate.setResult(Interp::CreateRootDelegate(inTenured())))
-        return ErrorVal();
-    rootDelegate_ = rootDelegate.get();
-
+    threadState_ = threadState.get();
     return OkVal();
 }
 

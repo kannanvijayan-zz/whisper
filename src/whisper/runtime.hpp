@@ -14,10 +14,11 @@
 namespace Whisper {
 
 namespace VM {
-    class Wobject;
     class Frame;
     class RuntimeState;
+    class ThreadState;
     class GlobalScope;
+    class Wobject;
 }
 
 
@@ -174,9 +175,8 @@ class ThreadContext
     Slab* tenured_;
     SlabList tenuredList_;
     LocalBase* locals_;
+    VM::ThreadState* threadState_;
     VM::Frame* lastFrame_;
-    VM::GlobalScope* global_;
-    VM::Wobject* rootDelegate_;
     bool suppressGC_;
 
     unsigned int randSeed_;
@@ -240,21 +240,23 @@ class ThreadContext
     void pushLastFrame(VM::Frame* frame);
     void popLastFrame();
 
-    bool hasGlobal() const {
-        return global_ != nullptr;
+    bool hasThreadState() const {
+        return threadState_ != nullptr;
     }
-    VM::GlobalScope* global() const {
-        WH_ASSERT(hasGlobal());
-        return global_;
+    VM::ThreadState* threadState() const {
+        WH_ASSERT(hasThreadState());
+        return threadState_;
     }
 
+    bool hasGlobal() const {
+        return hasThreadState();
+    }
+    VM::GlobalScope* global() const;
+
     bool hasRootDelegate() const {
-        return rootDelegate_ != nullptr;
+        return hasThreadState();
     }
-    VM::Wobject* rootDelegate() const {
-        WH_ASSERT(hasRootDelegate());
-        return rootDelegate_;
-    }
+    VM::Wobject* rootDelegate() const;
 
     bool suppressGC() const {
         return suppressGC_;

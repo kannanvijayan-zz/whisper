@@ -1,6 +1,10 @@
 
 #include "runtime_inlines.hpp"
 #include "vm/runtime_state.hpp"
+#include "vm/global_scope.hpp"
+#include "vm/wobject.hpp"
+#include "interp/syntax_behaviour.hpp"
+#include "interp/object_behaviour.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -26,6 +30,25 @@ RuntimeState::Create(AllocationContext acx)
 #undef ALLOC_STRING_
 
     return acx.create<RuntimeState>(namePool.get());
+}
+
+/* static */ Result<ThreadState*>
+ThreadState::Create(AllocationContext acx)
+{
+    // Initialize the global.
+    Local<VM::GlobalScope*> glob(acx);
+    if (!glob.setResult(VM::GlobalScope::Create(acx)))
+        return ErrorVal();
+
+    if (!Interp::BindSyntaxHandlers(acx, glob))
+        return ErrorVal();
+
+    // Initialize the root delegate.
+    Local<VM::Wobject*> rootDelegate(acx);
+    if (!rootDelegate.setResult(Interp::CreateRootDelegate(acx)))
+        return ErrorVal();
+
+    return acx.create<ThreadState>(glob.handle(), rootDelegate.handle());
 }
 
 

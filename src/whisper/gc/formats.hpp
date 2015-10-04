@@ -32,6 +32,7 @@
     _(BoxArray)                 \
     _(ValBoxArray)              \
     _(RuntimeState)             \
+    _(ThreadState)              \
     _(PackedSyntaxTree)         \
     _(SyntaxTreeFragment)       \
     _(HeapPointerArray)         \

@@ -11,9 +11,12 @@
 namespace Whisper {
 namespace VM {
 
+class GlobalScope;
+class Wobject;
+
 //
-// A RuntimeState contains mappings from symbols to the location within the
-// file that contains the symbol definition.
+// A RuntimeState is a vm-allocated object that holds pointers to
+// universal, runtime-related objects.
 //
 class RuntimeState
 {
@@ -37,6 +40,37 @@ class RuntimeState
     }
     WHISPER_DEFN_NAME_POOL(NAME_METH_)
 #undef NAME_METH_
+};
+
+//
+// A ThreadState is a vm-allocated object that holds pointer to global,
+// thread-related objects, such as the global, root delegate, etc.
+//
+class ThreadState
+{
+    friend struct TraceTraits<ThreadState>;
+
+  private:
+    HeapField<GlobalScope*> global_;
+    HeapField<Wobject*> rootDelegate_;
+
+  public:
+    ThreadState(GlobalScope* global, Wobject* rootDelegate)
+      : global_(global),
+        rootDelegate_(rootDelegate)
+    {
+        WH_ASSERT(global != nullptr);
+        WH_ASSERT(rootDelegate != nullptr);
+    }
+
+    GlobalScope* global() const {
+        return global_;
+    }
+    Wobject* rootDelegate() const {
+        return rootDelegate_;
+    }
+
+    static Result<ThreadState*> Create(AllocationContext acx);
 };
 
 
@@ -66,6 +100,31 @@ struct TraceTraits<VM::RuntimeState>
                        void const* start, void const* end)
     {
         rtState.namePool_.update(updater, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::ThreadState>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::ThreadState const& rtState,
+                     void const* start, void const* end)
+    {
+        rtState.global_.scan(scanner, start, end);
+        rtState.rootDelegate_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::ThreadState& rtState,
+                       void const* start, void const* end)
+    {
+        rtState.global_.update(updater, start, end);
+        rtState.rootDelegate_.update(updater, start, end);
     }
 };
 
