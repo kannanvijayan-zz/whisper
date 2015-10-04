@@ -15,30 +15,30 @@ namespace Interp {
 
 
 // Declare a lift function for each syntax node type.
-#define DECLARE_LIFT_FN_(name) \
-    static VM::ControlFlow Lift_##name( \
+#define DECLARE_SYNTAX_FN_(name) \
+    static VM::ControlFlow Syntax_##name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::SyntaxNodeRef> args);
 
-    DECLARE_LIFT_FN_(File)
+    DECLARE_SYNTAX_FN_(File)
 
-    DECLARE_LIFT_FN_(EmptyStmt)
-    DECLARE_LIFT_FN_(ExprStmt)
-    DECLARE_LIFT_FN_(ReturnStmt)
-    DECLARE_LIFT_FN_(DefStmt)
-    DECLARE_LIFT_FN_(ConstStmt)
-    DECLARE_LIFT_FN_(VarStmt)
+    DECLARE_SYNTAX_FN_(EmptyStmt)
+    DECLARE_SYNTAX_FN_(ExprStmt)
+    DECLARE_SYNTAX_FN_(ReturnStmt)
+    DECLARE_SYNTAX_FN_(DefStmt)
+    DECLARE_SYNTAX_FN_(ConstStmt)
+    DECLARE_SYNTAX_FN_(VarStmt)
 
-    DECLARE_LIFT_FN_(CallExpr)
-    DECLARE_LIFT_FN_(DotExpr)
-    DECLARE_LIFT_FN_(NegExpr)
-    DECLARE_LIFT_FN_(ParenExpr)
-    DECLARE_LIFT_FN_(NameExpr)
-    DECLARE_LIFT_FN_(IntegerExpr)
-    //WHISPER_DEFN_SYNTAX_NODES(DECLARE_LIFT_FN_)
+    DECLARE_SYNTAX_FN_(CallExpr)
+    DECLARE_SYNTAX_FN_(DotExpr)
+    DECLARE_SYNTAX_FN_(NegExpr)
+    DECLARE_SYNTAX_FN_(ParenExpr)
+    DECLARE_SYNTAX_FN_(NameExpr)
+    DECLARE_SYNTAX_FN_(IntegerExpr)
+    //WHISPER_DEFN_SYNTAX_NODES(DECLARE_SYNTAX_FN_)
 
-#undef DECLARE_LIFT_FN_
+#undef DECLARE_SYNTAX_FN_
 
 static OkResult
 BindGlobalMethod(AllocationContext acx,
@@ -75,7 +75,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 #define BIND_GLOBAL_METHOD_(name) \
     do { \
         if (!BindGlobalMethod(acx, rootedScope, rtState->nm_At##name(), \
-                              &Lift_##name)) \
+                              &Syntax_##name)) \
         { \
             return ErrorVal(); \
         } \
@@ -102,13 +102,13 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     return OkVal();
 }
 
-#define IMPL_LIFT_FN_(name) \
-    static VM::ControlFlow Lift_##name( \
+#define IMPL_SYNTAX_FN_(name) \
+    static VM::ControlFlow Syntax_##name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::SyntaxNodeRef> args)
 
-IMPL_LIFT_FN_(File)
+IMPL_SYNTAX_FN_(File)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
@@ -122,11 +122,11 @@ IMPL_LIFT_FN_(File)
     Local<AST::PackedFileNode> fileNode(cx,
         AST::PackedFileNode(pst->data(), stRef->offset()));
 
-    SpewInterpNote("Lift_File: Interpreting %u statements",
+    SpewInterpNote("Syntax_File: Interpreting %u statements",
                    unsigned(fileNode->numStatements()));
     for (uint32_t i = 0; i < fileNode->numStatements(); i++) {
         Local<AST::PackedBaseNode> stmtNode(cx, fileNode->statement(i));
-        SpewInterpNote("Lift_File: statement %u is %s",
+        SpewInterpNote("Syntax_File: statement %u is %s",
                        unsigned(i), AST::NodeTypeString(stmtNode->type()));
 
         VM::ControlFlow stmtFlow = InterpretSyntax(cx, callInfo->callerScope(),
@@ -144,7 +144,7 @@ IMPL_LIFT_FN_(File)
     return VM::ControlFlow::Void();
 }
 
-IMPL_LIFT_FN_(EmptyStmt)
+IMPL_SYNTAX_FN_(EmptyStmt)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
@@ -155,7 +155,7 @@ IMPL_LIFT_FN_(EmptyStmt)
     return VM::ControlFlow::Void();
 }
 
-IMPL_LIFT_FN_(ExprStmt)
+IMPL_SYNTAX_FN_(ExprStmt)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
@@ -178,7 +178,7 @@ IMPL_LIFT_FN_(ExprStmt)
     return exprFlow;
 }
 
-IMPL_LIFT_FN_(ReturnStmt)
+IMPL_SYNTAX_FN_(ReturnStmt)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
@@ -195,11 +195,11 @@ IMPL_LIFT_FN_(ReturnStmt)
     // If it's a bare return, resolve to a return control flow with
     // an undefined value.
     if (!returnStmtNode->hasExpression()) {
-        SpewInterpNote("Lift_ReturnStmt: Empty return.");
+        SpewInterpNote("Syntax_ReturnStmt: Empty return.");
         return VM::ControlFlow::Return(VM::ValBox::Undefined());
     }
 
-    SpewInterpNote("Lift_ReturnStmt: Evaluating expression.");
+    SpewInterpNote("Syntax_ReturnStmt: Evaluating expression.");
     Local<AST::PackedBaseNode> exprNode(cx, returnStmtNode->expression());
     VM::ControlFlow exprFlow = InterpretSyntax(cx, callInfo->callerScope(), pst,
                                                exprNode->offset());
@@ -212,7 +212,7 @@ IMPL_LIFT_FN_(ReturnStmt)
     return exprFlow;
 }
 
-IMPL_LIFT_FN_(DefStmt)
+IMPL_SYNTAX_FN_(DefStmt)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
@@ -254,7 +254,7 @@ IMPL_LIFT_FN_(DefStmt)
     return VM::ControlFlow::Void();
 }
 
-IMPL_LIFT_FN_(ConstStmt)
+IMPL_SYNTAX_FN_(ConstStmt)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
@@ -277,12 +277,12 @@ IMPL_LIFT_FN_(ConstStmt)
     AllocationContext acx = cx->inHatchery();
 
     // Iterate through all bindings.
-    SpewInterpNote("Lift_ConstStmt: Defining %u consts!",
+    SpewInterpNote("Syntax_ConstStmt: Defining %u consts!",
                    unsigned(constStmtNode->numBindings()));
     for (uint32_t i = 0; i < constStmtNode->numBindings(); i++) {
         varname = pst->getConstantString(constStmtNode->varnameCid(i));
 
-        SpewInterpNote("Lift_ConstStmt var %d evaluating initial value!",
+        SpewInterpNote("Syntax_ConstStmt var %d evaluating initial value!",
                        unsigned(i));
         Local<AST::PackedBaseNode> exprNode(cx, constStmtNode->varexpr(i));
         VM::ControlFlow varExprFlow =
@@ -311,7 +311,7 @@ IMPL_LIFT_FN_(ConstStmt)
 }
 
 
-IMPL_LIFT_FN_(VarStmt)
+IMPL_SYNTAX_FN_(VarStmt)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
@@ -335,13 +335,13 @@ IMPL_LIFT_FN_(VarStmt)
     AllocationContext acx = cx->inHatchery();
 
     // Iterate through all bindings.
-    SpewInterpNote("Lift_VarStmt: Defining %u vars!",
+    SpewInterpNote("Syntax_VarStmt: Defining %u vars!",
                    unsigned(varStmtNode->numBindings()));
     for (uint32_t i = 0; i < varStmtNode->numBindings(); i++) {
         varname = pst->getConstantString(varStmtNode->varnameCid(i));
 
         if (varStmtNode->hasVarexpr(i)) {
-            SpewInterpNote("Lift_VarStmt var %d evaluating initial value!",
+            SpewInterpNote("Syntax_VarStmt var %d evaluating initial value!",
                            unsigned(i));
             Local<AST::PackedBaseNode> exprNode(cx, varStmtNode->varexpr(i));
             VM::ControlFlow varExprFlow =
@@ -373,7 +373,7 @@ IMPL_LIFT_FN_(VarStmt)
     return VM::ControlFlow::Void();
 }
 
-IMPL_LIFT_FN_(CallExpr)
+IMPL_SYNTAX_FN_(CallExpr)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
@@ -424,7 +424,7 @@ IMPL_LIFT_FN_(CallExpr)
     }
 }
 
-IMPL_LIFT_FN_(DotExpr)
+IMPL_SYNTAX_FN_(DotExpr)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
@@ -466,7 +466,7 @@ IMPL_LIFT_FN_(DotExpr)
                                 dotHandler, stRef);
 }
 
-IMPL_LIFT_FN_(NegExpr)
+IMPL_SYNTAX_FN_(NegExpr)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
@@ -508,7 +508,7 @@ IMPL_LIFT_FN_(NegExpr)
         ArrayHandle<VM::SyntaxNodeRef>::Empty());
 }
 
-IMPL_LIFT_FN_(ParenExpr)
+IMPL_SYNTAX_FN_(ParenExpr)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
@@ -530,7 +530,7 @@ IMPL_LIFT_FN_(ParenExpr)
     return exprFlow;
 }
 
-IMPL_LIFT_FN_(NameExpr)
+IMPL_SYNTAX_FN_(NameExpr)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
@@ -551,7 +551,7 @@ IMPL_LIFT_FN_(NameExpr)
     // Get the constant name to look up.
     Local<VM::String*> name(cx, pst->getConstantString(nameExpr->nameCid()));
 
-    SpewInterpNote("Lift_NameExpr: Looking up '%s' on scope %p!",
+    SpewInterpNote("Syntax_NameExpr: Looking up '%s' on scope %p!",
                 name->c_chars(), scopeObj.get());
 
     // Do the lookup.
@@ -571,13 +571,13 @@ IMPL_LIFT_FN_(NameExpr)
     return propFlow;
 }
 
-IMPL_LIFT_FN_(IntegerExpr)
+IMPL_SYNTAX_FN_(IntegerExpr)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
             "@IntegerExpr called with wrong number of arguments.");
     }
-    SpewInterpNote("Lift_IntegerExpr: Returning integer!");
+    SpewInterpNote("Syntax_IntegerExpr: Returning integer!");
 
     WH_ASSERT(args.get(0).nodeType() == AST::IntegerExpr);
 
