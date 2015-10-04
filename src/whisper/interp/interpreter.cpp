@@ -398,14 +398,18 @@ GetValueProperty(ThreadContext* cx,
                  Handle<VM::String*> name)
 {
     // Check if the value is an object.
-    if (!value->isPointer()) {
-        return cx->setExceptionRaised("Cannot look up property on a "
-                                      "primitive value");
+    if (value->isPointer()) {
+        Local<VM::Wobject*> object(cx, value->objectPointer());
+        return GetObjectProperty(cx, object, name);
     }
 
-    // Convert to wobject.
-    Local<VM::Wobject*> object(cx, value->objectPointer());
-    return GetObjectProperty(cx, object, name);
+    // Check if the value is a fixed integer.
+    if (value->isInteger()) {
+        return cx->setExceptionRaised("Cannot look up property on an integer.");
+    }
+
+    return cx->setExceptionRaised("Cannot look up property on a "
+                                  "primitive value");
 }
 
 VM::ControlFlow

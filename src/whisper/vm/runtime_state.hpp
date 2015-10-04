@@ -53,14 +53,19 @@ class ThreadState
   private:
     HeapField<GlobalScope*> global_;
     HeapField<Wobject*> rootDelegate_;
+    HeapField<Wobject*> immIntDelegate_;
 
   public:
-    ThreadState(GlobalScope* global, Wobject* rootDelegate)
+    ThreadState(GlobalScope* global,
+                Wobject* rootDelegate,
+                Wobject* immIntDelegate)
       : global_(global),
-        rootDelegate_(rootDelegate)
+        rootDelegate_(rootDelegate),
+        immIntDelegate_(immIntDelegate)
     {
         WH_ASSERT(global != nullptr);
         WH_ASSERT(rootDelegate != nullptr);
+        WH_ASSERT(immIntDelegate != nullptr);
     }
 
     GlobalScope* global() const {
@@ -68,6 +73,9 @@ class ThreadState
     }
     Wobject* rootDelegate() const {
         return rootDelegate_;
+    }
+    Wobject* immIntDelegate() const {
+        return immIntDelegate_;
     }
 
     static Result<ThreadState*> Create(AllocationContext acx);

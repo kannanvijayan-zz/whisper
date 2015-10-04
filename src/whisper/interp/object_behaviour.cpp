@@ -47,6 +47,33 @@ CreateRootDelegate(AllocationContext acx)
     return OkVal(obj.get());
 }
 
+Result<VM::Wobject*>
+CreateImmIntDelegate(AllocationContext acx,
+                     Handle<VM::Wobject*> rootDelegate)
+{
+    // Create an empty array of delegates.
+    Local<VM::Array<VM::Wobject*>*> delegates(acx);
+    if (!delegates.setResult(VM::Array<VM::Wobject*>::CreateCopy(acx,
+                                ArrayHandle<VM::Wobject*>(rootDelegate))))
+    {
+        SpewInterpError("Could not allocate immediate integer delegate's "
+                        "delegate array.");
+        return ErrorVal();
+    }
+
+    // Create a plain object.
+    Local<VM::PlainObject*> plainObj(acx);
+    if (!plainObj.setResult(VM::PlainObject::Create(acx, delegates))) {
+        SpewInterpError("Could not allocate immediate integer delegate.");
+        return ErrorVal();
+    }
+
+    Local<VM::Wobject*> obj(acx, plainObj.get());
+
+    SpewInterpNote("Created immediate integer delegate.");
+    return OkVal(obj.get());
+}
+
 // Declare a lift function for each syntax node type.
 #define DECLARE_OBJSYNTAX_FN_(name) \
     static VM::ControlFlow ObjSyntax_##name( \

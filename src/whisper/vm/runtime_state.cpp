@@ -48,7 +48,16 @@ ThreadState::Create(AllocationContext acx)
     if (!rootDelegate.setResult(Interp::CreateRootDelegate(acx)))
         return ErrorVal();
 
-    return acx.create<ThreadState>(glob.handle(), rootDelegate.handle());
+    // Initialize the immediate integer delegate.
+    Local<VM::Wobject*> immIntDelegate(acx);
+    if (!immIntDelegate.setResult(
+            Interp::CreateImmIntDelegate(acx, rootDelegate)))
+    {
+        return ErrorVal();
+    }
+
+    return acx.create<ThreadState>(glob.handle(), rootDelegate.handle(),
+                                   immIntDelegate.handle());
 }
 
 

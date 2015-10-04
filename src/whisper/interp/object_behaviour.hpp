@@ -12,6 +12,9 @@ namespace Interp {
 
 Result<VM::Wobject*> CreateRootDelegate(AllocationContext acx);
 
+Result<VM::Wobject*> CreateImmIntDelegate(AllocationContext acx,
+                                          Handle<VM::Wobject*> rootDelegate);
+
 
 } // namespace Interp
 } // namespace Whisper
