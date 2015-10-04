@@ -21,7 +21,7 @@
     _(DotExpr)           /* done */         \
     _(ArrowExpr)                            \
     _(PosExpr)                              \
-    _(NegExpr)                              \
+    _(NegExpr)           /* done */         \
     _(AddExpr)                              \
     _(SubExpr)                              \
     _(MulExpr)                              \

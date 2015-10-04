@@ -32,6 +32,7 @@ namespace Interp {
 
     DECLARE_LIFT_FN_(CallExpr)
     DECLARE_LIFT_FN_(DotExpr)
+    DECLARE_LIFT_FN_(NegExpr)
     DECLARE_LIFT_FN_(ParenExpr)
     DECLARE_LIFT_FN_(NameExpr)
     DECLARE_LIFT_FN_(IntegerExpr)
@@ -91,6 +92,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 
     BIND_GLOBAL_METHOD_(CallExpr);
     BIND_GLOBAL_METHOD_(DotExpr);
+    BIND_GLOBAL_METHOD_(NegExpr);
     BIND_GLOBAL_METHOD_(ParenExpr);
     BIND_GLOBAL_METHOD_(NameExpr);
     BIND_GLOBAL_METHOD_(IntegerExpr);
@@ -462,6 +464,48 @@ IMPL_LIFT_FN_(DotExpr)
 
     return InvokeOperativeValue(cx, callInfo->callerScope(),
                                 dotHandler, stRef);
+}
+
+IMPL_LIFT_FN_(NegExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@NegExpr called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::NegExpr);
+
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedNegExprNode> negExpr(cx,
+        AST::PackedNegExprNode(pst->data(), stRef->offset()));
+
+    // Evaluate the lookup target.
+    Local<AST::PackedBaseNode> subExpr(cx, negExpr->subexpr());
+    VM::ControlFlow subFlow =
+        InterpretSyntax(cx, callInfo->callerScope(), pst, subExpr->offset());
+    WH_ASSERT(subFlow.isExpressionResult());
+    if (!subFlow.isValue())
+        return subFlow;
+
+    // Look up the '@SubExpr' method on the target.
+    Local<VM::ValBox> value(cx, subFlow.value());
+    Local<VM::String*> negExprName(cx, cx->runtimeState()->nm_AtNegExpr());
+    VM::ControlFlow lookupFlow = GetValueProperty(cx, value, negExprName);
+    WH_ASSERT(lookupFlow.isPropertyLookupResult());
+
+    if (lookupFlow.isVoid())
+        return cx->setExceptionRaised("@NegExpr() not found on object.");
+
+    if (!lookupFlow.isValue())
+        return lookupFlow;
+
+    // Invoke "@NegExpr" result as an operative, no arguments.
+    Local<VM::ValBox> negHandler(cx, lookupFlow.value());
+
+    return InvokeApplicativeValue(cx,
+        callInfo->callerScope(), negHandler,
+        ArrayHandle<VM::SyntaxNodeRef>::Empty());
 }
 
 IMPL_LIFT_FN_(ParenExpr)
