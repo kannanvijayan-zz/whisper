@@ -204,6 +204,35 @@ DispatchSyntaxMethod(ThreadContext* cx,
 }
 
 VM::ControlFlow
+InvokeValue(ThreadContext* cx,
+            Handle<VM::ScopeObject*> callerScope,
+            Handle<VM::ValBox> funcVal,
+            ArrayHandle<VM::SyntaxNodeRef> stRefs)
+{
+    // Ensure callee is a function object.
+    if (!funcVal->isPointerTo<VM::FunctionObject>())
+        return cx->setExceptionRaised("Cannot call non-function");
+
+    // Obtain callee function.
+    Local<VM::FunctionObject*> func(cx,
+        funcVal->pointer<VM::FunctionObject>());
+
+    return InvokeFunction(cx, callerScope, func, stRefs);
+}
+
+VM::ControlFlow
+InvokeFunction(ThreadContext* cx,
+               Handle<VM::ScopeObject*> callerScope,
+               Handle<VM::FunctionObject*> funcObj,
+               ArrayHandle<VM::SyntaxNodeRef> stRefs)
+{
+    if (funcObj->isOperative())
+        return InvokeOperativeFunction(cx, callerScope, funcObj, stRefs);
+    else
+        return InvokeApplicativeFunction(cx, callerScope, funcObj, stRefs);
+}
+
+VM::ControlFlow
 InvokeOperativeValue(ThreadContext* cx,
                      Handle<VM::ScopeObject*> callerScope,
                      Handle<VM::ValBox> funcVal,

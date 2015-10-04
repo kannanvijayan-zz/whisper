@@ -35,6 +35,16 @@ VM::ControlFlow DispatchSyntaxMethod(ThreadContext* cx,
                                  Handle<VM::PackedSyntaxTree*> pst,
                                  Handle<AST::PackedBaseNode> node);
 
+VM::ControlFlow InvokeValue(ThreadContext* cx,
+                            Handle<VM::ScopeObject*> callerScope,
+                            Handle<VM::ValBox> funcVal,
+                            ArrayHandle<VM::SyntaxNodeRef> stRefs);
+
+VM::ControlFlow InvokeFunction(ThreadContext* cx,
+                               Handle<VM::ScopeObject*> callerScope,
+                               Handle<VM::FunctionObject*> funcObj,
+                               ArrayHandle<VM::SyntaxNodeRef> stRefs);
+
 VM::ControlFlow InvokeOperativeValue(ThreadContext* cx,
                                      Handle<VM::ScopeObject*> callerScope,
                                      Handle<VM::ValBox> funcVal,
