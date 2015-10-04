@@ -32,6 +32,7 @@ namespace Interp {
 
     DECLARE_SYNTAX_FN_(CallExpr)
     DECLARE_SYNTAX_FN_(DotExpr)
+    DECLARE_SYNTAX_FN_(PosExpr)
     DECLARE_SYNTAX_FN_(NegExpr)
     DECLARE_SYNTAX_FN_(ParenExpr)
     DECLARE_SYNTAX_FN_(NameExpr)
@@ -92,6 +93,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 
     BIND_GLOBAL_METHOD_(CallExpr);
     BIND_GLOBAL_METHOD_(DotExpr);
+    BIND_GLOBAL_METHOD_(PosExpr);
     BIND_GLOBAL_METHOD_(NegExpr);
     BIND_GLOBAL_METHOD_(ParenExpr);
     BIND_GLOBAL_METHOD_(NameExpr);
@@ -464,6 +466,48 @@ IMPL_SYNTAX_FN_(DotExpr)
 
     return InvokeOperativeValue(cx, callInfo->callerScope(),
                                 dotHandler, stRef);
+}
+
+IMPL_SYNTAX_FN_(PosExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@PosExpr called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::PosExpr);
+
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedPosExprNode> posExpr(cx,
+        AST::PackedPosExprNode(pst->data(), stRef->offset()));
+
+    // Evaluate the lookup target.
+    Local<AST::PackedBaseNode> subExpr(cx, posExpr->subexpr());
+    VM::ControlFlow subFlow =
+        InterpretSyntax(cx, callInfo->callerScope(), pst, subExpr->offset());
+    WH_ASSERT(subFlow.isExpressionResult());
+    if (!subFlow.isValue())
+        return subFlow;
+
+    // Look up the '@SubExpr' method on the target.
+    Local<VM::ValBox> value(cx, subFlow.value());
+    Local<VM::String*> posExprName(cx, cx->runtimeState()->nm_AtPosExpr());
+    VM::ControlFlow lookupFlow = GetValueProperty(cx, value, posExprName);
+    WH_ASSERT(lookupFlow.isPropertyLookupResult());
+
+    if (lookupFlow.isVoid())
+        return cx->setExceptionRaised("@PosExpr() not found on object.");
+
+    if (!lookupFlow.isValue())
+        return lookupFlow;
+
+    // Invoke "@PosExpr" result as an operative, no arguments.
+    Local<VM::ValBox> posHandler(cx, lookupFlow.value());
+
+    return InvokeValue(cx,
+        callInfo->callerScope(), posHandler,
+        ArrayHandle<VM::SyntaxNodeRef>::Empty());
 }
 
 IMPL_SYNTAX_FN_(NegExpr)

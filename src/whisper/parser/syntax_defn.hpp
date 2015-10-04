@@ -20,7 +20,7 @@
     _(CallExpr)          /* done */         \
     _(DotExpr)           /* done */         \
     _(ArrowExpr)                            \
-    _(PosExpr)                              \
+    _(PosExpr)           /* done */         \
     _(NegExpr)           /* done */         \
     _(AddExpr)                              \
     _(SubExpr)                              \

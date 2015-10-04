@@ -97,6 +97,7 @@ CreateImmIntDelegate(AllocationContext acx,
 
     DECLARE_OPERATIVE_FN_(ObjSyntax_DotExpr)
 
+    DECLARE_APPLICATIVE_FN_(ImmInt_PosExpr)
     DECLARE_APPLICATIVE_FN_(ImmInt_NegExpr)
 
 #undef DECLARE_OPERATIVE_FN_
@@ -185,6 +186,7 @@ BindImmIntMethods(AllocationContext acx, VM::Wobject* obj)
         } \
     } while(false)
 
+    BIND_IMM_INT_METHOD_(PosExpr);
     BIND_IMM_INT_METHOD_(NegExpr);
 
 #undef BIND_IMM_INT_METHOD_
@@ -229,6 +231,26 @@ IMPL_OPERATIVE_FN_(ObjSyntax_DotExpr)
         return cx->setExceptionRaised("Name not found on object.");
 
     return lookupFlow;
+}
+
+IMPL_APPLICATIVE_FN_(ImmInt_PosExpr)
+{
+    if (args.length() != 0) {
+        return cx->setExceptionRaised(
+            "immInt.@PosExpr called with wrong number of arguments.");
+    }
+
+    // Look up the name on the receiver.
+    Local<VM::ValBox> receiver(cx, callInfo->receiver());
+    if (!receiver->isInteger()) {
+        return cx->setExceptionRaised(
+            "immInt.@PosExpr called on non-immediate-integer.");
+    }
+
+    // Posate the value.
+    int64_t posInt = +receiver->integer();
+    WH_ASSERT(VM::ValBox::IntegerInRange(posInt));
+    return VM::ControlFlow::Value(VM::ValBox::Integer(posInt));
 }
 
 IMPL_APPLICATIVE_FN_(ImmInt_NegExpr)
