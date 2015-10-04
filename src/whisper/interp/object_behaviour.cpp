@@ -16,7 +16,10 @@ namespace Interp {
 
 
 static OkResult
-BindRootDelegateSyntaxHandlers(AllocationContext acx, VM::Wobject* obj);
+BindRootDelegateMethods(AllocationContext acx, VM::Wobject* obj);
+
+static OkResult
+BindImmIntMethods(AllocationContext acx, VM::Wobject* obj);
 
 Result<VM::Wobject*>
 CreateRootDelegate(AllocationContext acx)
@@ -38,7 +41,7 @@ CreateRootDelegate(AllocationContext acx)
 
     Local<VM::Wobject*> obj(acx, plainObj.get());
     // Bind root delegate syntax handler onto it.
-    if (!BindRootDelegateSyntaxHandlers(acx, obj)) {
+    if (!BindRootDelegateMethods(acx, obj)) {
         SpewInterpError("Failed to bind root delegate syntax handlers.");
         return ErrorVal();
     }
@@ -69,27 +72,41 @@ CreateImmIntDelegate(AllocationContext acx,
     }
 
     Local<VM::Wobject*> obj(acx, plainObj.get());
+    // Bind root delegate syntax handler onto it.
+    if (!BindImmIntMethods(acx, obj)) {
+        SpewInterpError("Failed to bind immediate integer methods.");
+        return ErrorVal();
+    }
 
     SpewInterpNote("Created immediate integer delegate.");
     return OkVal(obj.get());
 }
 
 // Declare a lift function for each syntax node type.
-#define DECLARE_OBJSYNTAX_FN_(name) \
-    static VM::ControlFlow ObjSyntax_##name( \
+#define DECLARE_OPERATIVE_FN_(name) \
+    static VM::ControlFlow name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::SyntaxNodeRef> args);
 
-    DECLARE_OBJSYNTAX_FN_(DotExpr)
+#define DECLARE_APPLICATIVE_FN_(name) \
+    static VM::ControlFlow name( \
+        ThreadContext* cx, \
+        Handle<VM::NativeCallInfo> callInfo, \
+        ArrayHandle<VM::ValBox> args);
 
-#undef DECLARE_OBJSYNTAX_FN_
+    DECLARE_OPERATIVE_FN_(ObjSyntax_DotExpr)
+
+    DECLARE_APPLICATIVE_FN_(ImmInt_NegExpr)
+
+#undef DECLARE_OPERATIVE_FN_
+#undef DECLARE_APPLICATIVE_FN_
 
 static OkResult
-BindRootDelegateSyntaxMethod(AllocationContext acx,
-                             Handle<VM::Wobject*> obj,
-                             VM::String* name,
-                             VM::NativeOperativeFuncPtr opFunc)
+BindOperativeMethod(AllocationContext acx,
+                    Handle<VM::Wobject*> obj,
+                    VM::String* name,
+                    VM::NativeOperativeFuncPtr opFunc)
 {
     Local<VM::String*> rootedName(acx, name);
 
@@ -107,7 +124,28 @@ BindRootDelegateSyntaxMethod(AllocationContext acx,
 }
 
 static OkResult
-BindRootDelegateSyntaxHandlers(AllocationContext acx, VM::Wobject* obj)
+BindApplicativeMethod(AllocationContext acx,
+                      Handle<VM::Wobject*> obj,
+                      VM::String* name,
+                      VM::NativeApplicativeFuncPtr appFunc)
+{
+    Local<VM::String*> rootedName(acx, name);
+
+    // Allocate NativeFunction object.
+    Local<VM::NativeFunction*> natF(acx);
+    if (!natF.setResult(VM::NativeFunction::Create(acx, appFunc)))
+        return ErrorVal();
+    Local<VM::PropertyDescriptor> desc(acx, VM::PropertyDescriptor(natF.get()));
+
+    // Bind method on global.
+    if (!VM::Wobject::DefineProperty(acx, obj, rootedName, desc))
+        return ErrorVal();
+
+    return OkVal();
+}
+
+static OkResult
+BindRootDelegateMethods(AllocationContext acx, VM::Wobject* obj)
 {
     Local<VM::Wobject*> rootedObj(acx, obj);
 
@@ -116,8 +154,8 @@ BindRootDelegateSyntaxHandlers(AllocationContext acx, VM::Wobject* obj)
 
 #define BIND_OBJSYNTAX_METHOD_(name) \
     do { \
-        if (!BindRootDelegateSyntaxMethod(acx, rootedObj, \
-                rtState->nm_At##name(), &ObjSyntax_##name)) \
+        if (!BindOperativeMethod(acx, rootedObj, rtState->nm_At##name(), \
+                                 &ObjSyntax_##name)) \
         { \
             return ErrorVal(); \
         } \
@@ -130,13 +168,43 @@ BindRootDelegateSyntaxHandlers(AllocationContext acx, VM::Wobject* obj)
     return OkVal();
 }
 
-#define IMPL_OBJSYNTAX_FN_(name) \
-    static VM::ControlFlow ObjSyntax_##name( \
+static OkResult
+BindImmIntMethods(AllocationContext acx, VM::Wobject* obj)
+{
+    Local<VM::Wobject*> rootedObj(acx, obj);
+
+    ThreadContext* cx = acx.threadContext();
+    Local<VM::RuntimeState*> rtState(acx, cx->runtimeState());
+
+#define BIND_IMM_INT_METHOD_(name) \
+    do { \
+        if (!BindApplicativeMethod(acx, rootedObj, rtState->nm_At##name(), \
+                                   &ImmInt_##name)) \
+        { \
+            return ErrorVal(); \
+        } \
+    } while(false)
+
+    BIND_IMM_INT_METHOD_(NegExpr);
+
+#undef BIND_IMM_INT_METHOD_
+
+    return OkVal();
+}
+
+#define IMPL_OPERATIVE_FN_(name) \
+    static VM::ControlFlow name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::SyntaxNodeRef> args)
 
-IMPL_OBJSYNTAX_FN_(DotExpr)
+#define IMPL_APPLICATIVE_FN_(name) \
+    static VM::ControlFlow name( \
+        ThreadContext* cx, \
+        Handle<VM::NativeCallInfo> callInfo, \
+        ArrayHandle<VM::ValBox> args)
+
+IMPL_OPERATIVE_FN_(ObjSyntax_DotExpr)
 {
     if (args.length() != 1) {
         return cx->setExceptionRaised(
@@ -161,6 +229,30 @@ IMPL_OBJSYNTAX_FN_(DotExpr)
         return cx->setExceptionRaised("Name not found on object.");
 
     return lookupFlow;
+}
+
+IMPL_APPLICATIVE_FN_(ImmInt_NegExpr)
+{
+    if (args.length() != 0) {
+        return cx->setExceptionRaised(
+            "immInt.@NegExpr called with wrong number of arguments.");
+    }
+
+    // Look up the name on the receiver.
+    Local<VM::ValBox> receiver(cx, callInfo->receiver());
+    if (!receiver->isInteger()) {
+        return cx->setExceptionRaised(
+            "immInt.@NegExpr called on non-immediate-integer.");
+    }
+
+    // Negate the value.
+    int64_t negInt = -receiver->integer();
+
+    // TODO: On ImmInt negate overflow, create and return BigInt object.
+    if (!VM::ValBox::IntegerInRange(negInt))
+        return cx->setExceptionRaised("immInt.@NegExpr result overflows.");
+
+    return VM::ControlFlow::Value(VM::ValBox::Integer(negInt));
 }
 
 
