@@ -160,11 +160,11 @@ class MutArrayHandle
         valAddr_[i] = other;
     }
 
-    inline T const& operator [](uint32_t idx) const {
-        return get(idx);
+    inline Handle<T> operator [](uint32_t idx) const {
+        return handle(idx);
     }
-    inline T& operator [](uint32_t idx) {
-        return get(idx);
+    inline MutHandle<T> operator [](uint32_t idx) {
+        return mutHandle(idx);
     }
 
     Handle<T> handle(uint32_t idx) const;
@@ -314,8 +314,8 @@ class ArrayHandle
         return valAddr_[i];
     }
 
-    inline T const& operator [](uint32_t idx) const {
-        return get(idx);
+    inline Handle<T> operator [](uint32_t idx) const {
+        return handle(idx);
     }
 
     Handle<T> handle(uint32_t idx) const;

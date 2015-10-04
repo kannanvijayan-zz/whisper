@@ -3,6 +3,7 @@
 
 
 #define WHISPER_DEFN_GC_STACK_FORMATS(_) \
+    _(UntracedPrimitive)        \
     _(NativeCallInfo)           \
     _(SyntaxNodeRef)            \
     _(SyntaxBlockRef)           \

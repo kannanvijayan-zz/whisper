@@ -22,6 +22,11 @@ namespace Whisper {
         FieldTraits() = delete; \
         static constexpr bool Specialized = true; \
     }; \
+    template <> struct StackTraits<type> { \
+        StackTraits() = delete; \
+        static constexpr bool Specialized = true; \
+        static constexpr StackFormat Format = StackFormat::UntracedPrimitive; \
+    }; \
     template <> struct TraceTraits<type> \
         : public UntracedTraceTraits<type> {}
 
@@ -38,6 +43,19 @@ DEF_PRIM_TRAITS_(float);
 DEF_PRIM_TRAITS_(double);
 
 #undef DEF_PRIM_TRAITS_
+
+//
+// Specialize StackFormatTraits for untraced primitives.
+//
+struct UntracedStackPrimitive {};
+template <>
+struct StackFormatTraits<StackFormat::UntracedPrimitive>
+{
+    StackFormatTraits() = delete;
+    typedef UntracedStackPrimitive Type;
+};
+template <> struct TraceTraits<UntracedStackPrimitive>
+    : public UntracedTraceTraits<UntracedStackPrimitive> {};
 
 
 ///////////////////////////////////////////////////////////////////////////////
