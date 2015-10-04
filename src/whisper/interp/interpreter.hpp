@@ -45,6 +45,11 @@ VM::ControlFlow InvokeOperativeFunction(ThreadContext* cx,
                                     Handle<VM::FunctionObject*> funcObj,
                                     ArrayHandle<VM::SyntaxNodeRef> stRefs);
 
+VM::ControlFlow InvokeApplicativeValue(ThreadContext* cx,
+                                       Handle<VM::ScopeObject*> callerScope,
+                                       Handle<VM::ValBox> funcVal,
+                                       ArrayHandle<VM::SyntaxNodeRef> stRefs);
+
 VM::ControlFlow InvokeApplicativeFunction(ThreadContext* cx,
                                     Handle<VM::ScopeObject*> callerScope,
                                     Handle<VM::FunctionObject*> funcObj,

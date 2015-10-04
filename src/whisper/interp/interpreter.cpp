@@ -264,6 +264,29 @@ InvokeOperativeFunction(ThreadContext* cx,
 }
 
 VM::ControlFlow
+InvokeApplicativeValue(ThreadContext* cx,
+                       Handle<VM::ScopeObject*> callerScope,
+                       Handle<VM::ValBox> funcVal,
+                       ArrayHandle<VM::SyntaxNodeRef> stRefs)
+{
+    // Ensure callee is a function object.
+    if (!funcVal->isPointerTo<VM::FunctionObject>())
+        return cx->setExceptionRaised("Cannot call non-function");
+
+    // Obtain callee function.
+    Local<VM::FunctionObject*> func(cx,
+        funcVal->pointer<VM::FunctionObject>());
+
+    // Ensure callee is an operative.
+    if (!func->isApplicative()) {
+        return cx->setExceptionRaised("Function is not an operative.",
+                                      func.get());
+    }
+
+    return InvokeApplicativeFunction(cx, callerScope, func, stRefs);
+}
+
+VM::ControlFlow
 InvokeApplicativeFunction(ThreadContext* cx,
                           Handle<VM::ScopeObject*> callerScope,
                           Handle<VM::FunctionObject*> funcObj,
