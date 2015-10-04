@@ -54,8 +54,6 @@ class ThreadState
     HeapField<GlobalScope*> global_;
     HeapField<Wobject*> rootDelegate_;
 
-    HeapField<Wobject*> fixIntDelegate_;
-
   public:
     ThreadState(GlobalScope* global, Wobject* rootDelegate)
       : global_(global),
