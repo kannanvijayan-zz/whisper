@@ -257,14 +257,14 @@ class FunctionObject : public HashObject
     friend struct TraceTraits<FunctionObject>;
   private:
     HeapField<Function*> func_;
-    HeapField<Wobject*> receiver_;
+    HeapField<ValBox> receiver_;
     HeapField<LookupState*> lookupState_;
 
   public:
     FunctionObject(Handle<Array<Wobject*>*> delegates,
                    Handle<PropertyDict*> dict,
                    Handle<Function*> func,
-                   Handle<Wobject*> receiver,
+                   Handle<ValBox> receiver,
                    Handle<LookupState*> lookupState)
       : HashObject(delegates, dict),
         func_(func),
@@ -272,15 +272,25 @@ class FunctionObject : public HashObject
         lookupState_(lookupState)
     {
         WH_ASSERT(func.get() != nullptr);
-        WH_ASSERT(receiver.get() != nullptr);
+        WH_ASSERT(receiver->isValid());
         WH_ASSERT(lookupState.get() != nullptr);
     }
 
     static Result<FunctionObject*> Create(
             AllocationContext acx,
             Handle<Function*> func,
-            Handle<Wobject*> receiver,
+            Handle<ValBox> receiver,
             Handle<LookupState*> lookupState);
+
+    static Result<FunctionObject*> Create(
+            AllocationContext acx,
+            Handle<Function*> func,
+            Handle<Wobject*> receiver,
+            Handle<LookupState*> lookupState)
+    {
+        Local<ValBox> receiverBox(acx, ValBox::Object(receiver));
+        return Create(acx, func, receiverBox, lookupState);
+    }
 
     WobjectHooks const* getFunctionObjectHooks() const;
 
@@ -288,7 +298,7 @@ class FunctionObject : public HashObject
         return func_;
     }
 
-    Wobject* receiver() const {
+    ValBox const& receiver() const {
         return receiver_;
     }
 

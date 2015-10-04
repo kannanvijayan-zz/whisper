@@ -188,7 +188,6 @@ DispatchSyntaxMethod(ThreadContext* cx,
 
     Local<VM::FunctionObject*> funcObj(cx,
         propFlow.value().pointer<VM::FunctionObject>());
-    Local<VM::Wobject*> receiver(cx, funcObj->receiver());
     Local<VM::LookupState*> lookupState(cx, funcObj->lookupState());
 
     // Function must be an operative.
@@ -239,12 +238,10 @@ InvokeOperativeFunction(ThreadContext* cx,
     Local<VM::Function*> func(cx, funcObj->func());
     if (func->isNative()) {
         Local<VM::LookupState*> lookupState(cx, funcObj->lookupState());
-        Local<VM::Wobject*> receiver(cx, funcObj->receiver());
+        Local<VM::ValBox> receiver(cx, funcObj->receiver());
 
         Local<VM::NativeCallInfo> callInfo(cx,
-            VM::NativeCallInfo(lookupState, callerScope,
-                               funcObj,
-                               VM::ValBox::Pointer(receiver.get())));
+            VM::NativeCallInfo(lookupState, callerScope, funcObj, receiver));
 
         VM::NativeOperativeFuncPtr opNatF = func->asNative()->operative();
         return opNatF(cx, callInfo, stRefs);
@@ -310,12 +307,10 @@ InvokeApplicativeFunction(ThreadContext* cx,
     Local<VM::Function*> func(cx, funcObj->func());
     if (func->isNative()) {
         Local<VM::LookupState*> lookupState(cx, funcObj->lookupState());
-        Local<VM::Wobject*> receiver(cx, funcObj->receiver());
+        Local<VM::ValBox> receiver(cx, funcObj->receiver());
 
         Local<VM::NativeCallInfo> callInfo(cx,
-            VM::NativeCallInfo(lookupState, callerScope,
-                               funcObj,
-                               VM::ValBox::Pointer(receiver.get())));
+            VM::NativeCallInfo(lookupState, callerScope, funcObj, receiver));
 
         VM::NativeApplicativeFuncPtr appNatF = func->asNative()->applicative();
         return appNatF(cx, callInfo, args);

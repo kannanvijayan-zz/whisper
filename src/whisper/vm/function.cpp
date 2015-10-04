@@ -50,7 +50,7 @@ ScriptedFunction::Create(AllocationContext acx,
 /* static */ Result<FunctionObject*>
 FunctionObject::Create(AllocationContext acx,
                        Handle<Function*> func,
-                       Handle<Wobject*> receiver,
+                       Handle<ValBox> receiver,
                        Handle<LookupState*> lookupState)
 {
     // Allocate empty array of delegates.
