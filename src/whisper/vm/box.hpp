@@ -124,7 +124,7 @@ class Box
     }
     int64_t integer() const {
         WH_ASSERT(isInteger());
-        return static_cast<int64_t>(value_ >> IntegerShift);
+        return static_cast<int64_t>(value_) >> IntegerShift;
     }
     static Box Integer(int64_t ival) {
         WH_ASSERT(IntegerInRange(ival));
