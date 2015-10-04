@@ -134,6 +134,10 @@ class MutArrayHandle
         return MutArrayHandle<T>(valAddr, length);
     }
 
+    static MutArrayHandle<T> Empty() {
+        return MutArrayHandle(nullptr, 0);
+    }
+
     inline uint32_t length() const {
         return length_;
     }
@@ -291,6 +295,10 @@ class ArrayHandle
                                                      uint32_t length)
     {
         return ArrayHandle<T>(valAddr, length);
+    }
+
+    static ArrayHandle<T> Empty() {
+        return ArrayHandle(nullptr, 0);
     }
 
     inline T const* ptr() const {
