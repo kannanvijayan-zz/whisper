@@ -16,6 +16,7 @@
 #include "vm/runtime_state.hpp"
 #include "name_pool.hpp"
 #include "interp/syntax_behaviour.hpp"
+#include "interp/object_behaviour.hpp"
 
 namespace Whisper {
 
@@ -324,6 +325,12 @@ ThreadContext::initialize()
         return ErrorVal();
 
     global_ = glob.get();
+
+    // Initialize the root delegate.
+    Local<VM::Wobject*> rootDelegate(this);
+    if (!rootDelegate.setResult(Interp::CreateRootDelegate(inTenured())))
+        return ErrorVal();
+    rootDelegate_ = rootDelegate.get();
 
     return OkVal();
 }

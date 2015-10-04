@@ -14,6 +14,7 @@
 namespace Whisper {
 
 namespace VM {
+    class Wobject;
     class Frame;
     class RuntimeState;
     class GlobalScope;
@@ -175,6 +176,7 @@ class ThreadContext
     LocalBase* locals_;
     VM::Frame* lastFrame_;
     VM::GlobalScope* global_;
+    VM::Wobject* rootDelegate_;
     bool suppressGC_;
 
     unsigned int randSeed_;
@@ -244,6 +246,14 @@ class ThreadContext
     VM::GlobalScope* global() const {
         WH_ASSERT(hasGlobal());
         return global_;
+    }
+
+    bool hasRootDelegate() const {
+        return rootDelegate_ != nullptr;
+    }
+    VM::Wobject* rootDelegate() const {
+        WH_ASSERT(hasRootDelegate());
+        return rootDelegate_;
     }
 
     bool suppressGC() const {
