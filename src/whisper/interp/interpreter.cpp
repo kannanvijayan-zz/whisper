@@ -387,28 +387,9 @@ EvaluateBlock(ThreadContext* cx,
     return VM::ControlFlow::Void();
 }
 
-VM::ControlFlow
-GetValueProperty(ThreadContext* cx,
-                 Handle<VM::ValBox> value,
-                 Handle<VM::String*> name)
-{
-    // Check if the value is an object.
-    if (value->isPointer()) {
-        Local<VM::Wobject*> object(cx, value->objectPointer());
-        return GetObjectProperty(cx, object, name);
-    }
-
-    // Check if the value is a fixed integer.
-    if (value->isInteger()) {
-        return cx->setExceptionRaised("Cannot look up property on an integer.");
-    }
-
-    return cx->setExceptionRaised("Cannot look up property on a "
-                                  "primitive value");
-}
-
-VM::ControlFlow
-GetObjectProperty(ThreadContext* cx,
+static VM::ControlFlow
+GetPropertyHelper(ThreadContext* cx,
+                  Handle<VM::ValBox> receiver,
                   Handle<VM::Wobject*> object,
                   Handle<VM::String*> name)
 {
@@ -438,17 +419,47 @@ GetObjectProperty(ThreadContext* cx,
         Local<VM::Function*> func(cx, propDesc->method());
         Local<VM::FunctionObject*> funcObj(cx);
         if (!funcObj.setResult(VM::FunctionObject::Create(
-                cx->inHatchery(), func, object, lookupState)))
+                cx->inHatchery(), func, receiver, lookupState)))
         {
             return ErrorVal();
         }
 
-        return OkVal(static_cast<VM::Wobject*>(funcObj.get()));
+        return VM::ControlFlow::Value(VM::ValBox::Object(funcObj.get()));
     }
 
     return cx->setExceptionRaised(
         "Unknown property binding for name",
         name.get());
+}
+
+VM::ControlFlow
+GetValueProperty(ThreadContext* cx,
+                 Handle<VM::ValBox> value,
+                 Handle<VM::String*> name)
+{
+    // Check if the value is an object.
+    if (value->isPointer()) {
+        Local<VM::Wobject*> object(cx, value->objectPointer());
+        return GetPropertyHelper(cx, value, object, name);
+    }
+
+    // Check if the value is a fixed integer.
+    if (value->isInteger()) {
+        Local<VM::Wobject*> immInt(cx, cx->threadState()->immIntDelegate());
+        return GetPropertyHelper(cx, value, immInt, name);
+    }
+
+    return cx->setExceptionRaised("Cannot look up property on a "
+                                  "primitive value");
+}
+
+VM::ControlFlow
+GetObjectProperty(ThreadContext* cx,
+                  Handle<VM::Wobject*> object,
+                  Handle<VM::String*> name)
+{
+    Local<VM::ValBox> val(cx, VM::ValBox::Object(object));
+    return GetPropertyHelper(cx, val, object, name);
 }
 
 
