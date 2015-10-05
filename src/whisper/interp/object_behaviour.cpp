@@ -21,6 +21,9 @@ BindRootDelegateMethods(AllocationContext acx, VM::Wobject* obj);
 static OkResult
 BindImmIntMethods(AllocationContext acx, VM::Wobject* obj);
 
+static OkResult
+BindImmBoolMethods(AllocationContext acx, VM::Wobject* obj);
+
 Result<VM::Wobject*>
 CreateRootDelegate(AllocationContext acx)
 {
@@ -72,13 +75,45 @@ CreateImmIntDelegate(AllocationContext acx,
     }
 
     Local<VM::Wobject*> obj(acx, plainObj.get());
-    // Bind root delegate syntax handler onto it.
+    // Bind methods.
     if (!BindImmIntMethods(acx, obj)) {
         SpewInterpError("Failed to bind immediate integer methods.");
         return ErrorVal();
     }
 
     SpewInterpNote("Created immediate integer delegate.");
+    return OkVal(obj.get());
+}
+
+Result<VM::Wobject*>
+CreateImmBoolDelegate(AllocationContext acx,
+                      Handle<VM::Wobject*> rootDelegate)
+{
+    // Create an empty array of delegates.
+    Local<VM::Array<VM::Wobject*>*> delegates(acx);
+    if (!delegates.setResult(VM::Array<VM::Wobject*>::CreateCopy(acx,
+                                ArrayHandle<VM::Wobject*>(rootDelegate))))
+    {
+        SpewInterpError("Could not allocate immediate boolean delegate's "
+                        "delegate array.");
+        return ErrorVal();
+    }
+
+    // Create a plain object.
+    Local<VM::PlainObject*> plainObj(acx);
+    if (!plainObj.setResult(VM::PlainObject::Create(acx, delegates))) {
+        SpewInterpError("Could not allocate immediate boolean delegate.");
+        return ErrorVal();
+    }
+
+    // Bind methods.
+    Local<VM::Wobject*> obj(acx, plainObj.get());
+    if (!BindImmBoolMethods(acx, obj)) {
+        SpewInterpError("Failed to bind immediate boolean methods.");
+        return ErrorVal();
+    }
+
+    SpewInterpNote("Created immediate boolean delegate.");
     return OkVal(obj.get());
 }
 
@@ -198,6 +233,30 @@ BindImmIntMethods(AllocationContext acx, VM::Wobject* obj)
     BIND_IMM_INT_METHOD_(DivExpr);
 
 #undef BIND_IMM_INT_METHOD_
+
+    return OkVal();
+}
+
+static OkResult
+BindImmBoolMethods(AllocationContext acx, VM::Wobject* obj)
+{
+    Local<VM::Wobject*> rootedObj(acx, obj);
+
+    ThreadContext* cx = acx.threadContext();
+    Local<VM::RuntimeState*> rtState(acx, cx->runtimeState());
+
+#define BIND_IMM_BOOL_METHOD_(name) \
+    do { \
+        if (!BindApplicativeMethod(acx, rootedObj, rtState->nm_At##name(), \
+                                   &ImmBool_##name)) \
+        { \
+            return ErrorVal(); \
+        } \
+    } while(false)
+
+    // BIND_IMM_BOOL_METHOD_(IfStmt);
+
+#undef BIND_IMM_BOOL_METHOD_
 
     return OkVal();
 }

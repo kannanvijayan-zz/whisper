@@ -478,6 +478,12 @@ GetValueProperty(ThreadContext* cx,
         return GetPropertyHelper(cx, value, immInt, name);
     }
 
+    // Check if the value is a fixed boolean.
+    if (value->isBoolean()) {
+        Local<VM::Wobject*> immBool(cx, cx->threadState()->immBoolDelegate());
+        return GetPropertyHelper(cx, value, immBool, name);
+    }
+
     return cx->setExceptionRaised("Cannot look up property on a "
                                   "primitive value");
 }

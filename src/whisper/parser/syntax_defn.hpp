@@ -19,7 +19,7 @@
     /* Expressions. */                      \
     _(CallExpr)          /* done */         \
     _(DotExpr)           /* done */         \
-    _(ArrowExpr)                            \
+    _(ArrowExpr)         /* done */         \
     _(PosExpr)           /* done */         \
     _(NegExpr)           /* done */         \
     _(AddExpr)           /* done */         \

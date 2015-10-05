@@ -56,8 +56,17 @@ ThreadState::Create(AllocationContext acx)
         return ErrorVal();
     }
 
+    // Initialize the immediate boolean delegate.
+    Local<VM::Wobject*> immBoolDelegate(acx);
+    if (!immBoolDelegate.setResult(
+            Interp::CreateImmBoolDelegate(acx, rootDelegate)))
+    {
+        return ErrorVal();
+    }
+
     return acx.create<ThreadState>(glob.handle(), rootDelegate.handle(),
-                                   immIntDelegate.handle());
+                                   immIntDelegate.handle(),
+                                   immBoolDelegate.handle());
 }
 
 
