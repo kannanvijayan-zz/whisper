@@ -476,22 +476,22 @@ static VM::ControlFlow
 UnaryExprHelper(ThreadContext* cx,
                 Handle<VM::NativeCallInfo> callInfo,
                 Handle<VM::PackedSyntaxTree*> pst,
-                Handle<AST::PackedBaseNode> subExpr,
+                uint32_t subexprOffset,
                 Handle<VM::String*> handlerName)
 {
     VM::ControlFlow subFlow =
-        InterpretSyntax(cx, callInfo->callerScope(), pst, subExpr->offset());
+        InterpretSyntax(cx, callInfo->callerScope(), pst, subexprOffset);
     WH_ASSERT(subFlow.isExpressionResult());
     if (!subFlow.isValue())
         return subFlow;
 
-    // Look up the '@PosExpr' method on the target.
+    // Look up the handler method on the target.
     Local<VM::ValBox> value(cx, subFlow.value());
     VM::ControlFlow lookupFlow = GetValueProperty(cx, value, handlerName);
     WH_ASSERT(lookupFlow.isPropertyLookupResult());
 
     if (lookupFlow.isVoid()) {
-        return cx->setExceptionRaised("Syntax handler not found on scope.",
+        return cx->setExceptionRaised("Handler method not found on scope.",
                                       handlerName.get());
     }
 
@@ -520,9 +520,9 @@ IMPL_SYNTAX_FN_(PosExpr)
         AST::PackedPosExprNode(pst->data(), stRef->offset()));
 
     // Evaluate the lookup target.
-    Local<AST::PackedBaseNode> subexpr(cx, posExpr->subexpr());
     Local<VM::String*> posExprName(cx, cx->runtimeState()->nm_AtPosExpr());
-    return UnaryExprHelper(cx, callInfo, pst, subexpr, posExprName);
+    return UnaryExprHelper(cx, callInfo, pst, posExpr->subexpr().offset(),
+                           posExprName);
 }
 
 IMPL_SYNTAX_FN_(NegExpr)
@@ -540,9 +540,43 @@ IMPL_SYNTAX_FN_(NegExpr)
         AST::PackedNegExprNode(pst->data(), stRef->offset()));
 
     // Evaluate the lookup target.
-    Local<AST::PackedBaseNode> subexpr(cx, negExpr->subexpr());
     Local<VM::String*> negExprName(cx, cx->runtimeState()->nm_AtNegExpr());
-    return UnaryExprHelper(cx, callInfo, pst, subexpr, negExprName);
+    return UnaryExprHelper(cx, callInfo, pst, negExpr->subexpr().offset(),
+                           negExprName);
+}
+
+static VM::ControlFlow
+BinaryExprHelper(ThreadContext* cx,
+                 Handle<VM::NativeCallInfo> callInfo,
+                 Handle<VM::PackedSyntaxTree*> pst,
+                 uint32_t lhsOffset,
+                 uint32_t rhsOffset,
+                 Handle<VM::String*> handlerName)
+{
+    // Evaluate the lookup target.
+    VM::ControlFlow lhsFlow =
+        InterpretSyntax(cx, callInfo->callerScope(), pst, lhsOffset);
+    WH_ASSERT(lhsFlow.isExpressionResult());
+    if (!lhsFlow.isValue())
+        return lhsFlow;
+
+    // Look up the handler method on the target.
+    Local<VM::ValBox> lhsValue(cx, lhsFlow.value());
+    VM::ControlFlow lookupFlow = GetValueProperty(cx, lhsValue, handlerName);
+    WH_ASSERT(lookupFlow.isPropertyLookupResult());
+
+    if (lookupFlow.isVoid())
+        return cx->setExceptionRaised("Handler method not found on object.");
+
+    if (!lookupFlow.isValue())
+        return lookupFlow;
+
+    Local<VM::ValBox> handler(cx, lookupFlow.value());
+
+    // Invoke handler method, pass rhs as argument.
+    Local<VM::SyntaxNodeRef> rhsNode(cx, VM::SyntaxNodeRef(pst, rhsOffset));
+    return InvokeValue(cx, callInfo->callerScope(), handler,
+                       ArrayHandle<VM::SyntaxNodeRef>(rhsNode));
 }
 
 IMPL_SYNTAX_FN_(AddExpr)
@@ -559,35 +593,12 @@ IMPL_SYNTAX_FN_(AddExpr)
     Local<AST::PackedAddExprNode> addExpr(cx,
         AST::PackedAddExprNode(pst->data(), stRef->offset()));
 
-    // Evaluate the lookup target.
-    Local<AST::PackedBaseNode> lhsExpr(cx, addExpr->lhs());
-    VM::ControlFlow lhsFlow =
-        InterpretSyntax(cx, callInfo->callerScope(), pst, lhsExpr->offset());
-    WH_ASSERT(lhsFlow.isExpressionResult());
-    if (!lhsFlow.isValue())
-        return lhsFlow;
-
-    // Look up the '@AddExpr' method on the target.
-    Local<VM::ValBox> lhsValue(cx, lhsFlow.value());
     Local<VM::String*> addExprName(cx, cx->runtimeState()->nm_AtAddExpr());
-    VM::ControlFlow lookupFlow = GetValueProperty(cx, lhsValue, addExprName);
-    WH_ASSERT(lookupFlow.isPropertyLookupResult());
 
-    if (lookupFlow.isVoid())
-        return cx->setExceptionRaised("@AddExpr() not found on object.");
-
-    if (!lookupFlow.isValue())
-        return lookupFlow;
-
-    Local<VM::ValBox> addHandler(cx, lookupFlow.value());
-
-    // Invoke "@AddExpr" method, pass rhs as argument.
-    Local<VM::SyntaxNodeRef> rhsExpr(cx,
-        VM::SyntaxNodeRef(pst, addExpr->rhs().offset()));
-
-    return InvokeValue(cx,
-        callInfo->callerScope(), addHandler,
-        ArrayHandle<VM::SyntaxNodeRef>(rhsExpr));
+    return BinaryExprHelper(cx, callInfo, pst,
+                            addExpr->lhs().offset(),
+                            addExpr->rhs().offset(),
+                            addExprName);
 }
 
 IMPL_SYNTAX_FN_(SubExpr)
@@ -604,35 +615,11 @@ IMPL_SYNTAX_FN_(SubExpr)
     Local<AST::PackedSubExprNode> subExpr(cx,
         AST::PackedSubExprNode(pst->data(), stRef->offset()));
 
-    // Evaluate the lookup target.
-    Local<AST::PackedBaseNode> lhsExpr(cx, subExpr->lhs());
-    VM::ControlFlow lhsFlow =
-        InterpretSyntax(cx, callInfo->callerScope(), pst, lhsExpr->offset());
-    WH_ASSERT(lhsFlow.isExpressionResult());
-    if (!lhsFlow.isValue())
-        return lhsFlow;
-
-    // Look up the '@SubExpr' method on the target.
-    Local<VM::ValBox> lhsValue(cx, lhsFlow.value());
     Local<VM::String*> subExprName(cx, cx->runtimeState()->nm_AtSubExpr());
-    VM::ControlFlow lookupFlow = GetValueProperty(cx, lhsValue, subExprName);
-    WH_ASSERT(lookupFlow.isPropertyLookupResult());
-
-    if (lookupFlow.isVoid())
-        return cx->setExceptionRaised("@SubExpr() not found on object.");
-
-    if (!lookupFlow.isValue())
-        return lookupFlow;
-
-    Local<VM::ValBox> subHandler(cx, lookupFlow.value());
-
-    // Invoke "@SubExpr" method, pass rhs as argument.
-    Local<VM::SyntaxNodeRef> rhsExpr(cx,
-        VM::SyntaxNodeRef(pst, subExpr->rhs().offset()));
-
-    return InvokeValue(cx,
-        callInfo->callerScope(), subHandler,
-        ArrayHandle<VM::SyntaxNodeRef>(rhsExpr));
+    return BinaryExprHelper(cx, callInfo, pst,
+                            subExpr->lhs().offset(),
+                            subExpr->rhs().offset(),
+                            subExprName);
 }
 
 IMPL_SYNTAX_FN_(ParenExpr)
