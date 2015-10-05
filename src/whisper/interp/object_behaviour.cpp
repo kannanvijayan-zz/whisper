@@ -101,6 +101,8 @@ CreateImmIntDelegate(AllocationContext acx,
     DECLARE_APPLICATIVE_FN_(ImmInt_NegExpr)
     DECLARE_APPLICATIVE_FN_(ImmInt_AddExpr)
     DECLARE_APPLICATIVE_FN_(ImmInt_SubExpr)
+    DECLARE_APPLICATIVE_FN_(ImmInt_MulExpr)
+    DECLARE_APPLICATIVE_FN_(ImmInt_DivExpr)
 
 #undef DECLARE_OPERATIVE_FN_
 #undef DECLARE_APPLICATIVE_FN_
@@ -192,6 +194,8 @@ BindImmIntMethods(AllocationContext acx, VM::Wobject* obj)
     BIND_IMM_INT_METHOD_(NegExpr);
     BIND_IMM_INT_METHOD_(AddExpr);
     BIND_IMM_INT_METHOD_(SubExpr);
+    BIND_IMM_INT_METHOD_(MulExpr);
+    BIND_IMM_INT_METHOD_(DivExpr);
 
 #undef BIND_IMM_INT_METHOD_
 
@@ -343,6 +347,68 @@ IMPL_APPLICATIVE_FN_(ImmInt_SubExpr)
                                   "integer immediates for now");
 }
 
+IMPL_APPLICATIVE_FN_(ImmInt_MulExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "immInt.@MulExpr called with wrong number of arguments.");
+    }
+
+    // Receiver should be immediate integer.
+    Local<VM::ValBox> receiver(cx, callInfo->receiver());
+    if (!receiver->isInteger()) {
+        return cx->setExceptionRaised(
+            "immInt.@MulExpr called on non-immediate-integer.");
+    }
+
+    // Check args[0].
+    Local<VM::ValBox> arg(cx, args[0]);
+    if (arg->isInteger()) {
+        int64_t lhsInt = receiver->integer();
+        int64_t rhsInt = arg->integer();
+        int64_t prodInt = lhsInt * rhsInt;
+        // TODO: Handle overflow.
+        if (!VM::ValBox::IntegerInRange(prodInt))
+            return cx->setExceptionRaised("immInt.@MulExpr result overflows.");
+        return VM::ControlFlow::Value(VM::ValBox::Integer(prodInt));
+    }
+
+    // TODO: On ImmInt negate overflow, create and return BigInt object.
+    return cx->setExceptionRaised("Integer multiply can only handle "
+                                  "integer immediates for now");
+}
+
+IMPL_APPLICATIVE_FN_(ImmInt_DivExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "immInt.@DivExpr called with wrong number of arguments.");
+    }
+
+    // Receiver should be immediate integer.
+    Local<VM::ValBox> receiver(cx, callInfo->receiver());
+    if (!receiver->isInteger()) {
+        return cx->setExceptionRaised(
+            "immInt.@DivExpr called on non-immediate-integer.");
+    }
+
+    // Check args[0].
+    Local<VM::ValBox> arg(cx, args[0]);
+    if (arg->isInteger()) {
+        int64_t lhsInt = receiver->integer();
+        int64_t rhsInt = arg->integer();
+        int64_t quotInt = lhsInt / rhsInt;
+        // TODO: Handle overflow, divide-by-zero, non-integer results,
+        // basically everything!
+        if (!VM::ValBox::IntegerInRange(quotInt))
+            return cx->setExceptionRaised("immInt.@DivExpr result overflows.");
+        return VM::ControlFlow::Value(VM::ValBox::Integer(quotInt));
+    }
+
+    // TODO: On ImmInt negate overflow, create and return BigInt object.
+    return cx->setExceptionRaised("Integer divide can only handle "
+                                  "integer immediates for now");
+}
 
 } // namespace Interp
 } // namespace Whisper

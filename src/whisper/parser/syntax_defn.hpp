@@ -24,8 +24,8 @@
     _(NegExpr)           /* done */         \
     _(AddExpr)           /* done */         \
     _(SubExpr)           /* done */         \
-    _(MulExpr)                              \
-    _(DivExpr)                              \
+    _(MulExpr)           /* done */         \
+    _(DivExpr)           /* done */         \
     _(ParenExpr)         /* done */         \
     _(NameExpr)          /* done */         \
     _(IntegerExpr)       /* done */

@@ -36,6 +36,8 @@ namespace Interp {
     DECLARE_SYNTAX_FN_(NegExpr)
     DECLARE_SYNTAX_FN_(AddExpr)
     DECLARE_SYNTAX_FN_(SubExpr)
+    DECLARE_SYNTAX_FN_(MulExpr)
+    DECLARE_SYNTAX_FN_(DivExpr)
     DECLARE_SYNTAX_FN_(ParenExpr)
     DECLARE_SYNTAX_FN_(NameExpr)
     DECLARE_SYNTAX_FN_(IntegerExpr)
@@ -99,6 +101,8 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(NegExpr);
     BIND_GLOBAL_METHOD_(AddExpr);
     BIND_GLOBAL_METHOD_(SubExpr);
+    BIND_GLOBAL_METHOD_(MulExpr);
+    BIND_GLOBAL_METHOD_(DivExpr);
     BIND_GLOBAL_METHOD_(ParenExpr);
     BIND_GLOBAL_METHOD_(NameExpr);
     BIND_GLOBAL_METHOD_(IntegerExpr);
@@ -620,6 +624,48 @@ IMPL_SYNTAX_FN_(SubExpr)
                             subExpr->lhs().offset(),
                             subExpr->rhs().offset(),
                             subExprName);
+}
+
+IMPL_SYNTAX_FN_(MulExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@MulExpr called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::MulExpr);
+
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedMulExprNode> mulExpr(cx,
+        AST::PackedMulExprNode(pst->data(), stRef->offset()));
+
+    Local<VM::String*> mulExprName(cx, cx->runtimeState()->nm_AtMulExpr());
+    return BinaryExprHelper(cx, callInfo, pst,
+                            mulExpr->lhs().offset(),
+                            mulExpr->rhs().offset(),
+                            mulExprName);
+}
+
+IMPL_SYNTAX_FN_(DivExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@DivExpr called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::DivExpr);
+
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedDivExprNode> divExpr(cx,
+        AST::PackedDivExprNode(pst->data(), stRef->offset()));
+
+    Local<VM::String*> divExprName(cx, cx->runtimeState()->nm_AtDivExpr());
+    return BinaryExprHelper(cx, callInfo, pst,
+                            divExpr->lhs().offset(),
+                            divExpr->rhs().offset(),
+                            divExprName);
 }
 
 IMPL_SYNTAX_FN_(ParenExpr)
