@@ -32,6 +32,7 @@ namespace Interp {
 
     DECLARE_SYNTAX_FN_(CallExpr)
     DECLARE_SYNTAX_FN_(DotExpr)
+    DECLARE_SYNTAX_FN_(ArrowExpr)
     DECLARE_SYNTAX_FN_(PosExpr)
     DECLARE_SYNTAX_FN_(NegExpr)
     DECLARE_SYNTAX_FN_(AddExpr)
@@ -97,6 +98,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 
     BIND_GLOBAL_METHOD_(CallExpr);
     BIND_GLOBAL_METHOD_(DotExpr);
+    BIND_GLOBAL_METHOD_(ArrowExpr);
     BIND_GLOBAL_METHOD_(PosExpr);
     BIND_GLOBAL_METHOD_(NegExpr);
     BIND_GLOBAL_METHOD_(AddExpr);
@@ -474,6 +476,48 @@ IMPL_SYNTAX_FN_(DotExpr)
 
     return InvokeOperativeValue(cx, callInfo->callerScope(),
                                 dotHandler, stRef);
+}
+
+IMPL_SYNTAX_FN_(ArrowExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@ArrowExpr called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0).nodeType() == AST::ArrowExpr);
+
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedArrowExprNode> arrowExpr(cx,
+        AST::PackedArrowExprNode(pst->data(), stRef->offset()));
+
+    // Evaluate the lookup target.
+    Local<AST::PackedBaseNode> targetExpr(cx, arrowExpr->target());
+    VM::ControlFlow targetFlow =
+        InterpretSyntax(cx, callInfo->callerScope(), pst,
+                        targetExpr->offset());
+    WH_ASSERT(targetFlow.isExpressionResult());
+    if (!targetFlow.isValue())
+        return targetFlow;
+
+    // Look up the '@ArrowExpr' method on the target.
+    Local<VM::ValBox> targetBox(cx, targetFlow.value());
+    Local<VM::String*> arrowExprName(cx, cx->runtimeState()->nm_AtArrowExpr());
+    VM::ControlFlow lookupFlow = GetValueProperty(cx, targetBox, arrowExprName);
+    WH_ASSERT(lookupFlow.isPropertyLookupResult());
+
+    if (lookupFlow.isVoid())
+        return cx->setExceptionRaised("@ArrowExpr() not found on object.");
+
+    if (!lookupFlow.isValue())
+        return lookupFlow;
+
+    // Invoke "@ArrowExpr" result as an operative.
+    Local<VM::ValBox> arrowHandler(cx, lookupFlow.value());
+
+    return InvokeOperativeValue(cx, callInfo->callerScope(),
+                                arrowHandler, stRef);
 }
 
 static VM::ControlFlow
