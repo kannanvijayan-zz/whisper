@@ -81,12 +81,7 @@ class Array
             vals_[i].init(vals[i], this);
     }
 
-    Array(uint32_t len, Handle<T> val) {
-        for (uint32_t i = 0; i < len; i++)
-            vals_[i].init(val, this);
-    }
-
-    Array(Handle<Array<T>*> arr) {
+    Array(Array<T>* arr) {
         WH_ASSERT(length() == arr->length());
         for (uint32_t i = 0; i < arr->length(); i++)
             vals_[i].init(arr->vals_[i], this);
