@@ -23,8 +23,7 @@ class HashObject : public Wobject
     static constexpr uint32_t InitialPropertyCapacity = 8;
 
   public:
-    HashObject(Handle<Array<Wobject*>*> delegates,
-               Handle<PropertyDict*> dict)
+    HashObject(Array<Wobject*>* delegates, PropertyDict* dict)
       : Wobject(),
         delegates_(delegates),
         dict_(dict)

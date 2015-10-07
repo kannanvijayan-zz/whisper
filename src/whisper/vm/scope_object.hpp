@@ -14,8 +14,8 @@ class ScopeObject : public HashObject
 {
   friend class TraceTraits<ScopeObject>;
   public:
-    ScopeObject(Handle<Array<Wobject*>*> delegates,
-                Handle<PropertyDict*> dict)
+    ScopeObject(Array<Wobject*>* delegates,
+                PropertyDict* dict)
       : HashObject(delegates, dict)
     {}
 };
@@ -27,9 +27,9 @@ class CallScope : public ScopeObject
     HeapField<Function*> function_;
 
   public:
-    CallScope(Handle<Array<Wobject*>*> delegates,
-              Handle<PropertyDict*> dict,
-              Handle<Function*> function)
+    CallScope(Array<Wobject*>* delegates,
+              PropertyDict* dict,
+              Function* function)
       : ScopeObject(delegates, dict),
         function_(function)
     {}
@@ -49,8 +49,8 @@ class BlockScope : public ScopeObject
 {
   friend class TraceTraits<BlockScope>;
   public:
-    BlockScope(Handle<Array<Wobject*>*> delegates,
-               Handle<PropertyDict*> dict)
+    BlockScope(Array<Wobject*>* delegates,
+               PropertyDict* dict)
       : ScopeObject(delegates, dict)
     {}
 
@@ -64,13 +64,13 @@ class ModuleScope : public ScopeObject
 {
   friend class TraceTraits<ModuleScope>;
   public:
-    ModuleScope(Handle<Array<Wobject*>*> delegates,
-                Handle<PropertyDict*> dict)
+    ModuleScope(Array<Wobject*>* delegates,
+                PropertyDict* dict)
       : ScopeObject(delegates, dict)
     {}
 
     static Result<ModuleScope*> Create(AllocationContext acx,
-                                        Handle<GlobalScope*> global);
+                                       Handle<GlobalScope*> global);
 
     WobjectHooks const* getModuleScopeHooks() const;
 };
