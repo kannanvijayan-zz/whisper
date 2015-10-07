@@ -13,8 +13,8 @@ class PlainObject : public HashObject
 {
   friend class TraceTraits<PlainObject>;
   public:
-    PlainObject(Handle<Array<Wobject*>*> delegates,
-                Handle<PropertyDict*> dict)
+    PlainObject(Array<Wobject*>* delegates,
+                PropertyDict* dict)
       : HashObject(delegates, dict)
     {}
 

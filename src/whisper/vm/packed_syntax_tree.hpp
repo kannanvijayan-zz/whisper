@@ -26,13 +26,13 @@ class PackedSyntaxTree
     HeapField<Array<Box>*> constants_;
 
   public:
-    PackedSyntaxTree(Handle<Array<uint32_t>*> data,
-                     Handle<Array<Box>*> constants)
+    PackedSyntaxTree(Array<uint32_t>* data,
+                     Array<Box>* constants)
       : data_(data),
         constants_(constants)
     {
-        WH_ASSERT(data.get() != nullptr);
-        WH_ASSERT(constants.get() != nullptr);
+        WH_ASSERT(data != nullptr);
+        WH_ASSERT(constants != nullptr);
     }
 
     static Result<PackedSyntaxTree*> Create(AllocationContext acx,
@@ -212,11 +212,11 @@ class SyntaxTreeFragment
     uint32_t offset_;
 
   public:
-    SyntaxTreeFragment(Handle<PackedSyntaxTree*> pst, uint32_t offset)
+    SyntaxTreeFragment(PackedSyntaxTree* pst, uint32_t offset)
       : pst_(pst),
         offset_(offset)
     {
-        WH_ASSERT(pst.get() != nullptr);
+        WH_ASSERT(pst != nullptr);
     }
 
     static Result<SyntaxTreeFragment*> Create(

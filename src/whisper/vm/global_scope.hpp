@@ -14,8 +14,8 @@ class GlobalScope : public ScopeObject
 {
   friend class TraceTraits<GlobalScope>;
   public:
-    GlobalScope(Handle<Array<Wobject*>*> delegates,
-                Handle<PropertyDict*> dict)
+    GlobalScope(Array<Wobject*>* delegates,
+                PropertyDict* dict)
       : ScopeObject(delegates, dict)
     {}
 

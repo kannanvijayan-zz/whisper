@@ -85,23 +85,23 @@ class LookupNode
     uint32_t index_;
 
   public:
-    LookupNode(Handle<Wobject*> object)
+    LookupNode(Wobject* object)
       : parent_(nullptr),
         object_(object),
         delegates_(nullptr),
         index_(0)
     {
-        WH_ASSERT(object.get() != nullptr);
+        WH_ASSERT(object != nullptr);
     }
-    LookupNode(Handle<LookupNode*> parent,
-               Handle<Wobject*> object)
+    LookupNode(LookupNode* parent,
+               Wobject* object)
       : parent_(parent),
         object_(object),
         delegates_(nullptr),
         index_(0)
     {
-        WH_ASSERT(parent.get() != nullptr);
-        WH_ASSERT(object.get() != nullptr);
+        WH_ASSERT(parent != nullptr);
+        WH_ASSERT(object != nullptr);
     }
 
     static Result<LookupNode*> Create(AllocationContext acx,
@@ -144,10 +144,10 @@ class LookupState
     HeapField<LookupNode*> node_;
 
   public:
-    LookupState(Handle<Wobject*> receiver,
-                Handle<String*> name,
-                Handle<LookupSeenObjects*> seen,
-                Handle<LookupNode*> node)
+    LookupState(Wobject* receiver,
+                String* name,
+                LookupSeenObjects* seen,
+                LookupNode* node)
       : receiver_(receiver),
         name_(name),
         seen_(seen),

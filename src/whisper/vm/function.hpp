@@ -261,19 +261,19 @@ class FunctionObject : public HashObject
     HeapField<LookupState*> lookupState_;
 
   public:
-    FunctionObject(Handle<Array<Wobject*>*> delegates,
-                   Handle<PropertyDict*> dict,
-                   Handle<Function*> func,
-                   Handle<ValBox> receiver,
-                   Handle<LookupState*> lookupState)
+    FunctionObject(Array<Wobject*>* delegates,
+                   PropertyDict* dict,
+                   Function* func,
+                   ValBox const& receiver,
+                   LookupState* lookupState)
       : HashObject(delegates, dict),
         func_(func),
         receiver_(receiver),
         lookupState_(lookupState)
     {
-        WH_ASSERT(func.get() != nullptr);
-        WH_ASSERT(receiver->isValid());
-        WH_ASSERT(lookupState.get() != nullptr);
+        WH_ASSERT(func != nullptr);
+        WH_ASSERT(receiver.isValid());
+        WH_ASSERT(lookupState != nullptr);
     }
 
     static Result<FunctionObject*> Create(
