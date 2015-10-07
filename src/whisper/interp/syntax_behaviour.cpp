@@ -141,7 +141,7 @@ IMPL_SYNTAX_FN_(File)
         SpewInterpNote("Syntax_File: statement %u is %s",
                        unsigned(i), AST::NodeTypeString(stmtNode->type()));
 
-        VM::ControlFlow stmtFlow = InterpretSyntax(cx, callInfo->callerScope(),
+        VM::ControlFlow stmtFlow = InterpretSyntax(cx, callInfo->scope(),
                                                    pst, stmtNode->offset());
         WH_ASSERT(stmtFlow.isStatementResult());
 
@@ -183,7 +183,7 @@ IMPL_SYNTAX_FN_(ExprStmt)
 
     Local<AST::PackedBaseNode> exprNode(cx, exprStmtNode->expression());
 
-    VM::ControlFlow exprFlow = InterpretSyntax(cx, callInfo->callerScope(), pst,
+    VM::ControlFlow exprFlow = InterpretSyntax(cx, callInfo->scope(), pst,
                                                exprNode->offset());
     // An expression should only ever resolve to a value, error, or exception.
     WH_ASSERT(exprFlow.isExpressionResult());
@@ -213,7 +213,7 @@ IMPL_SYNTAX_FN_(ReturnStmt)
 
     SpewInterpNote("Syntax_ReturnStmt: Evaluating expression.");
     Local<AST::PackedBaseNode> exprNode(cx, returnStmtNode->expression());
-    VM::ControlFlow exprFlow = InterpretSyntax(cx, callInfo->callerScope(), pst,
+    VM::ControlFlow exprFlow = InterpretSyntax(cx, callInfo->scope(), pst,
                                                exprNode->offset());
     // An expression should only ever resolve to a value, error, or exception.
     WH_ASSERT(exprFlow.isExpressionResult());
@@ -248,7 +248,7 @@ IMPL_SYNTAX_FN_(DefStmt)
     // Create the scripted function.
     Local<VM::ScriptedFunction*> func(cx);
     if (!func.setResult(VM::ScriptedFunction::Create(
-            acx, pst, stRef->offset(), callInfo->callerScope(), false)))
+            acx, pst, stRef->offset(), callInfo->scope(), false)))
     {
         return ErrorVal();
     }
@@ -298,7 +298,7 @@ IMPL_SYNTAX_FN_(ConstStmt)
                        unsigned(i));
         Local<AST::PackedBaseNode> exprNode(cx, constStmtNode->varexpr(i));
         VM::ControlFlow varExprFlow =
-            InterpretSyntax(cx, callInfo->callerScope(), pst,
+            InterpretSyntax(cx, callInfo->scope(), pst,
                             exprNode->offset());
 
         // The underlying expression can return a value, error out,
@@ -357,7 +357,7 @@ IMPL_SYNTAX_FN_(VarStmt)
                            unsigned(i));
             Local<AST::PackedBaseNode> exprNode(cx, varStmtNode->varexpr(i));
             VM::ControlFlow varExprFlow =
-                InterpretSyntax(cx, callInfo->callerScope(), pst,
+                InterpretSyntax(cx, callInfo->scope(), pst,
                                 exprNode->offset());
 
             // The underlying expression can return a value, error out,
@@ -402,7 +402,7 @@ IMPL_SYNTAX_FN_(CallExpr)
     // Evaluate the call target.
     Local<AST::PackedBaseNode> calleeExpr(cx, callExpr->callee());
     VM::ControlFlow calleeFlow =
-        InterpretSyntax(cx, callInfo->callerScope(), pst,
+        InterpretSyntax(cx, callInfo->scope(), pst,
                         calleeExpr->offset());
 
     WH_ASSERT(calleeFlow.isExpressionResult());
@@ -427,11 +427,11 @@ IMPL_SYNTAX_FN_(CallExpr)
     // Check if callee is operative or applicaive.
     if (calleeFunc->isOperative()) {
         // Invoke the operative function.
-        return InvokeOperativeFunction(cx, callInfo->callerScope(),
+        return InvokeOperativeFunction(cx, callInfo->scope(),
                                        calleeFunc, stRefs);
     } else {
         // Invoke the operative function.
-        return InvokeApplicativeFunction(cx, callInfo->callerScope(),
+        return InvokeApplicativeFunction(cx, callInfo->scope(),
                                          calleeFunc, stRefs);
     }
 }
@@ -453,7 +453,7 @@ IMPL_SYNTAX_FN_(DotExpr)
     // Evaluate the lookup target.
     Local<AST::PackedBaseNode> targetExpr(cx, dotExpr->target());
     VM::ControlFlow targetFlow =
-        InterpretSyntax(cx, callInfo->callerScope(), pst,
+        InterpretSyntax(cx, callInfo->scope(), pst,
                         targetExpr->offset());
     WH_ASSERT(targetFlow.isExpressionResult());
     if (!targetFlow.isValue())
@@ -474,7 +474,7 @@ IMPL_SYNTAX_FN_(DotExpr)
     // Invoke "@DotExpr" result as an operative.
     Local<VM::ValBox> dotHandler(cx, lookupFlow.value());
 
-    return InvokeOperativeValue(cx, callInfo->callerScope(),
+    return InvokeOperativeValue(cx, callInfo->scope(),
                                 dotHandler, stRef);
 }
 
@@ -495,7 +495,7 @@ IMPL_SYNTAX_FN_(ArrowExpr)
     // Evaluate the lookup target.
     Local<AST::PackedBaseNode> targetExpr(cx, arrowExpr->target());
     VM::ControlFlow targetFlow =
-        InterpretSyntax(cx, callInfo->callerScope(), pst,
+        InterpretSyntax(cx, callInfo->scope(), pst,
                         targetExpr->offset());
     WH_ASSERT(targetFlow.isExpressionResult());
     if (!targetFlow.isValue())
@@ -516,7 +516,7 @@ IMPL_SYNTAX_FN_(ArrowExpr)
     // Invoke "@ArrowExpr" result as an operative.
     Local<VM::ValBox> arrowHandler(cx, lookupFlow.value());
 
-    return InvokeOperativeValue(cx, callInfo->callerScope(),
+    return InvokeOperativeValue(cx, callInfo->scope(),
                                 arrowHandler, stRef);
 }
 
@@ -528,7 +528,7 @@ UnaryExprHelper(ThreadContext* cx,
                 Handle<VM::String*> handlerName)
 {
     VM::ControlFlow subFlow =
-        InterpretSyntax(cx, callInfo->callerScope(), pst, subexprOffset);
+        InterpretSyntax(cx, callInfo->scope(), pst, subexprOffset);
     WH_ASSERT(subFlow.isExpressionResult());
     if (!subFlow.isValue())
         return subFlow;
@@ -549,7 +549,7 @@ UnaryExprHelper(ThreadContext* cx,
     // Invoke handler result as an operative, no arguments.
     Local<VM::ValBox> handler(cx, lookupFlow.value());
 
-    return InvokeValue(cx, callInfo->callerScope(), handler,
+    return InvokeValue(cx, callInfo->scope(), handler,
                        ArrayHandle<VM::SyntaxNodeRef>::Empty());
 }
 
@@ -603,7 +603,7 @@ BinaryExprHelper(ThreadContext* cx,
 {
     // Evaluate the lookup target.
     VM::ControlFlow lhsFlow =
-        InterpretSyntax(cx, callInfo->callerScope(), pst, lhsOffset);
+        InterpretSyntax(cx, callInfo->scope(), pst, lhsOffset);
     WH_ASSERT(lhsFlow.isExpressionResult());
     if (!lhsFlow.isValue())
         return lhsFlow;
@@ -623,7 +623,7 @@ BinaryExprHelper(ThreadContext* cx,
 
     // Invoke handler method, pass rhs as argument.
     Local<VM::SyntaxNodeRef> rhsNode(cx, VM::SyntaxNodeRef(pst, rhsOffset));
-    return InvokeValue(cx, callInfo->callerScope(), handler,
+    return InvokeValue(cx, callInfo->scope(), handler,
                        ArrayHandle<VM::SyntaxNodeRef>(rhsNode));
 }
 
@@ -728,7 +728,7 @@ IMPL_SYNTAX_FN_(ParenExpr)
 
     Local<AST::PackedBaseNode> subexprNode(cx, parenExpr->subexpr());
     VM::ControlFlow exprFlow =
-        InterpretSyntax(cx, callInfo->callerScope(), pst,
+        InterpretSyntax(cx, callInfo->scope(), pst,
                         subexprNode->offset());
     WH_ASSERT(exprFlow.isExpressionResult());
     return exprFlow;
@@ -750,7 +750,7 @@ IMPL_SYNTAX_FN_(NameExpr)
 
     // Get the scope to look up on.
     Local<VM::Wobject*> scopeObj(cx,
-        callInfo->callerScope().convertTo<VM::Wobject*>());
+        callInfo->scope().convertTo<VM::Wobject*>());
 
     // Get the constant name to look up.
     Local<VM::String*> name(cx, pst->getConstantString(nameExpr->nameCid()));
