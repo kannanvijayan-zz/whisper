@@ -79,6 +79,7 @@ LookupSeenObjects::add(Wobject* obj)
         Wobject* entry = seen_[probe].get();
         if (entry == nullptr || entry == SENTINEL()) {
             seen_[probe].set(obj, this);
+            filled_++;
             return;
         }
             
