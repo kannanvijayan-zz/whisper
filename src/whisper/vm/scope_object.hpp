@@ -23,16 +23,26 @@ class ScopeObject : public HashObject
 class CallScope : public ScopeObject
 {
   friend class TraceTraits<CallScope>;
+  private:
+    HeapField<Function*> function_;
+
   public:
     CallScope(Handle<Array<Wobject*>*> delegates,
-              Handle<PropertyDict*> dict)
-      : ScopeObject(delegates, dict)
+              Handle<PropertyDict*> dict,
+              Handle<Function*> function)
+      : ScopeObject(delegates, dict),
+        function_(function)
     {}
 
     static Result<CallScope*> Create(AllocationContext acx,
-                                     Handle<ScopeObject*> callerScope);
+                                     Handle<ScopeObject*> callerScope,
+                                     Handle<Function*> function);
 
     WobjectHooks const* getCallScopeHooks() const;
+
+    Function* function() const {
+        return function_;
+    }
 };
 
 class BlockScope : public ScopeObject

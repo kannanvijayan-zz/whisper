@@ -9,7 +9,8 @@ namespace VM {
 
 /* static */ Result<CallScope*>
 CallScope::Create(AllocationContext acx,
-                  Handle<ScopeObject*> callerScope)
+                  Handle<ScopeObject*> callerScope,
+                  Handle<Function*> function)
 {
     // Allocate array of delegates containing caller scope.
     Local<Array<Wobject*>*> delegates(acx);
@@ -22,7 +23,7 @@ CallScope::Create(AllocationContext acx,
     if (!props.setResult(PropertyDict::Create(acx, InitialPropertyCapacity)))
         return ErrorVal();
 
-    return acx.create<CallScope>(delegates.handle(), props.handle());
+    return acx.create<CallScope>(delegates.handle(), props.handle(), function);
 }
 
 WobjectHooks const*

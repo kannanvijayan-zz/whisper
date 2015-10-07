@@ -269,7 +269,7 @@ InvokeOperativeFunction(ThreadContext* cx,
         // Create a new scope for the call.
         Local<VM::CallScope*> funcScope(cx);
         if (!funcScope.setResult(VM::CallScope::Create(cx->inHatchery(),
-                                                       callerScope)))
+                                                       callerScope, func)))
         {
             return ErrorVal();
         }
@@ -346,7 +346,7 @@ InvokeApplicativeFunction(ThreadContext* cx,
         // Create a new scope for the call.
         Local<VM::CallScope*> funcScope(cx);
         if (!funcScope.setResult(VM::CallScope::Create(cx->inHatchery(),
-                                                       callerScope)))
+                                                       callerScope, func)))
         {
             return ErrorVal();
         }
@@ -370,7 +370,7 @@ InvokeApplicativeFunction(ThreadContext* cx,
         // Create a new scope object for the call.
         Local<VM::CallScope*> funcScope(cx);
         if (!funcScope.setResult(VM::CallScope::Create(cx->inHatchery(),
-                                                       callerScope)))
+                                                       callerScope, func)))
         {
             return cx->setExceptionRaised("Error creating call scope.");
         }
