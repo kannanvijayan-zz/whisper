@@ -266,19 +266,11 @@ InvokeOperativeFunction(ThreadContext* cx,
     // Call native if native.
     Local<VM::Function*> func(cx, funcObj->func());
     if (func->isNative()) {
-        // Create a new scope for the call.
-        Local<VM::CallScope*> funcScope(cx);
-        if (!funcScope.setResult(VM::CallScope::Create(cx->inHatchery(),
-                                                       callerScope, func)))
-        {
-            return ErrorVal();
-        }
-
         Local<VM::LookupState*> lookupState(cx, funcObj->lookupState());
         Local<VM::ValBox> receiver(cx, funcObj->receiver());
 
         Local<VM::NativeCallInfo> callInfo(cx,
-            VM::NativeCallInfo(lookupState, funcScope, funcObj, receiver));
+            VM::NativeCallInfo(lookupState, callerScope, funcObj, receiver));
 
         VM::NativeOperativeFuncPtr opNatF = func->asNative()->operative();
         return opNatF(cx, callInfo, stRefs);
@@ -343,19 +335,11 @@ InvokeApplicativeFunction(ThreadContext* cx,
     // Call native if native.
     Local<VM::Function*> func(cx, funcObj->func());
     if (func->isNative()) {
-        // Create a new scope for the call.
-        Local<VM::CallScope*> funcScope(cx);
-        if (!funcScope.setResult(VM::CallScope::Create(cx->inHatchery(),
-                                                       callerScope, func)))
-        {
-            return ErrorVal();
-        }
-
         Local<VM::LookupState*> lookupState(cx, funcObj->lookupState());
         Local<VM::ValBox> receiver(cx, funcObj->receiver());
 
         Local<VM::NativeCallInfo> callInfo(cx,
-            VM::NativeCallInfo(lookupState, funcScope, funcObj, receiver));
+            VM::NativeCallInfo(lookupState, callerScope, funcObj, receiver));
 
         VM::NativeApplicativeFuncPtr appNatF = func->asNative()->applicative();
         return appNatF(cx, callInfo, args);
@@ -367,10 +351,12 @@ InvokeApplicativeFunction(ThreadContext* cx,
         if (scriptedFunc->numParams() != args.length())
             return cx->setExceptionRaised("Arguments do not match params.");
 
+        Local<VM::ScopeObject*> scopeChain(cx, scriptedFunc->scopeChain());
+
         // Create a new scope object for the call.
         Local<VM::CallScope*> funcScope(cx);
         if (!funcScope.setResult(VM::CallScope::Create(cx->inHatchery(),
-                                                       callerScope, func)))
+                                                       scopeChain, func)))
         {
             return cx->setExceptionRaised("Error creating call scope.");
         }

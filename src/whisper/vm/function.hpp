@@ -79,22 +79,22 @@ class NativeCallInfo
 
   private:
     StackField<LookupState*> lookupState_;
-    StackField<ScopeObject*> scope_;
+    StackField<ScopeObject*> callerScope_;
     StackField<FunctionObject*> calleeFunc_;
     StackField<ValBox> receiver_;
 
   public:
     NativeCallInfo(LookupState* lookupState,
-                   ScopeObject* scope,
+                   ScopeObject* callerScope,
                    FunctionObject* calleeFunc,
                    ValBox receiver)
       : lookupState_(lookupState),
-        scope_(scope),
+        callerScope_(callerScope),
         calleeFunc_(calleeFunc),
         receiver_(receiver)
     {
         WH_ASSERT(lookupState_ != nullptr);
-        WH_ASSERT(scope_ != nullptr);
+        WH_ASSERT(callerScope_ != nullptr);
         WH_ASSERT(calleeFunc_ != nullptr);
         WH_ASSERT(receiver_->isValid());
     }
@@ -102,8 +102,8 @@ class NativeCallInfo
     Handle<LookupState*> lookupState() const {
         return lookupState_;
     }
-    Handle<ScopeObject*> scope() const {
-        return scope_;
+    Handle<ScopeObject*> callerScope() const {
+        return callerScope_;
     }
     Handle<FunctionObject*> calleeFunc() const {
         return calleeFunc_;
@@ -388,7 +388,7 @@ struct TraceTraits<VM::NativeCallInfo>
                      void const* start, void const* end)
     {
         info.lookupState_.scan(scanner, start, end);
-        info.scope_.scan(scanner, start, end);
+        info.callerScope_.scan(scanner, start, end);
         info.calleeFunc_.scan(scanner, start, end);
         info.receiver_.scan(scanner, start, end);
     }
@@ -398,7 +398,7 @@ struct TraceTraits<VM::NativeCallInfo>
                        void const* start, void const* end)
     {
         info.lookupState_.update(updater, start, end);
-        info.scope_.update(updater, start, end);
+        info.callerScope_.update(updater, start, end);
         info.calleeFunc_.update(updater, start, end);
         info.receiver_.update(updater, start, end);
     }
