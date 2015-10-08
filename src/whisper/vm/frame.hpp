@@ -14,171 +14,68 @@ namespace VM {
 class Frame
 {
     friend class TraceTraits<Frame>;
-
   public:
-    // The packed syntax tree buffer is at most 2**28 words long, so
-    // 4 bits of the offset are usable.  The offset is shifted 4 bits,
-    // and the low 4 bits are used to store the kind of syntax
-    // element an offset refers to.
-    enum class OffsetKind : uint32_t {
-        // TopLevel offsets point to the start of the dump
-        // for a top-level syntactic element, such as a FileNode,
-        // IfStmtNode, etc.
-        TopLevel        = 0x0,
-
-        // ImplicitChild offsets point to the same location as
-        // TopLevel offsets, but denote the fact that we're executing
-        // the first (implicit) child of that top-level syntactic
-        // node.
-        ImplicitChild   = 0x1,
-
-        // Child offsets point to a location in the packed syntax
-        // tree that contains an explicit offset-reference to a
-        // child syntactic element.
-        Child           = 0x2
-    };
-
-    class OffsetAndKind
-    {
-      private:
-        uint32_t word_;
-
-      public:
-        explicit OffsetAndKind(uint32_t word) : word_(word) {}
-
-        OffsetKind kind() const {
-            return static_cast<OffsetKind>(word_ & 0xf);
-        }
-        uint32_t offset() const {
-            return word_ >> 4;
-        }
+    enum Kind {
+        Eval,       /* Bare syntax evaluation. */
+        Func        /* Function call. */
     };
 
   private:
     // The caller frame.
     HeapField<Frame*> caller_;
 
-    // The scripted function being interpreted in this frame.
-    HeapField<ScriptedFunction*> func_;
+    // Kind of frame.
+    Kind kind_;
 
-    // The call object in effect for this frame.
-    HeapField<CallScope*> scope_;
+    // Frame anchor.  This depends on the kind.
+    // For Eval kind, this is a SyntaxTreeFragment.
+    // For Func kind, this is a pointer to the function.
+    HeapField<HeapThing*> anchor_;
 
-    // The maximal stack and eval depth.
-    uint32_t maxStackDepth_;
-    uint32_t maxEvalDepth_;
-
-    // The current stack top, and expression eval top.
-    HeapField<Box>* stackTop_;
-    OffsetAndKind* evalTop_;
-
-    // Implicit following fields:
-    //
-    //      Box stack_[maxStackDepth_]
-    //      OffsetAndKind evalOffsets_[maxEvalDepth_];
-    //
-    // * stack_ holds Boxed values.
-    // * evalOffsets_ holds OffsetAndKind values pointing into the
-    //   scripted function's packed syntax tree buffer.
+    // An object representing the leave location from this frame to a
+    // callee.  Value depends on kind of frame.
+    // For Eval frames, this is a SyntaxTreeFragment.
+    // For Func frames, depends on whether function is native or not.
+    //  If func is native, then this is either null or String.
+    //  If func is scripted, then this is a SyntaxTreeFragment referring
+    //  to the call site.
+    HeapField<HeapThing*> leaveLocation_;
 
   public:
-    Frame(Frame* caller,
-          ScriptedFunction* func,
-          CallScope* scope,
-          uint32_t maxStackDepth,
-          uint32_t maxEvalDepth)
+    Frame(Frame* caller, Kind kind, HeapThing* anchor)
       : caller_(caller),
-        func_(func),
-        scope_(scope),
-        maxStackDepth_(maxStackDepth),
-        maxEvalDepth_(maxEvalDepth),
-        stackTop_(stackStart()),
-        evalTop_(evalStart())
+        kind_(kind),
+        anchor_(anchor),
+        leaveLocation_(nullptr)
     {}
 
-    static uint32_t StackOffset() {
-        return AlignIntUp<uint32_t>(sizeof(Frame), alignof(Box));
-    }
-    static uint32_t StackEndOffset(uint32_t maxStackDepth) {
-        return StackOffset() + (sizeof(Box) * maxStackDepth);
-    }
-    static uint32_t EvalOffset(uint32_t maxStackDepth) {
-        return AlignIntUp<uint32_t>(StackEndOffset(maxStackDepth),
-                                    alignof(uint32_t));
-    }
-    static uint32_t EvalEndOffset(uint32_t maxStackDepth,
-                                  uint32_t maxEvalDepth)
-    {
-        return EvalOffset(maxStackDepth) + (sizeof(uint32_t) * maxEvalDepth);
-    }
-    static uint32_t CalculateSize(uint32_t maxStackDepth,
-                                  uint32_t maxEvalDepth)
-    {
-        return EvalEndOffset(maxStackDepth, maxEvalDepth);
-    }
+    static Result<Frame*> CreateEval(AllocationContext acx,
+                                     Handle<Frame*> caller,
+                                     Handle<SyntaxTreeFragment*> anchor);
 
-    static Result<Frame*> Create(AllocationContext acx,
-                                  Handle<Frame*> caller,
-                                  Handle<ScriptedFunction*> func,
-                                  Handle<CallScope*> scope,
-                                  uint32_t maxStackDepth,
-                                  uint32_t maxEvalDepth);
+    static Result<Frame*> CreateFunc(AllocationContext acx,
+                                     Handle<Frame*> caller,
+                                     Handle<Function*> anchor);
 
     Frame* caller() const {
         return caller_;
     }
-    ScriptedFunction* func() const {
-        return func_;
+    Kind kind() const {
+        return kind_;
     }
-    uint32_t maxStackDepth() const {
-        return maxStackDepth_;
+    bool isEval() const {
+        return kind() == Eval;
     }
-    uint32_t maxEvalDepth() const {
-        return maxEvalDepth_;
+    bool isFunc() const {
+        return kind() == Func;
     }
-    uint32_t stackDepth() const {
-        return stackTop_ - stackStart();
+    SyntaxTreeFragment* anchorSyntax() const {
+        WH_ASSERT(isEval());
+        return anchor_->to<SyntaxTreeFragment>();
     }
-    uint32_t evalDepth() const {
-        return evalTop_ - evalStart();
-    }
-
-    HeapField<Box> const& stackVal(uint32_t idx) const {
-        WH_ASSERT(idx < stackDepth());
-        return stackTop_[-ToInt32(idx)];
-    }
-    HeapField<Box>& stackVal(uint32_t idx) {
-        WH_ASSERT(idx < stackDepth());
-        return stackTop_[-ToInt32(idx)];
-    }
-
-    OffsetAndKind const& evalElement(uint32_t idx) const {
-        WH_ASSERT(idx < evalDepth());
-        return evalTop_[-ToInt32(idx)];
-    }
-    OffsetAndKind& evalElement(uint32_t idx) {
-        WH_ASSERT(idx < evalDepth());
-        return evalTop_[-ToInt32(idx)];
-    }
-
-  private:
-    HeapField<Box> const* stackStart() const {
-        uint8_t const* ptr = reinterpret_cast<uint8_t const*>(this);
-        return reinterpret_cast<HeapField<Box> const*>(ptr + StackOffset());
-    }
-    HeapField<Box>* stackStart() {
-        uint8_t* ptr = reinterpret_cast<uint8_t*>(this);
-        return reinterpret_cast<HeapField<Box>*>(ptr + StackOffset());
-    }
-    OffsetAndKind const* evalStart() const {
-        uint8_t const* ptr = reinterpret_cast<uint8_t const*>(this);
-        return reinterpret_cast<OffsetAndKind const*>(
-                ptr + EvalOffset(maxStackDepth_));
-    }
-    OffsetAndKind* evalStart() {
-        uint8_t* ptr = reinterpret_cast<uint8_t*>(this);
-        return reinterpret_cast<OffsetAndKind*>(
-                ptr + EvalOffset(maxStackDepth_));
+    Function* anchorFunction() const {
+        WH_ASSERT(isFunc());
+        return anchor_->to<Function>();
     }
 };
 
@@ -203,9 +100,8 @@ struct TraceTraits<VM::Frame>
                      void const* start, void const* end)
     {
         obj.caller_.scan(scanner, start, end);
-        obj.func_.scan(scanner, start, end);
-        for (uint32_t i = 0; i < obj.stackDepth(); i++)
-            obj.stackVal(i).scan(scanner, start, end);
+        obj.anchor_.scan(scanner, start, end);
+        obj.leaveLocation_.scan(scanner, start, end);
     }
 
     template <typename Updater>
@@ -213,9 +109,8 @@ struct TraceTraits<VM::Frame>
                        void const* start, void const* end)
     {
         obj.caller_.update(updater, start, end);
-        obj.func_.update(updater, start, end);
-        for (uint32_t i = 0; i < obj.stackDepth(); i++)
-            obj.stackVal(i).update(updater, start, end);
+        obj.anchor_.update(updater, start, end);
+        obj.leaveLocation_.update(updater, start, end);
     }
 };
 

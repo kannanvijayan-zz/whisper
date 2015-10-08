@@ -9,16 +9,21 @@ namespace VM {
 
 
 /* static */ Result<Frame*>
-Frame::Create(AllocationContext acx,
-              Handle<Frame*> caller,
-              Handle<ScriptedFunction*> func,
-              Handle<CallScope*> scope,
-              uint32_t maxStackDepth,
-              uint32_t maxEvalDepth)
+Frame::CreateEval(AllocationContext acx,
+                  Handle<Frame*> caller,
+                  Handle<SyntaxTreeFragment*> anchor)
 {
-    uint32_t size = CalculateSize(maxStackDepth, maxEvalDepth);
-    return acx.createSized<Frame>(size, caller, func, scope,
-                                  maxStackDepth, maxEvalDepth);
+    return acx.create<Frame>(caller, Eval,
+                             anchor.forceConvertTo<HeapThing*>());
+}
+
+/* static */ Result<Frame*>
+Frame::CreateFunc(AllocationContext acx,
+                  Handle<Frame*> caller,
+                  Handle<Function*> anchor)
+{
+    return acx.create<Frame>(caller, Func,
+                             anchor.forceConvertTo<HeapThing*>());
 }
 
 
