@@ -53,8 +53,14 @@ class Frame
                                      Handle<Frame*> caller,
                                      Handle<SyntaxTreeFragment*> anchor);
 
+    static Result<Frame*> CreateEval(AllocationContext acx,
+                                     Handle<SyntaxTreeFragment*> anchor);
+
     static Result<Frame*> CreateFunc(AllocationContext acx,
                                      Handle<Frame*> caller,
+                                     Handle<Function*> anchor);
+
+    static Result<Frame*> CreateFunc(AllocationContext acx,
                                      Handle<Function*> anchor);
 
     Frame* caller() const {

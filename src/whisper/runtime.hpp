@@ -237,6 +237,9 @@ class ThreadContext
         WH_ASSERT(hasLastFrame());
         return lastFrame_;
     }
+    VM::Frame* maybeLastFrame() const {
+        return lastFrame_;
+    }
     void pushLastFrame(VM::Frame* frame);
     void popLastFrame();
 

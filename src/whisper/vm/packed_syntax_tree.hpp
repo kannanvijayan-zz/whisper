@@ -53,6 +53,10 @@ class PackedSyntaxTree
         return constants_;
     }
 
+    uint32_t startOffset() const {
+        return 0;
+    }
+
     Box getConstant(uint32_t idx) const {
         WH_ASSERT(idx < numConstants());
         return constants_->get(idx);

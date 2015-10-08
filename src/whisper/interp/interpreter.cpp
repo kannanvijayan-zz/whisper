@@ -11,6 +11,20 @@ namespace Whisper {
 namespace Interp {
 
 
+WithPushedFrame::WithPushedFrame(ThreadContext* cx, Handle<VM::Frame*> frame)
+  : frame_(cx, frame)
+{
+    cx->pushLastFrame(frame);
+}
+
+WithPushedFrame::~WithPushedFrame()
+{
+    ThreadContext* cx = frame_.threadContext();
+    WH_ASSERT(cx->hasLastFrame());
+    WH_ASSERT(cx->lastFrame() == frame_.get());
+    cx->popLastFrame();
+}
+
 VM::ControlFlow
 InterpretSourceFile(ThreadContext* cx,
                     Handle<VM::SourceFile*> file,
@@ -25,8 +39,23 @@ InterpretSourceFile(ThreadContext* cx,
     if (!st.setResult(VM::SourceFile::ParseSyntaxTree(cx, file)))
         return ErrorVal();
 
+    // SyntaxTreeFragment.
+    Local<VM::SyntaxTreeFragment*> anchor(cx);
+    if (!anchor.setResult(VM::SyntaxTreeFragment::Create(
+            cx->inHatchery(), st, st->startOffset())))
+    {
+        return ErrorVal();
+    }
+
+    // Create a new frame for the interpretation.
+    Local<VM::Frame*> frame(cx);
+    Local<VM::Frame*> nullFrame(cx);
+    if (!frame.setResult(VM::Frame::CreateEval(cx->inHatchery(), anchor)))
+        return ErrorVal();
+    WithPushedFrame pushedFrame(cx, frame);
+
     // Interpret the syntax tree at the given offset.
-    return InterpretSyntax(cx, scope, st, 0);
+    return InterpretSyntax(cx, scope, st, st->startOffset());
 }
 
 VM::ControlFlow
@@ -35,7 +64,6 @@ InterpretSyntax(ThreadContext* cx,
                 Handle<VM::PackedSyntaxTree*> pst,
                 uint32_t offset)
 {
-    WH_ASSERT(!cx->hasLastFrame());
     WH_ASSERT(scope.get() != nullptr);
     WH_ASSERT(pst.get() != nullptr);
 
@@ -272,6 +300,12 @@ InvokeOperativeFunction(ThreadContext* cx,
         Local<VM::NativeCallInfo> callInfo(cx,
             VM::NativeCallInfo(lookupState, callerScope, funcObj, receiver));
 
+        // Create a new frame for the interpretation.
+        Local<VM::Frame*> frame(cx);
+        if (!frame.setResult(VM::Frame::CreateFunc(cx->inHatchery(), func)))
+            return ErrorVal();
+        WithPushedFrame pushedFrame(cx, frame);
+
         VM::NativeOperativeFuncPtr opNatF = func->asNative()->operative();
         return opNatF(cx, callInfo, stRefs);
     }
@@ -341,6 +375,12 @@ InvokeApplicativeFunction(ThreadContext* cx,
         Local<VM::NativeCallInfo> callInfo(cx,
             VM::NativeCallInfo(lookupState, callerScope, funcObj, receiver));
 
+        // Create a new frame for the interpretation.
+        Local<VM::Frame*> frame(cx);
+        if (!frame.setResult(VM::Frame::CreateFunc(cx->inHatchery(), func)))
+            return ErrorVal();
+        WithPushedFrame pushedFrame(cx, frame);
+
         VM::NativeApplicativeFuncPtr appNatF = func->asNative()->applicative();
         return appNatF(cx, callInfo, args);
     }
@@ -376,6 +416,12 @@ InvokeApplicativeFunction(ThreadContext* cx,
 
         // Obtain the block to evaluate.
         Local<VM::SyntaxBlockRef> bodyBlock(cx, scriptedFunc->bodyBlockRef());
+
+        // Create a new frame for the interpretation.
+        Local<VM::Frame*> frame(cx);
+        if (!frame.setResult(VM::Frame::CreateFunc(cx->inHatchery(), func)))
+            return ErrorVal();
+        WithPushedFrame pushedFrame(cx, frame);
 
         // Evaluate the function syntax.
         VM::ControlFlow callFlow = EvaluateBlock(cx,

@@ -7,10 +7,22 @@
 #include "vm/source_file.hpp"
 #include "vm/scope_object.hpp"
 #include "vm/control_flow.hpp"
+#include "vm/frame.hpp"
 
 namespace Whisper {
 namespace Interp {
 
+
+class WithPushedFrame
+{
+  private:
+    ThreadContext *cx_;
+    Local<VM::Frame*> frame_;
+
+  public:
+    WithPushedFrame(ThreadContext* cx, Handle<VM::Frame*> frame);
+    ~WithPushedFrame();
+};
 
 VM::ControlFlow InterpretSourceFile(ThreadContext* cx,
                                 Handle<VM::SourceFile*> file,
