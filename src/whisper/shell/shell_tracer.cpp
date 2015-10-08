@@ -76,11 +76,11 @@ trace_heap(ThreadContext* cx, TracerVisitor* visitor)
         remaining.push_back(lastFrameThing);
         seen.insert(lastFrameThing);
     }
-    if (cx->hasGlobal()) {
-        HeapThing* globalThing = HeapThing::From(cx->global());
-        visitor->visitHeapThing(globalThing);
-        remaining.push_back(globalThing);
-        seen.insert(globalThing);
+    if (cx->hasThreadState()) {
+        HeapThing* threadState = HeapThing::From(cx->threadState());
+        visitor->visitHeapThing(threadState);
+        remaining.push_back(threadState);
+        seen.insert(threadState);
     }
 
     // Visit all stack things.
