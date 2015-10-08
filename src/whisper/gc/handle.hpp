@@ -241,6 +241,12 @@ class Handle
         return Handle<U>(reinterpret_cast<U const*>(address()));
     }
 
+    template <typename U>
+    inline Handle<U> forceConvertTo()
+    {
+        return Handle<U>(reinterpret_cast<U const*>(address()));
+    }
+
     inline T const& get() const {
         return *valAddr_;
     }
