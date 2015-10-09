@@ -40,13 +40,12 @@ InterpretSourceFile(ThreadContext* cx,
         return ErrorVal();
 
     // SyntaxTreeFragment.
-    Local<VM::SyntaxNode*> anchorNode(cx);
-    if (!anchorNode.setResult(VM::SyntaxNode::Create(
+    Local<VM::SyntaxTreeFragment*> anchor(cx);
+    if (!anchor.setResult(VM::SyntaxNode::Create(
             cx->inHatchery(), st, st->startOffset())))
     {
         return ErrorVal();
     }
-    Local<VM::SyntaxTreeFragment*> anchor(cx, anchorNode.get());
 
     // Create a new frame for the interpretation.
     Local<VM::Frame*> frame(cx);

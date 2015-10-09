@@ -170,7 +170,10 @@ class Local : public LocalBase
     inline void set(T&& ref) {
         val_ = std::move(ref);
     }
-    OkResult setResult(Result<T> const& result) {
+    template <typename U>
+    OkResult setResult(Result<U> const& result) {
+        static_assert(std::is_convertible<U, T>::value,
+                      "U is not convertible to T.");
         if (result.isError())
             return ErrorVal();
         val_ = result.value();
@@ -267,7 +270,10 @@ class LocalArray : public LocalBase
         WH_ASSERT(idx < length());
         this->elementAt(idx) = std::move(ref);
     }
-    OkResult setResult(uint32_t idx, Result<T> const& result) {
+    template <typename U>
+    OkResult setResult(uint32_t idx, Result<U> const& result) {
+        static_assert(std::is_convertible<U, T>::value,
+                      "U is not convertible to T.");
         WH_ASSERT(idx < length());
         if (result.isError())
             return ErrorVal();
