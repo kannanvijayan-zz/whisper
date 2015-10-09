@@ -1,0 +1,8 @@
+
+def foo(a, b) {
+    return a;
+}
+
+const zz = 33;
+var x;
+foo(zz, x);

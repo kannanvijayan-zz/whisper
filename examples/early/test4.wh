@@ -1,0 +1,11 @@
+
+def foo(a, b, c, d) {
+    return (-a * +b) / (c - d);
+}
+
+const zz = 4;
+var x = 3;
+var y = 6;
+var z = 1;
+foo(zz, x, y, z);
+print(zz, x, foo(zz, x, y,z ));

@@ -1,0 +1,9 @@
+
+def foo(a, b) {
+    return -a - +b;
+}
+
+const zz = 33;
+var x = 9;
+foo(zz, x);
+print(zz, x, foo(zz, x));
