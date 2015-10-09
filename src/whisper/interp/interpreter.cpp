@@ -50,7 +50,7 @@ InterpretSourceFile(ThreadContext* cx,
     // Create a new frame for the interpretation.
     Local<VM::Frame*> frame(cx);
     Local<VM::Frame*> nullFrame(cx);
-    if (!frame.setResult(VM::Frame::CreateEval(cx->inHatchery(), anchor)))
+    if (!frame.setResult(VM::EvalFrame::Create(cx->inHatchery(), anchor)))
         return ErrorVal();
     WithPushedFrame pushedFrame(cx, frame);
 
@@ -302,7 +302,7 @@ InvokeOperativeFunction(ThreadContext* cx,
 
         // Create a new frame for the interpretation.
         Local<VM::Frame*> frame(cx);
-        if (!frame.setResult(VM::Frame::CreateFunc(cx->inHatchery(), func)))
+        if (!frame.setResult(VM::FunctionFrame::Create(cx->inHatchery(), func)))
             return ErrorVal();
         WithPushedFrame pushedFrame(cx, frame);
 
@@ -377,7 +377,7 @@ InvokeApplicativeFunction(ThreadContext* cx,
 
         // Create a new frame for the interpretation.
         Local<VM::Frame*> frame(cx);
-        if (!frame.setResult(VM::Frame::CreateFunc(cx->inHatchery(), func)))
+        if (!frame.setResult(VM::FunctionFrame::Create(cx->inHatchery(), func)))
             return ErrorVal();
         WithPushedFrame pushedFrame(cx, frame);
 
@@ -419,7 +419,7 @@ InvokeApplicativeFunction(ThreadContext* cx,
 
         // Create a new frame for the interpretation.
         Local<VM::Frame*> frame(cx);
-        if (!frame.setResult(VM::Frame::CreateFunc(cx->inHatchery(), func)))
+        if (!frame.setResult(VM::FunctionFrame::Create(cx->inHatchery(), func)))
             return ErrorVal();
         WithPushedFrame pushedFrame(cx, frame);
 

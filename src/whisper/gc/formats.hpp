@@ -51,7 +51,8 @@
     _(NativeFunction)           \
     _(ScriptedFunction)         \
     _(FunctionObject)           \
-    _(Frame)
+    _(EvalFrame)                \
+    _(FunctionFrame)
 
 
 #endif // WHISPER__GC__FORMATS_HPP

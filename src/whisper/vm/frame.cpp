@@ -8,38 +8,34 @@ namespace Whisper {
 namespace VM {
 
 
-/* static */ Result<Frame*>
-Frame::CreateEval(AllocationContext acx,
+/* static */ Result<EvalFrame*>
+EvalFrame::Create(AllocationContext acx,
                   Handle<Frame*> caller,
-                  Handle<SyntaxTreeFragment*> anchor)
+                  Handle<SyntaxTreeFragment*> syntax)
 {
-    return acx.create<Frame>(caller, Eval,
-                             anchor.forceConvertTo<HeapThing*>());
+    return acx.create<EvalFrame>(caller, syntax);
 }
 
-/* static */ Result<Frame*>
-Frame::CreateEval(AllocationContext acx,
-                  Handle<SyntaxTreeFragment*> anchor)
+/* static */ Result<EvalFrame*>
+EvalFrame::Create(AllocationContext acx, Handle<SyntaxTreeFragment*> syntax)
 {
     Local<Frame*> caller(acx, acx.threadContext()->maybeLastFrame());
-    return CreateEval(acx, caller, anchor);
+    return Create(acx, caller, syntax);
 }
 
-/* static */ Result<Frame*>
-Frame::CreateFunc(AllocationContext acx,
-                  Handle<Frame*> caller,
-                  Handle<Function*> anchor)
+/* static */ Result<FunctionFrame*>
+FunctionFrame::Create(AllocationContext acx,
+                      Handle<Frame*> caller,
+                      Handle<Function*> function)
 {
-    return acx.create<Frame>(caller, Func,
-                             anchor.forceConvertTo<HeapThing*>());
+    return acx.create<FunctionFrame>(caller, function);
 }
 
-/* static */ Result<Frame*>
-Frame::CreateFunc(AllocationContext acx,
-                  Handle<Function*> anchor)
+/* static */ Result<FunctionFrame*>
+FunctionFrame::Create(AllocationContext acx, Handle<Function*> function)
 {
     Local<Frame*> caller(acx, acx.threadContext()->maybeLastFrame());
-    return CreateFunc(acx, caller, anchor);
+    return Create(acx, caller, function);
 }
 
 
