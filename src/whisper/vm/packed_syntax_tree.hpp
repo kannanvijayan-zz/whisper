@@ -211,11 +211,10 @@ class SyntaxTreeFragment
 {
     friend struct TraceTraits<SyntaxTreeFragment>;
 
-  private:
+  protected:
     HeapField<PackedSyntaxTree*> pst_;
     uint32_t offset_;
 
-  public:
     SyntaxTreeFragment(PackedSyntaxTree* pst, uint32_t offset)
       : pst_(pst),
         offset_(offset)
@@ -223,18 +222,7 @@ class SyntaxTreeFragment
         WH_ASSERT(pst != nullptr);
     }
 
-    static Result<SyntaxTreeFragment*> Create(
-            AllocationContext acx,
-            Handle<PackedSyntaxTree*> pst,
-            uint32_t offset);
-
-    static Result<SyntaxTreeFragment*> Create(
-            AllocationContext acx,
-            Handle<SyntaxNodeRef> ref)
-    {
-        return Create(acx, ref->pst(), ref->offset());
-    }
-
+  public:
     PackedSyntaxTree* pst() const {
         return pst_;
     }
@@ -243,8 +231,76 @@ class SyntaxTreeFragment
         return offset_;
     }
 
+    bool isNode() const {
+        return HeapThing::From(this)->isSyntaxNode();
+    }
+    SyntaxNode const* toNode() const {
+        WH_ASSERT(isNode());
+        return reinterpret_cast<SyntaxNode const*>(this);
+    }
+
+    bool isBlock() const {
+        return HeapThing::From(this)->isSyntaxBlock();
+    }
+    SyntaxBlock const* toBlock() const {
+        WH_ASSERT(isBlock());
+        return reinterpret_cast<SyntaxBlock const*>(this);
+    }
+};
+
+class SyntaxNode : public SyntaxTreeFragment
+{
+    friend struct TraceTraits<SyntaxNode>;
+
+  public:
+    SyntaxNode(PackedSyntaxTree* pst, uint32_t offset)
+      : SyntaxTreeFragment(pst, offset)
+    {}
+
+    static Result<SyntaxNode*> Create(
+            AllocationContext acx,
+            Handle<PackedSyntaxTree*> pst,
+            uint32_t offset);
+
+    static Result<SyntaxNode*> Create(
+            AllocationContext acx,
+            Handle<SyntaxNodeRef> ref)
+    {
+        return Create(acx, ref->pst(), ref->offset());
+    }
+
     AST::NodeType nodeType() const;
     char const* nodeTypeCString() const;
+};
+
+class SyntaxBlock : public SyntaxTreeFragment
+{
+    friend struct TraceTraits<SyntaxBlock>;
+  protected:
+    uint32_t numStatements_;
+
+  public:
+    SyntaxBlock(PackedSyntaxTree* pst, uint32_t offset, uint32_t numStatements)
+      : SyntaxTreeFragment(pst, offset),
+        numStatements_(numStatements)
+    {}
+
+    static Result<SyntaxBlock*> Create(
+            AllocationContext acx,
+            Handle<PackedSyntaxTree*> pst,
+            uint32_t offset,
+            uint32_t numStatements);
+
+    static Result<SyntaxBlock*> Create(
+            AllocationContext acx,
+            Handle<SyntaxBlockRef> ref)
+    {
+        return Create(acx, ref->pst(), ref->offset(), ref->numStatements());
+    }
+
+    uint32_t numStatements() const {
+        return numStatements_;
+    }
 };
 
 
@@ -369,6 +425,56 @@ struct TraceTraits<VM::SyntaxTreeFragment>
                        void const* start, void const* end)
     {
         stFrag.pst_.update(updater, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::SyntaxNode>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::SyntaxNode const& stFrag,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxTreeFragment>::Scan<Scanner>(
+            scanner, stFrag, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::SyntaxNode& stFrag,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxTreeFragment>::Update<Updater>(
+            updater, stFrag, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::SyntaxBlock>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::SyntaxBlock const& stFrag,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxTreeFragment>::Scan<Scanner>(
+            scanner, stFrag, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::SyntaxBlock& stFrag,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxTreeFragment>::Update<Updater>(
+            updater, stFrag, start, end);
     }
 };
 

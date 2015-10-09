@@ -28,28 +28,6 @@ PackedSyntaxTree::Create(AllocationContext acx,
                                         constPoolArray.handle());
 }
 
-/* static */ Result<SyntaxTreeFragment*>
-SyntaxTreeFragment::Create(AllocationContext acx,
-                           Handle<PackedSyntaxTree*> pst,
-                           uint32_t offset)
-{
-    return acx.create<SyntaxTreeFragment>(pst, offset);
-}
-
-AST::NodeType
-SyntaxTreeFragment::nodeType() const
-{
-    // Create a packed syntax node.
-    AST::PackedBaseNode node(pst_->data(), offset_);
-    return node.type();
-}
-
-char const*
-SyntaxTreeFragment::nodeTypeCString() const
-{
-    return AST::NodeTypeString(nodeType());
-}
-
 AST::NodeType
 SyntaxNodeRef::nodeType() const
 {
@@ -62,6 +40,37 @@ SyntaxNodeRef::nodeTypeCString() const
 {
     WH_ASSERT(isValid());
     return AST::NodeTypeString(nodeType());
+}
+
+/* static */ Result<SyntaxNode*>
+SyntaxNode::Create(AllocationContext acx,
+                   Handle<PackedSyntaxTree*> pst,
+                   uint32_t offset)
+{
+    return acx.create<SyntaxNode>(pst, offset);
+}
+
+AST::NodeType
+SyntaxNode::nodeType() const
+{
+    // Create a packed syntax node.
+    return AST::PackedBaseNode(pst_->data(), offset_).type();
+}
+
+char const*
+SyntaxNode::nodeTypeCString() const
+{
+    return AST::NodeTypeString(nodeType());
+}
+
+
+/* static */ Result<SyntaxBlock*>
+SyntaxBlock::Create(AllocationContext acx,
+                   Handle<PackedSyntaxTree*> pst,
+                   uint32_t offset,
+                   uint32_t numStatements)
+{
+    return acx.create<SyntaxBlock>(pst, offset, numStatements);
 }
 
 

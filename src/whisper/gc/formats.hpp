@@ -35,7 +35,8 @@
     _(RuntimeState)             \
     _(ThreadState)              \
     _(PackedSyntaxTree)         \
-    _(SyntaxTreeFragment)       \
+    _(SyntaxNode)               \
+    _(SyntaxBlock)              \
     _(HeapPointerArray)         \
     _(SourceFile)               \
     _(PropertyDict)             \
