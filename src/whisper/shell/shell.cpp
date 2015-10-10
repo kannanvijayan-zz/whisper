@@ -31,6 +31,7 @@
 #include "vm/control_flow.hpp"
 #include "interp/syntax_behaviour.hpp"
 #include "interp/interpreter.hpp"
+#include "interp/heap_interpreter.hpp"
 
 #include "shell/shell_tracer.hpp"
 
@@ -166,9 +167,10 @@ main(int argc, char** argv)
     }
 
     // Interpret the file.
-    Local<VM::ControlFlow> result(cx,
-        Interp::InterpretSourceFile(cx, sourceFile,
-            module.handle().convertTo<VM::ScopeObject*>()));
+    VM::ControlFlow res = Interp::HeapInterpretSourceFile(cx, sourceFile,
+            module.handle().convertTo<VM::ScopeObject*>());
+
+    Local<VM::ControlFlow> result(cx, res);
 
     if (result->isError()) {
         std::cerr << "Error interpreting code!" << std::endl;

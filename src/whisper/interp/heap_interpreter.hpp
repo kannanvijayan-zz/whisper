@@ -14,8 +14,10 @@ namespace Interp {
 
 
 VM::ControlFlow HeapInterpretSourceFile(ThreadContext* cx,
-                                        Handle<VM::SourceFile*> frame,
+                                        Handle<VM::SourceFile*> file,
                                         Handle<VM::ScopeObject*> scope);
+
+VM::ControlFlow HeapInterpretLoop(ThreadContext* cx);
 
 
 } // namespace Interp
