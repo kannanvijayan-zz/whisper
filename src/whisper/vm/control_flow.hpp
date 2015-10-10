@@ -59,7 +59,7 @@ class ControlFlow
     }
 
   private:
-    ControlFlow(Kind kind) : kind_(Kind::Void) {}
+    ControlFlow(Kind kind) : kind_(kind) {}
 
     ControlFlow(Kind kind, char const* msg)
       : kind_(kind)
