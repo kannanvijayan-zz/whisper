@@ -70,12 +70,16 @@ trace_heap(ThreadContext* cx, TracerVisitor* visitor)
     std::list<HeapThing*> remaining;
 
     // Add unrooted heap things hanging directly off of cx.
-    if (cx->hasLastFrame()) {
-        HeapThing* lastFrameThing = HeapThing::From(cx->lastFrame());
-        visitor->visitHeapThing(lastFrameThing);
-        remaining.push_back(lastFrameThing);
-        seen.insert(lastFrameThing);
-    }
+    HeapThing* bottomFrameThing = HeapThing::From(cx->bottomFrame());
+    visitor->visitHeapThing(bottomFrameThing);
+    remaining.push_back(bottomFrameThing);
+    seen.insert(bottomFrameThing);
+
+    HeapThing* topFrameThing = HeapThing::From(cx->topFrame());
+    visitor->visitHeapThing(topFrameThing);
+    remaining.push_back(topFrameThing);
+    seen.insert(topFrameThing);
+
     if (cx->hasThreadState()) {
         HeapThing* threadState = HeapThing::From(cx->threadState());
         visitor->visitHeapThing(threadState);

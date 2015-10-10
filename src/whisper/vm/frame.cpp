@@ -60,7 +60,7 @@ EntryFrame::Create(AllocationContext acx,
                    Handle<SyntaxTreeFragment*> stFrag,
                    Handle<ScopeObject*> scope)
 {
-    Local<Frame*> caller(acx, acx.threadContext()->maybeLastFrame());
+    Local<Frame*> caller(acx, acx.threadContext()->topFrame());
     return Create(acx, caller, stFrag, scope);
 }
 
@@ -92,7 +92,7 @@ EvalFrame::Create(AllocationContext acx,
 /* static */ Result<EvalFrame*>
 EvalFrame::Create(AllocationContext acx, Handle<SyntaxTreeFragment*> syntax)
 {
-    Local<Frame*> caller(acx, acx.threadContext()->maybeLastFrame());
+    Local<Frame*> caller(acx, acx.threadContext()->topFrame());
     return Create(acx, caller, syntax);
 }
 
@@ -132,7 +132,7 @@ SyntaxFrame::Create(AllocationContext acx,
                     ResolveChildFunc resolveChildFunc,
                     StepFunc stepFunc)
 {
-    Local<Frame*> caller(acx, acx.threadContext()->maybeLastFrame());
+    Local<Frame*> caller(acx, acx.threadContext()->topFrame());
     return Create(acx, caller, entryFrame, stFrag,
                   resolveChildFunc, stepFunc);
 }
@@ -165,7 +165,7 @@ FunctionFrame::Create(AllocationContext acx,
 /* static */ Result<FunctionFrame*>
 FunctionFrame::Create(AllocationContext acx, Handle<Function*> function)
 {
-    Local<Frame*> caller(acx, acx.threadContext()->maybeLastFrame());
+    Local<Frame*> caller(acx, acx.threadContext()->topFrame());
     return Create(acx, caller, function);
 }
 

@@ -15,15 +15,14 @@ namespace Interp {
 WithPushedFrame::WithPushedFrame(ThreadContext* cx, Handle<VM::Frame*> frame)
   : frame_(cx, frame)
 {
-    cx->pushLastFrame(frame);
+    cx->pushTopFrame(frame);
 }
 
 WithPushedFrame::~WithPushedFrame()
 {
     ThreadContext* cx = frame_.threadContext();
-    WH_ASSERT(cx->hasLastFrame());
-    WH_ASSERT(cx->lastFrame() == frame_.get());
-    cx->popLastFrame();
+    WH_ASSERT(cx->topFrame() == frame_.get());
+    cx->popTopFrame();
 }
 
 VM::ControlFlow
@@ -31,7 +30,6 @@ InterpretSourceFile(ThreadContext* cx,
                     Handle<VM::SourceFile*> file,
                     Handle<VM::ScopeObject*> scope)
 {
-    WH_ASSERT(!cx->hasLastFrame());
     WH_ASSERT(file.get() != nullptr);
     WH_ASSERT(scope.get() != nullptr);
 
@@ -49,8 +47,8 @@ InterpretSourceFile(ThreadContext* cx,
     }
 
     // Create a new frame for the interpretation.
+    Local<VM::Frame*> parentFrame(cx, cx->topFrame());
     Local<VM::Frame*> frame(cx);
-    Local<VM::Frame*> nullFrame(cx);
     if (!frame.setResult(VM::EvalFrame::Create(cx->inHatchery(), anchor)))
         return ErrorVal();
     WithPushedFrame pushedFrame(cx, frame);
