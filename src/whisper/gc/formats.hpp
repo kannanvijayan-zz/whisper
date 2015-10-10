@@ -32,12 +32,13 @@
     _(String)                   \
     _(BoxArray)                 \
     _(ValBoxArray)              \
+    _(HeapPointerArray)         \
+    _(Error)                    \
     _(RuntimeState)             \
     _(ThreadState)              \
     _(PackedSyntaxTree)         \
     _(SyntaxNode)               \
     _(SyntaxBlock)              \
-    _(HeapPointerArray)         \
     _(SourceFile)               \
     _(PropertyDict)             \
     _(PlainObject)              \

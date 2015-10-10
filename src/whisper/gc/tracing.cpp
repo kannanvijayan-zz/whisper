@@ -12,6 +12,7 @@
 #include "vm/string.hpp"
 #include "vm/properties.hpp"
 #include "vm/array.hpp"
+#include "vm/error.hpp"
 #include "vm/source_file.hpp"
 #include "vm/runtime_state.hpp"
 #include "vm/box.hpp"
