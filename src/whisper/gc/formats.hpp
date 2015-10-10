@@ -51,7 +51,9 @@
     _(NativeFunction)           \
     _(ScriptedFunction)         \
     _(FunctionObject)           \
+    _(EntryFrame)               \
     _(EvalFrame)                \
+    _(SyntaxFrame)              \
     _(FunctionFrame)
 
 

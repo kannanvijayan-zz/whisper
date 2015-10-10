@@ -53,6 +53,70 @@ class Frame
 #undef FRAME_KIND_METHODS_
 };
 
+//
+// An EntryFrame establishes an object in the frame chain which
+// represents the entry into a new evaluation scope.  It establishes
+// the PackedSyntaxTree in effect, the offset of the logical AST
+// node the evaluation relates to (e.g. the File or DefStmt node),
+// and the scope object in effect.
+//
+// All syntactic child frames within the lexical scope of this
+// entry frame refer to it.
+//
+class EntryFrame : public Frame
+{
+    friend class TraceTraits<EntryFrame>;
+
+  private:
+    // The syntax tree in effect.
+    HeapField<PackedSyntaxTree*> syntaxTree_;
+
+    // Offset of the logical element relating to this evaluation.
+    uint32_t syntaxOffset_;
+
+    // The scope in effect.
+    HeapField<ScopeObject*> scope_;
+
+  public:
+    EntryFrame(Frame* caller,
+               PackedSyntaxTree* syntaxTree,
+               uint32_t syntaxOffset,
+               ScopeObject* scope)
+      : Frame(caller),
+        syntaxTree_(syntaxTree),
+        syntaxOffset_(syntaxOffset),
+        scope_(scope)
+    {
+        WH_ASSERT(caller != nullptr);
+    }
+
+    static Result<EntryFrame*> Create(AllocationContext acx,
+                                      Handle<Frame*> caller,
+                                      Handle<PackedSyntaxTree*> syntaxTree,
+                                      uint32_t syntaxOffset,
+                                      Handle<ScopeObject*> scope);
+
+    static Result<EntryFrame*> Create(AllocationContext acx,
+                                      Handle<PackedSyntaxTree*> syntaxTree,
+                                      uint32_t syntaxOffset,
+                                      Handle<ScopeObject*> scope);
+
+    PackedSyntaxTree* syntaxTree() const {
+        return syntaxTree_;
+    }
+    uint32_t syntaxOffset() const {
+        return syntaxOffset_;
+    }
+    ScopeObject* scope() const {
+        return scope_;
+    }
+
+    Result<Frame*> resolveEntryFrameChild(ThreadContext* cx,
+                                          Handle<Frame*> child,
+                                          ControlFlow const& flow);
+    Result<Frame*> stepEntryFrame(ThreadContext* cx);
+};
+
 class EvalFrame : public Frame
 {
     friend class TraceTraits<EvalFrame>;
@@ -85,6 +149,68 @@ class EvalFrame : public Frame
                                          ControlFlow const& flow);
     Result<Frame*> stepEvalFrame(ThreadContext* cx);
 };
+
+
+class SyntaxFrame : public Frame
+{
+    friend class TraceTraits<SyntaxFrame>;
+
+  private:
+    // The syntax node being evaluated.
+    HeapField<SyntaxNode*> node_;
+
+    // The position within the syntax node being evaluated.
+    uint32_t position_;
+
+    // The C function pointer for handling a resolved child.
+    typedef Result<Frame*> (*ResolveChildFunc)(
+        ThreadContext* cx,
+        Handle<SyntaxFrame*> frame,
+        Handle<Frame*> child,
+        ControlFlow const& flow);
+    ResolveChildFunc resolveChildFunc_;
+
+    // The C function pointer for stepping.
+    typedef Result<Frame*> (*StepFunc)(
+        ThreadContext* cx,
+        Handle<SyntaxFrame*> frame);
+    StepFunc stepFunc_;
+
+  public:
+    SyntaxFrame(Frame* caller, SyntaxNode* node, uint32_t position,
+                ResolveChildFunc resolveChildFunc, StepFunc stepFunc)
+      : Frame(caller),
+        node_(node),
+        position_(position),
+        resolveChildFunc_(resolveChildFunc),
+        stepFunc_(stepFunc)
+    {
+        WH_ASSERT(caller != nullptr);
+    }
+
+    static Result<SyntaxFrame*> Create(AllocationContext acx,
+                                       Handle<Frame*> caller,
+                                       Handle<SyntaxNode*> node,
+                                       uint32_t position,
+                                       ResolveChildFunc resolveChildFunc,
+                                       StepFunc stepFunc);
+
+    static Result<SyntaxFrame*> Create(AllocationContext acx,
+                                       Handle<SyntaxNode*> node,
+                                       uint32_t position,
+                                       ResolveChildFunc resolveChildFunc,
+                                       StepFunc stepFunc);
+
+    SyntaxNode* node() const {
+        return node_;
+    }
+
+    Result<Frame*> resolveSyntaxFrameChild(ThreadContext* cx,
+                                           Handle<Frame*> child,
+                                           ControlFlow const& flow);
+    Result<Frame*> stepSyntaxFrame(ThreadContext* cx);
+};
+
 
 class FunctionFrame : public Frame
 {
@@ -151,6 +277,33 @@ struct TraceTraits<VM::Frame>
 };
 
 template <>
+struct TraceTraits<VM::EntryFrame>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::EntryFrame const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::Frame>::Scan<Scanner>(scanner, obj, start, end);
+        obj.syntaxTree_.scan(scanner, start, end);
+        obj.scope_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::EntryFrame& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
+        obj.syntaxTree_.update(updater, start, end);
+        obj.scope_.update(updater, start, end);
+    }
+};
+
+template <>
 struct TraceTraits<VM::EvalFrame>
 {
     TraceTraits() = delete;
@@ -172,6 +325,31 @@ struct TraceTraits<VM::EvalFrame>
     {
         TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
         obj.syntax_.update(updater, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::SyntaxFrame>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::SyntaxFrame const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::Frame>::Scan<Scanner>(scanner, obj, start, end);
+        obj.node_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::SyntaxFrame& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
+        obj.node_.update(updater, start, end);
     }
 };
 
