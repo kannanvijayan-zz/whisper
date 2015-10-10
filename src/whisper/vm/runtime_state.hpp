@@ -92,7 +92,7 @@ class ThreadState
     }
 
     bool hasError() const {
-        return error_ == RuntimeError::None;
+        return error_ != RuntimeError::None;
     }
     RuntimeError error() const {
         WH_ASSERT(hasError());
