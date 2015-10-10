@@ -149,7 +149,7 @@ enum class RuntimeError
     None,
     MemAllocFailed,
     SyntaxParseFailed,
-    MethodLookupFailed,
+    LookupFailed,
     InternalError,
     ExceptionRaised
 };
@@ -182,12 +182,6 @@ class ThreadContext
     unsigned int randSeed_;
     uint32_t spoiler_;
 
-    // If an error occurs during execution, it is recorded
-    // here before returning an error result.
-    RuntimeError error_;
-    char const* errorString_;
-    HeapThing* errorThing_;
-
     static unsigned int NewRandSeed();
 
   public:
@@ -198,7 +192,7 @@ class ThreadContext
         return runtime_;
     }
 
-    uint32_t rtid() const {
+   uint32_t rtid() const {
         return rtid_;
     }
 
@@ -265,55 +259,25 @@ class ThreadContext
         return suppressGC_;
     }
 
-    bool hasError() const {
-        return error_ != RuntimeError::None;
-    }
-    RuntimeError error() const {
-        return error_;
-    }
+    bool hasError() const;
+    RuntimeError error() const;
 
-    bool hasErrorString() const {
-        return errorString_ != nullptr;
-    }
-    char const* errorString() const {
-        WH_ASSERT(hasErrorString());
-        return errorString_;
-    }
+    bool hasErrorString() const;
+    char const* errorString() const;
 
-    bool hasErrorThing() const {
-        return errorThing_ != nullptr;
-    }
-    HeapThing* errorThing() const {
-        WH_ASSERT(hasErrorThing());
-        return errorThing_;
-    }
+    bool hasErrorThing() const;
+    HeapThing* errorThing() const;
 
-    ErrorT_ setError(RuntimeError error) {
-        WH_ASSERT(!hasError());
-        WH_ASSERT(!hasErrorString());
-        WH_ASSERT(!hasErrorThing());
-        error_ = error;
-        return ErrorVal();
-    }
-    ErrorT_ setError(RuntimeError error, char const* string) {
-        WH_ASSERT(!hasError());
-        WH_ASSERT(!hasErrorString());
-        WH_ASSERT(!hasErrorThing());
-        error_ = error;
-        errorString_ = string;
-        return ErrorVal();
-    }
     ErrorT_ setError(RuntimeError error, char const* string,
-                      HeapThing* thing)
-    {
-        WH_ASSERT(!hasError());
-        WH_ASSERT(!hasErrorString());
-        WH_ASSERT(!hasErrorThing());
-        error_ = error;
-        errorString_ = string;
-        errorThing_ = thing;
-        return ErrorVal();
+                      HeapThing* thing);
+
+    ErrorT_ setError(RuntimeError error, char const* string) {
+        return setError(error, string, nullptr);
     }
+    ErrorT_ setError(RuntimeError error) {
+        return setError(error, nullptr);
+    }
+
     template <typename T>
     ErrorT_ setError(RuntimeError error, char const* string, T* thing) {
         return setError(error, string, HeapThing::From(thing));

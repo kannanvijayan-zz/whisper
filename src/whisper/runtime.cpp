@@ -197,8 +197,8 @@ RuntimeErrorString(RuntimeError err)
         return "MemAllocFailed";
       case RuntimeError::SyntaxParseFailed:
         return "SyntaxParseFailed";
-      case RuntimeError::MethodLookupFailed:
-        return "MethodLookupFailed";
+      case RuntimeError::LookupFailed:
+        return "LookupFailed";
       case RuntimeError::InternalError:
         return "InternalError";
       case RuntimeError::ExceptionRaised:
@@ -242,10 +242,7 @@ ThreadContext::ThreadContext(Runtime* runtime, uint32_t rtid,
     lastFrame_(nullptr),
     suppressGC_(false),
     randSeed_(NewRandSeed()),
-    spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16)),
-    error_(RuntimeError::None),
-    errorString_(nullptr),
-    errorThing_(nullptr)
+    spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16))
 {
     WH_ASSERT(runtime != nullptr);
 
@@ -279,6 +276,50 @@ ThreadContext::rootDelegate() const
 {
     WH_ASSERT(hasRootDelegate());
     return threadState()->rootDelegate();
+}
+
+bool
+ThreadContext::hasError() const
+{
+    return threadState()->hasError();
+}
+
+RuntimeError
+ThreadContext::error() const
+{
+    return threadState()->error();
+}
+
+bool
+ThreadContext::hasErrorString() const
+{
+    return threadState()->hasErrorString();
+}
+
+char const*
+ThreadContext::errorString() const
+{
+    return threadState()->errorString();
+}
+
+bool
+ThreadContext::hasErrorThing() const
+{
+    return threadState()->hasErrorThing();
+}
+
+HeapThing*
+ThreadContext::errorThing() const
+{
+    return threadState()->errorThing();
+}
+
+ErrorT_
+ThreadContext::setError(RuntimeError error, char const* string,
+                        HeapThing* thing)
+{
+    threadState()->setError(error, string, thing);
+    return ErrorVal();
 }
 
 size_t

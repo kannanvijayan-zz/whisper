@@ -56,6 +56,12 @@ class ThreadState
     HeapField<Wobject*> immIntDelegate_;
     HeapField<Wobject*> immBoolDelegate_;
 
+    // If an error occurs during execution, it is recorded
+    // here.
+    RuntimeError error_;
+    char const* errorString_;
+    HeapField<HeapThing*> errorThing_;
+
   public:
     ThreadState(GlobalScope* global,
                 Wobject* rootDelegate,
@@ -83,6 +89,40 @@ class ThreadState
     }
     Wobject* immBoolDelegate() const {
         return immBoolDelegate_;
+    }
+
+    bool hasError() const {
+        return error_ == RuntimeError::None;
+    }
+    RuntimeError error() const {
+        WH_ASSERT(hasError());
+        return error_;
+    }
+
+    bool hasErrorString() const {
+        WH_ASSERT(hasError());
+        return errorString_ != nullptr;
+    }
+    char const* errorString() const {
+        WH_ASSERT(hasErrorString());
+        return errorString_;
+    }
+
+    bool hasErrorThing() const {
+        WH_ASSERT(hasError());
+        return errorThing_ != nullptr;
+    }
+    HeapThing* errorThing() const {
+        WH_ASSERT(hasErrorThing());
+        return errorThing_;
+    }
+
+    void setError(RuntimeError error, char const* string, HeapThing* thing)
+    {
+        WH_ASSERT(!hasError());
+        error_ = error;
+        errorString_ = string;
+        errorThing_.set(thing, this);
     }
 
     static Result<ThreadState*> Create(AllocationContext acx);
@@ -132,6 +172,7 @@ struct TraceTraits<VM::ThreadState>
     {
         rtState.global_.scan(scanner, start, end);
         rtState.rootDelegate_.scan(scanner, start, end);
+        rtState.errorThing_.scan(scanner, start, end);
     }
 
     template <typename Updater>
@@ -140,6 +181,7 @@ struct TraceTraits<VM::ThreadState>
     {
         rtState.global_.update(updater, start, end);
         rtState.rootDelegate_.update(updater, start, end);
+        rtState.errorThing_.update(updater, start, end);
     }
 };
 
