@@ -44,27 +44,25 @@ Frame::step(ThreadContext* cx)
 /* static */ Result<EntryFrame*>
 EntryFrame::Create(AllocationContext acx,
                    Handle<Frame*> caller,
-                   Handle<PackedSyntaxTree*> syntaxTree,
-                   uint32_t syntaxOffset,
+                   Handle<SyntaxTreeFragment*> stFrag,
                    Handle<ScopeObject*> scope)
 {
-    return acx.create<EntryFrame>(caller, syntaxTree, syntaxOffset, scope);
+    return acx.create<EntryFrame>(caller, stFrag, scope);
 }
 
 /* static */ Result<EntryFrame*>
 EntryFrame::Create(AllocationContext acx,
-                   Handle<PackedSyntaxTree*> syntaxTree,
-                   uint32_t syntaxOffset,
+                   Handle<SyntaxTreeFragment*> stFrag,
                    Handle<ScopeObject*> scope)
 {
     Local<Frame*> caller(acx, acx.threadContext()->maybeLastFrame());
-    return Create(acx, caller, syntaxTree, syntaxOffset, scope);
+    return Create(acx, caller, stFrag, scope);
 }
 
 Result<Frame*>
 EntryFrame::resolveEntryFrameChild(ThreadContext* cx,
-                                      Handle<Frame*> child,
-                                      ControlFlow const& flow)
+                                   Handle<Frame*> child,
+                                   ControlFlow const& flow)
 {
     // Resolve caller frame with the same controlflow result.
     Local<Frame*> rootedThis(cx, this);
@@ -113,24 +111,24 @@ EvalFrame::stepEvalFrame(ThreadContext* cx)
 /* static */ Result<SyntaxFrame*>
 SyntaxFrame::Create(AllocationContext acx,
                     Handle<Frame*> caller,
-                    Handle<SyntaxNode*> node,
-                    uint32_t position,
+                    Handle<EntryFrame*> entryFrame,
+                    Handle<SyntaxTreeFragment*> stFrag,
                     ResolveChildFunc resolveChildFunc,
                     StepFunc stepFunc)
 {
-    return acx.create<SyntaxFrame>(caller, node, position,
+    return acx.create<SyntaxFrame>(caller, entryFrame, stFrag,
                                    resolveChildFunc, stepFunc);
 }
 
 /* static */ Result<SyntaxFrame*>
 SyntaxFrame::Create(AllocationContext acx,
-                    Handle<SyntaxNode*> node,
-                    uint32_t position,
+                    Handle<EntryFrame*> entryFrame,
+                    Handle<SyntaxTreeFragment*> stFrag,
                     ResolveChildFunc resolveChildFunc,
                     StepFunc stepFunc)
 {
     Local<Frame*> caller(acx, acx.threadContext()->maybeLastFrame());
-    return Create(acx, caller, node, position,
+    return Create(acx, caller, entryFrame, stFrag,
                   resolveChildFunc, stepFunc);
 }
 
