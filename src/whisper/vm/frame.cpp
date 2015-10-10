@@ -48,11 +48,11 @@ TerminalFrame::Create(AllocationContext acx)
 
 /* static */ Result<EntryFrame*>
 EntryFrame::Create(AllocationContext acx,
-                   Handle<Frame*> caller,
+                   Handle<Frame*> parent,
                    Handle<SyntaxTreeFragment*> stFrag,
                    Handle<ScopeObject*> scope)
 {
-    return acx.create<EntryFrame>(caller, stFrag, scope);
+    return acx.create<EntryFrame>(parent, stFrag, scope);
 }
 
 /* static */ Result<EntryFrame*>
@@ -60,8 +60,8 @@ EntryFrame::Create(AllocationContext acx,
                    Handle<SyntaxTreeFragment*> stFrag,
                    Handle<ScopeObject*> scope)
 {
-    Local<Frame*> caller(acx, acx.threadContext()->topFrame());
-    return Create(acx, caller, stFrag, scope);
+    Local<Frame*> parent(acx, acx.threadContext()->topFrame());
+    return Create(acx, parent, stFrag, scope);
 }
 
 Result<Frame*>
@@ -69,9 +69,9 @@ EntryFrame::resolveEntryFrameChild(ThreadContext* cx,
                                    Handle<Frame*> child,
                                    ControlFlow const& flow)
 {
-    // Resolve caller frame with the same controlflow result.
+    // Resolve parent frame with the same controlflow result.
     Local<Frame*> rootedThis(cx, this);
-    return caller_->resolveChild(cx, rootedThis, flow);
+    return parent_->resolveChild(cx, rootedThis, flow);
 }
 
 Result<Frame*>
@@ -83,17 +83,17 @@ EntryFrame::stepEntryFrame(ThreadContext* cx)
 
 /* static */ Result<EvalFrame*>
 EvalFrame::Create(AllocationContext acx,
-                  Handle<Frame*> caller,
+                  Handle<Frame*> parent,
                   Handle<SyntaxTreeFragment*> syntax)
 {
-    return acx.create<EvalFrame>(caller, syntax);
+    return acx.create<EvalFrame>(parent, syntax);
 }
 
 /* static */ Result<EvalFrame*>
 EvalFrame::Create(AllocationContext acx, Handle<SyntaxTreeFragment*> syntax)
 {
-    Local<Frame*> caller(acx, acx.threadContext()->topFrame());
-    return Create(acx, caller, syntax);
+    Local<Frame*> parent(acx, acx.threadContext()->topFrame());
+    return Create(acx, parent, syntax);
 }
 
 Result<Frame*>
@@ -101,9 +101,9 @@ EvalFrame::resolveEvalFrameChild(ThreadContext* cx,
                                  Handle<Frame*> child,
                                  ControlFlow const& flow)
 {
-    // Resolve caller frame with the same controlflow result.
+    // Resolve parent frame with the same controlflow result.
     Local<Frame*> rootedThis(cx, this);
-    return caller_->resolveChild(cx, rootedThis, flow);
+    return parent_->resolveChild(cx, rootedThis, flow);
 }
 
 Result<Frame*>
@@ -115,13 +115,13 @@ EvalFrame::stepEvalFrame(ThreadContext* cx)
 
 /* static */ Result<SyntaxFrame*>
 SyntaxFrame::Create(AllocationContext acx,
-                    Handle<Frame*> caller,
+                    Handle<Frame*> parent,
                     Handle<EntryFrame*> entryFrame,
                     Handle<SyntaxTreeFragment*> stFrag,
                     ResolveChildFunc resolveChildFunc,
                     StepFunc stepFunc)
 {
-    return acx.create<SyntaxFrame>(caller, entryFrame, stFrag,
+    return acx.create<SyntaxFrame>(parent, entryFrame, stFrag,
                                    resolveChildFunc, stepFunc);
 }
 
@@ -132,8 +132,8 @@ SyntaxFrame::Create(AllocationContext acx,
                     ResolveChildFunc resolveChildFunc,
                     StepFunc stepFunc)
 {
-    Local<Frame*> caller(acx, acx.threadContext()->topFrame());
-    return Create(acx, caller, entryFrame, stFrag,
+    Local<Frame*> parent(acx, acx.threadContext()->topFrame());
+    return Create(acx, parent, entryFrame, stFrag,
                   resolveChildFunc, stepFunc);
 }
 
@@ -156,17 +156,17 @@ SyntaxFrame::stepSyntaxFrame(ThreadContext* cx)
 
 /* static */ Result<FunctionFrame*>
 FunctionFrame::Create(AllocationContext acx,
-                      Handle<Frame*> caller,
+                      Handle<Frame*> parent,
                       Handle<Function*> function)
 {
-    return acx.create<FunctionFrame>(caller, function);
+    return acx.create<FunctionFrame>(parent, function);
 }
 
 /* static */ Result<FunctionFrame*>
 FunctionFrame::Create(AllocationContext acx, Handle<Function*> function)
 {
-    Local<Frame*> caller(acx, acx.threadContext()->topFrame());
-    return Create(acx, caller, function);
+    Local<Frame*> parent(acx, acx.threadContext()->topFrame());
+    return Create(acx, parent, function);
 }
 
 Result<Frame*>

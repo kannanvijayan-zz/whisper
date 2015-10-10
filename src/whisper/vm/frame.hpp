@@ -22,16 +22,16 @@ class Frame
 {
     friend class TraceTraits<Frame>;
   protected:
-    // The caller frame.
-    HeapField<Frame*> caller_;
+    // The parent frame.
+    HeapField<Frame*> parent_;
 
-    Frame(Frame* caller)
-      : caller_(caller)
+    Frame(Frame* parent)
+      : parent_(parent)
     {}
 
   public:
-    Frame* caller() const {
-        return caller_;
+    Frame* parent() const {
+        return parent_;
     }
 
     Result<Frame*> resolveChild(ThreadContext* cx,
@@ -60,7 +60,7 @@ class Frame
 // child is resolved.
 //
 // It is always the bottom-most frame in the frame stack, and
-// thus has a null caller frame.
+// thus has a null parent frame.
 //
 class TerminalFrame : public Frame
 {
@@ -96,18 +96,18 @@ class EntryFrame : public Frame
     HeapField<ScopeObject*> scope_;
 
   public:
-    EntryFrame(Frame* caller,
+    EntryFrame(Frame* parent,
                SyntaxTreeFragment* stFrag,
                ScopeObject* scope)
-      : Frame(caller),
+      : Frame(parent),
         stFrag_(stFrag),
         scope_(scope)
     {
-        WH_ASSERT(caller != nullptr);
+        WH_ASSERT(parent != nullptr);
     }
 
     static Result<EntryFrame*> Create(AllocationContext acx,
-                                      Handle<Frame*> caller,
+                                      Handle<Frame*> parent,
                                       Handle<SyntaxTreeFragment*> stFrag,
                                       Handle<ScopeObject*> scope);
 
@@ -158,22 +158,22 @@ class SyntaxFrame : public Frame
     StepFunc stepFunc_;
 
   public:
-    SyntaxFrame(Frame* caller,
+    SyntaxFrame(Frame* parent,
                 EntryFrame* entryFrame,
                 SyntaxTreeFragment* stFrag,
                 ResolveChildFunc resolveChildFunc,
                 StepFunc stepFunc)
-      : Frame(caller),
+      : Frame(parent),
         entryFrame_(entryFrame),
         stFrag_(stFrag),
         resolveChildFunc_(resolveChildFunc),
         stepFunc_(stepFunc)
     {
-        WH_ASSERT(caller != nullptr);
+        WH_ASSERT(parent != nullptr);
     }
 
     static Result<SyntaxFrame*> Create(AllocationContext acx,
-                                       Handle<Frame*> caller,
+                                       Handle<Frame*> parent,
                                        Handle<EntryFrame*> entryFrame,
                                        Handle<SyntaxTreeFragment*> stFrag,
                                        ResolveChildFunc resolveChildFunc,
@@ -207,15 +207,15 @@ class EvalFrame : public Frame
     HeapField<SyntaxTreeFragment*> syntax_;
 
   public:
-    EvalFrame(Frame* caller, SyntaxTreeFragment* syntax)
-      : Frame(caller),
+    EvalFrame(Frame* parent, SyntaxTreeFragment* syntax)
+      : Frame(parent),
         syntax_(syntax)
     {
-        WH_ASSERT(caller != nullptr);
+        WH_ASSERT(parent != nullptr);
     }
 
     static Result<EvalFrame*> Create(AllocationContext acx,
-                                     Handle<Frame*> caller,
+                                     Handle<Frame*> parent,
                                      Handle<SyntaxTreeFragment*> syntax);
 
     static Result<EvalFrame*> Create(AllocationContext acx,
@@ -241,15 +241,15 @@ class FunctionFrame : public Frame
     HeapField<Function*> function_;
 
   public:
-    FunctionFrame(Frame* caller, Function* function)
-      : Frame(caller),
+    FunctionFrame(Frame* parent, Function* function)
+      : Frame(parent),
         function_(function)
     {
-        WH_ASSERT(caller != nullptr);
+        WH_ASSERT(parent != nullptr);
     }
 
     static Result<FunctionFrame*> Create(AllocationContext acx,
-                                         Handle<Frame*> caller,
+                                         Handle<Frame*> parent,
                                          Handle<Function*> anchor);
 
     static Result<FunctionFrame*> Create(AllocationContext acx,
@@ -285,14 +285,14 @@ struct TraceTraits<VM::Frame>
     static void Scan(Scanner& scanner, VM::Frame const& obj,
                      void const* start, void const* end)
     {
-        obj.caller_.scan(scanner, start, end);
+        obj.parent_.scan(scanner, start, end);
     }
 
     template <typename Updater>
     static void Update(Updater& updater, VM::Frame& obj,
                        void const* start, void const* end)
     {
-        obj.caller_.update(updater, start, end);
+        obj.parent_.update(updater, start, end);
     }
 };
 

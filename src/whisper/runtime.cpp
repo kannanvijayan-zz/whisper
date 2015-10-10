@@ -255,7 +255,7 @@ ThreadContext::ThreadContext(Runtime* runtime, uint32_t rtid,
 void
 ThreadContext::pushTopFrame(VM::Frame* frame)
 {
-    WH_ASSERT(frame->caller() == topFrame_);
+    WH_ASSERT(frame->parent() == topFrame_);
     topFrame_ = frame;
 }
 
@@ -263,7 +263,7 @@ void
 ThreadContext::popTopFrame()
 {
     WH_ASSERT(topFrame_ != bottomFrame_);
-    topFrame_ = topFrame_->caller();
+    topFrame_ = topFrame_->parent();
 }
 
 VM::GlobalScope*
