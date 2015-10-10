@@ -81,14 +81,6 @@ VM::ControlFlow EvaluateBlock(ThreadContext* cx,
                               Handle<VM::ScopeObject*> scopeObj,
                               Handle<VM::SyntaxBlockRef> bodyBlock);
 
-VM::ControlFlow GetValueProperty(ThreadContext* cx,
-                                 Handle<VM::ValBox> value,
-                                 Handle<VM::String*> name);
-
-VM::ControlFlow GetObjectProperty(ThreadContext* cx,
-                                  Handle<VM::Wobject*> object,
-                                  Handle<VM::String*> name);
-
 
 } // namespace Interp
 } // namespace Whisper
