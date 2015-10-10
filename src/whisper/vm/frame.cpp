@@ -46,6 +46,23 @@ TerminalFrame::Create(AllocationContext acx)
     return acx.create<TerminalFrame>();
 }
 
+Result<Frame*>
+TerminalFrame::resolveTerminalFrameChild(ThreadContext* cx,
+                                         Handle<Frame*> child,
+                                         ControlFlow const& flow)
+{
+    // Any resolving of a child returns this frame as-is.
+    return OkVal<Frame*>(this);
+}
+
+Result<Frame*>
+TerminalFrame::stepTerminalFrame(ThreadContext* cx)
+{
+    // TerminalFrame should never be stepped!
+    WH_UNREACHABLE("TerminalFrame should never be step-executed.");
+    return ErrorVal();
+}
+
 /* static */ Result<EntryFrame*>
 EntryFrame::Create(AllocationContext acx,
                    Handle<Frame*> parent,

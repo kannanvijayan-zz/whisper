@@ -10,6 +10,7 @@ namespace Whisper {
 namespace VM {
 
 #define WHISPER_DEFN_FRAME_KINDS(_) \
+    _(TerminalFrame) \
     _(EntryFrame) \
     _(SyntaxFrame) \
     _(EvalFrame) \
@@ -72,6 +73,11 @@ class TerminalFrame : public Frame
     {}
 
     static Result<TerminalFrame*> Create(AllocationContext acx);
+
+    Result<Frame*> resolveTerminalFrameChild(ThreadContext* cx,
+                                             Handle<Frame*> child,
+                                             ControlFlow const& flow);
+    Result<Frame*> stepTerminalFrame(ThreadContext* cx);
 };
 
 //
