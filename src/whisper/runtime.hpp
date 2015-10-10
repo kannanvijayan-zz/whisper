@@ -240,6 +240,7 @@ class ThreadContext
     }
     void pushTopFrame(VM::Frame* frame);
     void popTopFrame();
+    bool atTerminalFrame() const;
 
     bool hasThreadState() const {
         return threadState_ != nullptr;
@@ -280,6 +281,10 @@ class ThreadContext
     }
     ErrorT_ setError(RuntimeError error) {
         return setError(error, nullptr);
+    }
+
+    ErrorT_ setInternalError(char const* string) {
+        return setError(RuntimeError::InternalError, string, nullptr);
     }
 
     template <typename T>

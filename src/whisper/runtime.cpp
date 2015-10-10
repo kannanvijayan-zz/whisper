@@ -266,6 +266,12 @@ ThreadContext::popTopFrame()
     topFrame_ = topFrame_->parent();
 }
 
+bool
+ThreadContext::atTerminalFrame() const
+{
+    return topFrame_ == static_cast<VM::Frame*>(bottomFrame_);
+}
+
 VM::GlobalScope*
 ThreadContext::global() const
 {
