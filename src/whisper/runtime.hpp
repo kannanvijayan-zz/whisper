@@ -234,6 +234,10 @@ class ThreadContext
         WH_ASSERT(topFrame_ != nullptr);
         return topFrame_;
     }
+    void setTopFrame(VM::Frame* frame) {
+        WH_ASSERT(frame != nullptr);
+        topFrame_ = frame;
+    }
     void pushTopFrame(VM::Frame* frame);
     void popTopFrame();
 
