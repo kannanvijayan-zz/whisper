@@ -67,12 +67,20 @@ class TerminalFrame : public Frame
 {
     friend class TraceTraits<TerminalFrame>;
 
+  private:
+    HeapField<ControlFlow> flow_;
+
   public:
     TerminalFrame()
-      : Frame(nullptr)
+      : Frame(nullptr),
+        flow_(ControlFlow::Void())
     {}
 
     static Result<TerminalFrame*> Create(AllocationContext acx);
+
+    ControlFlow const& flow() const {
+        return flow_;
+    }
 
     Result<Frame*> resolveTerminalFrameChild(ThreadContext* cx,
                                              Handle<Frame*> child,
@@ -315,6 +323,7 @@ struct TraceTraits<VM::TerminalFrame>
                      void const* start, void const* end)
     {
         TraceTraits<VM::Frame>::Scan<Scanner>(scanner, obj, start, end);
+        obj.flow_.scan(scanner, start, end);
     }
 
     template <typename Updater>
@@ -322,6 +331,7 @@ struct TraceTraits<VM::TerminalFrame>
                        void const* start, void const* end)
     {
         TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
+        obj.flow_.update(updater, start, end);
     }
 };
 

@@ -60,7 +60,7 @@ TerminalFrame::stepTerminalFrame(ThreadContext* cx)
 {
     // TerminalFrame should never be stepped!
     WH_UNREACHABLE("TerminalFrame should never be step-executed.");
-    return ErrorVal();
+    return cx->setInternalError("TerminalFrame should never be step-executed.");
 }
 
 /* static */ Result<EntryFrame*>
@@ -94,7 +94,7 @@ EntryFrame::resolveEntryFrameChild(ThreadContext* cx,
 Result<Frame*>
 EntryFrame::stepEntryFrame(ThreadContext* cx)
 {
-    return ErrorVal();
+    return cx->setInternalError("stepEntryFrame not defined.");
 }
 
 
@@ -126,7 +126,7 @@ EvalFrame::resolveEvalFrameChild(ThreadContext* cx,
 Result<Frame*>
 EvalFrame::stepEvalFrame(ThreadContext* cx)
 {
-    return OkVal<Frame*>(nullptr);
+    return cx->setInternalError("stepEvalFrame not defined.");
 }
 
 
@@ -191,13 +191,13 @@ FunctionFrame::resolveFunctionFrameChild(ThreadContext* cx,
                                          Handle<Frame*> child,
                                          ControlFlow const& flow)
 {
-    return OkVal<Frame*>(nullptr);
+    return cx->setInternalError("resolveFunctionFrameChild not defined.");
 }
 
 Result<Frame*>
 FunctionFrame::stepFunctionFrame(ThreadContext* cx)
 {
-    return OkVal<Frame*>(nullptr);
+    return cx->setInternalError("stepFunctionFrame not defined.");
 }
 
 
