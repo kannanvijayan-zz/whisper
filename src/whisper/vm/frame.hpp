@@ -4,6 +4,7 @@
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
 #include "vm/box.hpp"
+#include "vm/control_flow.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -30,6 +31,11 @@ class Frame
     Frame* caller() const {
         return caller_;
     }
+
+    Result<Frame*> resolveChild(ThreadContext* cx,
+                                Handle<Frame*> child,
+                                ControlFlow const& flow);
+    Result<Frame*> step(ThreadContext* cx);
 
 #define FRAME_KIND_METHODS_(name) \
     bool is##name() const { \
@@ -59,7 +65,9 @@ class EvalFrame : public Frame
     EvalFrame(Frame* caller, SyntaxTreeFragment* syntax)
       : Frame(caller),
         syntax_(syntax)
-    {}
+    {
+        WH_ASSERT(caller != nullptr);
+    }
 
     static Result<EvalFrame*> Create(AllocationContext acx,
                                      Handle<Frame*> caller,
@@ -71,6 +79,11 @@ class EvalFrame : public Frame
     SyntaxTreeFragment* syntax() const {
         return syntax_;
     }
+
+    Result<Frame*> resolveEvalFrameChild(ThreadContext* cx,
+                                         Handle<Frame*> child,
+                                         ControlFlow const& flow);
+    Result<Frame*> stepEvalFrame(ThreadContext* cx);
 };
 
 class FunctionFrame : public Frame
@@ -85,7 +98,9 @@ class FunctionFrame : public Frame
     FunctionFrame(Frame* caller, Function* function)
       : Frame(caller),
         function_(function)
-    {}
+    {
+        WH_ASSERT(caller != nullptr);
+    }
 
     static Result<FunctionFrame*> Create(AllocationContext acx,
                                          Handle<Frame*> caller,
@@ -97,6 +112,11 @@ class FunctionFrame : public Frame
     Function* function() const {
         return function_;
     }
+
+    Result<Frame*> resolveFunctionFrameChild(ThreadContext* cx,
+                                             Handle<Frame*> child,
+                                             ControlFlow const& flow);
+    Result<Frame*> stepFunctionFrame(ThreadContext* cx);
 };
 
 
