@@ -19,6 +19,9 @@ VM::ControlFlow HeapInterpretSourceFile(ThreadContext* cx,
 
 VM::ControlFlow HeapInterpretLoop(ThreadContext* cx);
 
+Result<VM::Frame*> CreateInitialSyntaxFrame(ThreadContext* cx,
+                                            Handle<VM::EntryFrame*> entryFrame);
+
 
 } // namespace Interp
 } // namespace Whisper

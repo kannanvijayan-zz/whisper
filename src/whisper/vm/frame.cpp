@@ -3,6 +3,7 @@
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
 #include "vm/frame.hpp"
+#include "interp/heap_interpreter.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -94,7 +95,10 @@ EntryFrame::resolveEntryFrameChild(ThreadContext* cx,
 Result<Frame*>
 EntryFrame::stepEntryFrame(ThreadContext* cx)
 {
-    return cx->setInternalError("stepEntryFrame not defined.");
+    // Call into the interpreter to initialize a SyntaxFrame
+    // for the root node of this entry frame.
+    Local<EntryFrame*> rootedThis(cx, this);
+    return Interp::CreateInitialSyntaxFrame(cx, rootedThis);
 }
 
 

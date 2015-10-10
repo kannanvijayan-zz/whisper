@@ -57,6 +57,13 @@ HeapInterpretLoop(ThreadContext* cx)
     return cx->bottomFrame()->flow();
 }
 
+Result<VM::Frame*>
+CreateInitialSyntaxFrame(ThreadContext* cx,
+                         Handle<VM::EntryFrame*> entryFrame)
+{
+    return cx->setInternalError("CreateInitialSyntaxFrame not implemented.");
+}
+
 
 } // namespace Interp
 } // namespace Whisper
