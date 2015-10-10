@@ -15,8 +15,6 @@
 #include "vm/global_scope.hpp"
 #include "vm/runtime_state.hpp"
 #include "name_pool.hpp"
-#include "interp/syntax_behaviour.hpp"
-#include "interp/object_behaviour.hpp"
 
 namespace Whisper {
 

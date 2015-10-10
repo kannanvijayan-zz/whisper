@@ -8,8 +8,8 @@
 #include "vm/runtime_state.hpp"
 #include "vm/function.hpp"
 #include "vm/plain_object.hpp"
-#include "interp/interpreter.hpp"
-#include "interp/property_lookup.hpp"
+// #include "interp/interpreter.hpp"
+// #include "interp/property_lookup.hpp"
 #include "interp/object_behaviour.hpp"
 
 namespace Whisper {
@@ -131,6 +131,7 @@ CreateImmBoolDelegate(AllocationContext acx,
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::ValBox> args);
 
+  /*
     DECLARE_OPERATIVE_FN_(ObjSyntax_DotExpr)
 
     DECLARE_APPLICATIVE_FN_(ImmInt_PosExpr)
@@ -139,10 +140,12 @@ CreateImmBoolDelegate(AllocationContext acx,
     DECLARE_APPLICATIVE_FN_(ImmInt_SubExpr)
     DECLARE_APPLICATIVE_FN_(ImmInt_MulExpr)
     DECLARE_APPLICATIVE_FN_(ImmInt_DivExpr)
+ */
 
 #undef DECLARE_OPERATIVE_FN_
 #undef DECLARE_APPLICATIVE_FN_
 
+/*
 static OkResult
 BindOperativeMethod(AllocationContext acx,
                     Handle<VM::Wobject*> obj,
@@ -185,6 +188,8 @@ BindApplicativeMethod(AllocationContext acx,
     return OkVal();
 }
 
+*/
+
 static OkResult
 BindRootDelegateMethods(AllocationContext acx, VM::Wobject* obj)
 {
@@ -202,7 +207,9 @@ BindRootDelegateMethods(AllocationContext acx, VM::Wobject* obj)
         } \
     } while(false)
 
+/*
     BIND_OBJSYNTAX_METHOD_(DotExpr);
+*/
 
 #undef BIND_OBJSYNTAX_METHOD_
 
@@ -226,12 +233,14 @@ BindImmIntMethods(AllocationContext acx, VM::Wobject* obj)
         } \
     } while(false)
 
+/*
     BIND_IMM_INT_METHOD_(PosExpr);
     BIND_IMM_INT_METHOD_(NegExpr);
     BIND_IMM_INT_METHOD_(AddExpr);
     BIND_IMM_INT_METHOD_(SubExpr);
     BIND_IMM_INT_METHOD_(MulExpr);
     BIND_IMM_INT_METHOD_(DivExpr);
+*/
 
 #undef BIND_IMM_INT_METHOD_
 
@@ -274,6 +283,7 @@ BindImmBoolMethods(AllocationContext acx, VM::Wobject* obj)
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::ValBox> args)
 
+/*
 IMPL_OPERATIVE_FN_(ObjSyntax_DotExpr)
 {
     if (args.length() != 1) {
@@ -469,6 +479,8 @@ IMPL_APPLICATIVE_FN_(ImmInt_DivExpr)
     return cx->setExceptionRaised("Integer divide can only handle "
                                   "integer immediates for now");
 }
+
+*/
 
 } // namespace Interp
 } // namespace Whisper

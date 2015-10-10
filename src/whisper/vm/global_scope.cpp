@@ -7,7 +7,6 @@
 #include "vm/global_scope.hpp"
 #include "vm/runtime_state.hpp"
 #include "vm/function.hpp"
-#include "interp/interpreter.hpp"
 
 namespace Whisper {
 namespace VM {

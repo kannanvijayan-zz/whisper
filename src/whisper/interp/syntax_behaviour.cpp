@@ -7,8 +7,8 @@
 #include "vm/global_scope.hpp"
 #include "vm/runtime_state.hpp"
 #include "vm/function.hpp"
-#include "interp/interpreter.hpp"
-#include "interp/property_lookup.hpp"
+// #include "interp/interpreter.hpp"
+// #include "interp/property_lookup.hpp"
 #include "interp/syntax_behaviour.hpp"
 
 namespace Whisper {
@@ -22,6 +22,7 @@ namespace Interp {
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::SyntaxNodeRef> args);
 
+  /*
     DECLARE_SYNTAX_FN_(File)
 
     DECLARE_SYNTAX_FN_(EmptyStmt)
@@ -44,9 +45,11 @@ namespace Interp {
     DECLARE_SYNTAX_FN_(NameExpr)
     DECLARE_SYNTAX_FN_(IntegerExpr)
     //WHISPER_DEFN_SYNTAX_NODES(DECLARE_SYNTAX_FN_)
+ */
 
 #undef DECLARE_SYNTAX_FN_
 
+/*
 static OkResult
 BindGlobalMethod(AllocationContext acx,
                  Handle<VM::GlobalScope*> obj,
@@ -70,6 +73,7 @@ BindGlobalMethod(AllocationContext acx,
 
     return OkVal();
 }
+*/
 
 OkResult
 BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
@@ -88,6 +92,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
         } \
     } while(false)
 
+/*
     BIND_GLOBAL_METHOD_(File);
 
     BIND_GLOBAL_METHOD_(EmptyStmt);
@@ -110,6 +115,8 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(NameExpr);
     BIND_GLOBAL_METHOD_(IntegerExpr);
 
+*/
+
 #undef BIND_GLOBAL_METHOD_
 
     return OkVal();
@@ -120,6 +127,8 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::SyntaxNodeRef> args)
+
+/*
 
 IMPL_SYNTAX_FN_(File)
 {
@@ -794,6 +803,8 @@ IMPL_SYNTAX_FN_(IntegerExpr)
     // Make an integer box and return it.
     return VM::ControlFlow::Value(VM::ValBox::Integer(intExpr->value()));
 }
+
+*/
 
 
 } // namespace Interp
