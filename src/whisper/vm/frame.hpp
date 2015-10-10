@@ -56,6 +56,25 @@ class Frame
 };
 
 //
+// An TerminalFrame is signifies the end of computation when its
+// child is resolved.
+//
+// It is always the bottom-most frame in the frame stack, and
+// thus has a null caller frame.
+//
+class TerminalFrame : public Frame
+{
+    friend class TraceTraits<TerminalFrame>;
+
+  public:
+    TerminalFrame()
+      : Frame(nullptr)
+    {}
+
+    static Result<TerminalFrame*> Create(AllocationContext acx);
+};
+
+//
 // An EntryFrame establishes an object in the frame chain which
 // represents the entry into a new evaluation scope.  It establishes
 // the PackedSyntaxTree in effect, the offset of the logical AST
@@ -276,6 +295,30 @@ struct TraceTraits<VM::Frame>
         obj.caller_.update(updater, start, end);
     }
 };
+
+template <>
+struct TraceTraits<VM::TerminalFrame>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::TerminalFrame const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::Frame>::Scan<Scanner>(scanner, obj, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::TerminalFrame& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
+    }
+};
+
 
 template <>
 struct TraceTraits<VM::EntryFrame>

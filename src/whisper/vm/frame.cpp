@@ -3,7 +3,6 @@
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
 #include "vm/frame.hpp"
-#include "interp/heap_interpreter.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -39,6 +38,12 @@ Frame::step(ThreadContext* cx)
 
     WH_UNREACHABLE("Unrecognized frame type.");
     return ErrorVal();
+}
+
+/* static */ Result<TerminalFrame*>
+TerminalFrame::Create(AllocationContext acx)
+{
+    return acx.create<TerminalFrame>();
 }
 
 /* static */ Result<EntryFrame*>
