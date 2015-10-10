@@ -39,7 +39,8 @@ shared_cpp = \
     interp/syntax_behaviour.cpp \
     interp/object_behaviour.cpp \
     interp/property_lookup.cpp \
-    interp/interpreter.cpp
+    interp/interpreter.cpp \
+    interp/heap_interpreter.cpp
 
 whisper_SOURCES = \
     $(shared_cpp) \
