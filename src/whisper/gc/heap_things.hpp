@@ -321,7 +321,7 @@ class HeapThing
         return reinterpret_cast<HeapThing*>(ptr);
     }
     template <typename T>
-    static inline const HeapThing* From(T const* ptr) {
+    static inline HeapThing const* From(T const* ptr) {
         static_assert(IsHeapThingType<T>(), "T is not HeapThingType.");
         return reinterpret_cast<HeapThing const*>(ptr);
     }

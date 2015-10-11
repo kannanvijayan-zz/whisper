@@ -165,7 +165,7 @@ Array<T>::CreateCopy(AllocationContext acx, uint32_t len, T const* vals)
 
 template <typename T>
 /* static */ inline Result<Array<T>*>
-Array<T>::CreateFill(AllocationContext acx, uint32_t len, const T& val)
+Array<T>::CreateFill(AllocationContext acx, uint32_t len, T const& val)
 {
     return acx.createSized<Array<T>>(CalculateSize(len), len, val);
 }

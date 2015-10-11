@@ -230,12 +230,13 @@ class SyntaxBlockRef : public SyntaxTreeRef
       : SyntaxTreeRef(pst, offset, numStatements)
     {}
 
-    SyntaxBlockRef(PackedSyntaxTree *pst, const AST::PackedBlock &packedBlock)
+    SyntaxBlockRef(PackedSyntaxTree *pst,
+                   AST::PackedBlock const& packedBlock)
       : SyntaxTreeRef(pst, packedBlock)
     {}
 
     SyntaxBlockRef(PackedSyntaxTree *pst,
-                   const AST::PackedSizedBlock &packedSizedBlock)
+                   AST::PackedSizedBlock const& packedSizedBlock)
       : SyntaxTreeRef(pst, packedSizedBlock)
     {}
 

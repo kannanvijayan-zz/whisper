@@ -511,7 +511,7 @@ PackedWriter::writeVarStmt(VarStmtNode const* node)
 }
 
 void
-PackedWriter::writeConstStmt(const ConstStmtNode *node)
+PackedWriter::writeConstStmt(ConstStmtNode const* node)
 {
     uint32_t numBindings = node->bindings().size();
     if (numBindings > MaxBindings)
