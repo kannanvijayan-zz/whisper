@@ -28,6 +28,20 @@ PackedSyntaxTree::Create(AllocationContext acx,
                                         constPoolArray.handle());
 }
 
+SyntaxTreeRef::SyntaxTreeRef(SyntaxNode const* stNode)
+  : SyntaxTreeRef(stNode->pst(), stNode->offset())
+{}
+
+SyntaxTreeRef::SyntaxTreeRef(SyntaxBlock const* stBlock)
+  : SyntaxTreeRef(stBlock->pst(), stBlock->offset(), stBlock->numStatements())
+{}
+
+SyntaxTreeRef::SyntaxTreeRef(SyntaxTreeFragment const* stFrag)
+  : SyntaxTreeRef(stFrag->pst(), stFrag->offset(),
+                  stFrag->isBlock() ? stFrag->toBlock()->numStatements() : 0,
+                  stFrag->isBlock())
+{}
+
 AST::NodeType
 SyntaxNodeRef::nodeType() const
 {

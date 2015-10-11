@@ -124,19 +124,35 @@ class SyntaxTreeRef
         WH_ASSERT(pst_.get() != nullptr);
     }
 
+    SyntaxTreeRef(PackedSyntaxTree* pst,
+                  uint32_t offset,
+                  uint32_t numStatements,
+                  bool isBlock)
+      : pst_(pst),
+        offset_(offset),
+        numStatements_(numStatements),
+        isBlock_(isBlock)
+    {
+        WH_ASSERT_IF(!isBlock_, numStatements_ == 0);
+    }
+
   public:
-    SyntaxTreeRef(PackedSyntaxTree *pst, AST::PackedBaseNode const& node)
+    SyntaxTreeRef(PackedSyntaxTree* pst, AST::PackedBaseNode const& node)
       : SyntaxTreeRef(pst, node.offset())
     {}
 
-    SyntaxTreeRef(PackedSyntaxTree *pst, AST::PackedBlock const& packedBlock)
+    SyntaxTreeRef(PackedSyntaxTree* pst, AST::PackedBlock const& packedBlock)
       : SyntaxTreeRef(pst, packedBlock.offset(), packedBlock.numStatements())
     {}
 
-    SyntaxTreeRef(PackedSyntaxTree *pst,
+    SyntaxTreeRef(PackedSyntaxTree* pst,
                   AST::PackedSizedBlock const& packedSizedBlock)
       : SyntaxTreeRef(pst, packedSizedBlock.unsizedBlock())
     {}
+
+    SyntaxTreeRef(SyntaxNode const* stNode);
+    SyntaxTreeRef(SyntaxBlock const* stBlock);
+    SyntaxTreeRef(SyntaxTreeFragment const* stFrag);
 
     bool isValid() const {
         return pst_.get() != nullptr;
@@ -194,8 +210,12 @@ class SyntaxNodeRef : public SyntaxTreeRef
       : SyntaxTreeRef(pst, offset)
     {}
 
-    SyntaxNodeRef(PackedSyntaxTree *pst, AST::PackedBaseNode const& node)
+    SyntaxNodeRef(PackedSyntaxTree* pst, AST::PackedBaseNode const& node)
       : SyntaxTreeRef(pst, node)
+    {}
+
+    SyntaxNodeRef(SyntaxNode const* stNode)
+      : SyntaxTreeRef(stNode)
     {}
 
     AST::NodeType nodeType() const;
@@ -230,14 +250,18 @@ class SyntaxBlockRef : public SyntaxTreeRef
       : SyntaxTreeRef(pst, offset, numStatements)
     {}
 
-    SyntaxBlockRef(PackedSyntaxTree *pst,
+    SyntaxBlockRef(PackedSyntaxTree* pst,
                    AST::PackedBlock const& packedBlock)
       : SyntaxTreeRef(pst, packedBlock)
     {}
 
-    SyntaxBlockRef(PackedSyntaxTree *pst,
+    SyntaxBlockRef(PackedSyntaxTree* pst,
                    AST::PackedSizedBlock const& packedSizedBlock)
       : SyntaxTreeRef(pst, packedSizedBlock)
+    {}
+
+    SyntaxBlockRef(SyntaxBlock const* stBlock)
+      : SyntaxTreeRef(stBlock)
     {}
 
     uint32_t numStatements() const {
