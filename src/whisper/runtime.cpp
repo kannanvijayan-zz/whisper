@@ -334,10 +334,17 @@ ThreadContext::formatError(char* buf, size_t bufSize)
     WH_ASSERT(hasError());
     if (hasErrorString()) {
         if (hasErrorThing()) {
+            char thingStr[128];
+            if (errorThing()->isString()) {
+                snprintf(thingStr, 128, "String (%s)",
+                            errorThing()->to<VM::String>()->c_chars());
+            } else {
+                snprintf(thingStr, 128, "%s",
+                            errorThing()->header().formatString());
+            }
             return snprintf(buf, bufSize, "%s: %s [%s]",
                             RuntimeErrorString(error()),
-                            errorString(),
-                            errorThing()->header().formatString());
+                            errorString(), thingStr);
         }
 
         return snprintf(buf, bufSize, "%s: %s",
