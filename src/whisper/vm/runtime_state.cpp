@@ -1,5 +1,6 @@
 
 #include "runtime_inlines.hpp"
+#include "vm/packed_syntax_tree.hpp"
 #include "vm/runtime_state.hpp"
 #include "vm/global_scope.hpp"
 #include "vm/wobject.hpp"
@@ -31,6 +32,49 @@ RuntimeState::Create(AllocationContext acx)
 
     return acx.create<RuntimeState>(namePool.get());
 }
+
+String*
+RuntimeState::syntaxHandlerName(SyntaxTreeFragment const* stFrag) const
+{
+    if (stFrag->isNode())
+        return syntaxHandlerName(stFrag->toNode()->nodeType());
+
+    if (stFrag->isBlock())
+        return nullptr;
+
+    WH_UNREACHABLE("SyntaxTreeFragment is neither node nor block.");
+    return nullptr;
+}
+
+String*
+RuntimeState::syntaxHandlerName(AST::NodeType nodeType) const
+{
+    switch (nodeType) {
+      case AST::File:               return nm_AtFile();
+      case AST::EmptyStmt:          return nm_AtEmptyStmt();
+      case AST::ExprStmt:           return nm_AtExprStmt();
+      case AST::ReturnStmt:         return nm_AtReturnStmt();
+      case AST::IfStmt:             return nm_AtIfStmt();
+      case AST::DefStmt:            return nm_AtDefStmt();
+      case AST::ConstStmt:          return nm_AtConstStmt();
+      case AST::VarStmt:            return nm_AtVarStmt();
+      case AST::LoopStmt:           return nm_AtLoopStmt();
+      case AST::CallExpr:           return nm_AtCallExpr();
+      case AST::DotExpr:            return nm_AtDotExpr();
+      case AST::ArrowExpr:          return nm_AtArrowExpr();
+      case AST::PosExpr:            return nm_AtPosExpr();
+      case AST::NegExpr:            return nm_AtNegExpr();
+      case AST::AddExpr:            return nm_AtAddExpr();
+      case AST::SubExpr:            return nm_AtSubExpr();
+      case AST::MulExpr:            return nm_AtMulExpr();
+      case AST::DivExpr:            return nm_AtDivExpr();
+      case AST::ParenExpr:          return nm_AtParenExpr();
+      case AST::NameExpr:           return nm_AtNameExpr();
+      case AST::IntegerExpr:        return nm_AtIntegerExpr();
+      default:                      return nullptr;
+    }
+}
+
 
 /* static */ Result<ThreadState*>
 ThreadState::Create(AllocationContext acx)

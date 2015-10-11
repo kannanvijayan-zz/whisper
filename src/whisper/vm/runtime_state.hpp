@@ -2,6 +2,7 @@
 #define WHISPER__VM__RUNTIME_STATE_HPP
 
 
+#include "parser/syntax_tree.hpp"
 #include "name_pool.hpp"
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
@@ -11,8 +12,9 @@
 namespace Whisper {
 namespace VM {
 
-class GlobalScope;
 class Wobject;
+class GlobalScope;
+class SyntaxTreeFragment;
 
 //
 // A RuntimeState is a vm-allocated object that holds pointers to
@@ -33,6 +35,9 @@ class RuntimeState
     }
 
     static Result<RuntimeState*> Create(AllocationContext acx);
+
+    String* syntaxHandlerName(SyntaxTreeFragment const* stFrag) const;
+    String* syntaxHandlerName(AST::NodeType nodeType) const;
 
 #define NAME_METH_(name, str) \
     String* nm_##name() const { \
