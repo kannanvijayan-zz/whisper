@@ -125,15 +125,18 @@ class SyntaxTreeRef
     }
 
   public:
-    static SyntaxTreeRef Node(PackedSyntaxTree* pst, uint32_t offset) {
-        return SyntaxTreeRef(pst, offset);
-    }
-    static SyntaxTreeRef Block(PackedSyntaxTree* pst,
-                               uint32_t offset,
-                               uint32_t numStatements)
-    {
-        return SyntaxTreeRef(pst, offset, numStatements);
-    }
+    SyntaxTreeRef(PackedSyntaxTree *pst, AST::PackedBaseNode const& node)
+      : SyntaxTreeRef(pst, node.offset())
+    {}
+
+    SyntaxTreeRef(PackedSyntaxTree *pst, AST::PackedBlock const& packedBlock)
+      : SyntaxTreeRef(pst, packedBlock.offset(), packedBlock.numStatements())
+    {}
+
+    SyntaxTreeRef(PackedSyntaxTree *pst,
+                  AST::PackedSizedBlock const& packedSizedBlock)
+      : SyntaxTreeRef(pst, packedSizedBlock.unsizedBlock())
+    {}
 
     bool isValid() const {
         return pst_.get() != nullptr;
@@ -186,8 +189,13 @@ class SyntaxNodeRef : public SyntaxTreeRef
   public:
     SyntaxNodeRef() : SyntaxTreeRef() {}
 
-    SyntaxNodeRef(PackedSyntaxTree* pst, uint32_t offset)
+    SyntaxNodeRef(PackedSyntaxTree* pst,
+                  uint32_t offset)
       : SyntaxTreeRef(pst, offset)
+    {}
+
+    SyntaxNodeRef(PackedSyntaxTree *pst, AST::PackedBaseNode const& node)
+      : SyntaxTreeRef(pst, node)
     {}
 
     AST::NodeType nodeType() const;
@@ -223,12 +231,12 @@ class SyntaxBlockRef : public SyntaxTreeRef
     {}
 
     SyntaxBlockRef(PackedSyntaxTree *pst, const AST::PackedBlock &packedBlock)
-      : SyntaxBlockRef(pst, packedBlock.offset(), packedBlock.numStatements())
+      : SyntaxTreeRef(pst, packedBlock)
     {}
 
     SyntaxBlockRef(PackedSyntaxTree *pst,
                    const AST::PackedSizedBlock &packedSizedBlock)
-      : SyntaxBlockRef(pst, packedSizedBlock.unsizedBlock())
+      : SyntaxTreeRef(pst, packedSizedBlock)
     {}
 
     uint32_t numStatements() const {
