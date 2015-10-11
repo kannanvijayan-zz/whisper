@@ -61,8 +61,8 @@ HeapInterpretLoop(ThreadContext* cx)
 
 static OkResult
 ResolveSyntaxNameLookup(ThreadContext* cx,
-                             Handle<VM::SyntaxFrame*> frame,
-                             VM::ControlFlow const& flow)
+                        Handle<VM::SyntaxFrame*> frame,
+                        VM::ControlFlow const& flow)
 {
     return ErrorVal();
 }
