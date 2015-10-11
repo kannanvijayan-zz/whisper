@@ -1,4 +1,5 @@
 
+#include "parser/syntax_tree.hpp"
 #include "parser/packed_syntax.hpp"
 #include "vm/runtime_state.hpp"
 #include "interp/heap_interpreter.hpp"
@@ -45,23 +46,34 @@ VM::ControlFlow
 HeapInterpretLoop(ThreadContext* cx)
 {
     while (!cx->atTerminalFrame()) {
-        Result<VM::Frame*> nextFrame = cx->topFrame()->step(cx);
-        if (!nextFrame) {
+        Result<VM::Frame*> nextTopFrame = cx->topFrame()->step(cx);
+        if (!nextTopFrame) {
+            WH_ASSERT(cx->hasError());
             // Fatal error, immediate halt of computation
             // with frame-stack intact.
             return VM::ControlFlow::Error();
         }
-
-        cx->setTopFrame(nextFrame.value());
+        WH_ASSERT(cx->topFrame() == nextTopFrame.value());
     }
     return cx->bottomFrame()->flow();
 }
+
 
 Result<VM::Frame*>
 CreateInitialSyntaxFrame(ThreadContext* cx,
                          Handle<VM::EntryFrame*> entryFrame)
 {
-    return cx->setInternalError("CreateInitialSyntaxFrame not implemented.");
+    Local<VM::SyntaxTreeFragment*> stFrag(cx, entryFrame->stFrag());
+
+    // Get the name of the syntax handler method.
+    Local<VM::String*> name(cx, cx->runtimeState()->syntaxHandlerName(stFrag));
+    if (name.get() == nullptr) {
+        WH_UNREACHABLE("Handler name not found for SyntaxTreeFragment.");
+        cx->setInternalError("Handler name not found for SyntaxTreeFragment.");
+        return ErrorVal();
+    }
+
+    return ErrorVal();
 }
 
 
