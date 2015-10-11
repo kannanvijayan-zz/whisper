@@ -16,9 +16,9 @@ class ControlFlow
     enum class Kind {
         Void,
         Error,
+        Exception,
         Value,
-        Return,
-        Exception
+        Return
     };
 
   private:
@@ -80,11 +80,11 @@ class ControlFlow
         switch (kind_) {
           case Kind::Void:
           case Kind::Error:
+          case Kind::Exception:
             break;
 
           case Kind::Value:
           case Kind::Return:
-          case Kind::Exception:
             initValBoxPayload(*other.valBoxPayload());
             break;
 
@@ -116,11 +116,11 @@ class ControlFlow
         switch (kind_) {
           case Kind::Void:
           case Kind::Error:
+          case Kind::Exception:
             break;
 
           case Kind::Value:
           case Kind::Return:
-          case Kind::Exception:
             valBoxPayload()->~ValBox();
             break;
 
@@ -144,8 +144,8 @@ class ControlFlow
     static ControlFlow Return(ValBox const& val) {
         return ControlFlow(Kind::Return, val);
     }
-    static ControlFlow Exception(ValBox const& val) {
-        return ControlFlow(Kind::Exception, val);
+    static ControlFlow Exception() {
+        return ControlFlow(Kind::Exception);
     }
 
     Kind kind() const {
@@ -201,10 +201,6 @@ class ControlFlow
         WH_ASSERT(isReturn());
         return *valBoxPayload();
     }
-    ValBox const& exceptionValue() const {
-        WH_ASSERT(isException());
-        return *valBoxPayload();
-    }
 };
 
 
@@ -230,10 +226,10 @@ struct TraceTraits<VM::ControlFlow>
         switch (cf.kind()) {
           case VM::ControlFlow::Kind::Void:
           case VM::ControlFlow::Kind::Error:
+          case VM::ControlFlow::Kind::Exception:
             return;
           case VM::ControlFlow::Kind::Value:
           case VM::ControlFlow::Kind::Return:
-          case VM::ControlFlow::Kind::Exception:
             TraceTraits<VM::ValBox>::Scan(scanner, *cf.valBoxPayload(),
                                           start, end);
             return;
@@ -247,10 +243,10 @@ struct TraceTraits<VM::ControlFlow>
         switch (cf.kind()) {
           case VM::ControlFlow::Kind::Void:
           case VM::ControlFlow::Kind::Error:
+          case VM::ControlFlow::Kind::Exception:
             return;
           case VM::ControlFlow::Kind::Value:
           case VM::ControlFlow::Kind::Return:
-          case VM::ControlFlow::Kind::Exception:
             TraceTraits<VM::ValBox>::Update(updater, *cf.valBoxPayload(),
                                             start, end);
             return;
