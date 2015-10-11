@@ -11,12 +11,11 @@ namespace VM {
 
 OkResult
 Frame::resolveChild(ThreadContext* cx,
-                    Handle<Frame*> child,
                     ControlFlow const& flow)
 {
 #define RESOLVE_CHILD_CASE_(name) \
     if (this->is##name()) \
-        return this->to##name()->resolve##name##Child(cx, child, flow);
+        return this->to##name()->resolve##name##Child(cx, flow);
 
     WHISPER_DEFN_FRAME_KINDS(RESOLVE_CHILD_CASE_)
 
@@ -49,7 +48,6 @@ TerminalFrame::Create(AllocationContext acx)
 
 OkResult
 TerminalFrame::resolveTerminalFrameChild(ThreadContext* cx,
-                                         Handle<Frame*> child,
                                          ControlFlow const& flow)
 {
     // Any resolving of a child returns this frame as-is.
@@ -84,12 +82,10 @@ EntryFrame::Create(AllocationContext acx,
 
 OkResult
 EntryFrame::resolveEntryFrameChild(ThreadContext* cx,
-                                   Handle<Frame*> child,
                                    ControlFlow const& flow)
 {
     // Resolve parent frame with the same controlflow result.
-    Local<Frame*> rootedThis(cx, this);
-    return parent_->resolveChild(cx, rootedThis, flow);
+    return parent_->resolveChild(cx, flow);
 }
 
 OkResult
@@ -98,10 +94,12 @@ EntryFrame::stepEntryFrame(ThreadContext* cx)
     // Call into the interpreter to initialize a SyntaxFrame
     // for the root node of this entry frame.
     Local<EntryFrame*> rootedThis(cx, this);
-    Local<Frame*> newFrame(cx);
+    Local<SyntaxFrame*> newFrame(cx);
     if (!newFrame.setResult(Interp::CreateInitialSyntaxFrame(cx, rootedThis)))
         return ErrorVal();
 
+    // Update the top frame.
+    cx->setTopFrame(newFrame);
     return OkVal();
 }
 
@@ -123,12 +121,10 @@ EvalFrame::Create(AllocationContext acx, Handle<SyntaxTreeFragment*> syntax)
 
 OkResult
 EvalFrame::resolveEvalFrameChild(ThreadContext* cx,
-                                 Handle<Frame*> child,
                                  ControlFlow const& flow)
 {
     // Resolve parent frame with the same controlflow result.
-    Local<Frame*> rootedThis(cx, this);
-    return parent_->resolveChild(cx, rootedThis, flow);
+    return parent_->resolveChild(cx, flow);
 }
 
 OkResult
@@ -164,11 +160,10 @@ SyntaxFrame::Create(AllocationContext acx,
 
 OkResult
 SyntaxFrame::resolveSyntaxFrameChild(ThreadContext* cx,
-                                     Handle<Frame*> child,
                                      ControlFlow const& flow)
 {
     Local<SyntaxFrame*> rootedThis(cx, this);
-    return resolveChildFunc_(cx, rootedThis, child, flow);
+    return resolveChildFunc_(cx, rootedThis, flow);
 }
 
 OkResult
@@ -196,7 +191,6 @@ FunctionFrame::Create(AllocationContext acx, Handle<Function*> function)
 
 OkResult
 FunctionFrame::resolveFunctionFrameChild(ThreadContext* cx,
-                                         Handle<Frame*> child,
                                          ControlFlow const& flow)
 {
     return cx->setInternalError("resolveFunctionFrameChild not defined.");

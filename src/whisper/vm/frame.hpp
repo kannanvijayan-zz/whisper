@@ -35,9 +35,7 @@ class Frame
         return parent_;
     }
 
-    OkResult resolveChild(ThreadContext* cx,
-                          Handle<Frame*> child,
-                          ControlFlow const& flow);
+    OkResult resolveChild(ThreadContext* cx, ControlFlow const& flow);
     OkResult step(ThreadContext* cx);
 
 #define FRAME_KIND_METHODS_(name) \
@@ -83,7 +81,6 @@ class TerminalFrame : public Frame
     }
 
     OkResult resolveTerminalFrameChild(ThreadContext* cx,
-                                       Handle<Frame*> child,
                                        ControlFlow const& flow);
     OkResult stepTerminalFrame(ThreadContext* cx);
 };
@@ -137,7 +134,6 @@ class EntryFrame : public Frame
     }
 
     OkResult resolveEntryFrameChild(ThreadContext* cx,
-                                    Handle<Frame*> child,
                                     ControlFlow const& flow);
     OkResult stepEntryFrame(ThreadContext* cx);
 };
@@ -161,7 +157,6 @@ class SyntaxFrame : public Frame
     typedef OkResult (*ResolveChildFunc)(
         ThreadContext* cx,
         Handle<SyntaxFrame*> frame,
-        Handle<Frame*> child,
         ControlFlow const& flow);
     ResolveChildFunc resolveChildFunc_;
 
@@ -208,7 +203,6 @@ class SyntaxFrame : public Frame
     }
 
     OkResult resolveSyntaxFrameChild(ThreadContext* cx,
-                                     Handle<Frame*> child,
                                      ControlFlow const& flow);
     OkResult stepSyntaxFrame(ThreadContext* cx);
 };
@@ -241,7 +235,6 @@ class EvalFrame : public Frame
     }
 
     OkResult resolveEvalFrameChild(ThreadContext* cx,
-                                   Handle<Frame*> child,
                                    ControlFlow const& flow);
     OkResult stepEvalFrame(ThreadContext* cx);
 };
@@ -275,7 +268,6 @@ class FunctionFrame : public Frame
     }
 
     OkResult resolveFunctionFrameChild(ThreadContext* cx,
-                                       Handle<Frame*> child,
                                        ControlFlow const& flow);
     OkResult stepFunctionFrame(ThreadContext* cx);
 };
