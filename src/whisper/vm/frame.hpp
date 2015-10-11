@@ -12,7 +12,7 @@ namespace VM {
 #define WHISPER_DEFN_FRAME_KINDS(_) \
     _(TerminalFrame) \
     _(EntryFrame) \
-    _(SyntaxFrame) \
+    _(SyntaxNameLookupFrame) \
     _(EvalFrame) \
     _(FunctionFrame)
 
@@ -142,7 +142,7 @@ class SyntaxFrame : public Frame
 {
     friend class TraceTraits<SyntaxFrame>;
 
-  private:
+  protected:
     // The entry frame corresponding to the syntax frame.
     HeapField<EntryFrame*> entryFrame_;
 
@@ -150,57 +150,52 @@ class SyntaxFrame : public Frame
     // evaluated.
     HeapField<SyntaxTreeFragment*> stFrag_;
 
-    // The C function pointer for handling a resolved child.
-    typedef OkResult (*ResolveChildFunc)(
-        ThreadContext* cx,
-        Handle<SyntaxFrame*> frame,
-        ControlFlow const& flow);
-    ResolveChildFunc resolveChildFunc_;
-
-    // The C function pointer for stepping.
-    typedef OkResult (*StepFunc)(
-        ThreadContext* cx,
-        Handle<SyntaxFrame*> frame);
-    StepFunc stepFunc_;
-
-  public:
     SyntaxFrame(Frame* parent,
                 EntryFrame* entryFrame,
-                SyntaxTreeFragment* stFrag,
-                ResolveChildFunc resolveChildFunc,
-                StepFunc stepFunc)
+                SyntaxTreeFragment* stFrag)
       : Frame(parent),
         entryFrame_(entryFrame),
-        stFrag_(stFrag),
-        resolveChildFunc_(resolveChildFunc),
-        stepFunc_(stepFunc)
+        stFrag_(stFrag)
     {
         WH_ASSERT(parent != nullptr);
+        WH_ASSERT(entryFrame != nullptr);
+        WH_ASSERT(stFrag != nullptr);
     }
 
-    static Result<SyntaxFrame*> Create(AllocationContext acx,
-                                       Handle<Frame*> parent,
-                                       Handle<EntryFrame*> entryFrame,
-                                       Handle<SyntaxTreeFragment*> stFrag,
-                                       ResolveChildFunc resolveChildFunc,
-                                       StepFunc stepFunc);
-
-    static Result<SyntaxFrame*> Create(AllocationContext acx,
-                                       Handle<EntryFrame*> entryFrame,
-                                       Handle<SyntaxTreeFragment*> stFrag,
-                                       ResolveChildFunc resolveChildFunc,
-                                       StepFunc stepFunc);
-
+  public:
     EntryFrame* entryFrame() const {
         return entryFrame_;
     }
     SyntaxTreeFragment* stFrag() const {
         return stFrag_;
     }
+};
 
-    OkResult resolveSyntaxFrameChild(ThreadContext* cx,
-                                     ControlFlow const& flow);
-    OkResult stepSyntaxFrame(ThreadContext* cx);
+class SyntaxNameLookupFrame : public SyntaxFrame
+{
+    friend class TraceTraits<SyntaxNameLookupFrame>;
+
+  public:
+    SyntaxNameLookupFrame(Frame* parent,
+                          EntryFrame* entryFrame,
+                          SyntaxTreeFragment* stFrag)
+      : SyntaxFrame(parent, entryFrame, stFrag)
+    {}
+
+    static Result<SyntaxNameLookupFrame*> Create(
+            AllocationContext acx,
+            Handle<Frame*> parent,
+            Handle<EntryFrame*> entryFrame,
+            Handle<SyntaxTreeFragment*> stFrag);
+
+    static Result<SyntaxNameLookupFrame*> Create(
+            AllocationContext acx,
+            Handle<EntryFrame*> entryFrame,
+            Handle<SyntaxTreeFragment*> stFrag);
+
+    OkResult resolveSyntaxNameLookupFrameChild(ThreadContext* cx,
+                                               ControlFlow const& flow);
+    OkResult stepSyntaxNameLookupFrame(ThreadContext* cx);
 };
 
 class EvalFrame : public Frame
@@ -376,6 +371,29 @@ struct TraceTraits<VM::SyntaxFrame>
         TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
         obj.entryFrame_.update(updater, start, end);
         obj.stFrag_.update(updater, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::SyntaxNameLookupFrame>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::SyntaxNameLookupFrame const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Scan<Scanner>(scanner, obj, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::SyntaxNameLookupFrame& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
     }
 };
 

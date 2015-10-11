@@ -59,108 +59,15 @@ HeapInterpretLoop(ThreadContext* cx)
 }
 
 
-static OkResult
-ResolveSyntaxNameLookup(ThreadContext* cx,
-                        Handle<VM::SyntaxFrame*> frame,
-                        VM::ControlFlow const& flow)
-{
-    WH_ASSERT(flow.isError() || flow.isException() || flow.isValue());
-
-    if (flow.isError() || flow.isException())
-        return ErrorVal();
-
-    // Create invocation frame for the looked up value.
-    Local<VM::ValBox> syntaxHandler(cx, flow.value());
-    Local<VM::EntryFrame*> entryFrame(cx, frame->entryFrame());
-
-    Local<VM::SyntaxTreeFragment*> arg(cx, frame->stFrag());
-    Local<VM::Frame*> invokeFrame(cx);
-    if (!invokeFrame.setResult(CreateInvokeSyntaxFrame(cx,
-            entryFrame, frame.convertTo<VM::Frame*>(),
-            syntaxHandler, arg)))
-    {
-        return ErrorVal();
-    }
-
-    cx->setTopFrame(invokeFrame);
-    return OkVal();
-}
-
-static OkResult
-StepSyntaxNameLookup(ThreadContext* cx, Handle<VM::SyntaxFrame*> frame)
-{
-    Local<VM::SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
-
-    // Get the name of the syntax handler method.
-    Local<VM::String*> name(cx, cx->runtimeState()->syntaxHandlerName(stFrag));
-    if (name.get() == nullptr) {
-        WH_UNREACHABLE("Handler name not found for SyntaxTreeFragment.");
-        cx->setInternalError("Handler name not found for SyntaxTreeFragment.");
-        return ErrorVal();
-    }
-
-    // Look up the property on the scope object.
-    Local<VM::ScopeObject*> scope(cx, frame->entryFrame()->scope());
-    PropertyLookupResult lookupResult = GetObjectProperty(cx,
-        scope.handle().convertTo<VM::Wobject*>(), name);
-
-    if (lookupResult.isError()) {
-        return ResolveSyntaxNameLookup(cx, frame,
-                VM::ControlFlow::Error());
-    }
-
-    if (lookupResult.isNotFound()) {
-        cx->setExceptionRaised("Lookup name not found", name.get());
-        return ResolveSyntaxNameLookup(cx, frame,
-            VM::ControlFlow::Exception());
-    }
-
-    if (lookupResult.isFound()) {
-        Local<VM::PropertyDescriptor> descriptor(cx, lookupResult.descriptor());
-        Local<VM::LookupState*> lookupState(cx, lookupResult.lookupState());
-
-        // Handle a value binding by returning the value.
-        if (descriptor->isValue())
-            return ResolveSyntaxNameLookup(cx, frame,
-                    VM::ControlFlow::Value(descriptor->valBox()));
-
-        // Handle a method binding by creating a bound FunctionObject
-        // from the method.
-        if (descriptor->isMethod()) {
-            // Create a new function object bound to the scope.
-            Local<VM::ValBox> scopeVal(cx, VM::ValBox::Object(scope.get()));
-            Local<VM::Function*> func(cx, descriptor->method());
-            Local<VM::FunctionObject*> funcObj(cx);
-            if (!funcObj.setResult(VM::FunctionObject::Create(
-                    cx->inHatchery(), func, scopeVal, lookupState)))
-            {
-                return ErrorVal();
-            }
-
-            return ResolveSyntaxNameLookup(cx, frame,
-                    VM::ControlFlow::Value(VM::ValBox::Object(funcObj.get())));
-        }
-
-        WH_UNREACHABLE("PropertyDescriptor not one of Value, Method.");
-        return ErrorVal();
-    }
-
-    WH_UNREACHABLE("Property lookup not one of Found, NotFound, Error.");
-    return ErrorVal();
-}
-
-
-Result<VM::SyntaxFrame*>
+Result<VM::Frame*>
 CreateInitialSyntaxFrame(ThreadContext* cx,
                          Handle<VM::EntryFrame*> entryFrame)
 {
     Local<VM::SyntaxTreeFragment*> stFrag(cx, entryFrame->stFrag());
 
-    Local<VM::SyntaxFrame*> stFrame(cx);
-    if (!stFrame.setResult(VM::SyntaxFrame::Create(cx->inHatchery(),
-            entryFrame, stFrag,
-            ResolveSyntaxNameLookup,
-            StepSyntaxNameLookup)))
+    Local<VM::SyntaxNameLookupFrame*> stFrame(cx);
+    if (!stFrame.setResult(VM::SyntaxNameLookupFrame::Create(cx->inHatchery(),
+            entryFrame, stFrag)))
     {
         return ErrorVal();
     }

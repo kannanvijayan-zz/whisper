@@ -56,7 +56,7 @@
     _(TerminalFrame)            \
     _(EntryFrame)               \
     _(EvalFrame)                \
-    _(SyntaxFrame)              \
+    _(SyntaxNameLookupFrame)    \
     _(FunctionFrame)
 
 

@@ -3,6 +3,8 @@
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
 #include "vm/frame.hpp"
+#include "vm/runtime_state.hpp"
+#include "vm/function.hpp"
 #include "interp/heap_interpreter.hpp"
 
 namespace Whisper {
@@ -94,7 +96,7 @@ EntryFrame::stepEntryFrame(ThreadContext* cx)
     // Call into the interpreter to initialize a SyntaxFrame
     // for the root node of this entry frame.
     Local<EntryFrame*> rootedThis(cx, this);
-    Local<SyntaxFrame*> newFrame(cx);
+    Local<Frame*> newFrame(cx);
     if (!newFrame.setResult(Interp::CreateInitialSyntaxFrame(cx, rootedThis)))
         return ErrorVal();
 
@@ -134,43 +136,107 @@ EvalFrame::stepEvalFrame(ThreadContext* cx)
 }
 
 
-/* static */ Result<SyntaxFrame*>
-SyntaxFrame::Create(AllocationContext acx,
-                    Handle<Frame*> parent,
-                    Handle<EntryFrame*> entryFrame,
-                    Handle<SyntaxTreeFragment*> stFrag,
-                    ResolveChildFunc resolveChildFunc,
-                    StepFunc stepFunc)
+/* static */ Result<SyntaxNameLookupFrame*>
+SyntaxNameLookupFrame::Create(AllocationContext acx,
+                              Handle<Frame*> parent,
+                              Handle<EntryFrame*> entryFrame,
+                              Handle<SyntaxTreeFragment*> stFrag)
 {
-    return acx.create<SyntaxFrame>(parent, entryFrame, stFrag,
-                                   resolveChildFunc, stepFunc);
+    return acx.create<SyntaxNameLookupFrame>(parent, entryFrame, stFrag);
 }
 
-/* static */ Result<SyntaxFrame*>
-SyntaxFrame::Create(AllocationContext acx,
-                    Handle<EntryFrame*> entryFrame,
-                    Handle<SyntaxTreeFragment*> stFrag,
-                    ResolveChildFunc resolveChildFunc,
-                    StepFunc stepFunc)
+/* static */ Result<SyntaxNameLookupFrame*>
+SyntaxNameLookupFrame::Create(AllocationContext acx,
+                              Handle<EntryFrame*> entryFrame,
+                              Handle<SyntaxTreeFragment*> stFrag)
 {
     Local<Frame*> parent(acx, acx.threadContext()->topFrame());
-    return Create(acx, parent, entryFrame, stFrag,
-                  resolveChildFunc, stepFunc);
+    return Create(acx, parent, entryFrame, stFrag);
 }
 
 OkResult
-SyntaxFrame::resolveSyntaxFrameChild(ThreadContext* cx,
-                                     ControlFlow const& flow)
+SyntaxNameLookupFrame::resolveSyntaxNameLookupFrameChild(
+        ThreadContext* cx,
+        ControlFlow const& flow)
 {
-    Local<SyntaxFrame*> rootedThis(cx, this);
-    return resolveChildFunc_(cx, rootedThis, flow);
+    WH_ASSERT(flow.isError() || flow.isException() || flow.isValue());
+
+    if (flow.isError() || flow.isException())
+        return ErrorVal();
+
+    // Create invocation frame for the looked up value.
+    Local<ValBox> syntaxHandler(cx, flow.value());
+    Local<EntryFrame*> entryFrame(cx, this->entryFrame());
+    Local<Frame*> parentFrame(cx, parent());
+
+    Local<SyntaxTreeFragment*> arg(cx, stFrag());
+    Local<Frame*> invokeFrame(cx);
+    if (!invokeFrame.setResult(Interp::CreateInvokeSyntaxFrame(cx,
+            entryFrame, parentFrame, syntaxHandler, arg)))
+    {
+        return ErrorVal();
+    }
+
+    cx->setTopFrame(invokeFrame);
+    return OkVal();
 }
 
 OkResult
-SyntaxFrame::stepSyntaxFrame(ThreadContext* cx)
+SyntaxNameLookupFrame::stepSyntaxNameLookupFrame(ThreadContext* cx)
 {
-    Local<SyntaxFrame*> rootedThis(cx, this);
-    return stepFunc_(cx, rootedThis);
+    // Get the name of the syntax handler method.
+    Local<String*> name(cx, cx->runtimeState()->syntaxHandlerName(stFrag()));
+    if (name.get() == nullptr) {
+        WH_UNREACHABLE("Handler name not found for SyntaxTreeFragment.");
+        cx->setInternalError("Handler name not found for SyntaxTreeFragment.");
+        return ErrorVal();
+    }
+
+    // Look up the property on the scope object.
+    Local<ScopeObject*> scope(cx, entryFrame()->scope());
+    Interp::PropertyLookupResult lookupResult = Interp::GetObjectProperty(cx,
+        scope.handle().convertTo<Wobject*>(), name);
+
+    if (lookupResult.isError())
+        return resolveSyntaxNameLookupFrameChild(cx, ControlFlow::Error());
+
+    if (lookupResult.isNotFound()) {
+        cx->setExceptionRaised("Lookup name not found", name.get());
+        return resolveSyntaxNameLookupFrameChild(cx, ControlFlow::Exception());
+    }
+
+    if (lookupResult.isFound()) {
+        Local<PropertyDescriptor> descriptor(cx, lookupResult.descriptor());
+        Local<LookupState*> lookupState(cx, lookupResult.lookupState());
+
+        // Handle a value binding by returning the value.
+        if (descriptor->isValue())
+            return resolveSyntaxNameLookupFrameChild(cx,
+                        ControlFlow::Value(descriptor->valBox()));
+
+        // Handle a method binding by creating a bound FunctionObject
+        // from the method.
+        if (descriptor->isMethod()) {
+            // Create a new function object bound to the scope.
+            Local<ValBox> scopeVal(cx, ValBox::Object(scope.get()));
+            Local<Function*> func(cx, descriptor->method());
+            Local<FunctionObject*> funcObj(cx);
+            if (!funcObj.setResult(FunctionObject::Create(
+                    cx->inHatchery(), func, scopeVal, lookupState)))
+            {
+                return ErrorVal();
+            }
+
+            return resolveSyntaxNameLookupFrameChild(cx,
+                    ControlFlow::Value(ValBox::Object(funcObj.get())));
+        }
+
+        WH_UNREACHABLE("PropertyDescriptor not one of Value, Method.");
+        return ErrorVal();
+    }
+
+    WH_UNREACHABLE("Property lookup not one of Found, NotFound, Error.");
+    return ErrorVal();
 }
 
 

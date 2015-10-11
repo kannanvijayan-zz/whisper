@@ -21,8 +21,9 @@ VM::ControlFlow HeapInterpretSourceFile(ThreadContext* cx,
 
 VM::ControlFlow HeapInterpretLoop(ThreadContext* cx);
 
-Result<VM::SyntaxFrame*> CreateInitialSyntaxFrame(
-        ThreadContext* cx, Handle<VM::EntryFrame*> entryFrame);
+Result<VM::Frame*> CreateInitialSyntaxFrame(
+        ThreadContext* cx,
+        Handle<VM::EntryFrame*> entryFrame);
 
 Result<VM::Frame*> CreateInvokeSyntaxFrame(
         ThreadContext* cx,
