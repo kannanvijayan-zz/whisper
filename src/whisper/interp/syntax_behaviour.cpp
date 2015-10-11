@@ -20,7 +20,7 @@ namespace Interp {
     static OkResult Syntax_##name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
-        ArrayHandle<VM::SyntaxTreeRef> args);
+        ArrayHandle<VM::SyntaxTreeFragment*> args);
 
     DECLARE_SYNTAX_FN_(File)
 
@@ -124,7 +124,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     static OkResult Syntax_##name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
-        ArrayHandle<VM::SyntaxTreeRef> args)
+        ArrayHandle<VM::SyntaxTreeFragment*> args)
 
 IMPL_SYNTAX_FN_(File)
 {
