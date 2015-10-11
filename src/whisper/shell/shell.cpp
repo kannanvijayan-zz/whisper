@@ -189,6 +189,7 @@ main(int argc, char** argv)
     return 0;
 }
 
+/*
 static VM::ControlFlow Shell_Print(
     ThreadContext* cx,
     Handle<VM::NativeCallInfo> callInfo,
@@ -217,6 +218,7 @@ BindShellGlobal(AllocationContext acx,
 
     return OkVal();
 }
+*/
 
 static OkResult
 InitShellGlobals(AllocationContext acx, VM::GlobalScope* scope)
@@ -234,13 +236,16 @@ InitShellGlobals(AllocationContext acx, VM::GlobalScope* scope)
             return ErrorVal(); \
     } while(false)
 
+/*
     BIND_SHELL_METHOD_("print", Shell_Print);
+*/
 
 #undef BIND_SHELL_METHOD_
 
     return OkVal();
 }
 
+/*
 static VM::ControlFlow Shell_Print(
     ThreadContext* cx,
     Handle<VM::NativeCallInfo> callInfo,
@@ -256,3 +261,4 @@ static VM::ControlFlow Shell_Print(
     std::cout << out.str() << std::endl;
     return VM::ControlFlow::Value(VM::ValBox::Undefined());
 }
+*/

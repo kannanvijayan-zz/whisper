@@ -73,6 +73,9 @@ CreateInitialSyntaxFrame(ThreadContext* cx,
         return ErrorVal();
     }
 
+    // The lookup for the syntax handler method may invoke computation,
+    // and thus i
+
     return ErrorVal();
 }
 

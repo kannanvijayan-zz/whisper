@@ -113,12 +113,12 @@ class NativeCallInfo
     }
 };
 
-typedef ControlFlow (*NativeApplicativeFuncPtr)(
+typedef OkResult (*NativeApplicativeFuncPtr)(
         ThreadContext* cx,
         Handle<NativeCallInfo> callInfo,
         ArrayHandle<ValBox> args);
 
-typedef ControlFlow (*NativeOperativeFuncPtr)(
+typedef OkResult (*NativeOperativeFuncPtr)(
         ThreadContext* cx,
         Handle<NativeCallInfo> callInfo,
         ArrayHandle<SyntaxNodeRef> args);

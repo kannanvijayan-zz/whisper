@@ -180,6 +180,7 @@ class SyntaxFrame : public Frame
       : Frame(parent),
         entryFrame_(entryFrame),
         stFrag_(stFrag),
+        position_(0),
         resolveChildFunc_(resolveChildFunc),
         stepFunc_(stepFunc)
     {
