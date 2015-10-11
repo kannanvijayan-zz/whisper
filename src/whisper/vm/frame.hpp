@@ -35,10 +35,10 @@ class Frame
         return parent_;
     }
 
-    Result<Frame*> resolveChild(ThreadContext* cx,
-                                Handle<Frame*> child,
-                                ControlFlow const& flow);
-    Result<Frame*> step(ThreadContext* cx);
+    OkResult resolveChild(ThreadContext* cx,
+                          Handle<Frame*> child,
+                          ControlFlow const& flow);
+    OkResult step(ThreadContext* cx);
 
 #define FRAME_KIND_METHODS_(name) \
     bool is##name() const { \
@@ -82,10 +82,10 @@ class TerminalFrame : public Frame
         return flow_;
     }
 
-    Result<Frame*> resolveTerminalFrameChild(ThreadContext* cx,
-                                             Handle<Frame*> child,
-                                             ControlFlow const& flow);
-    Result<Frame*> stepTerminalFrame(ThreadContext* cx);
+    OkResult resolveTerminalFrameChild(ThreadContext* cx,
+                                       Handle<Frame*> child,
+                                       ControlFlow const& flow);
+    OkResult stepTerminalFrame(ThreadContext* cx);
 };
 
 //
@@ -136,10 +136,10 @@ class EntryFrame : public Frame
         return scope_;
     }
 
-    Result<Frame*> resolveEntryFrameChild(ThreadContext* cx,
-                                          Handle<Frame*> child,
-                                          ControlFlow const& flow);
-    Result<Frame*> stepEntryFrame(ThreadContext* cx);
+    OkResult resolveEntryFrameChild(ThreadContext* cx,
+                                    Handle<Frame*> child,
+                                    ControlFlow const& flow);
+    OkResult stepEntryFrame(ThreadContext* cx);
 };
 
 class SyntaxFrame : public Frame
@@ -158,7 +158,7 @@ class SyntaxFrame : public Frame
     uint32_t position_;
 
     // The C function pointer for handling a resolved child.
-    typedef Result<Frame*> (*ResolveChildFunc)(
+    typedef OkResult (*ResolveChildFunc)(
         ThreadContext* cx,
         Handle<SyntaxFrame*> frame,
         Handle<Frame*> child,
@@ -166,7 +166,7 @@ class SyntaxFrame : public Frame
     ResolveChildFunc resolveChildFunc_;
 
     // The C function pointer for stepping.
-    typedef Result<Frame*> (*StepFunc)(
+    typedef OkResult (*StepFunc)(
         ThreadContext* cx,
         Handle<SyntaxFrame*> frame);
     StepFunc stepFunc_;
@@ -207,10 +207,10 @@ class SyntaxFrame : public Frame
         return stFrag_;
     }
 
-    Result<Frame*> resolveSyntaxFrameChild(ThreadContext* cx,
-                                           Handle<Frame*> child,
-                                           ControlFlow const& flow);
-    Result<Frame*> stepSyntaxFrame(ThreadContext* cx);
+    OkResult resolveSyntaxFrameChild(ThreadContext* cx,
+                                     Handle<Frame*> child,
+                                     ControlFlow const& flow);
+    OkResult stepSyntaxFrame(ThreadContext* cx);
 };
 
 class EvalFrame : public Frame
@@ -240,10 +240,10 @@ class EvalFrame : public Frame
         return syntax_;
     }
 
-    Result<Frame*> resolveEvalFrameChild(ThreadContext* cx,
-                                         Handle<Frame*> child,
-                                         ControlFlow const& flow);
-    Result<Frame*> stepEvalFrame(ThreadContext* cx);
+    OkResult resolveEvalFrameChild(ThreadContext* cx,
+                                   Handle<Frame*> child,
+                                   ControlFlow const& flow);
+    OkResult stepEvalFrame(ThreadContext* cx);
 };
 
 
@@ -274,10 +274,10 @@ class FunctionFrame : public Frame
         return function_;
     }
 
-    Result<Frame*> resolveFunctionFrameChild(ThreadContext* cx,
-                                             Handle<Frame*> child,
-                                             ControlFlow const& flow);
-    Result<Frame*> stepFunctionFrame(ThreadContext* cx);
+    OkResult resolveFunctionFrameChild(ThreadContext* cx,
+                                       Handle<Frame*> child,
+                                       ControlFlow const& flow);
+    OkResult stepFunctionFrame(ThreadContext* cx);
 };
 
 

@@ -46,14 +46,13 @@ VM::ControlFlow
 HeapInterpretLoop(ThreadContext* cx)
 {
     while (!cx->atTerminalFrame()) {
-        Result<VM::Frame*> nextTopFrame = cx->topFrame()->step(cx);
-        if (!nextTopFrame) {
-            WH_ASSERT(cx->hasError());
+        OkResult result = cx->topFrame()->step(cx);
+        if (!result) {
             // Fatal error, immediate halt of computation
             // with frame-stack intact.
+            WH_ASSERT(cx->hasError());
             return VM::ControlFlow::Error();
         }
-        WH_ASSERT(cx->topFrame() == nextTopFrame.value());
     }
     return cx->bottomFrame()->flow();
 }

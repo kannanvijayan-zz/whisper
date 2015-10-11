@@ -9,7 +9,7 @@ namespace Whisper {
 namespace VM {
 
 
-Result<Frame*>
+OkResult
 Frame::resolveChild(ThreadContext* cx,
                     Handle<Frame*> child,
                     ControlFlow const& flow)
@@ -26,7 +26,7 @@ Frame::resolveChild(ThreadContext* cx,
     return ErrorVal();
 }
 
-Result<Frame*>
+OkResult
 Frame::step(ThreadContext* cx)
 {
 #define RESOLVE_CHILD_CASE_(name) \
@@ -47,16 +47,16 @@ TerminalFrame::Create(AllocationContext acx)
     return acx.create<TerminalFrame>();
 }
 
-Result<Frame*>
+OkResult
 TerminalFrame::resolveTerminalFrameChild(ThreadContext* cx,
                                          Handle<Frame*> child,
                                          ControlFlow const& flow)
 {
     // Any resolving of a child returns this frame as-is.
-    return OkVal<Frame*>(this);
+    return OkVal();
 }
 
-Result<Frame*>
+OkResult
 TerminalFrame::stepTerminalFrame(ThreadContext* cx)
 {
     // TerminalFrame should never be stepped!
@@ -82,7 +82,7 @@ EntryFrame::Create(AllocationContext acx,
     return Create(acx, parent, stFrag, scope);
 }
 
-Result<Frame*>
+OkResult
 EntryFrame::resolveEntryFrameChild(ThreadContext* cx,
                                    Handle<Frame*> child,
                                    ControlFlow const& flow)
@@ -92,13 +92,17 @@ EntryFrame::resolveEntryFrameChild(ThreadContext* cx,
     return parent_->resolveChild(cx, rootedThis, flow);
 }
 
-Result<Frame*>
+OkResult
 EntryFrame::stepEntryFrame(ThreadContext* cx)
 {
     // Call into the interpreter to initialize a SyntaxFrame
     // for the root node of this entry frame.
     Local<EntryFrame*> rootedThis(cx, this);
-    return Interp::CreateInitialSyntaxFrame(cx, rootedThis);
+    Local<Frame*> newFrame(cx);
+    if (!newFrame.setResult(Interp::CreateInitialSyntaxFrame(cx, rootedThis)))
+        return ErrorVal();
+
+    return OkVal();
 }
 
 
@@ -117,7 +121,7 @@ EvalFrame::Create(AllocationContext acx, Handle<SyntaxTreeFragment*> syntax)
     return Create(acx, parent, syntax);
 }
 
-Result<Frame*>
+OkResult
 EvalFrame::resolveEvalFrameChild(ThreadContext* cx,
                                  Handle<Frame*> child,
                                  ControlFlow const& flow)
@@ -127,7 +131,7 @@ EvalFrame::resolveEvalFrameChild(ThreadContext* cx,
     return parent_->resolveChild(cx, rootedThis, flow);
 }
 
-Result<Frame*>
+OkResult
 EvalFrame::stepEvalFrame(ThreadContext* cx)
 {
     return cx->setInternalError("stepEvalFrame not defined.");
@@ -158,7 +162,7 @@ SyntaxFrame::Create(AllocationContext acx,
                   resolveChildFunc, stepFunc);
 }
 
-Result<Frame*>
+OkResult
 SyntaxFrame::resolveSyntaxFrameChild(ThreadContext* cx,
                                      Handle<Frame*> child,
                                      ControlFlow const& flow)
@@ -167,7 +171,7 @@ SyntaxFrame::resolveSyntaxFrameChild(ThreadContext* cx,
     return resolveChildFunc_(cx, rootedThis, child, flow);
 }
 
-Result<Frame*>
+OkResult
 SyntaxFrame::stepSyntaxFrame(ThreadContext* cx)
 {
     Local<SyntaxFrame*> rootedThis(cx, this);
@@ -190,7 +194,7 @@ FunctionFrame::Create(AllocationContext acx, Handle<Function*> function)
     return Create(acx, parent, function);
 }
 
-Result<Frame*>
+OkResult
 FunctionFrame::resolveFunctionFrameChild(ThreadContext* cx,
                                          Handle<Frame*> child,
                                          ControlFlow const& flow)
@@ -198,7 +202,7 @@ FunctionFrame::resolveFunctionFrameChild(ThreadContext* cx,
     return cx->setInternalError("resolveFunctionFrameChild not defined.");
 }
 
-Result<Frame*>
+OkResult
 FunctionFrame::stepFunctionFrame(ThreadContext* cx)
 {
     return cx->setInternalError("stepFunctionFrame not defined.");
