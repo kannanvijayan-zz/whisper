@@ -275,21 +275,19 @@ class ThreadContext
 
     ErrorT_ setError(RuntimeError error, char const* string,
                       HeapThing* thing);
-
     ErrorT_ setError(RuntimeError error, char const* string) {
         return setError(error, string, nullptr);
     }
     ErrorT_ setError(RuntimeError error) {
         return setError(error, nullptr);
     }
-
-    ErrorT_ setInternalError(char const* string) {
-        return setError(RuntimeError::InternalError, string, nullptr);
-    }
-
     template <typename T>
     ErrorT_ setError(RuntimeError error, char const* string, T* thing) {
         return setError(error, string, HeapThing::From(thing));
+    }
+
+    ErrorT_ setInternalError(char const* string) {
+        return setError(RuntimeError::InternalError, string, nullptr);
     }
 
     ErrorT_ setExceptionRaised(char const* string) {
