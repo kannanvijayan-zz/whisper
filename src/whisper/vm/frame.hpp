@@ -12,9 +12,7 @@ namespace VM {
 #define WHISPER_DEFN_FRAME_KINDS(_) \
     _(TerminalFrame) \
     _(EntryFrame) \
-    _(SyntaxNameLookupFrame) \
-    _(EvalFrame) \
-    _(FunctionFrame)
+    _(SyntaxNameLookupFrame)
 
 //
 // Base class for interpreter frames.
@@ -35,8 +33,9 @@ class Frame
         return parent_;
     }
 
-    OkResult resolveChild(ThreadContext* cx, ControlFlow const& flow);
-    OkResult step(ThreadContext* cx);
+    static OkResult ResolveChild(ThreadContext* cx, Handle<Frame*> frame,
+                                 ControlFlow const& flow);
+    static OkResult Step(ThreadContext* cx, Handle<Frame*> frame);
 
 #define FRAME_KIND_METHODS_(name) \
     bool is##name() const { \
@@ -80,9 +79,10 @@ class TerminalFrame : public Frame
         return flow_;
     }
 
-    OkResult resolveTerminalFrameChild(ThreadContext* cx,
-                                       ControlFlow const& flow);
-    OkResult stepTerminalFrame(ThreadContext* cx);
+    static OkResult ResolveChildImpl(ThreadContext* cx,
+                                     Handle<TerminalFrame*> frame,
+                                     ControlFlow const& flow);
+    static OkResult StepImpl(ThreadContext* cx, Handle<TerminalFrame*> frame);
 };
 
 //
@@ -133,9 +133,10 @@ class EntryFrame : public Frame
         return scope_;
     }
 
-    OkResult resolveEntryFrameChild(ThreadContext* cx,
-                                    ControlFlow const& flow);
-    OkResult stepEntryFrame(ThreadContext* cx);
+    static OkResult ResolveChildImpl(ThreadContext* cx,
+                                     Handle<EntryFrame*> frame,
+                                     ControlFlow const& flow);
+    static OkResult StepImpl(ThreadContext* cx, Handle<EntryFrame*> frame);
 };
 
 class SyntaxFrame : public Frame
@@ -193,74 +194,11 @@ class SyntaxNameLookupFrame : public SyntaxFrame
             Handle<EntryFrame*> entryFrame,
             Handle<SyntaxTreeFragment*> stFrag);
 
-    OkResult resolveSyntaxNameLookupFrameChild(ThreadContext* cx,
-                                               ControlFlow const& flow);
-    OkResult stepSyntaxNameLookupFrame(ThreadContext* cx);
-};
-
-class EvalFrame : public Frame
-{
-    friend class TraceTraits<EvalFrame>;
-
-  private:
-    // The syntax fragment being evaluated.
-    HeapField<SyntaxTreeFragment*> syntax_;
-
-  public:
-    EvalFrame(Frame* parent, SyntaxTreeFragment* syntax)
-      : Frame(parent),
-        syntax_(syntax)
-    {
-        WH_ASSERT(parent != nullptr);
-    }
-
-    static Result<EvalFrame*> Create(AllocationContext acx,
-                                     Handle<Frame*> parent,
-                                     Handle<SyntaxTreeFragment*> syntax);
-
-    static Result<EvalFrame*> Create(AllocationContext acx,
-                                     Handle<SyntaxTreeFragment*> syntax);
-
-    SyntaxTreeFragment* syntax() const {
-        return syntax_;
-    }
-
-    OkResult resolveEvalFrameChild(ThreadContext* cx,
-                                   ControlFlow const& flow);
-    OkResult stepEvalFrame(ThreadContext* cx);
-};
-
-
-class FunctionFrame : public Frame
-{
-    friend class TraceTraits<FunctionFrame>;
-
-  private:
-    // The syntax fragment being evaluated.
-    HeapField<Function*> function_;
-
-  public:
-    FunctionFrame(Frame* parent, Function* function)
-      : Frame(parent),
-        function_(function)
-    {
-        WH_ASSERT(parent != nullptr);
-    }
-
-    static Result<FunctionFrame*> Create(AllocationContext acx,
-                                         Handle<Frame*> parent,
-                                         Handle<Function*> anchor);
-
-    static Result<FunctionFrame*> Create(AllocationContext acx,
-                                         Handle<Function*> anchor);
-
-    Function* function() const {
-        return function_;
-    }
-
-    OkResult resolveFunctionFrameChild(ThreadContext* cx,
-                                       ControlFlow const& flow);
-    OkResult stepFunctionFrame(ThreadContext* cx);
+    static OkResult ResolveChildImpl(ThreadContext* cx,
+                                     Handle<SyntaxNameLookupFrame*> frame,
+                                     ControlFlow const& flow);
+    static OkResult StepImpl(ThreadContext* cx,
+                             Handle<SyntaxNameLookupFrame*> frame);
 };
 
 
@@ -394,56 +332,6 @@ struct TraceTraits<VM::SyntaxNameLookupFrame>
                        void const* start, void const* end)
     {
         TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
-    }
-};
-
-template <>
-struct TraceTraits<VM::EvalFrame>
-{
-    TraceTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = false;
-
-    template <typename Scanner>
-    static void Scan(Scanner& scanner, VM::EvalFrame const& obj,
-                     void const* start, void const* end)
-    {
-        TraceTraits<VM::Frame>::Scan<Scanner>(scanner, obj, start, end);
-        obj.syntax_.scan(scanner, start, end);
-    }
-
-    template <typename Updater>
-    static void Update(Updater& updater, VM::EvalFrame& obj,
-                       void const* start, void const* end)
-    {
-        TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
-        obj.syntax_.update(updater, start, end);
-    }
-};
-
-template <>
-struct TraceTraits<VM::FunctionFrame>
-{
-    TraceTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = false;
-
-    template <typename Scanner>
-    static void Scan(Scanner& scanner, VM::FunctionFrame const& obj,
-                     void const* start, void const* end)
-    {
-        TraceTraits<VM::Frame>::Scan<Scanner>(scanner, obj, start, end);
-        obj.function_.scan(scanner, start, end);
-    }
-
-    template <typename Updater>
-    static void Update(Updater& updater, VM::FunctionFrame& obj,
-                       void const* start, void const* end)
-    {
-        TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
-        obj.function_.update(updater, start, end);
     }
 };
 

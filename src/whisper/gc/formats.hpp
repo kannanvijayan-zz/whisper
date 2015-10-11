@@ -55,9 +55,7 @@
     _(FunctionObject)           \
     _(TerminalFrame)            \
     _(EntryFrame)               \
-    _(EvalFrame)                \
-    _(SyntaxNameLookupFrame)    \
-    _(FunctionFrame)
+    _(SyntaxNameLookupFrame)
 
 
 #endif // WHISPER__GC__FORMATS_HPP

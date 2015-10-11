@@ -46,14 +46,16 @@ HeapInterpretSourceFile(ThreadContext* cx,
 VM::ControlFlow
 HeapInterpretLoop(ThreadContext* cx)
 {
+    Local<VM::Frame*> curFrame(cx, cx->topFrame());
     while (!cx->atTerminalFrame()) {
-        OkResult result = cx->topFrame()->step(cx);
+        OkResult result = VM::Frame::Step(cx, curFrame);
         if (!result) {
             // Fatal error, immediate halt of computation
             // with frame-stack intact.
             WH_ASSERT(cx->hasError());
             return VM::ControlFlow::Error();
         }
+        curFrame = cx->topFrame();
     }
     return cx->bottomFrame()->flow();
 }
