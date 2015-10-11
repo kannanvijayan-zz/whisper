@@ -17,14 +17,14 @@ namespace Interp {
 
 // Declare a lift function for each syntax node type.
 #define DECLARE_SYNTAX_FN_(name) \
-    static VM::ControlFlow Syntax_##name( \
+    static OkResult Syntax_##name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::SyntaxNodeRef> args);
 
-  /*
     DECLARE_SYNTAX_FN_(File)
 
+  /*
     DECLARE_SYNTAX_FN_(EmptyStmt)
     DECLARE_SYNTAX_FN_(ExprStmt)
     DECLARE_SYNTAX_FN_(ReturnStmt)
@@ -49,7 +49,6 @@ namespace Interp {
 
 #undef DECLARE_SYNTAX_FN_
 
-/*
 static OkResult
 BindGlobalMethod(AllocationContext acx,
                  Handle<VM::GlobalScope*> obj,
@@ -73,7 +72,6 @@ BindGlobalMethod(AllocationContext acx,
 
     return OkVal();
 }
-*/
 
 OkResult
 BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
@@ -92,9 +90,9 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
         } \
     } while(false)
 
-/*
     BIND_GLOBAL_METHOD_(File);
 
+/*
     BIND_GLOBAL_METHOD_(EmptyStmt);
     BIND_GLOBAL_METHOD_(ExprStmt);
     BIND_GLOBAL_METHOD_(ReturnStmt);
@@ -123,15 +121,16 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 }
 
 #define IMPL_SYNTAX_FN_(name) \
-    static VM::ControlFlow Syntax_##name( \
+    static OkResult Syntax_##name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::SyntaxNodeRef> args)
 
-/*
-
 IMPL_SYNTAX_FN_(File)
 {
+    return cx->setExceptionRaised("File syntax handler not implemented.");
+
+    /*
     if (args.length() != 1) {
         return cx->setExceptionRaised(
             "@File called with wrong number of arguments.");
@@ -164,8 +163,10 @@ IMPL_SYNTAX_FN_(File)
     }
 
     return VM::ControlFlow::Void();
+    */
 }
 
+/*
 IMPL_SYNTAX_FN_(EmptyStmt)
 {
     if (args.length() != 1) {

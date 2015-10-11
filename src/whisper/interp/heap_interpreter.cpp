@@ -64,7 +64,24 @@ ResolveSyntaxNameLookup(ThreadContext* cx,
                         Handle<VM::SyntaxFrame*> frame,
                         VM::ControlFlow const& flow)
 {
-    return ErrorVal();
+    /*
+    WH_ASSERT(flow.isError() || flow.isException() || flow.isValue());
+
+    if (flow.isError() || flow.isException())
+        return ErrorVal();
+
+    // Create invocation frame for the looked up value.
+    Local<VM::ValBox> syntaxHandler(cx, flow.value());
+    Local<VM::EntryFrame*> entryFrame(cx, frame->entryFrame());
+
+    Local<VM::SyntaxTreeFragment*> stFrag(cx, 
+
+    return CreateInvokeOperativeFrame(cx,
+            / * entryFrame = * / entryFrame,
+            / * parentFrame = * / frame.convertTo<VM::Frame*>(),
+            / * calleeValue = * / syntaxHandler,
+    */
+    return cx->setExceptionRaised("ResolveSyntaxNameLookup not implemented.");
 }
 
 static OkResult
