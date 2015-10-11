@@ -150,9 +150,6 @@ class SyntaxFrame : public Frame
     // evaluated.
     HeapField<SyntaxTreeFragment*> stFrag_;
 
-    // The position within the syntax node being evaluated.
-    uint32_t position_;
-
     // The C function pointer for handling a resolved child.
     typedef OkResult (*ResolveChildFunc)(
         ThreadContext* cx,
@@ -175,7 +172,6 @@ class SyntaxFrame : public Frame
       : Frame(parent),
         entryFrame_(entryFrame),
         stFrag_(stFrag),
-        position_(0),
         resolveChildFunc_(resolveChildFunc),
         stepFunc_(stepFunc)
     {
