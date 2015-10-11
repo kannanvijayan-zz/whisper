@@ -121,7 +121,7 @@ typedef OkResult (*NativeApplicativeFuncPtr)(
 typedef OkResult (*NativeOperativeFuncPtr)(
         ThreadContext* cx,
         Handle<NativeCallInfo> callInfo,
-        ArrayHandle<SyntaxNodeRef> args);
+        ArrayHandle<SyntaxTreeRef> args);
 
 class NativeFunction : public Function
 {

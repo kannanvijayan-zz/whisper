@@ -94,32 +94,84 @@ class SyntaxTreeRef
   protected:
     StackField<PackedSyntaxTree*> pst_;
     uint32_t offset_;
+    uint32_t numStatements_;
+    bool isBlock_;
 
     SyntaxTreeRef()
       : pst_(nullptr),
-        offset_(0)
+        offset_(0),
+        numStatements_(0),
+        isBlock_(false)
     {}
 
     SyntaxTreeRef(PackedSyntaxTree* pst, uint32_t offset)
       : pst_(pst),
-        offset_(offset)
+        offset_(offset),
+        numStatements_(0),
+        isBlock_(false)
+    {
+        WH_ASSERT(pst_.get() != nullptr);
+    }
+
+    SyntaxTreeRef(PackedSyntaxTree* pst,
+                  uint32_t offset,
+                  uint32_t numStatements)
+      : pst_(pst),
+        offset_(offset),
+        numStatements_(numStatements),
+        isBlock_(true)
     {
         WH_ASSERT(pst_.get() != nullptr);
     }
 
   public:
+    static SyntaxTreeRef Node(PackedSyntaxTree* pst, uint32_t offset) {
+        return SyntaxTreeRef(pst, offset);
+    }
+    static SyntaxTreeRef Block(PackedSyntaxTree* pst,
+                               uint32_t offset,
+                               uint32_t numStatements)
+    {
+        return SyntaxTreeRef(pst, offset, numStatements);
+    }
+
     bool isValid() const {
         return pst_.get() != nullptr;
+    }
+    bool isNode() const {
+        WH_ASSERT(isValid());
+        return !isBlock_;
+    }
+    bool isBlock() const {
+        WH_ASSERT(isValid());
+        return isBlock_;
     }
 
     Handle<PackedSyntaxTree*> pst() const {
         WH_ASSERT(isValid());
         return pst_;
     }
-
     uint32_t offset() const {
         WH_ASSERT(isValid());
         return offset_;
+    }
+
+    SyntaxNodeRef const* toNode() const {
+        WH_ASSERT(isNode());
+        return reinterpret_cast<SyntaxNodeRef const*>(this);
+    }
+    SyntaxNodeRef* toNode() {
+        WH_ASSERT(isNode());
+        return reinterpret_cast<SyntaxNodeRef*>(this);
+    }
+
+    SyntaxBlockRef const* toBlock() const {
+        WH_ASSERT(isBlock());
+        return reinterpret_cast<SyntaxBlockRef const*>(this);
+    }
+    SyntaxBlockRef* toBlock() {
+        WH_ASSERT(isBlock());
+        return reinterpret_cast<SyntaxBlockRef*>(this);
     }
 };
 
@@ -136,9 +188,7 @@ class SyntaxNodeRef : public SyntaxTreeRef
 
     SyntaxNodeRef(PackedSyntaxTree* pst, uint32_t offset)
       : SyntaxTreeRef(pst, offset)
-    {
-        WH_ASSERT(pst_.get() != nullptr);
-    }
+    {}
 
     AST::NodeType nodeType() const;
     char const* nodeTypeCString() const;
@@ -163,16 +213,13 @@ class SyntaxNodeRef : public SyntaxTreeRef
 class SyntaxBlockRef : public SyntaxTreeRef
 {
     friend struct TraceTraits<SyntaxBlockRef>;
-  private:
-    uint32_t numStatements_;
-
   public:
     SyntaxBlockRef() : SyntaxTreeRef() {}
 
-    SyntaxBlockRef(PackedSyntaxTree* pst, uint32_t offset,
+    SyntaxBlockRef(PackedSyntaxTree* pst,
+                   uint32_t offset,
                    uint32_t numStatements)
-      : SyntaxTreeRef(pst, offset),
-        numStatements_(numStatements)
+      : SyntaxTreeRef(pst, offset, numStatements)
     {}
 
     SyntaxBlockRef(PackedSyntaxTree *pst, const AST::PackedBlock &packedBlock)
