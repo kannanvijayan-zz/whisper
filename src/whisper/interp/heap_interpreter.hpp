@@ -24,6 +24,12 @@ VM::ControlFlow HeapInterpretLoop(ThreadContext* cx);
 Result<VM::SyntaxFrame*> CreateInitialSyntaxFrame(
         ThreadContext* cx, Handle<VM::EntryFrame*> entryFrame);
 
+Result<VM::Frame*> CreateInvokeSyntaxFrame(
+        ThreadContext* cx,
+        Handle<VM::EntryFrame*> entryFrame,
+        Handle<VM::Frame*> parentFrame,
+        Handle<VM::ValBox> syntaxHandler,
+        Handle<VM::SyntaxTreeFragment*> args);
 
 // Property lookup helpers.
 class PropertyLookupResult

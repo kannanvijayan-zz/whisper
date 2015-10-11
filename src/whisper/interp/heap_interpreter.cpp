@@ -64,7 +64,6 @@ ResolveSyntaxNameLookup(ThreadContext* cx,
                         Handle<VM::SyntaxFrame*> frame,
                         VM::ControlFlow const& flow)
 {
-    /*
     WH_ASSERT(flow.isError() || flow.isException() || flow.isValue());
 
     if (flow.isError() || flow.isException())
@@ -74,14 +73,17 @@ ResolveSyntaxNameLookup(ThreadContext* cx,
     Local<VM::ValBox> syntaxHandler(cx, flow.value());
     Local<VM::EntryFrame*> entryFrame(cx, frame->entryFrame());
 
-    Local<VM::SyntaxTreeFragment*> stFrag(cx, 
+    Local<VM::SyntaxTreeFragment*> arg(cx, frame->stFrag());
+    Local<VM::Frame*> invokeFrame(cx);
+    if (!invokeFrame.setResult(CreateInvokeSyntaxFrame(cx,
+            entryFrame, frame.convertTo<VM::Frame*>(),
+            syntaxHandler, arg)))
+    {
+        return ErrorVal();
+    }
 
-    return CreateInvokeOperativeFrame(cx,
-            / * entryFrame = * / entryFrame,
-            / * parentFrame = * / frame.convertTo<VM::Frame*>(),
-            / * calleeValue = * / syntaxHandler,
-    */
-    return cx->setExceptionRaised("ResolveSyntaxNameLookup not implemented.");
+    cx->setTopFrame(invokeFrame);
+    return OkVal();
 }
 
 static OkResult
@@ -164,6 +166,16 @@ CreateInitialSyntaxFrame(ThreadContext* cx,
     }
 
     return OkVal(stFrame.get());
+}
+
+Result<VM::Frame*>
+CreateInvokeSyntaxFrame(ThreadContext* cx,
+                        Handle<VM::EntryFrame*> entryFrame,
+                        Handle<VM::Frame*> parentFrame,
+                        Handle<VM::ValBox> syntaxHandler,
+                        Handle<VM::SyntaxTreeFragment*> args)
+{
+    return cx->setInternalError("CreateInvokeSyntaxFrame not implemented.");
 }
 
 
