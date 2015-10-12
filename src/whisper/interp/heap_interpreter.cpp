@@ -100,7 +100,71 @@ InvokeValue(ThreadContext* cx,
             Handle<VM::ValBox> callee,
             ArrayHandle<VM::SyntaxTreeFragment*> args)
 {
-    return cx->setInternalError("InvokeValue not implemented!");
+    // Ensure callee is a function object.
+    if (!callee->isPointerTo<VM::FunctionObject>())
+        return cx->setExceptionRaised("Cannot call non-function");
+
+    // Obtain callee function.
+    Local<VM::FunctionObject*> calleeFunc(cx,
+        callee->pointer<VM::FunctionObject>());
+
+    return InvokeFunction(cx, callerScope, calleeFunc, args);
+}
+
+OkResult
+InvokeFunction(ThreadContext* cx,
+               Handle<VM::ScopeObject*> callerScope,
+               Handle<VM::FunctionObject*> calleeFunc,
+               ArrayHandle<VM::SyntaxTreeFragment*> args)
+{
+    if (calleeFunc->isOperative())
+        return InvokeOperativeFunction(cx, callerScope, calleeFunc, args);
+    else
+        return InvokeApplicativeFunction(cx, callerScope, calleeFunc, args);
+}
+
+OkResult
+InvokeOperativeFunction(ThreadContext* cx,
+                        Handle<VM::ScopeObject*> callerScope,
+                        Handle<VM::FunctionObject*> calleeFunc,
+                        ArrayHandle<VM::SyntaxTreeFragment*> args)
+{
+    WH_ASSERT(calleeFunc->isOperative());
+
+    // Check for native callee function.
+    Local<VM::Function*> func(cx, calleeFunc->func());
+    if (func->isNative()) {
+        Local<VM::LookupState*> lookupState(cx, calleeFunc->lookupState());
+        Local<VM::ValBox> receiver(cx, calleeFunc->receiver());
+
+        Local<VM::NativeCallInfo> callInfo(cx,
+            VM::NativeCallInfo(lookupState, callerScope, calleeFunc, receiver));
+
+        // Call the function. (FIXME).
+        VM::NativeOperativeFuncPtr opNatF = func->asNative()->operative();
+        return opNatF(cx, callInfo, args);
+    }
+
+    // If scripted, interpret the scripted function.
+    if (func->isScripted()) {
+        WH_ASSERT("Cannot interpret scripted operatives yet!");
+        return cx->setError(RuntimeError::InternalError,
+                            "Cannot interpret scripted operatives yet!");
+    }
+
+    WH_UNREACHABLE("Unknown function type!");
+    return cx->setError(RuntimeError::InternalError,
+                        "Unknown function type seen!",
+                        HeapThing::From(func.get()));
+}
+
+OkResult
+InvokeApplicativeFunction(ThreadContext* cx,
+                          Handle<VM::ScopeObject*> callerScope,
+                          Handle<VM::FunctionObject*> calleeFunc,
+                          ArrayHandle<VM::SyntaxTreeFragment*> args)
+{
+    return cx->setInternalError("InvokeApplicativeFunction not implemented.");
 }
 
 

@@ -38,6 +38,24 @@ OkResult InvokeValue(
         Handle<VM::ValBox> callee,
         ArrayHandle<VM::SyntaxTreeFragment*> args);
 
+OkResult InvokeFunction(
+        ThreadContext* cx,
+        Handle<VM::ScopeObject*> callerScope,
+        Handle<VM::FunctionObject*> calleeFunc,
+        ArrayHandle<VM::SyntaxTreeFragment*> args);
+
+OkResult InvokeOperativeFunction(
+        ThreadContext* cx,
+        Handle<VM::ScopeObject*> callerScope,
+        Handle<VM::FunctionObject*> calleeFunc,
+        ArrayHandle<VM::SyntaxTreeFragment*> args);
+
+OkResult InvokeApplicativeFunction(
+        ThreadContext* cx,
+        Handle<VM::ScopeObject*> callerScope,
+        Handle<VM::FunctionObject*> calleeFunc,
+        ArrayHandle<VM::SyntaxTreeFragment*> args);
+
 // Property lookup helpers.
 class PropertyLookupResult
 {
