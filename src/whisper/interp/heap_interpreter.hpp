@@ -27,10 +27,16 @@ Result<VM::Frame*> CreateInitialSyntaxFrame(
 
 Result<VM::Frame*> CreateInvokeSyntaxFrame(
         ThreadContext* cx,
-        Handle<VM::EntryFrame*> entryFrame,
         Handle<VM::Frame*> parentFrame,
-        Handle<VM::ValBox> syntaxHandler,
-        Handle<VM::SyntaxTreeFragment*> args);
+        Handle<VM::EntryFrame*> entryFrame,
+        Handle<VM::SyntaxTreeFragment*> stFrag,
+        Handle<VM::ValBox> syntaxHandler);
+
+OkResult InvokeValue(
+        ThreadContext* cx,
+        Handle<VM::ScopeObject*> callerScope,
+        Handle<VM::ValBox> callee,
+        ArrayHandle<VM::SyntaxTreeFragment*> args);
 
 // Property lookup helpers.
 class PropertyLookupResult

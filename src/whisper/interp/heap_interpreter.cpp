@@ -79,12 +79,28 @@ CreateInitialSyntaxFrame(ThreadContext* cx,
 
 Result<VM::Frame*>
 CreateInvokeSyntaxFrame(ThreadContext* cx,
-                        Handle<VM::EntryFrame*> entryFrame,
                         Handle<VM::Frame*> parentFrame,
-                        Handle<VM::ValBox> syntaxHandler,
-                        Handle<VM::SyntaxTreeFragment*> args)
+                        Handle<VM::EntryFrame*> entryFrame,
+                        Handle<VM::SyntaxTreeFragment*> stFrag,
+                        Handle<VM::ValBox> syntaxHandler)
 {
-    return cx->setInternalError("CreateInvokeSyntaxFrame not implemented.");
+    Local<VM::InvokeSyntaxFrame*> stFrame(cx);
+    if (!stFrame.setResult(VM::InvokeSyntaxFrame::Create(cx->inHatchery(),
+            parentFrame, entryFrame, stFrag, syntaxHandler)))
+    {
+        return ErrorVal();
+    }
+
+    return OkVal(stFrame.get());
+}
+
+OkResult
+InvokeValue(ThreadContext* cx,
+            Handle<VM::ScopeObject*> callerScope,
+            Handle<VM::ValBox> callee,
+            ArrayHandle<VM::SyntaxTreeFragment*> args)
+{
+    return cx->setInternalError("InvokeValue not implemented!");
 }
 
 

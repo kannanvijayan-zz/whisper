@@ -12,7 +12,8 @@ namespace VM {
 #define WHISPER_DEFN_FRAME_KINDS(_) \
     _(TerminalFrame) \
     _(EntryFrame) \
-    _(SyntaxNameLookupFrame)
+    _(SyntaxNameLookupFrame) \
+    _(InvokeSyntaxFrame)
 
 //
 // Base class for interpreter frames.
@@ -201,6 +202,45 @@ class SyntaxNameLookupFrame : public SyntaxFrame
                              Handle<SyntaxNameLookupFrame*> frame);
 };
 
+class InvokeSyntaxFrame : public SyntaxFrame
+{
+    friend class TraceTraits<InvokeSyntaxFrame>;
+  private:
+    HeapField<ValBox> syntaxHandler_;
+
+  public:
+    InvokeSyntaxFrame(Frame* parent,
+                      EntryFrame* entryFrame,
+                      SyntaxTreeFragment* stFrag,
+                      ValBox syntaxHandler)
+      : SyntaxFrame(parent, entryFrame, stFrag),
+        syntaxHandler_(syntaxHandler)
+    {}
+
+    ValBox const& syntaxHandler() const {
+        return syntaxHandler_;
+    }
+
+    static Result<InvokeSyntaxFrame*> Create(
+            AllocationContext acx,
+            Handle<Frame*> parent,
+            Handle<EntryFrame*> entryFrame,
+            Handle<SyntaxTreeFragment*> stFrag,
+            Handle<ValBox> syntaxHandler);
+
+    static Result<InvokeSyntaxFrame*> Create(
+            AllocationContext acx,
+            Handle<EntryFrame*> entryFrame,
+            Handle<SyntaxTreeFragment*> stFrag,
+            Handle<ValBox> syntaxHandler);
+
+    static OkResult ResolveChildImpl(ThreadContext* cx,
+                                     Handle<InvokeSyntaxFrame*> frame,
+                                     ControlFlow const& flow);
+    static OkResult StepImpl(ThreadContext* cx,
+                             Handle<InvokeSyntaxFrame*> frame);
+};
+
 
 } // namespace VM
 
@@ -332,6 +372,31 @@ struct TraceTraits<VM::SyntaxNameLookupFrame>
                        void const* start, void const* end)
     {
         TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::InvokeSyntaxFrame>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::InvokeSyntaxFrame const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Scan<Scanner>(scanner, obj, start, end);
+        obj.syntaxHandler_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::InvokeSyntaxFrame& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
+        obj.syntaxHandler_.update(updater, start, end);
     }
 };
 

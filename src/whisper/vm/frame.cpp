@@ -15,6 +15,9 @@ namespace VM {
 Frame::ResolveChild(ThreadContext* cx, Handle<Frame*> frame,
                     ControlFlow const& flow)
 {
+    // Frame being resolved must be parent of current top frame.
+    WH_ASSERT(cx->topFrame()->parent() == frame.get());
+
 #define RESOLVE_CHILD_CASE_(name) \
     if (frame->is##name()) \
         return name::ResolveChildImpl(cx, frame.upConvertTo<name*>(), flow);
@@ -30,6 +33,8 @@ Frame::ResolveChild(ThreadContext* cx, Handle<Frame*> frame,
 /* static */ OkResult
 Frame::Step(ThreadContext* cx, Handle<Frame*> frame)
 {
+    WH_ASSERT(cx->topFrame() == frame.get());
+
 #define RESOLVE_CHILD_CASE_(name) \
     if (frame->is##name()) \
         return name::StepImpl(cx, frame.upConvertTo<name*>());
@@ -142,10 +147,10 @@ SyntaxNameLookupFrame::ResolveChildImpl(
     Local<EntryFrame*> entryFrame(cx, frame->entryFrame());
     Local<Frame*> parentFrame(cx, frame->parent());
 
-    Local<SyntaxTreeFragment*> arg(cx, frame->stFrag());
+    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
     Local<Frame*> invokeFrame(cx);
     if (!invokeFrame.setResult(Interp::CreateInvokeSyntaxFrame(cx,
-            entryFrame, parentFrame, syntaxHandler, arg)))
+            parentFrame, entryFrame, stFrag, syntaxHandler)))
     {
         return ErrorVal();
     }
@@ -214,6 +219,48 @@ SyntaxNameLookupFrame::StepImpl(ThreadContext* cx,
 
     WH_UNREACHABLE("Property lookup not one of Found, NotFound, Error.");
     return ErrorVal();
+}
+
+
+/* static */ Result<InvokeSyntaxFrame*>
+InvokeSyntaxFrame::Create(AllocationContext acx,
+                          Handle<Frame*> parent,
+                          Handle<EntryFrame*> entryFrame,
+                          Handle<SyntaxTreeFragment*> stFrag,
+                          Handle<ValBox> syntaxHandler)
+{
+    return acx.create<InvokeSyntaxFrame>(parent, entryFrame, stFrag,
+                                         syntaxHandler);
+}
+
+/* static */ Result<InvokeSyntaxFrame*>
+InvokeSyntaxFrame::Create(AllocationContext acx,
+                          Handle<EntryFrame*> entryFrame,
+                          Handle<SyntaxTreeFragment*> stFrag,
+                          Handle<ValBox> syntaxHandler)
+{
+    Local<Frame*> parent(acx, acx.threadContext()->topFrame());
+    return Create(acx, parent, entryFrame, stFrag, syntaxHandler);
+}
+
+/* static */ OkResult
+InvokeSyntaxFrame::ResolveChildImpl(
+        ThreadContext* cx,
+        Handle<InvokeSyntaxFrame*> frame,
+        ControlFlow const& flow)
+{
+    return cx->setInternalError("InvokeSyntaxFrame::ResolveChildImpl not "
+                                "implemented.");
+}
+
+/* static */ OkResult
+InvokeSyntaxFrame::StepImpl(ThreadContext* cx,
+                            Handle<InvokeSyntaxFrame*> frame)
+{
+    Local<ScopeObject*> callerScope(cx, frame->entryFrame()->scope());
+    Local<ValBox> syntaxHandler(cx, frame->syntaxHandler());
+    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
+    return Interp::InvokeValue(cx, callerScope, syntaxHandler, stFrag);
 }
 
 
