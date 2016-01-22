@@ -26,7 +26,7 @@ constexpr unsigned WordBits = 32;
 constexpr unsigned WordBytes = 4;
 typedef uint32_t word_t;
 typedef int32_t sword_t;
-    
+
 #else // defined(ARCH_BITS_64)
 constexpr unsigned WordBits = 64;
 constexpr unsigned WordBytes = 8;

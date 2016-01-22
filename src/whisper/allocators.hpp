@@ -141,7 +141,7 @@ class BumpAllocator
 //
 // SavedBumpSpace steals the memory allocated by a BumpAllocator,
 // and allows for alter destruction of it.
-// 
+//
 class SavedBumpSpace
 {
   private:

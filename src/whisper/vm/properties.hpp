@@ -15,7 +15,7 @@ class PropertyName
 {
   friend class TraceTraits<PropertyName>;
   private:
-    // Low bits of pointer determine whether 
+    // Low bits of pointer determine whether
     uintptr_t val_;
     uint32_t length_;
 

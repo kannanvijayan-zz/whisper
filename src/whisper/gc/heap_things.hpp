@@ -234,7 +234,7 @@ class alignas(8) HeapHeader
 //
 //      // Indicates whether the type is variable sized.
 //      static constexpr bool VarSized;
-//      
+//
 template <typename T>
 struct HeapTraits
 {

@@ -377,10 +377,10 @@ class BaseBitfield
     // Maximum value for signed field: 00..00011..11
     //                                       -------
     //                                         BITS
-    static constexpr FieldT MaxValue = 
+    static constexpr FieldT MaxValue =
         SignedField ? (static_cast<FieldT>(1) << (Bits - 1)) - 1
                     : static_cast<FieldT>(LowMask);
-                   
+
 
   protected:
     WordT& word_;

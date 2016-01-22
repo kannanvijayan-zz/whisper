@@ -82,7 +82,7 @@ LookupSeenObjects::add(Wobject* obj)
             filled_++;
             return;
         }
-            
+
         probe += 1;
         probe %= size_;
         WH_ASSERT(probe != index);

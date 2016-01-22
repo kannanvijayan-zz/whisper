@@ -16,7 +16,6 @@ namespace Whisper {
 //
 // CodeSource
 //
-// Represents 
 // All methods on this class are pure virtual.
 //
 // Code sources do not provide general random access, but they

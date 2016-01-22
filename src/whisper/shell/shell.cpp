@@ -42,7 +42,7 @@ using namespace Whisper;
 struct HeapPrintVisitor : public TracerVisitor
 {
     StackThing* lastRoot;
-    
+
 
     HeapPrintVisitor() : lastRoot(nullptr) {}
 

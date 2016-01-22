@@ -256,7 +256,7 @@ class PackedIfStmtNode : public PackedBaseNode
     //        ...
     //        ElsifCondOffsetN; ElsifBlockOffsetN;
     //        ElseBlockOffset if HasElse;
-    //          
+    //
     //        IfCond...; SizedIfBlock...;
     //        ElsifCond1...; SizedElsifBlock1...;
     //        ...

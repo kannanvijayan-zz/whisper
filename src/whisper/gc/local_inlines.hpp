@@ -49,7 +49,7 @@ LocalBase::LocalBase(AllocationContext const& acx,
   : LocalBase(acx.threadContext(), format, size, count)
 {}
 
-inline 
+inline
 LocalBase::~LocalBase()
 {
     WH_ASSERT(threadContext_->locals_ == this);

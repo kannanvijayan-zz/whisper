@@ -202,7 +202,7 @@ Slab::Slab(void* region, uint32_t regionSize,
 
     allocTop_ = dataSpace;
     allocBottom_ = dataSpace + (CardSize * dataCards_);
-    
+
     headAlloc_ = headStartAlloc();
     tailAlloc_ = tailStartAlloc();
 }

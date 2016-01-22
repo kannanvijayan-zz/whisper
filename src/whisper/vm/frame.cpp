@@ -220,7 +220,7 @@ SyntaxNameLookupFrame::StepImpl(ThreadContext* cx,
             }
 
             return ResolveChildImpl(cx, frame,
-                    ControlFlow::Value(ValBox::Object(funcObj.get()))); 
+                    ControlFlow::Value(ValBox::Object(funcObj.get())));
         }
 
         WH_UNREACHABLE("PropertyDescriptor not one of Value, Method.");
