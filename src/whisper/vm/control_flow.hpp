@@ -25,13 +25,8 @@ class ControlFlow
     static constexpr size_t ValBoxSize = sizeof(ValBox);
     static constexpr size_t ValBoxAlign = alignof(ValBox);
 
-    static constexpr size_t CStringSize = sizeof(char const*);
-    static constexpr size_t CStringAlign = alignof(char const*);
-
-    static constexpr size_t PayloadSize =
-        ConstExprMax<size_t, ValBoxSize, CStringSize>();
-    static constexpr size_t PayloadAlign =
-        ConstExprMax<size_t, ValBoxAlign, CStringAlign>();
+    static constexpr size_t PayloadSize = ConstExprMax<size_t, ValBoxSize>();
+    static constexpr size_t PayloadAlign = ConstExprMax<size_t, ValBoxAlign>();
 
     Kind kind_;
     alignas(PayloadAlign)
@@ -44,28 +39,12 @@ class ControlFlow
         return reinterpret_cast<ValBox const*>(payload_);
     }
 
-    char const** cStringPayload() {
-        return reinterpret_cast<char const**>(payload_);
-    }
-    char const* const* cStringPayload() const {
-        return reinterpret_cast<char const* const*>(payload_);
-    }
-
-    void initCStringPayload(char const* msg) {
-        new (cStringPayload()) (char const*)(msg);
-    }
     void initValBoxPayload(ValBox const& val) {
         new (valBoxPayload()) ValBox(val);
     }
 
   private:
     ControlFlow(Kind kind) : kind_(kind) {}
-
-    ControlFlow(Kind kind, char const* msg)
-      : kind_(kind)
-    {
-        initCStringPayload(msg);
-    }
 
     ControlFlow(Kind kind, ValBox const& val)
       : kind_(kind)
