@@ -30,7 +30,6 @@
 #include "vm/runtime_state.hpp"
 #include "vm/control_flow.hpp"
 #include "interp/syntax_behaviour.hpp"
-// #include "interp/interpreter.hpp"
 #include "interp/heap_interpreter.hpp"
 
 #include "shell/shell_tracer.hpp"

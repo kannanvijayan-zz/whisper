@@ -8,8 +8,6 @@
 #include "vm/runtime_state.hpp"
 #include "vm/function.hpp"
 #include "vm/plain_object.hpp"
-// #include "interp/interpreter.hpp"
-// #include "interp/property_lookup.hpp"
 #include "interp/object_behaviour.hpp"
 
 namespace Whisper {
