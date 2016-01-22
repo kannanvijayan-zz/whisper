@@ -18,15 +18,19 @@ class ControlFlow
         Error,
         Exception,
         Value,
-        Return
+        Return,
+        Continue
     };
 
   private:
     static constexpr size_t ValBoxSize = sizeof(ValBox);
     static constexpr size_t ValBoxAlign = alignof(ValBox);
 
-    static constexpr size_t PayloadSize = ConstExprMax<size_t, ValBoxSize>();
-    static constexpr size_t PayloadAlign = ConstExprMax<size_t, ValBoxAlign>();
+    static constexpr size_t FramePointerSize = sizeof(Frame*);
+    static constexpr size_t FramePointerAlign = alignof(Frame*);
+
+    static constexpr size_t PayloadSize = ConstExprMax<size_t, ValBoxSize, FramePointerSize>();
+    static constexpr size_t PayloadAlign = ConstExprMax<size_t, ValBoxAlign, FramePointerAlign>();
 
     Kind kind_;
     alignas(PayloadAlign)
@@ -38,9 +42,18 @@ class ControlFlow
     ValBox const* valBoxPayload() const {
         return reinterpret_cast<ValBox const*>(payload_);
     }
-
     void initValBoxPayload(ValBox const& val) {
         new (valBoxPayload()) ValBox(val);
+    }
+
+    Frame** framePointerPayload() {
+        return reinterpret_cast<Frame**>(payload_);
+    }
+    Frame* const* framePointerPayload() const {
+        return reinterpret_cast<Frame* const*>(payload_);
+    }
+    void initFramePointerPayload(Frame* frame) {
+        *framePointerPayload() = frame;
     }
 
   private:
@@ -50,6 +63,12 @@ class ControlFlow
       : kind_(kind)
     {
         initValBoxPayload(val);
+    }
+
+    ControlFlow(Kind kind, Frame* frame)
+      : kind_(kind)
+    {
+        initFramePointerPayload(frame);
     }
 
   public:
@@ -65,6 +84,10 @@ class ControlFlow
           case Kind::Value:
           case Kind::Return:
             initValBoxPayload(*other.valBoxPayload());
+            break;
+
+          case Kind::Continue:
+            initFramePointerPayload(*other.framePointerPayload());
             break;
 
           default:
@@ -96,6 +119,7 @@ class ControlFlow
           case Kind::Void:
           case Kind::Error:
           case Kind::Exception:
+          case Kind::Continue:
             break;
 
           case Kind::Value:
@@ -123,6 +147,9 @@ class ControlFlow
     static ControlFlow Return(ValBox const& val) {
         return ControlFlow(Kind::Return, val);
     }
+    static ControlFlow Continue(Frame* frame) {
+        return ControlFlow(Kind::Continue, frame);
+    }
     static ControlFlow Exception() {
         return ControlFlow(Kind::Exception);
     }
@@ -136,6 +163,7 @@ class ControlFlow
           case Kind::Error:       return "Error";
           case Kind::Value:       return "Value";
           case Kind::Return:      return "Return";
+          case Kind::Continue:    return "Continue";
           case Kind::Exception:   return "Exception";
           default:
             WH_UNREACHABLE("Unknown kind");
@@ -154,22 +182,11 @@ class ControlFlow
     bool isReturn() const {
         return kind() == Kind::Return;
     }
+    bool isContinue() const {
+        return kind() == Kind::Continue;
+    }
     bool isException() const {
         return kind() == Kind::Exception;
-    }
-
-    bool isExpressionResult() const {
-        return isValue() || isError() || isException();
-    }
-    bool isPropertyLookupResult() const {
-        return isExpressionResult() || isVoid();
-    }
-    bool isCallResult() const {
-        return isVoid() || isReturn() || isError() || isException();
-    }
-    bool isStatementResult() const {
-        return isVoid() || isValue() || isReturn() || isError()
-            || isException();
     }
 
     ValBox const& value() const {
@@ -179,6 +196,10 @@ class ControlFlow
     ValBox const& returnValue() const {
         WH_ASSERT(isReturn());
         return *valBoxPayload();
+    }
+    Frame* continueFrame() const {
+        WH_ASSERT(isContinue());
+        return *framePointerPayload();
     }
 };
 
@@ -212,6 +233,10 @@ struct TraceTraits<VM::ControlFlow>
             TraceTraits<VM::ValBox>::Scan(scanner, *cf.valBoxPayload(),
                                           start, end);
             return;
+          case VM::ControlFlow::Kind::Continue:
+            TraceTraits<VM::Frame*>::Scan(scanner, *cf.framePointerPayload(),
+                                          start, end);
+            return;
         }
     }
 
@@ -227,6 +252,11 @@ struct TraceTraits<VM::ControlFlow>
           case VM::ControlFlow::Kind::Value:
           case VM::ControlFlow::Kind::Return:
             TraceTraits<VM::ValBox>::Update(updater, *cf.valBoxPayload(),
+                                            start, end);
+            return;
+
+          case VM::ControlFlow::Kind::Continue:
+            TraceTraits<VM::Frame*>::Update(updater, *cf.framePointerPayload(),
                                             start, end);
             return;
         }
