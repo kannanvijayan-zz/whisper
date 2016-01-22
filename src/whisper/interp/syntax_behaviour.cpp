@@ -7,6 +7,8 @@
 #include "vm/global_scope.hpp"
 #include "vm/runtime_state.hpp"
 #include "vm/function.hpp"
+#include "vm/frame.hpp"
+#include "vm/packed_syntax_tree.hpp"
 // #include "interp/interpreter.hpp"
 // #include "interp/property_lookup.hpp"
 #include "interp/syntax_behaviour.hpp"
@@ -128,42 +130,41 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 
 IMPL_SYNTAX_FN_(File)
 {
-    return cx->setExceptionRaised("File syntax handler not implemented.");
+    // return cx->setExceptionRaised("File syntax handler not implemented.");
 
-    /*
     if (args.length() != 1) {
         return cx->setExceptionRaised(
             "@File called with wrong number of arguments.");
     }
 
-    WH_ASSERT(args.get(0).nodeType() == AST::File);
+    WH_ASSERT(args.get(0)->isNode() && args.get(0)->toNode()->nodeType() == AST::File);
 
-    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedFileNode> fileNode(cx,
         AST::PackedFileNode(pst->data(), stRef->offset()));
 
     SpewInterpNote("Syntax_File: Interpreting %u statements",
                    unsigned(fileNode->numStatements()));
-    for (uint32_t i = 0; i < fileNode->numStatements(); i++) {
-        Local<AST::PackedBaseNode> stmtNode(cx, fileNode->statement(i));
-        SpewInterpNote("Syntax_File: statement %u is %s",
-                       unsigned(i), AST::NodeTypeString(stmtNode->type()));
 
-        VM::ControlFlow stmtFlow = InterpretSyntax(cx, callInfo->callerScope(),
-                                                   pst, stmtNode->offset());
-        WH_ASSERT(stmtFlow.isStatementResult());
-
-        // Statements can yield void or value control flows and still
-        // continue.
-        if (stmtFlow.isVoid() || stmtFlow.isValue())
-            continue;
-
-        return stmtFlow;
+    Local<VM::Frame*> parentFrame(cx, cx->topFrame());
+    Local<VM::EntryFrame*> entryFrame(cx, parentFrame->ancestorEntryFrame());
+    Local<VM::SyntaxNode*> stFrag(cx);
+    if (!stFrag.setResult(VM::SyntaxNode::Create(cx->inHatchery(), stRef))) {
+        return ErrorVal();
     }
 
-    return VM::ControlFlow::Void();
-    */
+    Local<VM::Frame*> frame(cx);
+    if (!frame.setResult(VM::FileSyntaxFrame::Create(
+            cx->inHatchery(), parentFrame, entryFrame,
+            stFrag.handle().convertTo<VM::SyntaxTreeFragment*>(),
+            0)))
+    {
+        return ErrorVal();
+    }
+
+    cx->setTopFrame(frame);
+    return OkVal();
 }
 
 /*

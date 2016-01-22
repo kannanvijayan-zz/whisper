@@ -47,6 +47,16 @@ Frame::Step(ThreadContext* cx, Handle<Frame*> frame)
     return ErrorVal();
 }
 
+EntryFrame*
+Frame::maybeAncestorEntryFrame()
+{
+    Frame* cur = this;
+    while (cur && !cur->isEntryFrame())
+        cur = cur->parent();
+    WH_ASSERT(!cur || cur->isEntryFrame());
+    return reinterpret_cast<EntryFrame*>(cur);
+}
+
 /* static */ Result<TerminalFrame*>
 TerminalFrame::Create(AllocationContext acx)
 {
@@ -249,8 +259,9 @@ InvokeSyntaxFrame::ResolveChildImpl(
         Handle<InvokeSyntaxFrame*> frame,
         ControlFlow const& flow)
 {
-    return cx->setInternalError("InvokeSyntaxFrame::ResolveChildImpl not "
-                                "implemented.");
+    // Resolve parent frame with the same controlflow result.
+    Local<Frame*> rootedParent(cx, frame->parent());
+    return Frame::ResolveChild(cx, rootedParent, flow);
 }
 
 /* static */ OkResult
@@ -261,6 +272,110 @@ InvokeSyntaxFrame::StepImpl(ThreadContext* cx,
     Local<ValBox> syntaxHandler(cx, frame->syntaxHandler());
     Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
     return Interp::InvokeValue(cx, callerScope, syntaxHandler, stFrag);
+}
+
+
+/* static */ Result<FileSyntaxFrame*>
+FileSyntaxFrame::Create(AllocationContext acx,
+                        Handle<Frame*> parent,
+                        Handle<EntryFrame*> entryFrame,
+                        Handle<SyntaxTreeFragment*> stFrag,
+                        uint32_t statementNo)
+{
+    return acx.create<FileSyntaxFrame>(parent, entryFrame, stFrag,
+                                       statementNo);
+}
+
+/* static */ Result<FileSyntaxFrame*>
+FileSyntaxFrame::Create(AllocationContext acx,
+                        Handle<EntryFrame*> entryFrame,
+                        Handle<SyntaxTreeFragment*> stFrag,
+                        uint32_t statementNo)
+{
+    Local<Frame*> parent(acx, acx.threadContext()->topFrame());
+    return Create(acx, parent, entryFrame, stFrag, statementNo);
+}
+
+/* static */ Result<FileSyntaxFrame*>
+FileSyntaxFrame::CreateNext(AllocationContext acx,
+                        Handle<FileSyntaxFrame*> curFrame)
+{
+    WH_ASSERT(curFrame->stFrag()->isNode());
+    Local<SyntaxNodeRef> fileNode(acx,
+        SyntaxNodeRef(curFrame->stFrag()->toNode()));
+    WH_ASSERT(fileNode->nodeType() == AST::File);
+    WH_ASSERT(curFrame->statementNo() < fileNode->astFile().numStatements());
+
+    Local<Frame*> parent(acx, curFrame->parent());
+    Local<EntryFrame*> entryFrame(acx, curFrame->entryFrame());
+    Local<SyntaxTreeFragment*> stFrag(acx, curFrame->stFrag());
+    uint32_t nextStatementNo = curFrame->statementNo() + 1;
+
+    return Create(acx, parent, entryFrame, stFrag, nextStatementNo);
+}
+
+/* static */ OkResult
+FileSyntaxFrame::ResolveChildImpl(
+        ThreadContext* cx,
+        Handle<FileSyntaxFrame*> frame,
+        ControlFlow const& flow)
+{
+    WH_ASSERT(frame->stFrag()->isNode());
+    Local<SyntaxNodeRef> fileNode(cx, SyntaxNodeRef(frame->stFrag()->toNode()));
+    WH_ASSERT(fileNode->nodeType() == AST::File);
+    WH_ASSERT(frame->statementNo() < fileNode->astFile().numStatements());
+
+    Local<Frame*> rootedParent(cx, frame->parent());
+
+    // If control flow is an error, resolve to parent.
+    if (flow.isError())
+        return Frame::ResolveChild(cx, rootedParent, flow);
+
+    // Otherwise, create new file syntax frame for executing next
+    // statement.
+    Local<FileSyntaxFrame*> nextFileFrame(cx);
+    if (!nextFileFrame.setResult(FileSyntaxFrame::CreateNext(
+            cx->inHatchery(), frame)))
+    {
+        return ErrorVal();
+    }
+    cx->setTopFrame(nextFileFrame);
+    return OkVal();
+}
+
+/* static */ OkResult
+FileSyntaxFrame::StepImpl(ThreadContext* cx,
+                            Handle<FileSyntaxFrame*> frame)
+{
+    WH_ASSERT(frame->stFrag()->isNode());
+    Local<SyntaxNodeRef> fileNode(cx, SyntaxNodeRef(frame->stFrag()->toNode()));
+    WH_ASSERT(fileNode->nodeType() == AST::File);
+    WH_ASSERT(frame->statementNo() < fileNode->astFile().numStatements());
+
+    Local<Frame*> rootedParent(cx, frame->parent());
+
+    if (frame->statementNo() == fileNode->astFile().numStatements())
+        return Frame::ResolveChild(cx, rootedParent, ControlFlow::Void());
+
+    // Get SyntaxTreeFragment for next statement node.
+    Local<SyntaxTreeFragment*> stmtNode(cx);
+    if (!stmtNode.setResult(SyntaxNode::Create(
+            cx->inHatchery(), fileNode->pst(),
+            fileNode->astFile().statement(frame->statementNo()).offset())))
+    {
+        return ErrorVal();
+    }
+
+    // Create a new entry frame for the interpretation of the statement.
+    Local<ScopeObject*> scope(cx, frame->scope());
+    Local<VM::EntryFrame*> entryFrame(cx);
+    if (!entryFrame.setResult(VM::EntryFrame::Create(
+            cx->inHatchery(), stmtNode, scope)))
+    {
+        return ErrorVal();
+    }
+    cx->setTopFrame(entryFrame);
+    return OkVal();
 }
 
 

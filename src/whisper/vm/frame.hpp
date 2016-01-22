@@ -13,7 +13,13 @@ namespace VM {
     _(TerminalFrame) \
     _(EntryFrame) \
     _(SyntaxNameLookupFrame) \
-    _(InvokeSyntaxFrame)
+    _(InvokeSyntaxFrame) \
+    _(FileSyntaxFrame)
+
+
+#define PREDECLARE_FRAME_CLASSES_(name) class name;
+    WHISPER_DEFN_FRAME_KINDS(PREDECLARE_FRAME_CLASSES_)
+#undef PREDECLARE_FRAME_CLASSES_
 
 //
 // Base class for interpreter frames.
@@ -37,6 +43,13 @@ class Frame
     static OkResult ResolveChild(ThreadContext* cx, Handle<Frame*> frame,
                                  ControlFlow const& flow);
     static OkResult Step(ThreadContext* cx, Handle<Frame*> frame);
+
+    EntryFrame* maybeAncestorEntryFrame();
+    EntryFrame* ancestorEntryFrame() {
+        EntryFrame* result = maybeAncestorEntryFrame();
+        WH_ASSERT(result);
+        return result;
+    }
 
 #define FRAME_KIND_METHODS_(name) \
     bool is##name() const { \
@@ -171,6 +184,9 @@ class SyntaxFrame : public Frame
     SyntaxTreeFragment* stFrag() const {
         return stFrag_;
     }
+    ScopeObject* scope() const {
+        return entryFrame_->scope();
+    }
 };
 
 class SyntaxNameLookupFrame : public SyntaxFrame
@@ -239,6 +255,49 @@ class InvokeSyntaxFrame : public SyntaxFrame
                                      ControlFlow const& flow);
     static OkResult StepImpl(ThreadContext* cx,
                              Handle<InvokeSyntaxFrame*> frame);
+};
+
+class FileSyntaxFrame : public SyntaxFrame
+{
+    friend class TraceTraits<FileSyntaxFrame>;
+  private:
+    uint32_t statementNo_;
+
+  public:
+    FileSyntaxFrame(Frame* parent,
+                    EntryFrame* entryFrame,
+                    SyntaxTreeFragment* stFrag,
+                    uint32_t statementNo)
+      : SyntaxFrame(parent, entryFrame, stFrag),
+        statementNo_(statementNo)
+    {}
+
+    uint32_t statementNo() const {
+        return statementNo_;
+    }
+
+    static Result<FileSyntaxFrame*> Create(
+            AllocationContext acx,
+            Handle<Frame*> parent,
+            Handle<EntryFrame*> entryFrame,
+            Handle<SyntaxTreeFragment*> stFrag,
+            uint32_t statementNo);
+
+    static Result<FileSyntaxFrame*> Create(
+            AllocationContext acx,
+            Handle<EntryFrame*> entryFrame,
+            Handle<SyntaxTreeFragment*> stFrag,
+            uint32_t statementNo);
+
+    static Result<FileSyntaxFrame*> CreateNext(
+            AllocationContext acx,
+            Handle<FileSyntaxFrame*> curFrame);
+
+    static OkResult ResolveChildImpl(ThreadContext* cx,
+                                     Handle<FileSyntaxFrame*> frame,
+                                     ControlFlow const& flow);
+    static OkResult StepImpl(ThreadContext* cx,
+                             Handle<FileSyntaxFrame*> frame);
 };
 
 
@@ -397,6 +456,29 @@ struct TraceTraits<VM::InvokeSyntaxFrame>
     {
         TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
         obj.syntaxHandler_.update(updater, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::FileSyntaxFrame>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::FileSyntaxFrame const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Scan<Scanner>(scanner, obj, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::FileSyntaxFrame& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
     }
 };
 
