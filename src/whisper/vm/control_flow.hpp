@@ -8,16 +8,110 @@
 namespace Whisper {
 namespace VM {
 
+class Frame;
+
+// Result of an interpretation of a code.
+class EvalResult
+{
+    friend class TraceTraits<EvalResult>;
+  public:
+    enum class Outcome {
+        Error,
+        Exception,
+        Value,
+        Void
+    };
+
+  private:
+    Outcome outcome_;
+    StackField<VM::ValBox> value_;
+    StackField<VM::Frame*> thrower_;
+
+    EvalResult(Outcome outcome)
+      : outcome_(outcome),
+        value_()
+    {}
+
+    EvalResult(Outcome outcome, VM::ValBox const& value)
+      : outcome_(outcome),
+        value_(value),
+        thrower_(nullptr)
+    {}
+
+    EvalResult(Outcome outcome, VM::Frame* frame)
+      : outcome_(outcome),
+        value_(),
+        thrower_(frame)
+    {}
+
+  public:
+    EvalResult(ErrorT_ const& error)
+      : EvalResult(Outcome::Error)
+    {}
+
+    static EvalResult Error() {
+        return EvalResult(Outcome::Error);
+    }
+    static EvalResult Exception(VM::Frame* thrower) {
+        return EvalResult(Outcome::Exception, thrower);
+    }
+    static EvalResult Value(VM::ValBox const& value) {
+        return EvalResult(Outcome::Value, value);
+    }
+    static EvalResult Void() {
+        return EvalResult(Outcome::Void);
+    }
+
+    Outcome outcome() const {
+        return outcome_;
+    }
+    char const* outcomeString() const {
+        return OutcomeString(outcome());
+    }
+    static char const* OutcomeString(Outcome outcome) {
+        switch (outcome) {
+          case Outcome::Error:       return "Error";
+          case Outcome::Exception:   return "Exception";
+          case Outcome::Value:       return "Value";
+          case Outcome::Void:        return "Void";
+          default:
+            WH_UNREACHABLE("Unknown outcome");
+            return "UNKNOWN";
+        }
+    }
+
+    bool isError() const {
+        return outcome() == Outcome::Error;
+    }
+    bool isException() const {
+        return outcome() == Outcome::Exception;
+    }
+    bool isValue() const {
+        return outcome() == Outcome::Value;
+    }
+    bool isVoid() const {
+        return outcome() == Outcome::Void;
+    }
+
+    VM::ValBox const& value() const {
+        WH_ASSERT(isValue());
+        return value_;
+    }
+    VM::Frame* thrower() const {
+        WH_ASSERT(isException());
+        return thrower_;
+    }
+};
 
 class ControlFlow
 {
     friend class TraceTraits<ControlFlow>;
   public:
     enum class Kind {
-        Void,
         Error,
         Exception,
         Value,
+        Void,
         Return,
         Continue
     };
@@ -237,6 +331,8 @@ struct TraceTraits<VM::ControlFlow>
             TraceTraits<VM::Frame*>::Scan(scanner, *cf.framePointerPayload(),
                                           start, end);
             return;
+          default:
+            WH_UNREACHABLE("Unknown outcome");
         }
     }
 
@@ -259,6 +355,51 @@ struct TraceTraits<VM::ControlFlow>
             TraceTraits<VM::Frame*>::Update(updater, *cf.framePointerPayload(),
                                             start, end);
             return;
+          default:
+            WH_UNREACHABLE("Unknown outcome");
+        }
+    }
+};
+
+template <>
+struct TraceTraits<VM::EvalResult>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::EvalResult const& er,
+                     void const* start, void const* end)
+    {
+        switch (er.outcome()) {
+          case VM::EvalResult::Outcome::Void:
+          case VM::EvalResult::Outcome::Error:
+          case VM::EvalResult::Outcome::Exception:
+            return;
+          case VM::EvalResult::Outcome::Value:
+            er.value_.scan(scanner, start, end);
+            return;
+          default:
+            WH_UNREACHABLE("Unknown outcome");
+        }
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::EvalResult& er,
+                       void const* start, void const* end)
+    {
+        switch (er.outcome()) {
+          case VM::EvalResult::Outcome::Void:
+          case VM::EvalResult::Outcome::Error:
+          case VM::EvalResult::Outcome::Exception:
+            return;
+          case VM::EvalResult::Outcome::Value:
+            er.value_.update(updater, start, end);
+            return;
+          default:
+            WH_UNREACHABLE("Unknown outcome");
         }
     }
 };
