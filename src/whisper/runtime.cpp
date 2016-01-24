@@ -267,7 +267,15 @@ ThreadContext::popTopFrame()
 bool
 ThreadContext::atTerminalFrame() const
 {
-    return topFrame_ == static_cast<VM::Frame*>(bottomFrame_);
+    WH_ASSERT(topFrame_);
+    return topFrame_->isTerminalFrame();
+}
+
+VM::TerminalFrame*
+ThreadContext::terminalFrame() const
+{
+    WH_ASSERT(atTerminalFrame());
+    return topFrame_->toTerminalFrame();
 }
 
 VM::GlobalScope*

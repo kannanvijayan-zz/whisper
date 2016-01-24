@@ -53,11 +53,11 @@ HeapInterpretLoop(ThreadContext* cx)
             // Fatal error, immediate halt of computation
             // with frame-stack intact.
             WH_ASSERT(cx->hasError());
-            return VM::ControlFlow::Error();
+            return ErrorVal();
         }
         curFrame = cx->topFrame();
     }
-    return cx->bottomFrame()->flow();
+    return cx->terminalFrame()->flow();
 }
 
 

@@ -241,6 +241,7 @@ class ThreadContext
     void pushTopFrame(VM::Frame* frame);
     void popTopFrame();
     bool atTerminalFrame() const;
+    VM::TerminalFrame* terminalFrame() const;
 
     bool hasThreadState() const {
         return threadState_ != nullptr;

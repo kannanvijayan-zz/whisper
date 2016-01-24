@@ -10,10 +10,10 @@
 #include "vm/lookup_state.hpp"
 #include "vm/control_flow.hpp"
 #include "vm/frame.hpp"
+#include "vm/box.hpp"
 
 namespace Whisper {
 namespace Interp {
-
 
 VM::ControlFlow HeapInterpretSourceFile(ThreadContext* cx,
                                         Handle<VM::SourceFile*> file,
