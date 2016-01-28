@@ -114,6 +114,10 @@ EntryFrame::ResolveChildImpl(ThreadContext* cx,
             SpewInterpNote("EntryFrame::ResolveChildImpl -"
                            " SyntaxNameLookup resolved with notFound -"
                            " raising exception.");
+            Local<String*> name(cx,
+                cx->runtimeState()->syntaxHandlerName(frame->stFrag()));
+            cx->setExceptionRaised("Syntax method binding not found.",
+                                   name.get());
             return Frame::ResolveChild(cx, parent, frame,
                             EvalResult::Exception(childFrame));
         }
@@ -343,7 +347,7 @@ FileSyntaxFrame::ResolveChildImpl(
     Local<Frame*> rootedParent(cx, frame->parent());
 
     // If result is an error, resolve to parent.
-    if (result.isError())
+    if (result.isError() || result.isException())
         return Frame::ResolveChild(cx, rootedParent, frame, result);
 
     // Otherwise, create new file syntax frame for executing next

@@ -170,6 +170,7 @@ main(int argc, char** argv)
         Interp::HeapInterpretSourceFile(cx, sourceFile,
             module.handle().convertTo<VM::ScopeObject*>()));
 
+    std::cerr << "Eval result " << result->outcomeString() << std::endl;
     if (result->isError()) {
         std::cerr << "Error interpreting code!" << std::endl;
         WH_ASSERT(cx->hasError());
