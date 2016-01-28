@@ -26,7 +26,11 @@ namespace Interp {
 
   /*
     DECLARE_SYNTAX_FN_(EmptyStmt)
+  */
+
     DECLARE_SYNTAX_FN_(ExprStmt)
+
+  /*
     DECLARE_SYNTAX_FN_(ReturnStmt)
     DECLARE_SYNTAX_FN_(DefStmt)
     DECLARE_SYNTAX_FN_(ConstStmt)
@@ -94,7 +98,9 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 
 /*
     BIND_GLOBAL_METHOD_(EmptyStmt);
+*/
     BIND_GLOBAL_METHOD_(ExprStmt);
+/*
     BIND_GLOBAL_METHOD_(ReturnStmt);
     BIND_GLOBAL_METHOD_(DefStmt);
     BIND_GLOBAL_METHOD_(ConstStmt);
@@ -128,14 +134,13 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 
 IMPL_SYNTAX_FN_(File)
 {
-    // return cx->setExceptionRaised("File syntax handler not implemented.");
-
     if (args.length() != 1) {
         return cx->setExceptionRaised(
             "@File called with wrong number of arguments.");
     }
 
-    WH_ASSERT(args.get(0)->isNode() && args.get(0)->toNode()->nodeType() == AST::File);
+    WH_ASSERT(args.get(0)->isNode());
+    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::File);
 
     Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
@@ -162,6 +167,45 @@ IMPL_SYNTAX_FN_(File)
     }
 
     return VM::CallResult::Continue(fileSyntaxFrame);
+}
+
+IMPL_SYNTAX_FN_(ExprStmt)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@ExprStmt called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0)->isNode());
+    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::ExprStmt);
+
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedExprStmtNode> exprStmtNode(cx,
+        AST::PackedExprStmtNode(pst->data(), stRef->offset()));
+
+    SpewInterpNote("Syntax_ExprStmt: Interpreting");
+
+    // Create a new entry frame for evaluating the ExprStmt's child.
+    Local<AST::PackedBaseNode> exprBaseNode(cx, exprStmtNode->expression());
+    Local<VM::SyntaxTreeFragment*> exprStRef(cx);
+    if (!exprStRef.setResult(VM::SyntaxNode::Create(
+            cx->inHatchery(), pst, exprBaseNode->offset())))
+    {
+        WH_ASSERT(cx->hasError());
+        return ErrorVal();
+    }
+
+    Local<VM::EntryFrame*> exprEntryFrame(cx);
+    if (!exprEntryFrame.setResult(VM::EntryFrame::Create(
+            cx->inHatchery(), callInfo->frame(), exprStRef,
+            callInfo->callerScope())))
+    {
+        WH_ASSERT(cx->hasError());
+        return ErrorVal();
+    }
+
+    return VM::CallResult::Continue(exprEntryFrame);
 }
 
 
