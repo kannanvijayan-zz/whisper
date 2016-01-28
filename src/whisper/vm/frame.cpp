@@ -397,5 +397,70 @@ FileSyntaxFrame::StepImpl(ThreadContext* cx,
 }
 
 
+/* static */ Result<CallExprSyntaxFrame*>
+CallExprSyntaxFrame::Create(AllocationContext acx,
+                            Handle<Frame*> parent,
+                            Handle<EntryFrame*> entryFrame,
+                            Handle<SyntaxTreeFragment*> stFrag)
+{
+    return acx.create<CallExprSyntaxFrame>(parent, entryFrame, stFrag);
+}
+
+/* static */ StepResult
+CallExprSyntaxFrame::ResolveChildImpl(
+        ThreadContext* cx,
+        Handle<CallExprSyntaxFrame*> frame,
+        Handle<Frame*> childFrame,
+        EvalResult const& result)
+{
+    WH_ASSERT(frame->stFrag()->isNode());
+    Local<SyntaxNodeRef> callNode(cx, SyntaxNodeRef(frame->stFrag()->toNode()));
+    WH_ASSERT(callNode->nodeType() == AST::CallExpr);
+
+    if (result.isError() || result.isException()) {
+        Local<Frame*> parent(cx, frame->parent());
+        return Frame::ResolveChild(cx, parent, frame, result);
+    }
+
+    return cx->setError(RuntimeError::InternalError, "CallExprSyntaxFrame::ResolveChildImpl");
+}
+
+/* static */ StepResult
+CallExprSyntaxFrame::StepImpl(ThreadContext* cx,
+                              Handle<CallExprSyntaxFrame*> frame)
+{
+    WH_ASSERT(frame->stFrag()->isNode());
+    Local<SyntaxNodeRef> callNodeRef(cx,
+        SyntaxNodeRef(frame->stFrag()->toNode()));
+    WH_ASSERT(callNodeRef->nodeType() == AST::CallExpr);
+    Local<PackedSyntaxTree*> pst(cx, frame->stFrag()->pst());
+    Local<AST::PackedCallExprNode> callExprNode(cx,
+        AST::PackedCallExprNode(pst->data(), callNodeRef->offset()));
+
+    // On initial step, just set up the entry frame for evaluating the
+    // underlying callee expression.
+    // The ResolveChild implementation when the callee finishes
+    // will handle the setup of execution to evaluate argument expressions.
+
+    // Create a new SyntaxTreeNode for the callee expression.
+    Local<SyntaxNode*> calleeNode(cx);
+    if (!calleeNode.setResult(SyntaxNode::Create(
+            cx->inHatchery(), pst, callExprNode->callee().offset())))
+    {
+        return ErrorVal();
+    }
+            
+    Local<ScopeObject*> scope(cx, frame->scope());
+    Local<EntryFrame*> entryFrame(cx);
+    if (!entryFrame.setResult(VM::EntryFrame::Create(
+            cx->inHatchery(), frame, calleeNode.handle(), scope)))
+    {
+        return ErrorVal();
+    }
+
+    return StepResult::Continue(entryFrame);
+}
+
+
 } // namespace VM
 } // namespace Whisper

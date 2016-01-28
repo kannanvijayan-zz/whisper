@@ -318,6 +318,10 @@ class SyntaxTreeFragment
         WH_ASSERT(isNode());
         return reinterpret_cast<SyntaxNode const*>(this);
     }
+    SyntaxNode* toNode() {
+        WH_ASSERT(isNode());
+        return reinterpret_cast<SyntaxNode*>(this);
+    }
 
     bool isBlock() const {
         return HeapThing::From(this)->isSyntaxBlock();
@@ -325,6 +329,10 @@ class SyntaxTreeFragment
     SyntaxBlock const* toBlock() const {
         WH_ASSERT(isBlock());
         return reinterpret_cast<SyntaxBlock const*>(this);
+    }
+    SyntaxBlock* toBlock() {
+        WH_ASSERT(isBlock());
+        return reinterpret_cast<SyntaxBlock*>(this);
     }
 };
 

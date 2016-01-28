@@ -35,8 +35,11 @@ namespace Interp {
     DECLARE_SYNTAX_FN_(DefStmt)
     DECLARE_SYNTAX_FN_(ConstStmt)
     DECLARE_SYNTAX_FN_(VarStmt)
+  */
 
     DECLARE_SYNTAX_FN_(CallExpr)
+
+  /*
     DECLARE_SYNTAX_FN_(DotExpr)
     DECLARE_SYNTAX_FN_(ArrowExpr)
     DECLARE_SYNTAX_FN_(PosExpr)
@@ -105,8 +108,11 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(DefStmt);
     BIND_GLOBAL_METHOD_(ConstStmt);
     BIND_GLOBAL_METHOD_(VarStmt);
+*/
 
     BIND_GLOBAL_METHOD_(CallExpr);
+
+/*
     BIND_GLOBAL_METHOD_(DotExpr);
     BIND_GLOBAL_METHOD_(ArrowExpr);
     BIND_GLOBAL_METHOD_(PosExpr);
@@ -206,6 +212,34 @@ IMPL_SYNTAX_FN_(ExprStmt)
     }
 
     return VM::CallResult::Continue(exprEntryFrame);
+}
+
+IMPL_SYNTAX_FN_(CallExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@ExprStmt called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0)->isNode());
+    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::CallExpr);
+
+    Local<VM::SyntaxNode*> stNode(cx, args.get(0)->toNode());
+
+    SpewInterpNote("Syntax_CallExpr: Interpreting");
+
+    // Set up a CallExprSyntaxFrame
+    Local<VM::EntryFrame*> entryFrame(cx,
+        callInfo->frame()->ancestorEntryFrame());
+
+    Local<VM::CallExprSyntaxFrame*> callExprSyntaxFrame(cx);
+    if (!callExprSyntaxFrame.setResult(VM::CallExprSyntaxFrame::Create(
+            cx->inHatchery(), callInfo->frame(), entryFrame, stNode.handle())))
+    {
+        return ErrorVal();
+    }
+
+    return VM::CallResult::Continue(callExprSyntaxFrame.get());
 }
 
 

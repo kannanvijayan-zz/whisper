@@ -10,11 +10,12 @@ namespace Whisper {
 namespace VM {
 
 #define WHISPER_DEFN_FRAME_KINDS(_) \
-    _(TerminalFrame) \
-    _(EntryFrame) \
-    _(SyntaxNameLookupFrame) \
-    _(InvokeSyntaxFrame) \
-    _(FileSyntaxFrame)
+    _(TerminalFrame)                \
+    _(EntryFrame)                   \
+    _(SyntaxNameLookupFrame)        \
+    _(InvokeSyntaxFrame)            \
+    _(FileSyntaxFrame)              \
+    _(CallExprSyntaxFrame)
 
 
 #define PREDECLARE_FRAME_CLASSES_(name) class name;
@@ -286,6 +287,31 @@ class FileSyntaxFrame : public SyntaxFrame
                                Handle<FileSyntaxFrame*> frame);
 };
 
+class CallExprSyntaxFrame : public SyntaxFrame
+{
+    friend class TraceTraits<CallExprSyntaxFrame>;
+  public:
+    CallExprSyntaxFrame(Frame* parent,
+                    EntryFrame* entryFrame,
+                    SyntaxTreeFragment* stFrag)
+      : SyntaxFrame(parent, entryFrame, stFrag)
+    {}
+
+    static Result<CallExprSyntaxFrame*> Create(
+            AllocationContext acx,
+            Handle<Frame*> parent,
+            Handle<EntryFrame*> entryFrame,
+            Handle<SyntaxTreeFragment*> stFrag);
+
+    static StepResult ResolveChildImpl(ThreadContext* cx,
+                                       Handle<CallExprSyntaxFrame*> frame,
+                                       Handle<Frame*> childFrame,
+                                       EvalResult const& result);
+
+    static StepResult StepImpl(ThreadContext* cx,
+                               Handle<CallExprSyntaxFrame*> frame);
+};
+
 
 } // namespace VM
 
@@ -462,6 +488,29 @@ struct TraceTraits<VM::FileSyntaxFrame>
 
     template <typename Updater>
     static void Update(Updater& updater, VM::FileSyntaxFrame& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::CallExprSyntaxFrame>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::CallExprSyntaxFrame const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Scan<Scanner>(scanner, obj, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::CallExprSyntaxFrame& obj,
                        void const* start, void const* end)
     {
         TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
