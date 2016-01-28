@@ -16,8 +16,9 @@
     _(PackedWriter)             \
     _(PackedReader)             \
     _(HeapPointer)              \
-    _(ControlFlow)              \
-    _(EvalResult)
+    _(EvalResult)               \
+    _(CallResult)               \
+    _(StepResult)
 
 
 #define WHISPER_DEFN_GC_HEAP_FORMATS(_) \

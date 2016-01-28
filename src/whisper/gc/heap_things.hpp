@@ -358,6 +358,9 @@ class HeapThing
     inline HeapFormat format() const {
         return header().format();
     }
+    inline char const* formatString() const {
+        return header().formatString();
+    }
 
     inline uint8_t userData() const {
         return header().userData();

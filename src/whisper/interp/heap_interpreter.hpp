@@ -15,14 +15,21 @@
 namespace Whisper {
 namespace Interp {
 
-VM::ControlFlow HeapInterpretSourceFile(ThreadContext* cx,
-                                        Handle<VM::SourceFile*> file,
-                                        Handle<VM::ScopeObject*> scope);
+VM::EvalResult HeapInterpretSourceFile(ThreadContext* cx,
+                                       Handle<VM::SourceFile*> file,
+                                       Handle<VM::ScopeObject*> scope);
 
-VM::ControlFlow HeapInterpretLoop(ThreadContext* cx);
+VM::EvalResult HeapInterpretSourceFile(ThreadContext* cx,
+                                       Handle<VM::Frame*> frame,
+                                       Handle<VM::SourceFile*> file,
+                                       Handle<VM::ScopeObject*> scope);
+
+VM::EvalResult HeapInterpretLoop(ThreadContext* cx,
+                                 Handle<VM::Frame*> frame);
 
 Result<VM::Frame*> CreateInitialSyntaxFrame(
         ThreadContext* cx,
+        Handle<VM::Frame*> parent,
         Handle<VM::EntryFrame*> entryFrame);
 
 Result<VM::Frame*> CreateInvokeSyntaxFrame(
@@ -32,26 +39,30 @@ Result<VM::Frame*> CreateInvokeSyntaxFrame(
         Handle<VM::SyntaxTreeFragment*> stFrag,
         Handle<VM::ValBox> syntaxHandler);
 
-OkResult InvokeValue(
+VM::CallResult InvokeValue(
         ThreadContext* cx,
+        Handle<VM::Frame*> frame,
         Handle<VM::ScopeObject*> callerScope,
         Handle<VM::ValBox> callee,
         ArrayHandle<VM::SyntaxTreeFragment*> args);
 
-OkResult InvokeFunction(
+VM::CallResult InvokeFunction(
         ThreadContext* cx,
+        Handle<VM::Frame*> frame,
         Handle<VM::ScopeObject*> callerScope,
         Handle<VM::FunctionObject*> calleeFunc,
         ArrayHandle<VM::SyntaxTreeFragment*> args);
 
-OkResult InvokeOperativeFunction(
+VM::CallResult InvokeOperativeFunction(
         ThreadContext* cx,
+        Handle<VM::Frame*> frame,
         Handle<VM::ScopeObject*> callerScope,
         Handle<VM::FunctionObject*> calleeFunc,
         ArrayHandle<VM::SyntaxTreeFragment*> args);
 
-OkResult InvokeApplicativeFunction(
+VM::CallResult InvokeApplicativeFunction(
         ThreadContext* cx,
+        Handle<VM::Frame*> frame,
         Handle<VM::ScopeObject*> callerScope,
         Handle<VM::FunctionObject*> calleeFunc,
         ArrayHandle<VM::SyntaxTreeFragment*> args);

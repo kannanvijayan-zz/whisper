@@ -5,6 +5,7 @@
 #include "debug.hpp"
 #include "spew.hpp"
 #include "gc.hpp"
+#include "vm/frame.hpp"
 
 //
 // Define a virtual visitor class for the tracer.
@@ -28,5 +29,7 @@ class TracerVisitor
 // Inspect the heap using a visitor.
 //
 void trace_heap(Whisper::ThreadContext* cx, TracerVisitor* visitor);
+void trace_heap(Whisper::ThreadContext* cx, TracerVisitor* visitor,
+                Whisper::VM::Frame* frame);
 
 #endif // WHISPER__SHELL__TRACER_HPP

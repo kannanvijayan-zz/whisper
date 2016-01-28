@@ -78,27 +78,34 @@ class NativeCallInfo
     friend struct TraceTraits<NativeCallInfo>;
 
   private:
+    StackField<Frame*> frame_;
     StackField<LookupState*> lookupState_;
     StackField<ScopeObject*> callerScope_;
     StackField<FunctionObject*> calleeFunc_;
     StackField<ValBox> receiver_;
 
   public:
-    NativeCallInfo(LookupState* lookupState,
+    NativeCallInfo(Frame* frame,
+                   LookupState* lookupState,
                    ScopeObject* callerScope,
                    FunctionObject* calleeFunc,
                    ValBox receiver)
-      : lookupState_(lookupState),
+      : frame_(frame),
+        lookupState_(lookupState),
         callerScope_(callerScope),
         calleeFunc_(calleeFunc),
         receiver_(receiver)
     {
+        WH_ASSERT(frame_ != nullptr);
         WH_ASSERT(lookupState_ != nullptr);
         WH_ASSERT(callerScope_ != nullptr);
         WH_ASSERT(calleeFunc_ != nullptr);
         WH_ASSERT(receiver_->isValid());
     }
 
+    Handle<Frame*> frame() const {
+        return frame_;
+    }
     Handle<LookupState*> lookupState() const {
         return lookupState_;
     }
@@ -113,12 +120,12 @@ class NativeCallInfo
     }
 };
 
-typedef OkResult (*NativeApplicativeFuncPtr)(
+typedef CallResult (*NativeApplicativeFuncPtr)(
         ThreadContext* cx,
         Handle<NativeCallInfo> callInfo,
         ArrayHandle<ValBox> args);
 
-typedef OkResult (*NativeOperativeFuncPtr)(
+typedef CallResult (*NativeOperativeFuncPtr)(
         ThreadContext* cx,
         Handle<NativeCallInfo> callInfo,
         ArrayHandle<SyntaxTreeFragment*> args);

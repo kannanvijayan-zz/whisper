@@ -63,22 +63,24 @@ struct HeapTracer
 void
 trace_heap(ThreadContext* cx, TracerVisitor* visitor)
 {
+    trace_heap(cx, visitor, nullptr);
+}
+
+void
+trace_heap(ThreadContext* cx, TracerVisitor* visitor, VM::Frame* frame)
+{
     // Set of seen heap-things.
     std::unordered_set<HeapThing*> seen;
 
     // List of heap-things left to visit in queue.
     std::list<HeapThing*> remaining;
 
-    // Add unrooted heap things hanging directly off of cx.
-    HeapThing* bottomFrameThing = HeapThing::From(cx->bottomFrame());
-    visitor->visitHeapThing(bottomFrameThing);
-    remaining.push_back(bottomFrameThing);
-    seen.insert(bottomFrameThing);
-
-    HeapThing* topFrameThing = HeapThing::From(cx->topFrame());
-    visitor->visitHeapThing(topFrameThing);
-    remaining.push_back(topFrameThing);
-    seen.insert(topFrameThing);
+    if (frame) {
+        HeapThing* frameThing = HeapThing::From(frame);
+        visitor->visitHeapThing(frameThing);
+        remaining.push_back(frameThing);
+        seen.insert(frameThing);
+    }
 
     if (cx->hasThreadState()) {
         HeapThing* threadState = HeapThing::From(cx->threadState());

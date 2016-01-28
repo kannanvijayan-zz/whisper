@@ -177,8 +177,6 @@ class ThreadContext
     SlabList tenuredList_;
     LocalBase* locals_;
     VM::ThreadState* threadState_;
-    VM::TerminalFrame* bottomFrame_;
-    VM::Frame* topFrame_;
     bool suppressGC_;
 
     unsigned int randSeed_;
@@ -225,23 +223,6 @@ class ThreadContext
     VM::RuntimeState* runtimeState() const {
       return runtime_->runtimeState();
     }
-
-    VM::TerminalFrame* bottomFrame() const {
-        WH_ASSERT(bottomFrame_ != nullptr);
-        return bottomFrame_;
-    }
-    VM::Frame* topFrame() const {
-        WH_ASSERT(topFrame_ != nullptr);
-        return topFrame_;
-    }
-    void setTopFrame(VM::Frame* frame) {
-        WH_ASSERT(frame != nullptr);
-        topFrame_ = frame;
-    }
-    void pushTopFrame(VM::Frame* frame);
-    void popTopFrame();
-    bool atTerminalFrame() const;
-    VM::TerminalFrame* terminalFrame() const;
 
     bool hasThreadState() const {
         return threadState_ != nullptr;

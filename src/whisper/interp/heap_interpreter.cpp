@@ -9,8 +9,21 @@ namespace Whisper {
 namespace Interp {
 
 
-VM::ControlFlow
+VM::EvalResult
 HeapInterpretSourceFile(ThreadContext* cx,
+                        Handle<VM::SourceFile*> file,
+                        Handle<VM::ScopeObject*> scope)
+{
+    Local<VM::Frame*> terminalFrame(cx);
+    if (!terminalFrame.setResult(VM::TerminalFrame::Create(cx->inHatchery())))
+        return ErrorVal();
+
+    return HeapInterpretSourceFile(cx, terminalFrame, file, scope);
+}
+
+VM::EvalResult
+HeapInterpretSourceFile(ThreadContext* cx,
+                        Handle<VM::Frame*> frame,
                         Handle<VM::SourceFile*> file,
                         Handle<VM::ScopeObject*> scope)
 {
@@ -33,43 +46,61 @@ HeapInterpretSourceFile(ThreadContext* cx,
     // Create a new entry frame for the interpretation.
     Local<VM::EntryFrame*> entryFrame(cx);
     if (!entryFrame.setResult(VM::EntryFrame::Create(
-            cx->inHatchery(), fileNode, scope)))
+            cx->inHatchery(), frame, fileNode, scope)))
     {
         return ErrorVal();
     }
-    cx->setTopFrame(entryFrame);
 
     // Run interpreter loop.
-    return HeapInterpretLoop(cx);
+    return HeapInterpretLoop(cx, entryFrame.handle());
 }
 
-VM::ControlFlow
-HeapInterpretLoop(ThreadContext* cx)
+VM::EvalResult
+HeapInterpretLoop(ThreadContext* cx,
+                  Handle<VM::Frame*> frame)
 {
-    Local<VM::Frame*> curFrame(cx, cx->topFrame());
-    while (!cx->atTerminalFrame()) {
-        OkResult result = VM::Frame::Step(cx, curFrame);
-        if (!result) {
+    WH_ASSERT(frame != nullptr);
+
+    Local<VM::Frame*> curFrame(cx, frame);
+    while (!curFrame->isTerminalFrame()) {
+        {
+            constexpr uint32_t BUFSIZE = 2048;
+            char buf[BUFSIZE];
+            uint32_t offset = 0;
+            VM::Frame* c = curFrame;
+            while (c) {
+                offset += snprintf(&buf[offset], BUFSIZE - offset,
+                                " -> (%p)%s",
+                                c, HeapThing::From(c)->formatString());
+                c = c->parent();
+            }
+            SpewInterpNote("HeapInterpretLoop step%s", buf);
+        }
+
+        VM::StepResult result = VM::Frame::Step(cx, curFrame);
+        if (result.isError()) {
             // Fatal error, immediate halt of computation
             // with frame-stack intact.
             WH_ASSERT(cx->hasError());
             return ErrorVal();
         }
-        curFrame = cx->topFrame();
+        WH_ASSERT(result.isContinue());
+        curFrame = result.continueFrame();
     }
-    return cx->terminalFrame()->flow();
+    WH_ASSERT(curFrame->isTerminalFrame());
+    return curFrame->toTerminalFrame()->result();
 }
-
 
 Result<VM::Frame*>
 CreateInitialSyntaxFrame(ThreadContext* cx,
+                         Handle<VM::Frame*> parent,
                          Handle<VM::EntryFrame*> entryFrame)
 {
     Local<VM::SyntaxTreeFragment*> stFrag(cx, entryFrame->stFrag());
 
     Local<VM::SyntaxNameLookupFrame*> stFrame(cx);
     if (!stFrame.setResult(VM::SyntaxNameLookupFrame::Create(cx->inHatchery(),
-            entryFrame, stFrag)))
+            parent, entryFrame, stFrag)))
     {
         return ErrorVal();
     }
@@ -94,8 +125,9 @@ CreateInvokeSyntaxFrame(ThreadContext* cx,
     return OkVal(stFrame.get());
 }
 
-OkResult
+VM::CallResult
 InvokeValue(ThreadContext* cx,
+            Handle<VM::Frame*> frame,
             Handle<VM::ScopeObject*> callerScope,
             Handle<VM::ValBox> callee,
             ArrayHandle<VM::SyntaxTreeFragment*> args)
@@ -108,23 +140,28 @@ InvokeValue(ThreadContext* cx,
     Local<VM::FunctionObject*> calleeFunc(cx,
         callee->pointer<VM::FunctionObject>());
 
-    return InvokeFunction(cx, callerScope, calleeFunc, args);
+    return InvokeFunction(cx, frame, callerScope, calleeFunc, args);
 }
 
-OkResult
+VM::CallResult
 InvokeFunction(ThreadContext* cx,
+               Handle<VM::Frame*> frame,
                Handle<VM::ScopeObject*> callerScope,
                Handle<VM::FunctionObject*> calleeFunc,
                ArrayHandle<VM::SyntaxTreeFragment*> args)
 {
-    if (calleeFunc->isOperative())
-        return InvokeOperativeFunction(cx, callerScope, calleeFunc, args);
-    else
-        return InvokeApplicativeFunction(cx, callerScope, calleeFunc, args);
+    if (calleeFunc->isOperative()) {
+        return InvokeOperativeFunction(cx, frame, callerScope,
+                                       calleeFunc, args);
+    } else {
+        return InvokeApplicativeFunction(cx, frame, callerScope,
+                                         calleeFunc, args);
+    }
 }
 
-OkResult
+VM::CallResult
 InvokeOperativeFunction(ThreadContext* cx,
+                        Handle<VM::Frame*> frame,
                         Handle<VM::ScopeObject*> callerScope,
                         Handle<VM::FunctionObject*> calleeFunc,
                         ArrayHandle<VM::SyntaxTreeFragment*> args)
@@ -138,7 +175,8 @@ InvokeOperativeFunction(ThreadContext* cx,
         Local<VM::ValBox> receiver(cx, calleeFunc->receiver());
 
         Local<VM::NativeCallInfo> callInfo(cx,
-            VM::NativeCallInfo(lookupState, callerScope, calleeFunc, receiver));
+            VM::NativeCallInfo(frame, lookupState,
+                               callerScope, calleeFunc, receiver));
 
         // Call the function. (FIXME).
         VM::NativeOperativeFuncPtr opNatF = func->asNative()->operative();
@@ -158,8 +196,9 @@ InvokeOperativeFunction(ThreadContext* cx,
                         HeapThing::From(func.get()));
 }
 
-OkResult
+VM::CallResult
 InvokeApplicativeFunction(ThreadContext* cx,
+                          Handle<VM::Frame*> frame,
                           Handle<VM::ScopeObject*> callerScope,
                           Handle<VM::FunctionObject*> calleeFunc,
                           ArrayHandle<VM::SyntaxTreeFragment*> args)

@@ -238,8 +238,6 @@ ThreadContext::ThreadContext(Runtime* runtime, uint32_t rtid,
     tenuredList_(),
     locals_(nullptr),
     threadState_(nullptr),
-    bottomFrame_(nullptr),
-    topFrame_(nullptr),
     suppressGC_(false),
     randSeed_(NewRandSeed()),
     spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16))
@@ -248,34 +246,6 @@ ThreadContext::ThreadContext(Runtime* runtime, uint32_t rtid,
 
     if (tenured)
         tenuredList_.addSlab(tenured);
-}
-
-void
-ThreadContext::pushTopFrame(VM::Frame* frame)
-{
-    WH_ASSERT(frame->parent() == topFrame_);
-    topFrame_ = frame;
-}
-
-void
-ThreadContext::popTopFrame()
-{
-    WH_ASSERT(topFrame_ != bottomFrame_);
-    topFrame_ = topFrame_->parent();
-}
-
-bool
-ThreadContext::atTerminalFrame() const
-{
-    WH_ASSERT(topFrame_);
-    return topFrame_->isTerminalFrame();
-}
-
-VM::TerminalFrame*
-ThreadContext::terminalFrame() const
-{
-    WH_ASSERT(atTerminalFrame());
-    return topFrame_->toTerminalFrame();
 }
 
 VM::GlobalScope*
@@ -396,13 +366,6 @@ ThreadContext::initialize()
     if (!threadState.setResult(VM::ThreadState::Create(inTenured())))
         return ErrorVal();
     threadState_ = threadState.get();
-
-    // Initialize the top and bottom frames to be terminal frames.
-    Local<VM::TerminalFrame*> terminalFrame(this);
-    if (!terminalFrame.setResult(VM::TerminalFrame::Create(inTenured())))
-        return ErrorVal();
-    bottomFrame_ = terminalFrame.get();
-    topFrame_ = bottomFrame_;
 
     return OkVal();
 }

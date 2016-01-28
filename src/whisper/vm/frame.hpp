@@ -40,9 +40,10 @@ class Frame
         return parent_;
     }
 
-    static OkResult ResolveChild(ThreadContext* cx, Handle<Frame*> frame,
-                                 ControlFlow const& flow);
-    static OkResult Step(ThreadContext* cx, Handle<Frame*> frame);
+    static StepResult ResolveChild(ThreadContext* cx, Handle<Frame*> frame,
+                                   Handle<Frame*> childFrame,
+                                   EvalResult const& result);
+    static StepResult Step(ThreadContext* cx, Handle<Frame*> frame);
 
     EntryFrame* maybeAncestorEntryFrame();
     EntryFrame* ancestorEntryFrame() {
@@ -79,24 +80,26 @@ class TerminalFrame : public Frame
     friend class TraceTraits<TerminalFrame>;
 
   private:
-    HeapField<ControlFlow> flow_;
+    HeapField<EvalResult> result_;
 
   public:
     TerminalFrame()
       : Frame(nullptr),
-        flow_(ControlFlow::Void())
+        result_(EvalResult::Void())
     {}
 
     static Result<TerminalFrame*> Create(AllocationContext acx);
 
-    ControlFlow const& flow() const {
-        return flow_;
+    EvalResult const& result() const {
+        return result_;
     }
 
-    static OkResult ResolveChildImpl(ThreadContext* cx,
-                                     Handle<TerminalFrame*> frame,
-                                     ControlFlow const& flow);
-    static OkResult StepImpl(ThreadContext* cx, Handle<TerminalFrame*> frame);
+    static StepResult ResolveChildImpl(ThreadContext* cx,
+                                       Handle<TerminalFrame*> frame,
+                                       Handle<Frame*> childFrame,
+                                       EvalResult const& result);
+    static StepResult StepImpl(ThreadContext* cx,
+                               Handle<TerminalFrame*> frame);
 };
 
 //
@@ -136,10 +139,6 @@ class EntryFrame : public Frame
                                       Handle<SyntaxTreeFragment*> stFrag,
                                       Handle<ScopeObject*> scope);
 
-    static Result<EntryFrame*> Create(AllocationContext acx,
-                                      Handle<SyntaxTreeFragment*> stFrag,
-                                      Handle<ScopeObject*> scope);
-
     SyntaxTreeFragment* stFrag() const {
         return stFrag_;
     }
@@ -147,10 +146,11 @@ class EntryFrame : public Frame
         return scope_;
     }
 
-    static OkResult ResolveChildImpl(ThreadContext* cx,
-                                     Handle<EntryFrame*> frame,
-                                     ControlFlow const& flow);
-    static OkResult StepImpl(ThreadContext* cx, Handle<EntryFrame*> frame);
+    static StepResult ResolveChildImpl(ThreadContext* cx,
+                                       Handle<EntryFrame*> frame,
+                                       Handle<Frame*> childFrame,
+                                       EvalResult const& result);
+    static StepResult StepImpl(ThreadContext* cx, Handle<EntryFrame*> frame);
 };
 
 class SyntaxFrame : public Frame
@@ -206,16 +206,12 @@ class SyntaxNameLookupFrame : public SyntaxFrame
             Handle<EntryFrame*> entryFrame,
             Handle<SyntaxTreeFragment*> stFrag);
 
-    static Result<SyntaxNameLookupFrame*> Create(
-            AllocationContext acx,
-            Handle<EntryFrame*> entryFrame,
-            Handle<SyntaxTreeFragment*> stFrag);
-
-    static OkResult ResolveChildImpl(ThreadContext* cx,
-                                     Handle<SyntaxNameLookupFrame*> frame,
-                                     ControlFlow const& flow);
-    static OkResult StepImpl(ThreadContext* cx,
-                             Handle<SyntaxNameLookupFrame*> frame);
+    static StepResult ResolveChildImpl(ThreadContext* cx,
+                                       Handle<SyntaxNameLookupFrame*> frame,
+                                       Handle<Frame*> childFrame,
+                                       EvalResult const& result);
+    static StepResult StepImpl(ThreadContext* cx,
+                               Handle<SyntaxNameLookupFrame*> frame);
 };
 
 class InvokeSyntaxFrame : public SyntaxFrame
@@ -244,17 +240,12 @@ class InvokeSyntaxFrame : public SyntaxFrame
             Handle<SyntaxTreeFragment*> stFrag,
             Handle<ValBox> syntaxHandler);
 
-    static Result<InvokeSyntaxFrame*> Create(
-            AllocationContext acx,
-            Handle<EntryFrame*> entryFrame,
-            Handle<SyntaxTreeFragment*> stFrag,
-            Handle<ValBox> syntaxHandler);
-
-    static OkResult ResolveChildImpl(ThreadContext* cx,
-                                     Handle<InvokeSyntaxFrame*> frame,
-                                     ControlFlow const& flow);
-    static OkResult StepImpl(ThreadContext* cx,
-                             Handle<InvokeSyntaxFrame*> frame);
+    static StepResult ResolveChildImpl(ThreadContext* cx,
+                                       Handle<InvokeSyntaxFrame*> frame,
+                                       Handle<Frame*> childFrame,
+                                       EvalResult const& result);
+    static StepResult StepImpl(ThreadContext* cx,
+                               Handle<InvokeSyntaxFrame*> frame);
 };
 
 class FileSyntaxFrame : public SyntaxFrame
@@ -283,21 +274,16 @@ class FileSyntaxFrame : public SyntaxFrame
             Handle<SyntaxTreeFragment*> stFrag,
             uint32_t statementNo);
 
-    static Result<FileSyntaxFrame*> Create(
-            AllocationContext acx,
-            Handle<EntryFrame*> entryFrame,
-            Handle<SyntaxTreeFragment*> stFrag,
-            uint32_t statementNo);
-
     static Result<FileSyntaxFrame*> CreateNext(
             AllocationContext acx,
             Handle<FileSyntaxFrame*> curFrame);
 
-    static OkResult ResolveChildImpl(ThreadContext* cx,
-                                     Handle<FileSyntaxFrame*> frame,
-                                     ControlFlow const& flow);
-    static OkResult StepImpl(ThreadContext* cx,
-                             Handle<FileSyntaxFrame*> frame);
+    static StepResult ResolveChildImpl(ThreadContext* cx,
+                                       Handle<FileSyntaxFrame*> frame,
+                                       Handle<Frame*> childFrame,
+                                       EvalResult const& result);
+    static StepResult StepImpl(ThreadContext* cx,
+                               Handle<FileSyntaxFrame*> frame);
 };
 
 
@@ -344,7 +330,7 @@ struct TraceTraits<VM::TerminalFrame>
                      void const* start, void const* end)
     {
         TraceTraits<VM::Frame>::Scan<Scanner>(scanner, obj, start, end);
-        obj.flow_.scan(scanner, start, end);
+        obj.result_.scan(scanner, start, end);
     }
 
     template <typename Updater>
@@ -352,7 +338,7 @@ struct TraceTraits<VM::TerminalFrame>
                        void const* start, void const* end)
     {
         TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
-        obj.flow_.update(updater, start, end);
+        obj.result_.update(updater, start, end);
     }
 };
 

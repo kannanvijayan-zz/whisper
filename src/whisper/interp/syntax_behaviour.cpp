@@ -17,7 +17,7 @@ namespace Interp {
 
 // Declare a lift function for each syntax node type.
 #define DECLARE_SYNTAX_FN_(name) \
-    static OkResult Syntax_##name( \
+    static VM::CallResult Syntax_##name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::SyntaxTreeFragment*> args);
@@ -121,7 +121,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 }
 
 #define IMPL_SYNTAX_FN_(name) \
-    static OkResult Syntax_##name( \
+    static VM::CallResult Syntax_##name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::SyntaxTreeFragment*> args)
@@ -145,24 +145,23 @@ IMPL_SYNTAX_FN_(File)
     SpewInterpNote("Syntax_File: Interpreting %u statements",
                    unsigned(fileNode->numStatements()));
 
-    Local<VM::Frame*> parentFrame(cx, cx->topFrame());
-    Local<VM::EntryFrame*> entryFrame(cx, parentFrame->ancestorEntryFrame());
+    Local<VM::Frame*> frame(cx, callInfo->frame());
+    Local<VM::EntryFrame*> entryFrame(cx, frame->ancestorEntryFrame());
     Local<VM::SyntaxNode*> stFrag(cx);
     if (!stFrag.setResult(VM::SyntaxNode::Create(cx->inHatchery(), stRef))) {
         return ErrorVal();
     }
 
-    Local<VM::Frame*> frame(cx);
-    if (!frame.setResult(VM::FileSyntaxFrame::Create(
-            cx->inHatchery(), parentFrame, entryFrame,
+    Local<VM::Frame*> fileSyntaxFrame(cx);
+    if (!fileSyntaxFrame.setResult(VM::FileSyntaxFrame::Create(
+            cx->inHatchery(), frame, entryFrame,
             stFrag.handle().convertTo<VM::SyntaxTreeFragment*>(),
             0)))
     {
         return ErrorVal();
     }
 
-    cx->setTopFrame(frame);
-    return OkVal();
+    return VM::CallResult::Continue(fileSyntaxFrame);
 }
 
 

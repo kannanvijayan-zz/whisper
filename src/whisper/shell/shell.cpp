@@ -166,13 +166,21 @@ main(int argc, char** argv)
     }
 
     // Interpret the file.
-    VM::ControlFlow res = Interp::HeapInterpretSourceFile(cx, sourceFile,
-            module.handle().convertTo<VM::ScopeObject*>());
-
-    Local<VM::ControlFlow> result(cx, res);
+    Local<VM::EvalResult> result(cx,
+        Interp::HeapInterpretSourceFile(cx, sourceFile,
+            module.handle().convertTo<VM::ScopeObject*>()));
 
     if (result->isError()) {
         std::cerr << "Error interpreting code!" << std::endl;
+        WH_ASSERT(cx->hasError());
+        char buf[512];
+        cx->formatError(buf, 512);
+        std::cerr << "ERROR: " << buf << std::endl;
+        return 1;
+    }
+
+    if (result->isException()) {
+        std::cerr << "Exception raised while interpreting code!" << std::endl;
         WH_ASSERT(cx->hasError());
         char buf[512];
         cx->formatError(buf, 512);

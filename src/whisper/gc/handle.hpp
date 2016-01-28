@@ -226,7 +226,7 @@ class Handle
     }
 
     template <typename U>
-    inline Handle<U> convertTo()
+    inline Handle<U> convertTo() const
     {
         static_assert(std::is_convertible<T, U>::value,
                       "T is not convertible to U.");
@@ -234,7 +234,7 @@ class Handle
     }
 
     template <typename U>
-    inline Handle<U> upConvertTo()
+    inline Handle<U> upConvertTo() const
     {
         static_assert(std::is_convertible<U, T>::value,
                       "U is not convertible to T.");
@@ -242,7 +242,7 @@ class Handle
     }
 
     template <typename U>
-    inline Handle<U> forceConvertTo()
+    inline Handle<U> forceConvertTo() const
     {
         return Handle<U>(reinterpret_cast<U const*>(address()));
     }
@@ -257,6 +257,11 @@ class Handle
 
     inline operator T const&() const {
         return get();
+    }
+
+    template <typename U>
+    inline operator Handle<U>() const {
+        return convertTo<U>();
     }
 
     inline T const* operator &() const {

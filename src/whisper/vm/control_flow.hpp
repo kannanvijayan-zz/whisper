@@ -25,7 +25,7 @@ class EvalResult
   private:
     Outcome outcome_;
     StackField<VM::ValBox> value_;
-    StackField<VM::Frame*> thrower_;
+    StackField<VM::Frame*> frame_;
 
     EvalResult(Outcome outcome)
       : outcome_(outcome),
@@ -35,13 +35,13 @@ class EvalResult
     EvalResult(Outcome outcome, VM::ValBox const& value)
       : outcome_(outcome),
         value_(value),
-        thrower_(nullptr)
+        frame_(nullptr)
     {}
 
     EvalResult(Outcome outcome, VM::Frame* frame)
       : outcome_(outcome),
         value_(),
-        thrower_(frame)
+        frame_(frame)
     {}
 
   public:
@@ -52,8 +52,8 @@ class EvalResult
     static EvalResult Error() {
         return EvalResult(Outcome::Error);
     }
-    static EvalResult Exception(VM::Frame* thrower) {
-        return EvalResult(Outcome::Exception, thrower);
+    static EvalResult Exception(VM::Frame* frame) {
+        return EvalResult(Outcome::Exception, frame);
     }
     static EvalResult Value(VM::ValBox const& value) {
         return EvalResult(Outcome::Value, value);
@@ -97,203 +97,178 @@ class EvalResult
         WH_ASSERT(isValue());
         return value_;
     }
-    VM::Frame* thrower() const {
+    VM::Frame* throwingFrame() const {
         WH_ASSERT(isException());
-        return thrower_;
+        return frame_;
     }
 };
 
-class ControlFlow
+// Intermediate result produced when calling a function.
+class CallResult
 {
-    friend class TraceTraits<ControlFlow>;
+    friend class TraceTraits<CallResult>;
   public:
-    enum class Kind {
+    enum class Outcome {
         Error,
         Exception,
         Value,
         Void,
-        Return,
         Continue
     };
 
   private:
-    static constexpr size_t ValBoxSize = sizeof(ValBox);
-    static constexpr size_t ValBoxAlign = alignof(ValBox);
+    Outcome outcome_;
+    StackField<VM::ValBox> value_;
+    StackField<VM::Frame*> frame_;
 
-    static constexpr size_t FramePointerSize = sizeof(Frame*);
-    static constexpr size_t FramePointerAlign = alignof(Frame*);
+    CallResult(Outcome outcome)
+      : outcome_(outcome),
+        value_()
+    {}
 
-    static constexpr size_t PayloadSize = ConstExprMax<size_t, ValBoxSize, FramePointerSize>();
-    static constexpr size_t PayloadAlign = ConstExprMax<size_t, ValBoxAlign, FramePointerAlign>();
+    CallResult(Outcome outcome, VM::ValBox const& value)
+      : outcome_(outcome),
+        value_(value),
+        frame_(nullptr)
+    {}
 
-    Kind kind_;
-    alignas(PayloadAlign)
-    uint8_t payload_[PayloadSize];
-
-    ValBox* valBoxPayload() {
-        return reinterpret_cast<ValBox*>(payload_);
-    }
-    ValBox const* valBoxPayload() const {
-        return reinterpret_cast<ValBox const*>(payload_);
-    }
-    void initValBoxPayload(ValBox const& val) {
-        new (valBoxPayload()) ValBox(val);
-    }
-
-    Frame** framePointerPayload() {
-        return reinterpret_cast<Frame**>(payload_);
-    }
-    Frame* const* framePointerPayload() const {
-        return reinterpret_cast<Frame* const*>(payload_);
-    }
-    void initFramePointerPayload(Frame* frame) {
-        *framePointerPayload() = frame;
-    }
-
-  private:
-    ControlFlow(Kind kind) : kind_(kind) {}
-
-    ControlFlow(Kind kind, ValBox const& val)
-      : kind_(kind)
-    {
-        initValBoxPayload(val);
-    }
-
-    ControlFlow(Kind kind, Frame* frame)
-      : kind_(kind)
-    {
-        initFramePointerPayload(frame);
-    }
+    CallResult(Outcome outcome, VM::Frame* frame)
+      : outcome_(outcome),
+        value_(),
+        frame_(frame)
+    {}
 
   public:
-    ControlFlow(ControlFlow const& other)
-      : kind_(other.kind_)
-    {
-        switch (kind_) {
-          case Kind::Void:
-          case Kind::Error:
-          case Kind::Exception:
-            break;
-
-          case Kind::Value:
-          case Kind::Return:
-            initValBoxPayload(*other.valBoxPayload());
-            break;
-
-          case Kind::Continue:
-            initFramePointerPayload(*other.framePointerPayload());
-            break;
-
-          default:
-            WH_UNREACHABLE("Bad ControlFlow Kind.");
-        }
-    }
-    ControlFlow(ErrorT_ const& err)
-      : kind_(Kind::Error)
+    CallResult(ErrorT_ const& error)
+      : CallResult(Outcome::Error)
     {}
-    ControlFlow(OkT_ const& ok)
-      : kind_(Kind::Value)
-    {
-        initValBoxPayload(ValBox::Undefined());
+
+    static CallResult Error() {
+        return CallResult(Outcome::Error);
     }
-    ControlFlow(OkValT_<ValBox> const& okVal)
-      : kind_(Kind::Value)
-    {
-        initValBoxPayload(okVal.val());
+    static CallResult Exception(VM::Frame* frame) {
+        return CallResult(Outcome::Exception, frame);
     }
-    ControlFlow(OkValT_<Wobject*> const& okVal)
-      : kind_(Kind::Value)
-    {
-        initValBoxPayload(ValBox::Pointer(okVal.val()));
+    static CallResult Value(VM::ValBox const& value) {
+        return CallResult(Outcome::Value, value);
+    }
+    static CallResult Void() {
+        return CallResult(Outcome::Void);
+    }
+    static CallResult Continue(VM::Frame* frame) {
+        return CallResult(Outcome::Continue, frame);
     }
 
-    ~ControlFlow()
-    {
-        switch (kind_) {
-          case Kind::Void:
-          case Kind::Error:
-          case Kind::Exception:
-          case Kind::Continue:
-            break;
-
-          case Kind::Value:
-          case Kind::Return:
-            valBoxPayload()->~ValBox();
-            break;
-
+    Outcome outcome() const {
+        return outcome_;
+    }
+    char const* outcomeString() const {
+        return OutcomeString(outcome());
+    }
+    static char const* OutcomeString(Outcome outcome) {
+        switch (outcome) {
+          case Outcome::Error:       return "Error";
+          case Outcome::Exception:   return "Exception";
+          case Outcome::Value:       return "Value";
+          case Outcome::Void:        return "Void";
+          case Outcome::Continue:    return "Continue";
           default:
-            WH_UNREACHABLE("Bad ControlFlow Kind.");
-        }
-    }
-
-    static ControlFlow Void() {
-        return ControlFlow(Kind::Void);
-    }
-    static ControlFlow Error() {
-        return ControlFlow(Kind::Error);
-    }
-    static ControlFlow Value(ValBox const& val) {
-        return ControlFlow(Kind::Value, val);
-    }
-    static ControlFlow Value(Wobject* obj) {
-        return ControlFlow(Kind::Value, ValBox::Pointer(obj));
-    }
-    static ControlFlow Return(ValBox const& val) {
-        return ControlFlow(Kind::Return, val);
-    }
-    static ControlFlow Continue(Frame* frame) {
-        return ControlFlow(Kind::Continue, frame);
-    }
-    static ControlFlow Exception() {
-        return ControlFlow(Kind::Exception);
-    }
-
-    Kind kind() const {
-        return kind_;
-    }
-    char const* kindString() const {
-        switch (kind()) {
-          case Kind::Void:        return "Void";
-          case Kind::Error:       return "Error";
-          case Kind::Value:       return "Value";
-          case Kind::Return:      return "Return";
-          case Kind::Continue:    return "Continue";
-          case Kind::Exception:   return "Exception";
-          default:
-            WH_UNREACHABLE("Unknown kind");
+            WH_UNREACHABLE("Unknown outcome");
             return "UNKNOWN";
         }
     }
-    bool isVoid() const {
-        return kind() == Kind::Void;
-    }
+
     bool isError() const {
-        return kind() == Kind::Error;
-    }
-    bool isValue() const {
-        return kind() == Kind::Value;
-    }
-    bool isReturn() const {
-        return kind() == Kind::Return;
-    }
-    bool isContinue() const {
-        return kind() == Kind::Continue;
+        return outcome() == Outcome::Error;
     }
     bool isException() const {
-        return kind() == Kind::Exception;
+        return outcome() == Outcome::Exception;
+    }
+    bool isValue() const {
+        return outcome() == Outcome::Value;
+    }
+    bool isVoid() const {
+        return outcome() == Outcome::Void;
+    }
+    bool isContinue() const {
+        return outcome() == Outcome::Continue;
     }
 
-    ValBox const& value() const {
+    VM::ValBox const& value() const {
         WH_ASSERT(isValue());
-        return *valBoxPayload();
+        return value_;
     }
-    ValBox const& returnValue() const {
-        WH_ASSERT(isReturn());
-        return *valBoxPayload();
+    VM::Frame* throwingFrame() const {
+        WH_ASSERT(isException());
+        return frame_;
     }
-    Frame* continueFrame() const {
+    VM::Frame* continueFrame() const {
         WH_ASSERT(isContinue());
-        return *framePointerPayload();
+        return frame_;
+    }
+};
+
+// Result of a step function.
+class StepResult
+{
+    friend class TraceTraits<StepResult>;
+  public:
+    enum class Outcome {
+        Error,
+        Continue
+    };
+
+  private:
+    Outcome outcome_;
+    StackField<VM::Frame*> frame_;
+
+    StepResult(Outcome outcome)
+      : outcome_(outcome)
+    {}
+
+    StepResult(Outcome outcome, VM::Frame* frame)
+      : outcome_(outcome),
+        frame_(frame)
+    {}
+
+  public:
+    StepResult(ErrorT_ const& error)
+      : StepResult(Outcome::Error)
+    {}
+
+    static StepResult Error() {
+        return StepResult(Outcome::Error);
+    }
+    static StepResult Continue(VM::Frame* frame) {
+        return StepResult(Outcome::Continue, frame);
+    }
+
+    Outcome outcome() const {
+        return outcome_;
+    }
+    char const* outcomeString() const {
+        return OutcomeString(outcome());
+    }
+    static char const* OutcomeString(Outcome outcome) {
+        switch (outcome) {
+          case Outcome::Error:       return "Error";
+          case Outcome::Continue:    return "Continue";
+          default:
+            WH_UNREACHABLE("Unknown outcome");
+            return "UNKNOWN";
+        }
+    }
+
+    bool isError() const {
+        return outcome() == Outcome::Error;
+    }
+    bool isContinue() const {
+        return outcome() == Outcome::Continue;
+    }
+
+    VM::Frame* continueFrame() const {
+        WH_ASSERT(isContinue());
+        return frame_;
     }
 };
 
@@ -304,62 +279,6 @@ class ControlFlow
 //
 // GC-Specializations.
 //
-
-template <>
-struct TraceTraits<VM::ControlFlow>
-{
-    TraceTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = false;
-
-    template <typename Scanner>
-    static void Scan(Scanner& scanner, VM::ControlFlow const& cf,
-                     void const* start, void const* end)
-    {
-        switch (cf.kind()) {
-          case VM::ControlFlow::Kind::Void:
-          case VM::ControlFlow::Kind::Error:
-          case VM::ControlFlow::Kind::Exception:
-            return;
-          case VM::ControlFlow::Kind::Value:
-          case VM::ControlFlow::Kind::Return:
-            TraceTraits<VM::ValBox>::Scan(scanner, *cf.valBoxPayload(),
-                                          start, end);
-            return;
-          case VM::ControlFlow::Kind::Continue:
-            TraceTraits<VM::Frame*>::Scan(scanner, *cf.framePointerPayload(),
-                                          start, end);
-            return;
-          default:
-            WH_UNREACHABLE("Unknown outcome");
-        }
-    }
-
-    template <typename Updater>
-    static void Update(Updater& updater, VM::ControlFlow& cf,
-                       void const* start, void const* end)
-    {
-        switch (cf.kind()) {
-          case VM::ControlFlow::Kind::Void:
-          case VM::ControlFlow::Kind::Error:
-          case VM::ControlFlow::Kind::Exception:
-            return;
-          case VM::ControlFlow::Kind::Value:
-          case VM::ControlFlow::Kind::Return:
-            TraceTraits<VM::ValBox>::Update(updater, *cf.valBoxPayload(),
-                                            start, end);
-            return;
-
-          case VM::ControlFlow::Kind::Continue:
-            TraceTraits<VM::Frame*>::Update(updater, *cf.framePointerPayload(),
-                                            start, end);
-            return;
-          default:
-            WH_UNREACHABLE("Unknown outcome");
-        }
-    }
-};
 
 template <>
 struct TraceTraits<VM::EvalResult>
@@ -373,34 +292,64 @@ struct TraceTraits<VM::EvalResult>
     static void Scan(Scanner& scanner, VM::EvalResult const& er,
                      void const* start, void const* end)
     {
-        switch (er.outcome()) {
-          case VM::EvalResult::Outcome::Void:
-          case VM::EvalResult::Outcome::Error:
-          case VM::EvalResult::Outcome::Exception:
-            return;
-          case VM::EvalResult::Outcome::Value:
-            er.value_.scan(scanner, start, end);
-            return;
-          default:
-            WH_UNREACHABLE("Unknown outcome");
-        }
+        er.value_.scan(scanner, start, end);
+        er.frame_.scan(scanner, start, end);
     }
 
     template <typename Updater>
     static void Update(Updater& updater, VM::EvalResult& er,
                        void const* start, void const* end)
     {
-        switch (er.outcome()) {
-          case VM::EvalResult::Outcome::Void:
-          case VM::EvalResult::Outcome::Error:
-          case VM::EvalResult::Outcome::Exception:
-            return;
-          case VM::EvalResult::Outcome::Value:
-            er.value_.update(updater, start, end);
-            return;
-          default:
-            WH_UNREACHABLE("Unknown outcome");
-        }
+        er.value_.update(updater, start, end);
+        er.frame_.update(updater, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::CallResult>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::CallResult const& cr,
+                     void const* start, void const* end)
+    {
+        cr.value_.scan(scanner, start, end);
+        cr.frame_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::CallResult& cr,
+                       void const* start, void const* end)
+    {
+        cr.value_.update(updater, start, end);
+        cr.frame_.update(updater, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::StepResult>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::StepResult const& sr,
+                     void const* start, void const* end)
+    {
+        sr.frame_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::StepResult& sr,
+                       void const* start, void const* end)
+    {
+        sr.frame_.update(updater, start, end);
     }
 };
 
