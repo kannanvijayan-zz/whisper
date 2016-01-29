@@ -9,6 +9,7 @@
 #include "vm/function.hpp"
 #include "vm/frame.hpp"
 #include "vm/packed_syntax_tree.hpp"
+#include "interp/heap_interpreter.hpp"
 #include "interp/syntax_behaviour.hpp"
 
 namespace Whisper {
@@ -49,9 +50,10 @@ namespace Interp {
     DECLARE_SYNTAX_FN_(MulExpr)
     DECLARE_SYNTAX_FN_(DivExpr)
     DECLARE_SYNTAX_FN_(ParenExpr)
+  */
     DECLARE_SYNTAX_FN_(NameExpr)
+  /*
     DECLARE_SYNTAX_FN_(IntegerExpr)
-    //WHISPER_DEFN_SYNTAX_NODES(DECLARE_SYNTAX_FN_)
  */
 
 #undef DECLARE_SYNTAX_FN_
@@ -122,7 +124,9 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(MulExpr);
     BIND_GLOBAL_METHOD_(DivExpr);
     BIND_GLOBAL_METHOD_(ParenExpr);
+*/
     BIND_GLOBAL_METHOD_(NameExpr);
+/*
     BIND_GLOBAL_METHOD_(IntegerExpr);
 
 */
@@ -240,6 +244,78 @@ IMPL_SYNTAX_FN_(CallExpr)
     }
 
     return VM::CallResult::Continue(callExprSyntaxFrame.get());
+}
+
+IMPL_SYNTAX_FN_(NameExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@ExprStmt called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0)->isNode());
+    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::NameExpr);
+    Local<VM::PackedSyntaxTree*> pst(cx, args.get(0)->pst());
+    Local<AST::PackedNameExprNode> nameExprNode(cx,
+        AST::PackedNameExprNode(pst->data(), args.get(0)->offset()));
+
+    Local<VM::String*> name(cx,
+        pst->getConstantString(nameExprNode->nameCid()));
+
+    SpewInterpNote("Syntax_NameExpr: Interpreting");
+
+    Local<VM::Frame*> frame(cx, callInfo->frame());
+    Local<VM::Frame*> parent(cx, frame->parent());
+    Local<VM::ScopeObject*> scope(cx, frame->ancestorEntryFrame()->scope());
+
+    PropertyLookupResult lookupResult = GetObjectProperty(cx,
+        scope.handle(), name);
+
+    if (lookupResult.isError()) {
+        SpewInterpNote("Syntax_NameExpr - lookupResult returned error!");
+        return VM::CallResult::Error();
+    }
+
+    if (lookupResult.isNotFound()) {
+        SpewInterpNote("Syntax_NameExpr -"
+                       " lookupResult returned notFound -"
+                       " raising exception!");
+        cx->setExceptionRaised("Name binding not found.", name.get());
+        return VM::CallResult::Exception(frame.get());
+    }
+
+    if (lookupResult.isFound()) {
+        SpewInterpNote("Syntax_NameExpr - lookupResult returned found");
+        Local<VM::PropertyDescriptor> descriptor(cx, lookupResult.descriptor());
+        Local<VM::LookupState*> lookupState(cx, lookupResult.lookupState());
+
+        // Handle a value binding by returning the value.
+        if (descriptor->isValue())
+            return VM::CallResult::Value(descriptor->valBox());
+
+        // Handle a method binding by creating a bound FunctionObject
+        // from the method.
+        if (descriptor->isMethod()) {
+            // Create a new function object bound to the scope, which
+            // is the receiver object.
+            Local<VM::ValBox> scopeVal(cx, VM::ValBox::Object(scope.get()));
+            Local<VM::Function*> func(cx, descriptor->method());
+            Local<VM::FunctionObject*> funcObj(cx);
+            if (!funcObj.setResult(VM::FunctionObject::Create(
+                    cx->inHatchery(), func, scopeVal, lookupState)))
+            {
+                return ErrorVal();
+            }
+
+            return VM::CallResult::Value(VM::ValBox::Object(funcObj.get()));
+        }
+
+        WH_UNREACHABLE("PropertyDescriptor not one of Value, Method.");
+        return ErrorVal();
+    }
+
+    return cx->setError(RuntimeError::InternalError,
+                        "Invalid property lookup result");
 }
 
 
