@@ -52,9 +52,7 @@ namespace Interp {
     DECLARE_SYNTAX_FN_(ParenExpr)
   */
     DECLARE_SYNTAX_FN_(NameExpr)
-  /*
     DECLARE_SYNTAX_FN_(IntegerExpr)
- */
 
 #undef DECLARE_SYNTAX_FN_
 
@@ -126,10 +124,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(ParenExpr);
 */
     BIND_GLOBAL_METHOD_(NameExpr);
-/*
     BIND_GLOBAL_METHOD_(IntegerExpr);
-
-*/
 
 #undef BIND_GLOBAL_METHOD_
 
@@ -316,6 +311,24 @@ IMPL_SYNTAX_FN_(NameExpr)
 
     return cx->setError(RuntimeError::InternalError,
                         "Invalid property lookup result");
+}
+
+IMPL_SYNTAX_FN_(IntegerExpr)
+{
+    if (args.length() != 1) {
+        return cx->setExceptionRaised(
+            "@ExprStmt called with wrong number of arguments.");
+    }
+
+    WH_ASSERT(args.get(0)->isNode());
+    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::IntegerExpr);
+    Local<VM::PackedSyntaxTree*> pst(cx, args.get(0)->pst());
+    Local<AST::PackedIntegerExprNode> integerExprNode(cx,
+        AST::PackedIntegerExprNode(pst->data(), args.get(0)->offset()));
+
+    int32_t intVal = integerExprNode->value();
+
+    return VM::CallResult::Value(VM::ValBox::Integer(intVal));
 }
 
 
