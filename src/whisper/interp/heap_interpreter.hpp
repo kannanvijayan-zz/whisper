@@ -53,6 +53,7 @@ VM::CallResult InvokeFunction(
         ThreadContext* cx,
         Handle<VM::Frame*> frame,
         Handle<VM::ScopeObject*> callerScope,
+        Handle<VM::ValBox> callee,
         Handle<VM::FunctionObject*> calleeFunc,
         ArrayHandle<VM::SyntaxTreeFragment*> args);
 
@@ -60,6 +61,7 @@ VM::CallResult InvokeOperativeFunction(
         ThreadContext* cx,
         Handle<VM::Frame*> frame,
         Handle<VM::ScopeObject*> callerScope,
+        Handle<VM::ValBox> callee,
         Handle<VM::FunctionObject*> calleeFunc,
         ArrayHandle<VM::SyntaxTreeFragment*> args);
 
@@ -67,6 +69,7 @@ VM::CallResult InvokeApplicativeFunction(
         ThreadContext* cx,
         Handle<VM::Frame*> frame,
         Handle<VM::ScopeObject*> callerScope,
+        Handle<VM::ValBox> callee,
         Handle<VM::FunctionObject*> calleeFunc,
         ArrayHandle<VM::SyntaxTreeFragment*> args);
 

@@ -144,27 +144,26 @@ InvokeValue(ThreadContext* cx,
             Handle<VM::ValBox> callee,
             ArrayHandle<VM::SyntaxTreeFragment*> args)
 {
-    Maybe<VM::FunctionObject*> funcObj = FunctionObjectForValue(cx, callee);
-    if (funcObj.hasValue()) {
-        Local<VM::FunctionObject*> rootedFunc(cx, funcObj.value());
-        return InvokeFunction(cx, frame, callerScope, rootedFunc, args);
-    }
-    return cx->setExceptionRaised("Cannot call non-function");
+    Local<VM::FunctionObject*> rootedCallee(cx);
+    if (!rootedCallee.setMaybe(FunctionObjectForValue(cx, callee)))
+        return ErrorVal();
+    return InvokeFunction(cx, frame, callerScope, callee, rootedCallee, args);
 }
 
 VM::CallResult
 InvokeFunction(ThreadContext* cx,
                Handle<VM::Frame*> frame,
                Handle<VM::ScopeObject*> callerScope,
+               Handle<VM::ValBox> callee,
                Handle<VM::FunctionObject*> calleeFunc,
                ArrayHandle<VM::SyntaxTreeFragment*> args)
 {
     if (calleeFunc->isOperative()) {
         return InvokeOperativeFunction(cx, frame, callerScope,
-                                       calleeFunc, args);
+                                       callee, calleeFunc, args);
     } else {
         return InvokeApplicativeFunction(cx, frame, callerScope,
-                                         calleeFunc, args);
+                                         callee, calleeFunc, args);
     }
 }
 
@@ -172,6 +171,7 @@ VM::CallResult
 InvokeOperativeFunction(ThreadContext* cx,
                         Handle<VM::Frame*> frame,
                         Handle<VM::ScopeObject*> callerScope,
+                        Handle<VM::ValBox> callee,
                         Handle<VM::FunctionObject*> calleeFunc,
                         ArrayHandle<VM::SyntaxTreeFragment*> args)
 {
@@ -209,6 +209,7 @@ VM::CallResult
 InvokeApplicativeFunction(ThreadContext* cx,
                           Handle<VM::Frame*> frame,
                           Handle<VM::ScopeObject*> callerScope,
+                          Handle<VM::ValBox> callee,
                           Handle<VM::FunctionObject*> calleeFunc,
                           ArrayHandle<VM::SyntaxTreeFragment*> args)
 {
