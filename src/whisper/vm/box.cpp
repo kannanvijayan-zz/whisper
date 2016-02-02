@@ -10,7 +10,14 @@ void
 Box::snprint(char* buf, size_t n) const
 {
     if (isPointer()) {
-        snprintf(buf, n, "ptr(%p)", pointer<HeapThing>());
+        HeapThing* ht = pointer<HeapThing>();
+        if (ht->isString()) {
+            String* str = reinterpret_cast<String*>(ht);
+            snprintf(buf, n, "ptr(%s:%p:%s)", ht->formatString(), ht,
+                                              str->c_chars());
+        } else {
+            snprintf(buf, n, "ptr(%s:%p)", ht->formatString(), ht);
+        }
         return;
     }
     if (isInteger()) {
