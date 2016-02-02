@@ -355,6 +355,12 @@ class CallExprSyntaxFrame : public SyntaxFrame
             Handle<EntryFrame*> entryFrame,
             Handle<SyntaxTreeFragment*> stFrag);
 
+    static Result<CallExprSyntaxFrame*> CreateFirstArg(
+            AllocationContext acx,
+            Handle<CallExprSyntaxFrame*> calleeFrame,
+            Handle<ValBox> callee,
+            Handle<FunctionObject*> calleeFunc);
+
     static StepResult ResolveChildImpl(ThreadContext* cx,
                                        Handle<CallExprSyntaxFrame*> frame,
                                        Handle<Frame*> childFrame,

@@ -410,6 +410,21 @@ CallExprSyntaxFrame::CreateCallee(AllocationContext acx,
                                            ValBox(), nullptr, nullptr);
 }
 
+/* static */ Result<CallExprSyntaxFrame*>
+CallExprSyntaxFrame::CreateFirstArg(AllocationContext acx,
+                                    Handle<CallExprSyntaxFrame*> calleeFrame,
+                                    Handle<ValBox> callee,
+                                    Handle<FunctionObject*> calleeFunc)
+{
+    Local<Frame*> parent(acx, calleeFrame->parent());
+    Local<EntryFrame*> entryFrame(acx, calleeFrame->entryFrame());
+    Local<SyntaxTreeFragment*> stFrag(acx, calleeFrame->stFrag());
+    return acx.create<CallExprSyntaxFrame>(parent.handle(),
+                                           entryFrame.handle(),
+                                           stFrag.handle(),
+                                           State::Arg, 0,
+                                           callee, calleeFunc, nullptr);
+}
 
 /* static */ StepResult
 CallExprSyntaxFrame::ResolveChildImpl(
@@ -503,10 +518,14 @@ CallExprSyntaxFrame::ResolveCalleeChild(
                             "create invocation frame for zero-arg call.");
     }
 
-    // Otherwise, create an argument evaluation frame for arg 0.
-    return cx->setError(RuntimeError::InternalError,
-                        "TODO: CallExprSyntaxFrame::ResolveCalleeChild - "
-                        "create evaluation frame for first argument.");
+    Local<CallExprSyntaxFrame*> nextFrame(cx);
+    if (!nextFrame.setResult(CallExprSyntaxFrame::CreateFirstArg(
+            cx->inHatchery(), frame, calleeBox, calleeObj)))
+    {
+        return ErrorVal();
+    }
+
+    return StepResult::Continue(nextFrame.get());
 }
 
 /* static */ StepResult
