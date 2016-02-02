@@ -5,6 +5,8 @@
 #include "vm/predeclare.hpp"
 #include "vm/box.hpp"
 #include "vm/control_flow.hpp"
+#include "vm/slist.hpp"
+#include "parser/packed_syntax.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -291,13 +293,63 @@ class CallExprSyntaxFrame : public SyntaxFrame
 {
     friend class TraceTraits<CallExprSyntaxFrame>;
   public:
+    enum class State : uint8_t { Callee, Arg, Invoke };
+
+  private:
+    State state_;
+    uint32_t argNo_;
+    HeapField<ValBox> callee_;
+    HeapField<FunctionObject*> calleeFunc_;
+    HeapField<Slist<ValBox>*> operands_;
+
+  public:
     CallExprSyntaxFrame(Frame* parent,
-                    EntryFrame* entryFrame,
-                    SyntaxTreeFragment* stFrag)
-      : SyntaxFrame(parent, entryFrame, stFrag)
+                        EntryFrame* entryFrame,
+                        SyntaxTreeFragment* stFrag,
+                        State state,
+                        uint32_t argNo,
+                        ValBox const& callee,
+                        FunctionObject* calleeFunc,
+                        Slist<ValBox>* operands)
+      : SyntaxFrame(parent, entryFrame, stFrag),
+        state_(state),
+        argNo_(argNo),
+        callee_(callee),
+        calleeFunc_(calleeFunc),
+        operands_(operands)
     {}
 
-    static Result<CallExprSyntaxFrame*> Create(
+    State state() const {
+        return state_;
+    }
+    bool inCalleeState() const {
+        return state() == State::Callee;
+    }
+    bool inArgState() const {
+        return state() == State::Arg;
+    }
+    bool inInvokeState() const {
+        return state() == State::Invoke;
+    }
+
+    uint32_t argNo() const {
+        WH_ASSERT(inArgState());
+        return argNo_;
+    }
+    ValBox const& callee() const {
+        WH_ASSERT(inArgState() || inInvokeState());
+        return callee_;
+    }
+    FunctionObject* calleeFunc() const {
+        WH_ASSERT(inArgState() || inInvokeState());
+        return calleeFunc_;
+    }
+    Slist<ValBox>* operands() const {
+        WH_ASSERT(inArgState() || inInvokeState());
+        return operands_;
+    }
+
+    static Result<CallExprSyntaxFrame*> CreateCallee(
             AllocationContext acx,
             Handle<Frame*> parent,
             Handle<EntryFrame*> entryFrame,
@@ -310,6 +362,40 @@ class CallExprSyntaxFrame : public SyntaxFrame
 
     static StepResult StepImpl(ThreadContext* cx,
                                Handle<CallExprSyntaxFrame*> frame);
+
+  private:
+    static StepResult ResolveCalleeChild(
+            ThreadContext* cx,
+            Handle<CallExprSyntaxFrame*> frame,
+            Handle<PackedSyntaxTree*> pst,
+            Handle<AST::PackedCallExprNode> callExprNode,
+            EvalResult const& result);
+
+    static StepResult ResolveArgChild(
+            ThreadContext* cx,
+            Handle<CallExprSyntaxFrame*> frame,
+            Handle<PackedSyntaxTree*> pst,
+            Handle<AST::PackedCallExprNode> callExprNode,
+            EvalResult const& result);
+
+    static StepResult ResolveInvokeChild(
+            ThreadContext* cx,
+            Handle<CallExprSyntaxFrame*> frame,
+            Handle<PackedSyntaxTree*> pst,
+            Handle<AST::PackedCallExprNode> callExprNode,
+            EvalResult const& result);
+
+    static StepResult StepCallee(ThreadContext* cx,
+                                 Handle<CallExprSyntaxFrame*> frame);
+    static StepResult StepArg(ThreadContext* cx,
+                              Handle<CallExprSyntaxFrame*> frame);
+    static StepResult StepInvoke(ThreadContext* cx,
+                                 Handle<CallExprSyntaxFrame*> frame);
+
+    static StepResult StepSubexpr(ThreadContext* cx,
+                                  Handle<CallExprSyntaxFrame*> frame,
+                                  Handle<PackedSyntaxTree*> pst,
+                                  uint32_t offset);
 };
 
 
@@ -507,6 +593,8 @@ struct TraceTraits<VM::CallExprSyntaxFrame>
                      void const* start, void const* end)
     {
         TraceTraits<VM::SyntaxFrame>::Scan<Scanner>(scanner, obj, start, end);
+        obj.callee_.scan(scanner, start, end);
+        obj.operands_.scan(scanner, start, end);
     }
 
     template <typename Updater>
@@ -514,6 +602,8 @@ struct TraceTraits<VM::CallExprSyntaxFrame>
                        void const* start, void const* end)
     {
         TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
+        obj.callee_.update(updater, start, end);
+        obj.operands_.update(updater, start, end);
     }
 };
 

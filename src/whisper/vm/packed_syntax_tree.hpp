@@ -232,6 +232,9 @@ class SyntaxNodeRef : public SyntaxTreeRef
     }
     WHISPER_DEFN_SYNTAX_NODES(VM_STREF_GET_)
 #undef VM_STREF_GET_
+
+    // Helper to create a new SyntaxNode for this one.
+    Result<SyntaxNode*> createSyntaxNode(AllocationContext acx);
 };
 
 //
@@ -270,11 +273,10 @@ class SyntaxBlockRef : public SyntaxTreeRef
 
     SyntaxNodeRef statement(uint32_t idx) const {
         WH_ASSERT(idx < numStatements());
-        return SyntaxNodeRef(pst_, packedBlock().statement(idx).offset());
+        return SyntaxNodeRef(pst_, astBlock().statement(idx).offset());
     }
 
-  private:
-    AST::PackedBlock packedBlock() const {
+    AST::PackedBlock astBlock() const {
         return AST::PackedBlock(pst_->data(), offset(), numStatements_);
     }
 };
@@ -359,6 +361,14 @@ class SyntaxNode : public SyntaxTreeFragment
 
     AST::NodeType nodeType() const;
     char const* nodeTypeCString() const;
+
+#define VM_STREF_GET_(ntype) \
+    AST::Packed##ntype##Node ast##ntype() { \
+        WH_ASSERT(nodeType() == AST::NodeType::ntype); \
+        return SyntaxNodeRef(this).ast##ntype(); \
+    }
+    WHISPER_DEFN_SYNTAX_NODES(VM_STREF_GET_)
+#undef VM_STREF_GET_
 };
 
 class SyntaxBlock : public SyntaxTreeFragment

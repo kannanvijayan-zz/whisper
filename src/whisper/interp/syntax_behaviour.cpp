@@ -237,7 +237,7 @@ IMPL_SYNTAX_FN_(CallExpr)
         callInfo->frame()->ancestorEntryFrame());
 
     Local<VM::CallExprSyntaxFrame*> callExprSyntaxFrame(cx);
-    if (!callExprSyntaxFrame.setResult(VM::CallExprSyntaxFrame::Create(
+    if (!callExprSyntaxFrame.setResult(VM::CallExprSyntaxFrame::CreateCallee(
             cx->inHatchery(), callInfo->frame(), entryFrame, stNode.handle())))
     {
         return ErrorVal();

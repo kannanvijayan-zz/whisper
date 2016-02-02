@@ -125,6 +125,18 @@ CreateInvokeSyntaxFrame(ThreadContext* cx,
     return OkVal(stFrame.get());
 }
 
+Maybe<VM::FunctionObject*>
+FunctionObjectForValue(ThreadContext* cx,
+                       Handle<VM::ValBox> value)
+{
+    if (value->isPointerTo<VM::FunctionObject>()) {
+        return Maybe<VM::FunctionObject*>::Some(
+                    value->pointer<VM::FunctionObject>());
+    }
+
+    return Maybe<VM::FunctionObject*>::None();
+}
+
 VM::CallResult
 InvokeValue(ThreadContext* cx,
             Handle<VM::Frame*> frame,
@@ -132,15 +144,12 @@ InvokeValue(ThreadContext* cx,
             Handle<VM::ValBox> callee,
             ArrayHandle<VM::SyntaxTreeFragment*> args)
 {
-    // Ensure callee is a function object.
-    if (!callee->isPointerTo<VM::FunctionObject>())
-        return cx->setExceptionRaised("Cannot call non-function");
-
-    // Obtain callee function.
-    Local<VM::FunctionObject*> calleeFunc(cx,
-        callee->pointer<VM::FunctionObject>());
-
-    return InvokeFunction(cx, frame, callerScope, calleeFunc, args);
+    Maybe<VM::FunctionObject*> funcObj = FunctionObjectForValue(cx, callee);
+    if (funcObj.hasValue()) {
+        Local<VM::FunctionObject*> rootedFunc(cx, funcObj.value());
+        return InvokeFunction(cx, frame, callerScope, rootedFunc, args);
+    }
+    return cx->setExceptionRaised("Cannot call non-function");
 }
 
 VM::CallResult

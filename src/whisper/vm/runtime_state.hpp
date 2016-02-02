@@ -8,6 +8,7 @@
 #include "vm/predeclare.hpp"
 #include "vm/string.hpp"
 #include "vm/array.hpp"
+#include "vm/box.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -65,7 +66,7 @@ class ThreadState
     // here.
     RuntimeError error_;
     char const* errorString_;
-    HeapField<HeapThing*> errorThing_;
+    HeapField<Box> errorThing_;
 
   public:
     ThreadState(GlobalScope* global,
@@ -75,7 +76,10 @@ class ThreadState
       : global_(global),
         rootDelegate_(rootDelegate),
         immIntDelegate_(immIntDelegate),
-        immBoolDelegate_(immBoolDelegate)
+        immBoolDelegate_(immBoolDelegate),
+        error_(RuntimeError::None),
+        errorString_(nullptr),
+        errorThing_()
     {
         WH_ASSERT(global != nullptr);
         WH_ASSERT(rootDelegate != nullptr);
@@ -115,19 +119,26 @@ class ThreadState
 
     bool hasErrorThing() const {
         WH_ASSERT(hasError());
-        return errorThing_ != nullptr;
+        return errorThing_->isValid();
     }
-    HeapThing* errorThing() const {
+    Box const& errorThing() const {
         WH_ASSERT(hasErrorThing());
         return errorThing_;
     }
 
-    void setError(RuntimeError error, char const* string, HeapThing* thing)
+    void setError(RuntimeError error, char const* string, Box const& thing)
     {
         WH_ASSERT(!hasError());
         error_ = error;
         errorString_ = string;
         errorThing_.set(thing, this);
+    }
+    void setError(RuntimeError error, char const* string, HeapThing* thing)
+    {
+        WH_ASSERT(!hasError());
+        error_ = error;
+        errorString_ = string;
+        errorThing_.set(Box::Pointer(thing), this);
     }
 
     static Result<ThreadState*> Create(AllocationContext acx);

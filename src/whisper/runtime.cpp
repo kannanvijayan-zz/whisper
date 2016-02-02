@@ -10,6 +10,7 @@
 #include "runtime.hpp"
 #include "runtime_inlines.hpp"
 #include "vm/frame.hpp"
+#include "vm/box.hpp"
 #include "vm/wobject.hpp"
 #include "vm/scope_object.hpp"
 #include "vm/global_scope.hpp"
@@ -292,10 +293,18 @@ ThreadContext::hasErrorThing() const
     return threadState()->hasErrorThing();
 }
 
-HeapThing*
+VM::Box const&
 ThreadContext::errorThing() const
 {
     return threadState()->errorThing();
+}
+
+ErrorT_
+ThreadContext::setError(RuntimeError error, char const* string,
+                        VM::Box const& thing)
+{
+    threadState()->setError(error, string, thing);
+    return ErrorVal();
 }
 
 ErrorT_
@@ -306,6 +315,12 @@ ThreadContext::setError(RuntimeError error, char const* string,
     return ErrorVal();
 }
 
+ErrorT_
+ThreadContext::setError(RuntimeError error, char const* string)
+{
+    return setError(error, string, VM::Box());
+}
+
 size_t
 ThreadContext::formatError(char* buf, size_t bufSize)
 {
@@ -313,6 +328,8 @@ ThreadContext::formatError(char* buf, size_t bufSize)
     if (hasErrorString()) {
         if (hasErrorThing()) {
             char thingStr[128];
+            errorThing().snprint(thingStr, 128);
+            /*
             if (errorThing()->isString()) {
                 snprintf(thingStr, 128, "String (%s)",
                             errorThing()->to<VM::String>()->c_chars());
@@ -320,6 +337,7 @@ ThreadContext::formatError(char* buf, size_t bufSize)
                 snprintf(thingStr, 128, "%s",
                             errorThing()->header().formatString());
             }
+            */
             return snprintf(buf, bufSize, "%s: %s [%s]",
                             RuntimeErrorString(error()),
                             errorString(), thingStr);

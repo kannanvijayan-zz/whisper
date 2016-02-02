@@ -32,10 +32,23 @@
     _(Int64Array)               \
     _(FloatArray)               \
     _(DoubleArray)              \
+    _(HeapPointerArray)         \
     _(String)                   \
     _(BoxArray)                 \
     _(ValBoxArray)              \
-    _(HeapPointerArray)         \
+    _(UInt8Slist)               \
+    _(UInt16Slist)              \
+    _(UInt32Slist)              \
+    _(UInt64Slist)              \
+    _(Int8Slist)                \
+    _(Int16Slist)               \
+    _(Int32Slist)               \
+    _(Int64Slist)               \
+    _(FloatSlist)               \
+    _(DoubleSlist)              \
+    _(HeapPointerSlist)         \
+    _(BoxSlist)                 \
+    _(ValBoxSlist)              \
     _(Error)                    \
     _(RuntimeState)             \
     _(ThreadState)              \

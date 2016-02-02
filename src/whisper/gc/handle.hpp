@@ -73,6 +73,12 @@ class MutHandle
         *valAddr_ = result.value();
         return OkVal();
     }
+    OkResult setMaybe(Maybe<T> const& result) {
+        if (!result.hasValue())
+            return ErrorVal();
+        *valAddr_ = result.value();
+        return OkVal();
+    }
 
     inline T* address() const {
         return valAddr_;

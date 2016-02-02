@@ -179,6 +179,15 @@ class Local : public LocalBase
         val_ = result.value();
         return OkVal();
     }
+    template <typename U>
+    OkResult setMaybe(Maybe<U> const& result) {
+        static_assert(std::is_convertible<U, T>::value,
+                      "U is not convertible to T.");
+        if (!result.hasValue())
+            return ErrorVal();
+        val_ = result.value();
+        return OkVal();
+    }
 
     inline T const* address() const {
         return &val_;

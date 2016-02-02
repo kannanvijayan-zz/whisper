@@ -1,4 +1,6 @@
 
+#include <limits>
+
 #include "runtime_inlines.hpp"
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
@@ -398,13 +400,16 @@ FileSyntaxFrame::StepImpl(ThreadContext* cx,
 
 
 /* static */ Result<CallExprSyntaxFrame*>
-CallExprSyntaxFrame::Create(AllocationContext acx,
-                            Handle<Frame*> parent,
-                            Handle<EntryFrame*> entryFrame,
-                            Handle<SyntaxTreeFragment*> stFrag)
+CallExprSyntaxFrame::CreateCallee(AllocationContext acx,
+                                  Handle<Frame*> parent,
+                                  Handle<EntryFrame*> entryFrame,
+                                  Handle<SyntaxTreeFragment*> stFrag)
 {
-    return acx.create<CallExprSyntaxFrame>(parent, entryFrame, stFrag);
+    return acx.create<CallExprSyntaxFrame>(parent, entryFrame, stFrag,
+                                           State::Callee, 0,
+                                           ValBox(), nullptr, nullptr);
 }
+
 
 /* static */ StepResult
 CallExprSyntaxFrame::ResolveChildImpl(
@@ -413,16 +418,156 @@ CallExprSyntaxFrame::ResolveChildImpl(
         Handle<Frame*> childFrame,
         EvalResult const& result)
 {
-    WH_ASSERT(frame->stFrag()->isNode());
-    Local<SyntaxNodeRef> callNode(cx, SyntaxNodeRef(frame->stFrag()->toNode()));
-    WH_ASSERT(callNode->nodeType() == AST::CallExpr);
+    Local<SyntaxNodeRef> callNodeRef(cx, frame->stFrag()->toNode());
+    WH_ASSERT(callNodeRef->nodeType() == AST::CallExpr);
 
-    if (result.isError() || result.isException()) {
-        Local<Frame*> parent(cx, frame->parent());
+    Local<PackedSyntaxTree*> pst(cx, frame->stFrag()->pst());
+    Local<AST::PackedCallExprNode> callExprNode(cx, callNodeRef->astCallExpr());
+
+    Local<VM::Frame*> parent(cx, frame->parent());
+
+    // Always forward errors or exceptions.
+    if (result.isError() || result.isException())
         return Frame::ResolveChild(cx, parent, frame, result);
+
+    // Switch on state to handle rest of behaviour.
+    switch (frame->state_) {
+      case State::Callee:
+        return ResolveCalleeChild(cx, frame, pst, callExprNode, result);
+      case State::Arg:
+        return ResolveArgChild(cx, frame, pst, callExprNode, result);
+      case State::Invoke:
+        return ResolveInvokeChild(cx, frame, pst, callExprNode, result);
+      default:
+        WH_UNREACHABLE("Invalid State.");
+        return cx->setError(RuntimeError::InternalError,
+                            "Invalid CallExpr frame state.");
+    }
+}
+
+/* static */ StepResult
+CallExprSyntaxFrame::ResolveCalleeChild(
+        ThreadContext* cx,
+        Handle<CallExprSyntaxFrame*> frame,
+        Handle<PackedSyntaxTree*> pst,
+        Handle<AST::PackedCallExprNode> callExprNode,
+        EvalResult const& result)
+{
+    WH_ASSERT(frame->state_ == State::Callee);
+    WH_ASSERT(result.isVoid() || result.isValue());
+
+    Local<VM::Frame*> parent(cx, frame->parent());
+
+    uint32_t offset = callExprNode->callee().offset();
+
+    // A void result is forwarded as an exception.
+    // Involving the syntax tree in question.
+    if (result.isVoid()) {
+        Local<SyntaxNodeRef> subNodeRef(cx,
+            SyntaxNodeRef(pst, offset));
+        Local<SyntaxNode*> subNode(cx);
+        if (!subNode.setResult(subNodeRef->createSyntaxNode(
+                                    cx->inHatchery())))
+        {
+            return ErrorVal();
+        }
+        cx->setExceptionRaised("Call callee expression yielded void.",
+                               subNode.get());
+        return Frame::ResolveChild(cx, parent, frame,
+                        EvalResult::Exception(frame.get()));
     }
 
-    return cx->setError(RuntimeError::InternalError, "CallExprSyntaxFrame::ResolveChildImpl");
+    WH_ASSERT(result.isValue());
+    Local<ValBox> calleeBox(cx, result.value());
+    Local<FunctionObject*> calleeObj(cx);
+    if (!calleeObj.setMaybe(Interp::FunctionObjectForValue(cx, calleeBox))) {
+        return cx->setExceptionRaised("Callee value is not callable.",
+                                      calleeBox.get());
+    }
+
+    // If the function is an operative, the next frame to get created
+    // will be an Invoke frame, since the args do not need to be evaluated.
+    if (calleeObj->isOperative()) {
+        return cx->setError(RuntimeError::InternalError,
+                            "TODO: CallExprSyntaxFrame::ResolveCalleeChild - "
+                            "create invocation frame for operative.");
+    }
+
+    // If the function is an applicative, check the arity of the call.
+    WH_ASSERT(calleeObj->isApplicative());
+    if (callExprNode->numArgs() == 0) {
+        // For an applicative function with zero arguments, we can
+        // invoke immediately.
+        return cx->setError(RuntimeError::InternalError,
+                            "TODO: CallExprSyntaxFrame::ResolveCalleeChild - "
+                            "create invocation frame for zero-arg call.");
+    }
+
+    // Otherwise, create an argument evaluation frame for arg 0.
+    return cx->setError(RuntimeError::InternalError,
+                        "TODO: CallExprSyntaxFrame::ResolveCalleeChild - "
+                        "create evaluation frame for first argument.");
+}
+
+/* static */ StepResult
+CallExprSyntaxFrame::ResolveArgChild(
+        ThreadContext* cx,
+        Handle<CallExprSyntaxFrame*> frame,
+        Handle<PackedSyntaxTree*> pst,
+        Handle<AST::PackedCallExprNode> callExprNode,
+        EvalResult const& result)
+{
+    WH_ASSERT(frame->state_ == State::Arg);
+    WH_ASSERT(frame->argNo() < callExprNode->numArgs());
+    WH_ASSERT(result.isVoid() || result.isValue());
+
+    Local<VM::Frame*> parent(cx, frame->parent());
+
+    uint32_t offset = callExprNode->arg(frame->argNo()).offset();
+
+    // A void result is forwarded as an exception.
+    // Involving the syntax tree in question.
+    if (result.isVoid()) {
+        Local<SyntaxNodeRef> subNodeRef(cx,
+            SyntaxNodeRef(pst, offset));
+        Local<SyntaxNode*> subNode(cx);
+        if (!subNode.setResult(subNodeRef->createSyntaxNode(
+                                    cx->inHatchery())))
+        {
+            return ErrorVal();
+        }
+        cx->setExceptionRaised("Call arg expression yielded void.",
+                               subNode.get());
+        return Frame::ResolveChild(cx, parent, frame,
+                        EvalResult::Exception(frame.get()));
+    }
+
+    uint32_t nextArgNo = frame->argNo() + 1;
+    WH_ASSERT(nextArgNo <= callExprNode->numArgs());
+    if (nextArgNo == callExprNode->numArgs()) {
+        return cx->setError(RuntimeError::InternalError,
+                            "TODO: CallExprSyntaxFrame::ResolveArgChild - "
+                            "create invoke frame for call with args.");
+    }
+
+    return cx->setError(RuntimeError::InternalError,
+                        "TODO: CallExprSyntaxFrame::ResolveArgChild - "
+                        "create evaluation frame for next argument.");
+}
+
+/* static */ StepResult
+CallExprSyntaxFrame::ResolveInvokeChild(
+        ThreadContext* cx,
+        Handle<CallExprSyntaxFrame*> frame,
+        Handle<PackedSyntaxTree*> pst,
+        Handle<AST::PackedCallExprNode> callExprNode,
+        EvalResult const& result)
+{
+    WH_ASSERT(frame->inInvokeState());
+    WH_ASSERT(result.isVoid() || result.isValue());
+
+    Local<Frame*> parent(cx, frame->parent());
+    return Frame::ResolveChild(cx, parent, frame, result);
 }
 
 /* static */ StepResult
@@ -430,36 +575,95 @@ CallExprSyntaxFrame::StepImpl(ThreadContext* cx,
                               Handle<CallExprSyntaxFrame*> frame)
 {
     WH_ASSERT(frame->stFrag()->isNode());
-    Local<SyntaxNodeRef> callNodeRef(cx,
-        SyntaxNodeRef(frame->stFrag()->toNode()));
-    WH_ASSERT(callNodeRef->nodeType() == AST::CallExpr);
-    Local<PackedSyntaxTree*> pst(cx, frame->stFrag()->pst());
-    Local<AST::PackedCallExprNode> callExprNode(cx,
-        AST::PackedCallExprNode(pst->data(), callNodeRef->offset()));
 
     // On initial step, just set up the entry frame for evaluating the
-    // underlying callee expression.
-    // The ResolveChild implementation when the callee finishes
-    // will handle the setup of execution to evaluate argument expressions.
+    // underlying callee or arg expression.
 
-    // Create a new SyntaxTreeNode for the callee expression.
-    Local<SyntaxNode*> calleeNode(cx);
-    if (!calleeNode.setResult(SyntaxNode::Create(
-            cx->inHatchery(), pst, callExprNode->callee().offset())))
-    {
-        return ErrorVal();
+    switch (frame->state()) {
+      case State::Callee:
+        return StepCallee(cx, frame);
+      case State::Arg:
+        return StepArg(cx, frame);
+      case State::Invoke:
+        return StepInvoke(cx, frame);
+      default:
+        WH_UNREACHABLE("Invalid CallExprSyntaxFrame::State.");
+        return cx->setError(RuntimeError::InternalError,
+                            "Invalid CallExprSyntaxFrame::State.");
     }
-            
+}
+
+/* static */ StepResult
+CallExprSyntaxFrame::StepCallee(ThreadContext* cx,
+                                Handle<CallExprSyntaxFrame*> frame)
+{
+    WH_ASSERT(frame->inCalleeState());
+
+    Local<SyntaxNodeRef> callNodeRef(cx, frame->stFrag()->toNode());
+    WH_ASSERT(callNodeRef->nodeType() == AST::CallExpr);
+
+    Local<PackedSyntaxTree*> pst(cx, frame->stFrag()->pst());
+    Local<AST::PackedCallExprNode> callExprNode(cx, callNodeRef->astCallExpr());
+
+    return StepSubexpr(cx, frame, pst, callExprNode->callee().offset());
+}
+
+/* static */ StepResult
+CallExprSyntaxFrame::StepArg(ThreadContext* cx,
+                             Handle<CallExprSyntaxFrame*> frame)
+{
+    WH_ASSERT(frame->inArgState());
+
+    // Only applicatives need evaluation of arguments.
+    WH_ASSERT(frame->calleeFunc()->isApplicative());
+
+    Local<SyntaxNodeRef> callNodeRef(cx, frame->stFrag()->toNode());
+    WH_ASSERT(callNodeRef->nodeType() == AST::CallExpr);
+
+    Local<PackedSyntaxTree*> pst(cx, frame->stFrag()->pst());
+    Local<AST::PackedCallExprNode> callExprNode(cx, callNodeRef->astCallExpr());
+
+    uint16_t argNo = frame->argNo();
+    WH_ASSERT(argNo < callExprNode->numArgs());
+
+    return StepSubexpr(cx, frame, pst, callExprNode->arg(argNo).offset());
+}
+
+/* static */ StepResult
+CallExprSyntaxFrame::StepInvoke(ThreadContext* cx,
+                                Handle<CallExprSyntaxFrame*> frame)
+{
+    WH_ASSERT(frame->inInvokeState());
+    // TODO: create an invoke frame for the function being called.
+    return cx->setError(RuntimeError::InternalError,
+                        "CallExprSyntaxFrame::StepInvoke not implemented.");
+}
+
+/* static */ StepResult
+CallExprSyntaxFrame::StepSubexpr(ThreadContext* cx,
+                                 Handle<CallExprSyntaxFrame*> frame,
+                                 Handle<PackedSyntaxTree*> pst,
+                                 uint32_t offset)
+{
+    // Create a new SyntaxNode for the subexpression (callee or argN).
+    Local<SyntaxNodeRef> nodeRef(cx, SyntaxNodeRef(pst, offset));
+    Local<SyntaxNode*> node(cx);
+    if (!node.setResult(nodeRef->createSyntaxNode(cx->inHatchery())))
+        return ErrorVal();
+
     Local<ScopeObject*> scope(cx, frame->scope());
+
+    // Create and return entry frame.
     Local<EntryFrame*> entryFrame(cx);
     if (!entryFrame.setResult(VM::EntryFrame::Create(
-            cx->inHatchery(), frame, calleeNode.handle(), scope)))
+            cx->inHatchery(), frame, node.handle(), scope)))
     {
         return ErrorVal();
     }
 
     return StepResult::Continue(entryFrame);
 }
+
 
 
 } // namespace VM

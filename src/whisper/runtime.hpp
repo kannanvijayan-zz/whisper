@@ -20,6 +20,7 @@ namespace VM {
     class ThreadState;
     class GlobalScope;
     class Wobject;
+    class Box;
 }
 
 
@@ -253,13 +254,16 @@ class ThreadContext
     char const* errorString() const;
 
     bool hasErrorThing() const;
-    HeapThing* errorThing() const;
+    VM::Box const& errorThing() const;
 
     ErrorT_ setError(RuntimeError error, char const* string,
-                      HeapThing* thing);
-    ErrorT_ setError(RuntimeError error, char const* string) {
-        return setError(error, string, nullptr);
-    }
+                     VM::Box const& thing);
+
+    ErrorT_ setError(RuntimeError error, char const* string,
+                     HeapThing* thing);
+
+    ErrorT_ setError(RuntimeError error, char const* string);
+
     ErrorT_ setError(RuntimeError error) {
         return setError(error, nullptr);
     }
@@ -276,6 +280,9 @@ class ThreadContext
         return setError(RuntimeError::ExceptionRaised, string);
     }
     ErrorT_ setExceptionRaised(char const* string, HeapThing* thing) {
+        return setError(RuntimeError::ExceptionRaised, string, thing);
+    }
+    ErrorT_ setExceptionRaised(char const* string, VM::Box const& thing) {
         return setError(RuntimeError::ExceptionRaised, string, thing);
     }
     template <typename T>

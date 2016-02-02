@@ -6,6 +6,7 @@
 
 #include "vm/predeclare.hpp"
 #include "vm/array.hpp"
+#include "vm/slist.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -249,6 +250,24 @@ struct ArrayTraits<ValBox>
     static const HeapFormat ArrayFormat = HeapFormat::ValBoxArray;
 };
 
+template <>
+struct SlistTraits<Box>
+{
+    SlistTraits() = delete;
+
+    static const bool Specialized = true;
+    static const HeapFormat SlistFormat = HeapFormat::BoxSlist;
+};
+
+template <>
+struct SlistTraits<ValBox>
+{
+    SlistTraits() = delete;
+
+    static const bool Specialized = true;
+    static const HeapFormat SlistFormat = HeapFormat::ValBoxSlist;
+};
+
 
 } // namespace VM
 
@@ -281,6 +300,19 @@ struct HeapFormatTraits<HeapFormat::ValBoxArray>
 {
     HeapFormatTraits() = delete;
     typedef VM::Array<VM::ValBox> Type;
+};
+
+template <>
+struct HeapFormatTraits<HeapFormat::BoxSlist>
+{
+    HeapFormatTraits() = delete;
+    typedef VM::Slist<VM::Box> Type;
+};
+template <>
+struct HeapFormatTraits<HeapFormat::ValBoxSlist>
+{
+    HeapFormatTraits() = delete;
+    typedef VM::Slist<VM::ValBox> Type;
 };
 
 template <>

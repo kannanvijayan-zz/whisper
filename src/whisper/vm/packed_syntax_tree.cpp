@@ -56,6 +56,12 @@ SyntaxNodeRef::nodeTypeCString() const
     return AST::NodeTypeString(nodeType());
 }
 
+Result<SyntaxNode*>
+SyntaxNodeRef::createSyntaxNode(AllocationContext acx)
+{
+    return acx.create<SyntaxNode>(pst(), offset());
+}
+
 /* static */ Result<SyntaxNode*>
 SyntaxNode::Create(AllocationContext acx,
                    Handle<PackedSyntaxTree*> pst,

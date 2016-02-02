@@ -39,6 +39,9 @@ Result<VM::Frame*> CreateInvokeSyntaxFrame(
         Handle<VM::SyntaxTreeFragment*> stFrag,
         Handle<VM::ValBox> syntaxHandler);
 
+Maybe<VM::FunctionObject*> FunctionObjectForValue(ThreadContext* cx,
+                                                  Handle<VM::ValBox> value);
+
 VM::CallResult InvokeValue(
         ThreadContext* cx,
         Handle<VM::Frame*> frame,
