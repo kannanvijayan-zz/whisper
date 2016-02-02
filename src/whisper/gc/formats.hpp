@@ -73,7 +73,8 @@
     _(SyntaxNameLookupFrame)    \
     _(InvokeSyntaxFrame)        \
     _(FileSyntaxFrame)          \
-    _(CallExprSyntaxFrame)
+    _(CallExprSyntaxFrame)      \
+    _(InvokeApplicativeFrame)
 
 
 #endif // WHISPER__GC__FORMATS_HPP

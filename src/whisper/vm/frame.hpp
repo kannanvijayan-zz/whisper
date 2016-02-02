@@ -17,7 +17,8 @@ namespace VM {
     _(SyntaxNameLookupFrame)        \
     _(InvokeSyntaxFrame)            \
     _(FileSyntaxFrame)              \
-    _(CallExprSyntaxFrame)
+    _(CallExprSyntaxFrame)          \
+    _(InvokeApplicativeFrame)
 
 
 #define PREDECLARE_FRAME_CLASSES_(name) class name;
@@ -372,6 +373,11 @@ class CallExprSyntaxFrame : public SyntaxFrame
             Handle<ValBox> callee,
             Handle<FunctionObject*> calleeFunc);
 
+    static Result<CallExprSyntaxFrame*> CreateInvoke(
+            AllocationContext acx,
+            Handle<CallExprSyntaxFrame*> frame,
+            Handle<Slist<ValBox>*> operands);
+
     static StepResult ResolveChildImpl(ThreadContext* cx,
                                        Handle<CallExprSyntaxFrame*> frame,
                                        Handle<Frame*> childFrame,
@@ -414,6 +420,51 @@ class CallExprSyntaxFrame : public SyntaxFrame
                                   Handle<PackedSyntaxTree*> pst,
                                   uint32_t offset);
 };
+
+class InvokeApplicativeFrame : public Frame
+{
+    friend class TraceTraits<InvokeApplicativeFrame>;
+  private:
+    HeapField<ValBox> callee_;
+    HeapField<FunctionObject*> calleeFunc_;
+    HeapField<Slist<ValBox>*> operands_;
+
+  public:
+    InvokeApplicativeFrame(Frame* parent,
+                           ValBox const& callee,
+                           FunctionObject* calleeFunc,
+                           Slist<ValBox>* operands)
+      : Frame(parent),
+        callee_(callee),
+        calleeFunc_(calleeFunc),
+        operands_(operands)
+    {}
+
+    ValBox const& callee() const {
+        return callee_;
+    }
+    FunctionObject* calleeFunc() const {
+        return calleeFunc_;
+    }
+    Slist<ValBox>* operands() const {
+        return operands_;
+    }
+
+    static Result<InvokeApplicativeFrame*> Create(
+            AllocationContext acx,
+            Handle<Frame*> parent,
+            Handle<ValBox> callee,
+            Handle<FunctionObject*> calleeFunc,
+            Handle<Slist<ValBox>*> operands);
+
+    static StepResult ResolveChildImpl(ThreadContext* cx,
+                                       Handle<InvokeApplicativeFrame*> frame,
+                                       Handle<Frame*> childFrame,
+                                       Handle<EvalResult> result);
+    static StepResult StepImpl(ThreadContext* cx,
+                               Handle<InvokeApplicativeFrame*> frame);
+};
+
 
 
 } // namespace VM
@@ -620,6 +671,35 @@ struct TraceTraits<VM::CallExprSyntaxFrame>
     {
         TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
         obj.callee_.update(updater, start, end);
+        obj.operands_.update(updater, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::InvokeApplicativeFrame>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::InvokeApplicativeFrame const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::Frame>::Scan<Scanner>(scanner, obj, start, end);
+        obj.callee_.scan(scanner, start, end);
+        obj.calleeFunc_.scan(scanner, start, end);
+        obj.operands_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::InvokeApplicativeFrame& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
+        obj.callee_.update(updater, start, end);
+        obj.calleeFunc_.update(updater, start, end);
         obj.operands_.update(updater, start, end);
     }
 };
