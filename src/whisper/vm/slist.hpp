@@ -107,7 +107,7 @@ Slist<T>::Create(AllocationContext acx,
                  Handle<T> value,
                  Handle<Slist<T>*> rest)
 {
-    return acx.createSized<Slist<T>>(value, rest);
+    return acx.create<Slist<T>>(value, rest);
 }
 
 
