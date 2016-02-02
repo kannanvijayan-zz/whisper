@@ -13,7 +13,7 @@ class Frame;
 // Result of an interpretation of a code.
 class EvalResult
 {
-    friend class TraceTraits<EvalResult>;
+  friend class TraceTraits<EvalResult>;
   public:
     enum class Outcome {
         Error,
@@ -93,11 +93,11 @@ class EvalResult
         return outcome() == Outcome::Void;
     }
 
-    VM::ValBox const& value() const {
+    Handle<ValBox> value() const {
         WH_ASSERT(isValue());
         return value_;
     }
-    VM::Frame* throwingFrame() const {
+    Handle<Frame*> throwingFrame() const {
         WH_ASSERT(isException());
         return frame_;
     }
@@ -106,7 +106,7 @@ class EvalResult
 // Intermediate result produced when calling a function.
 class CallResult
 {
-    friend class TraceTraits<CallResult>;
+  friend class TraceTraits<CallResult>;
   public:
     enum class Outcome {
         Error,
@@ -118,21 +118,21 @@ class CallResult
 
   private:
     Outcome outcome_;
-    StackField<VM::ValBox> value_;
-    StackField<VM::Frame*> frame_;
+    StackField<ValBox> value_;
+    StackField<Frame*> frame_;
 
     CallResult(Outcome outcome)
       : outcome_(outcome),
         value_()
     {}
 
-    CallResult(Outcome outcome, VM::ValBox const& value)
+    CallResult(Outcome outcome, ValBox const& value)
       : outcome_(outcome),
         value_(value),
         frame_(nullptr)
     {}
 
-    CallResult(Outcome outcome, VM::Frame* frame)
+    CallResult(Outcome outcome, Frame* frame)
       : outcome_(outcome),
         value_(),
         frame_(frame)
@@ -146,16 +146,16 @@ class CallResult
     static CallResult Error() {
         return CallResult(Outcome::Error);
     }
-    static CallResult Exception(VM::Frame* frame) {
+    static CallResult Exception(Frame* frame) {
         return CallResult(Outcome::Exception, frame);
     }
-    static CallResult Value(VM::ValBox const& value) {
+    static CallResult Value(ValBox const& value) {
         return CallResult(Outcome::Value, value);
     }
     static CallResult Void() {
         return CallResult(Outcome::Void);
     }
-    static CallResult Continue(VM::Frame* frame) {
+    static CallResult Continue(Frame* frame) {
         return CallResult(Outcome::Continue, frame);
     }
 
@@ -194,15 +194,15 @@ class CallResult
         return outcome() == Outcome::Continue;
     }
 
-    VM::ValBox const& value() const {
+    Handle<ValBox> value() const {
         WH_ASSERT(isValue());
         return value_;
     }
-    VM::Frame* throwingFrame() const {
+    Handle<Frame*> throwingFrame() const {
         WH_ASSERT(isException());
         return frame_;
     }
-    VM::Frame* continueFrame() const {
+    Handle<Frame*> continueFrame() const {
         WH_ASSERT(isContinue());
         return frame_;
     }
@@ -211,7 +211,7 @@ class CallResult
 // Result of a step function.
 class StepResult
 {
-    friend class TraceTraits<StepResult>;
+  friend class TraceTraits<StepResult>;
   public:
     enum class Outcome {
         Error,
@@ -220,13 +220,13 @@ class StepResult
 
   private:
     Outcome outcome_;
-    StackField<VM::Frame*> frame_;
+    StackField<Frame*> frame_;
 
     StepResult(Outcome outcome)
       : outcome_(outcome)
     {}
 
-    StepResult(Outcome outcome, VM::Frame* frame)
+    StepResult(Outcome outcome, Frame* frame)
       : outcome_(outcome),
         frame_(frame)
     {}
@@ -239,7 +239,7 @@ class StepResult
     static StepResult Error() {
         return StepResult(Outcome::Error);
     }
-    static StepResult Continue(VM::Frame* frame) {
+    static StepResult Continue(Frame* frame) {
         return StepResult(Outcome::Continue, frame);
     }
 
@@ -266,7 +266,7 @@ class StepResult
         return outcome() == Outcome::Continue;
     }
 
-    VM::Frame* continueFrame() const {
+    Handle<Frame*> continueFrame() const {
         WH_ASSERT(isContinue());
         return frame_;
     }

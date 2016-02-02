@@ -17,7 +17,7 @@ namespace VM {
 Frame::ResolveChild(ThreadContext* cx,
                     Handle<Frame*> frame,
                     Handle<Frame*> childFrame,
-                    EvalResult const& result)
+                    Handle<EvalResult> result)
 {
     WH_ASSERT(childFrame->parent() == frame);
 
@@ -69,7 +69,7 @@ TerminalFrame::Create(AllocationContext acx)
 TerminalFrame::ResolveChildImpl(ThreadContext* cx,
                                 Handle<TerminalFrame*> frame,
                                 Handle<Frame*> childFrame,
-                                EvalResult const& result)
+                                Handle<EvalResult> result)
 {
     // Any resolving of a child of this frame just continues with
     // the terminal frame.
@@ -99,7 +99,7 @@ EntryFrame::Create(AllocationContext acx,
 EntryFrame::ResolveChildImpl(ThreadContext* cx,
                              Handle<EntryFrame*> frame,
                              Handle<Frame*> childFrame,
-                             EvalResult const& result)
+                             Handle<EvalResult> result)
 {
     WH_ASSERT(childFrame->isSyntaxNameLookupFrame() ||
               childFrame->isInvokeSyntaxFrame());
@@ -109,10 +109,10 @@ EntryFrame::ResolveChildImpl(ThreadContext* cx,
     if (childFrame->isSyntaxNameLookupFrame()) {
         Local<Frame*> parent(cx, frame->parent());
 
-        if (result.isError() || result.isException())
+        if (result->isError() || result->isException())
             return Frame::ResolveChild(cx, parent, frame, result);
 
-        if (result.isVoid()) {
+        if (result->isVoid()) {
             SpewInterpNote("EntryFrame::ResolveChildImpl -"
                            " SyntaxNameLookup resolved with notFound -"
                            " raising exception.");
@@ -125,11 +125,10 @@ EntryFrame::ResolveChildImpl(ThreadContext* cx,
         }
 
         // Create invocation frame for the looked up value.
-        Local<ValBox> syntaxHandler(cx, result.value());
         Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
         Local<Frame*> invokeFrame(cx);
         if (!invokeFrame.setResult(Interp::CreateInvokeSyntaxFrame(cx,
-                frame, frame, stFrag, syntaxHandler)))
+                frame, frame, stFrag, result->value())))
         {
             return ErrorVal();
         }
@@ -171,7 +170,7 @@ SyntaxNameLookupFrame::ResolveChildImpl(
         ThreadContext* cx,
         Handle<SyntaxNameLookupFrame*> frame,
         Handle<Frame*> childFrame,
-        EvalResult const& result)
+        Handle<EvalResult> result)
 {
     WH_UNREACHABLE("SyntaxNameLookupFrame should never be resolved!");
     return ErrorVal();
@@ -263,7 +262,7 @@ InvokeSyntaxFrame::ResolveChildImpl(
         ThreadContext* cx,
         Handle<InvokeSyntaxFrame*> frame,
         Handle<Frame*> childFrame,
-        EvalResult const& result)
+        Handle<EvalResult> result)
 {
     // Resolve parent frame with the same result.
     Local<Frame*> rootedParent(cx, frame->parent());
@@ -277,28 +276,28 @@ InvokeSyntaxFrame::StepImpl(ThreadContext* cx,
     Local<ScopeObject*> callerScope(cx, frame->entryFrame()->scope());
     Local<ValBox> syntaxHandler(cx, frame->syntaxHandler());
     Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
-    CallResult result = Interp::InvokeValue(cx, frame, callerScope,
-                                            syntaxHandler, stFrag);
+    Local<CallResult> result(cx, Interp::InvokeValue(cx, frame, callerScope,
+                                            syntaxHandler, stFrag));
 
-    if (result.isError())
+    if (result->isError())
         return ErrorVal();
 
     Local<Frame*> parent(cx, frame->parent());
-    if (result.isException()) {
+    if (result->isException()) {
         return Frame::ResolveChild(cx, parent, frame,
-                        EvalResult::Exception(result.throwingFrame()));
+                        EvalResult::Exception(result->throwingFrame()));
     }
 
-    if (result.isValue()) {
+    if (result->isValue()) {
         return Frame::ResolveChild(cx, parent, frame,
-                            EvalResult::Value(result.value()));
+                            EvalResult::Value(result->value()));
     }
 
-    if (result.isVoid())
+    if (result->isVoid())
         return Frame::ResolveChild(cx, parent, frame, EvalResult::Void());
 
-    if (result.isContinue())
-        return StepResult::Continue(result.continueFrame());
+    if (result->isContinue())
+        return StepResult::Continue(result->continueFrame());
 
     WH_UNREACHABLE("Unknown CallResult.");
     return ErrorVal();
@@ -339,7 +338,7 @@ FileSyntaxFrame::ResolveChildImpl(
         ThreadContext* cx,
         Handle<FileSyntaxFrame*> frame,
         Handle<Frame*> childFrame,
-        EvalResult const& result)
+        Handle<EvalResult> result)
 {
     WH_ASSERT(frame->stFrag()->isNode());
     Local<SyntaxNodeRef> fileNode(cx, SyntaxNodeRef(frame->stFrag()->toNode()));
@@ -349,7 +348,7 @@ FileSyntaxFrame::ResolveChildImpl(
     Local<Frame*> rootedParent(cx, frame->parent());
 
     // If result is an error, resolve to parent.
-    if (result.isError() || result.isException())
+    if (result->isError() || result->isException())
         return Frame::ResolveChild(cx, rootedParent, frame, result);
 
     // Otherwise, create new file syntax frame for executing next
@@ -431,7 +430,7 @@ CallExprSyntaxFrame::ResolveChildImpl(
         ThreadContext* cx,
         Handle<CallExprSyntaxFrame*> frame,
         Handle<Frame*> childFrame,
-        EvalResult const& result)
+        Handle<EvalResult> result)
 {
     Local<SyntaxNodeRef> callNodeRef(cx, frame->stFrag()->toNode());
     WH_ASSERT(callNodeRef->nodeType() == AST::CallExpr);
@@ -442,7 +441,7 @@ CallExprSyntaxFrame::ResolveChildImpl(
     Local<VM::Frame*> parent(cx, frame->parent());
 
     // Always forward errors or exceptions.
-    if (result.isError() || result.isException())
+    if (result->isError() || result->isException())
         return Frame::ResolveChild(cx, parent, frame, result);
 
     // Switch on state to handle rest of behaviour.
@@ -466,10 +465,10 @@ CallExprSyntaxFrame::ResolveCalleeChild(
         Handle<CallExprSyntaxFrame*> frame,
         Handle<PackedSyntaxTree*> pst,
         Handle<AST::PackedCallExprNode> callExprNode,
-        EvalResult const& result)
+        Handle<EvalResult> result)
 {
     WH_ASSERT(frame->state_ == State::Callee);
-    WH_ASSERT(result.isVoid() || result.isValue());
+    WH_ASSERT(result->isVoid() || result->isValue());
 
     Local<VM::Frame*> parent(cx, frame->parent());
 
@@ -477,7 +476,7 @@ CallExprSyntaxFrame::ResolveCalleeChild(
 
     // A void result is forwarded as an exception.
     // Involving the syntax tree in question.
-    if (result.isVoid()) {
+    if (result->isVoid()) {
         Local<SyntaxNodeRef> subNodeRef(cx,
             SyntaxNodeRef(pst, offset));
         Local<SyntaxNode*> subNode(cx);
@@ -492,8 +491,8 @@ CallExprSyntaxFrame::ResolveCalleeChild(
                         EvalResult::Exception(frame.get()));
     }
 
-    WH_ASSERT(result.isValue());
-    Local<ValBox> calleeBox(cx, result.value());
+    WH_ASSERT(result->isValue());
+    Local<ValBox> calleeBox(cx, result->value());
     Local<FunctionObject*> calleeObj(cx);
     if (!calleeObj.setMaybe(Interp::FunctionObjectForValue(cx, calleeBox))) {
         return cx->setExceptionRaised("Callee value is not callable.",
@@ -534,11 +533,11 @@ CallExprSyntaxFrame::ResolveArgChild(
         Handle<CallExprSyntaxFrame*> frame,
         Handle<PackedSyntaxTree*> pst,
         Handle<AST::PackedCallExprNode> callExprNode,
-        EvalResult const& result)
+        Handle<EvalResult> result)
 {
     WH_ASSERT(frame->state_ == State::Arg);
     WH_ASSERT(frame->argNo() < callExprNode->numArgs());
-    WH_ASSERT(result.isVoid() || result.isValue());
+    WH_ASSERT(result->isVoid() || result->isValue());
 
     Local<VM::Frame*> parent(cx, frame->parent());
 
@@ -546,7 +545,7 @@ CallExprSyntaxFrame::ResolveArgChild(
 
     // A void result is forwarded as an exception.
     // Involving the syntax tree in question.
-    if (result.isVoid()) {
+    if (result->isVoid()) {
         Local<SyntaxNodeRef> subNodeRef(cx,
             SyntaxNodeRef(pst, offset));
         Local<SyntaxNode*> subNode(cx);
@@ -580,10 +579,10 @@ CallExprSyntaxFrame::ResolveInvokeChild(
         Handle<CallExprSyntaxFrame*> frame,
         Handle<PackedSyntaxTree*> pst,
         Handle<AST::PackedCallExprNode> callExprNode,
-        EvalResult const& result)
+        Handle<EvalResult> result)
 {
     WH_ASSERT(frame->inInvokeState());
-    WH_ASSERT(result.isVoid() || result.isValue());
+    WH_ASSERT(result->isVoid() || result->isValue());
 
     Local<Frame*> parent(cx, frame->parent());
     return Frame::ResolveChild(cx, parent, frame, result);

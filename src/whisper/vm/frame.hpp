@@ -43,9 +43,20 @@ class Frame
         return parent_;
     }
 
-    static StepResult ResolveChild(ThreadContext* cx, Handle<Frame*> frame,
+    static StepResult ResolveChild(ThreadContext* cx,
+                                   Handle<Frame*> frame,
                                    Handle<Frame*> childFrame,
-                                   EvalResult const& result);
+                                   Handle<EvalResult> result);
+
+    static StepResult ResolveChild(ThreadContext* cx,
+                                   Handle<Frame*> frame,
+                                   Handle<Frame*> childFrame,
+                                   EvalResult const& result)
+    {
+        Local<EvalResult> rootedResult(cx, result);
+        return ResolveChild(cx, frame, childFrame, rootedResult.handle());
+    }
+
     static StepResult Step(ThreadContext* cx, Handle<Frame*> frame);
 
     EntryFrame* maybeAncestorEntryFrame();
@@ -100,7 +111,7 @@ class TerminalFrame : public Frame
     static StepResult ResolveChildImpl(ThreadContext* cx,
                                        Handle<TerminalFrame*> frame,
                                        Handle<Frame*> childFrame,
-                                       EvalResult const& result);
+                                       Handle<EvalResult> result);
     static StepResult StepImpl(ThreadContext* cx,
                                Handle<TerminalFrame*> frame);
 };
@@ -152,7 +163,7 @@ class EntryFrame : public Frame
     static StepResult ResolveChildImpl(ThreadContext* cx,
                                        Handle<EntryFrame*> frame,
                                        Handle<Frame*> childFrame,
-                                       EvalResult const& result);
+                                       Handle<EvalResult> result);
     static StepResult StepImpl(ThreadContext* cx, Handle<EntryFrame*> frame);
 };
 
@@ -212,7 +223,7 @@ class SyntaxNameLookupFrame : public SyntaxFrame
     static StepResult ResolveChildImpl(ThreadContext* cx,
                                        Handle<SyntaxNameLookupFrame*> frame,
                                        Handle<Frame*> childFrame,
-                                       EvalResult const& result);
+                                       Handle<EvalResult> result);
     static StepResult StepImpl(ThreadContext* cx,
                                Handle<SyntaxNameLookupFrame*> frame);
 };
@@ -246,7 +257,7 @@ class InvokeSyntaxFrame : public SyntaxFrame
     static StepResult ResolveChildImpl(ThreadContext* cx,
                                        Handle<InvokeSyntaxFrame*> frame,
                                        Handle<Frame*> childFrame,
-                                       EvalResult const& result);
+                                       Handle<EvalResult> result);
     static StepResult StepImpl(ThreadContext* cx,
                                Handle<InvokeSyntaxFrame*> frame);
 };
@@ -284,7 +295,7 @@ class FileSyntaxFrame : public SyntaxFrame
     static StepResult ResolveChildImpl(ThreadContext* cx,
                                        Handle<FileSyntaxFrame*> frame,
                                        Handle<Frame*> childFrame,
-                                       EvalResult const& result);
+                                       Handle<EvalResult> result);
     static StepResult StepImpl(ThreadContext* cx,
                                Handle<FileSyntaxFrame*> frame);
 };
@@ -364,7 +375,7 @@ class CallExprSyntaxFrame : public SyntaxFrame
     static StepResult ResolveChildImpl(ThreadContext* cx,
                                        Handle<CallExprSyntaxFrame*> frame,
                                        Handle<Frame*> childFrame,
-                                       EvalResult const& result);
+                                       Handle<EvalResult> result);
 
     static StepResult StepImpl(ThreadContext* cx,
                                Handle<CallExprSyntaxFrame*> frame);
@@ -375,21 +386,21 @@ class CallExprSyntaxFrame : public SyntaxFrame
             Handle<CallExprSyntaxFrame*> frame,
             Handle<PackedSyntaxTree*> pst,
             Handle<AST::PackedCallExprNode> callExprNode,
-            EvalResult const& result);
+            Handle<EvalResult> result);
 
     static StepResult ResolveArgChild(
             ThreadContext* cx,
             Handle<CallExprSyntaxFrame*> frame,
             Handle<PackedSyntaxTree*> pst,
             Handle<AST::PackedCallExprNode> callExprNode,
-            EvalResult const& result);
+            Handle<EvalResult> result);
 
     static StepResult ResolveInvokeChild(
             ThreadContext* cx,
             Handle<CallExprSyntaxFrame*> frame,
             Handle<PackedSyntaxTree*> pst,
             Handle<AST::PackedCallExprNode> callExprNode,
-            EvalResult const& result);
+            Handle<EvalResult> result);
 
     static StepResult StepCallee(ThreadContext* cx,
                                  Handle<CallExprSyntaxFrame*> frame);
