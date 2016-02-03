@@ -555,15 +555,21 @@ CallExprSyntaxFrame::ResolveCalleeChild(
                                       calleeBox.get());
     }
 
+    Local<CallExprSyntaxFrame*> nextFrame(cx);
+
     // If the function is an operative, the next frame to get created
     // will be an Invoke frame, since the args do not need to be evaluated.
     if (calleeObj->isOperative()) {
-        return cx->setError(RuntimeError::InternalError,
-                            "TODO: CallExprSyntaxFrame::ResolveCalleeChild - "
-                            "create invocation frame for operative.");
-    }
+        // Zero-argument applicative can be invoked immediately.
+        Local<Slist<ValBox>*> operands(cx, nullptr);
+        if (!nextFrame.setResult(CallExprSyntaxFrame::CreateInvoke(
+                cx->inHatchery(), frame, calleeBox, calleeObj, operands)))
+        {
+            return ErrorVal();
+        }
 
-    Local<CallExprSyntaxFrame*> nextFrame(cx);
+        return StepResult::Continue(nextFrame.get());
+    }
 
     // If the function is an applicative, check the arity of the call.
     WH_ASSERT(calleeObj->isApplicative());
@@ -735,7 +741,6 @@ CallExprSyntaxFrame::StepInvoke(ThreadContext* cx,
     Local<Slist<ValBox>*> operands(cx, frame->operands());
 
     if (calleeFunc->isApplicative()) {
-        // TODO: create an invocation frame for the function being called.
         Local<InvokeApplicativeFrame*> invokeFrame(cx);
         if (!invokeFrame.setResult(InvokeApplicativeFrame::Create(
                 cx->inHatchery(), frame, callee, calleeFunc, operands)))
@@ -748,10 +753,15 @@ CallExprSyntaxFrame::StepInvoke(ThreadContext* cx,
     WH_ASSERT(calleeFunc->isOperative());
     WH_ASSERT(operands.get() == nullptr);
 
-    // TODO: create an invocation frame for the function being called.
-    return cx->setError(RuntimeError::InternalError,
-                        "CallExprSyntaxFrame::StepInvoke not implemented "
-                        "for operatives yet.");
+    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
+
+    Local<InvokeOperativeFrame*> invokeFrame(cx);
+    if (!invokeFrame.setResult(InvokeOperativeFrame::Create(
+            cx->inHatchery(), frame, callee, calleeFunc, stFrag)))
+    {
+        return ErrorVal();
+    }
+    return StepResult::Continue(invokeFrame.get());
 }
 
 /* static */ StepResult
@@ -827,6 +837,82 @@ InvokeApplicativeFrame::StepImpl(ThreadContext* cx,
     // Invoke the applicative function.
     Local<CallResult> result(cx, Interp::InvokeApplicativeFunction(
             cx, frame, callerScope, callee, calleeFunc, args));
+
+    if (result->isError())
+        return ErrorVal();
+
+    Local<Frame*> parent(cx, frame->parent());
+    if (result->isException()) {
+        return Frame::ResolveChild(cx, parent, frame,
+                        EvalResult::Exception(result->throwingFrame()));
+    }
+
+    if (result->isValue()) {
+        return Frame::ResolveChild(cx, parent, frame,
+                        EvalResult::Value(result->value()));
+    }
+
+    if (result->isVoid())
+        return Frame::ResolveChild(cx, parent, frame, EvalResult::Void());
+
+    if (result->isContinue())
+        return StepResult::Continue(result->continueFrame());
+
+    WH_UNREACHABLE("Unknown CallResult outcome.");
+    return cx->setError(RuntimeError::InternalError,
+                        "Unknown CallResult outcome.");
+}
+
+/* static */ Result<InvokeOperativeFrame*>
+InvokeOperativeFrame::Create(AllocationContext acx,
+                             Handle<Frame*> parent,
+                             Handle<ValBox> callee,
+                             Handle<FunctionObject*> calleeFunc,
+                             Handle<SyntaxTreeFragment*> stFrag)
+{
+    return acx.create<InvokeOperativeFrame>(parent, callee, calleeFunc,
+                                            stFrag);
+}
+
+/* static */ StepResult
+InvokeOperativeFrame::ResolveChildImpl(ThreadContext* cx,
+                                   Handle<InvokeOperativeFrame*> frame,
+                                   Handle<Frame*> childFrame,
+                                   Handle<EvalResult> result)
+{
+    Local<Frame*> parent(cx, frame->parent());
+    return Frame::ResolveChild(cx, parent, frame, result);
+}
+
+/* static */ StepResult
+InvokeOperativeFrame::StepImpl(ThreadContext* cx,
+                               Handle<InvokeOperativeFrame*> frame)
+{
+    Local<ValBox> callee(cx, frame->callee());
+    Local<FunctionObject*> calleeFunc(cx, frame->calleeFunc());
+    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
+    Local<ScopeObject*> callerScope(cx, frame->ancestorEntryFrame()->scope());
+
+    Local<SyntaxNodeRef> callNodeRef(cx, frame->stFrag()->toNode());
+    WH_ASSERT(callNodeRef->nodeType() == AST::CallExpr);
+
+    Local<PackedSyntaxTree*> pst(cx, frame->stFrag()->pst());
+    Local<AST::PackedCallExprNode> callExprNode(cx, callNodeRef->astCallExpr());
+
+    // Assemble an array of SyntaxTreeFragment pointers.
+    LocalArray<SyntaxTreeFragment*> operandExprs(cx, callExprNode->numArgs());
+    for (uint32_t i = 0; i < callExprNode->numArgs(); i++) {
+        uint32_t offset = callExprNode->arg(i).offset();
+        if (!operandExprs.setResult(i,
+                SyntaxNode::Create(cx->inHatchery(), pst, offset)))
+        {
+            return ErrorVal();
+        }
+    }
+
+    // Invoke the applicative function.
+    Local<CallResult> result(cx, Interp::InvokeOperativeFunction(
+            cx, frame, callerScope, callee, calleeFunc, operandExprs));
 
     if (result->isError())
         return ErrorVal();

@@ -208,6 +208,11 @@ static VM::CallResult Shell_Print(
     Handle<VM::NativeCallInfo> callInfo,
     ArrayHandle<VM::ValBox> args);
 
+static VM::CallResult Shell_TestOperative(
+    ThreadContext* cx,
+    Handle<VM::NativeCallInfo> callInfo,
+    ArrayHandle<VM::SyntaxTreeFragment*> args);
+
 static OkResult
 BindShellGlobal(AllocationContext acx,
                 Handle<VM::GlobalScope*> obj,
@@ -219,6 +224,30 @@ BindShellGlobal(AllocationContext acx,
     // Allocate NativeFunction object.
     Local<VM::NativeFunction*> natF(acx);
     if (!natF.setResult(VM::NativeFunction::Create(acx, appFunc)))
+        return ErrorVal();
+    Local<VM::PropertyDescriptor> desc(acx, VM::PropertyDescriptor(natF.get()));
+
+    // Bind method on global.
+    if (!VM::Wobject::DefineProperty(acx, obj.convertTo<VM::Wobject*>(),
+                                     rootedName, desc))
+    {
+        return ErrorVal();
+    }
+
+    return OkVal();
+}
+
+static OkResult
+BindShellGlobal(AllocationContext acx,
+                Handle<VM::GlobalScope*> obj,
+                VM::String* name,
+                VM::NativeOperativeFuncPtr opFunc)
+{
+    Local<VM::String*> rootedName(acx, name);
+
+    // Allocate NativeFunction object.
+    Local<VM::NativeFunction*> natF(acx);
+    if (!natF.setResult(VM::NativeFunction::Create(acx, opFunc)))
         return ErrorVal();
     Local<VM::PropertyDescriptor> desc(acx, VM::PropertyDescriptor(natF.get()));
 
@@ -250,6 +279,8 @@ InitShellGlobals(AllocationContext acx, VM::GlobalScope* scope)
 
     BIND_SHELL_METHOD_("print", Shell_Print);
 
+    BIND_SHELL_METHOD_("testOperative", Shell_TestOperative);
+
 #undef BIND_SHELL_METHOD_
 
     return OkVal();
@@ -268,5 +299,15 @@ static VM::CallResult Shell_Print(
     }
 
     std::cout << out.str() << std::endl;
+    return VM::CallResult::Value(VM::ValBox::Undefined());
+}
+
+static VM::CallResult Shell_TestOperative(
+    ThreadContext* cx,
+    Handle<VM::NativeCallInfo> callInfo,
+    ArrayHandle<VM::SyntaxTreeFragment*> args)
+{
+    std::cout << "Shell_TestOperative called with " << args.length()
+              << " args" << std::endl;
     return VM::CallResult::Value(VM::ValBox::Undefined());
 }

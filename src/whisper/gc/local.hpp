@@ -264,20 +264,20 @@ class LocalArray : public LocalBase
 
     inline T const& get(uint32_t idx) const {
         WH_ASSERT(idx < length());
-        return reinterpret_cast<T const&>(this->elementAt(idx));
+        return reinterpret_cast<T const&>(vals_[idx]);
     }
     inline T& get(uint32_t idx) {
         WH_ASSERT(idx < length());
-        return reinterpret_cast<T&>(this->elementAt(idx));
+        return reinterpret_cast<T&>(vals_[idx]);
     }
 
     inline void set(uint32_t idx, T const& ref) {
         WH_ASSERT(idx < length());
-        this->elementAt(idx) = ref;
+        vals_[idx] = ref;
     }
     inline void set(uint32_t idx, T&& ref) {
         WH_ASSERT(idx < length());
-        this->elementAt(idx) = std::move(ref);
+        vals_[idx] = std::move(ref);
     }
     template <typename U>
     OkResult setResult(uint32_t idx, Result<U> const& result) {
@@ -286,7 +286,7 @@ class LocalArray : public LocalBase
         WH_ASSERT(idx < length());
         if (result.isError())
             return ErrorVal();
-        this->elementAt(idx) = result.value();
+        vals_[idx] = result.value();
         return OkVal();
     }
 
