@@ -276,8 +276,8 @@ InvokeSyntaxFrame::StepImpl(ThreadContext* cx,
     Local<ScopeObject*> callerScope(cx, frame->entryFrame()->scope());
     Local<ValBox> syntaxHandler(cx, frame->syntaxHandler());
     Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
-    Local<CallResult> result(cx, Interp::InvokeValue(cx, frame, callerScope,
-                                            syntaxHandler, stFrag));
+    Local<CallResult> result(cx, Interp::InvokeOperativeValue(
+            cx, frame, callerScope, syntaxHandler, stFrag));
 
     if (result->isError())
         return ErrorVal();
@@ -285,7 +285,7 @@ InvokeSyntaxFrame::StepImpl(ThreadContext* cx,
     Local<Frame*> parent(cx, frame->parent());
     if (result->isException()) {
         return Frame::ResolveChild(cx, parent, frame,
-                        EvalResult::Exception(result->throwingFrame()));
+                            EvalResult::Exception(result->throwingFrame()));
     }
 
     if (result->isValue()) {
@@ -748,9 +748,9 @@ InvokeApplicativeFrame::Create(
 
 /* static */ StepResult
 InvokeApplicativeFrame::ResolveChildImpl(ThreadContext* cx,
-                                   Handle<InvokeApplicativeFrame*> frame,
-                                   Handle<Frame*> childFrame,
-                                   Handle<EvalResult> result)
+                                         Handle<InvokeApplicativeFrame*> frame,
+                                         Handle<Frame*> childFrame,
+                                         Handle<EvalResult> result)
 {
     return cx->setError(RuntimeError::InternalError,
                 "InvokeApplicativeFrame::ResolveChildImpl not implemented.");
@@ -758,14 +758,53 @@ InvokeApplicativeFrame::ResolveChildImpl(ThreadContext* cx,
 
 /* static */ StepResult
 InvokeApplicativeFrame::StepImpl(ThreadContext* cx,
-                           Handle<InvokeApplicativeFrame*> frame)
+                                 Handle<InvokeApplicativeFrame*> frame)
 {
     Local<ValBox> callee(cx, frame->callee());
     Local<FunctionObject*> calleeFunc(cx, frame->calleeFunc());
     Local<Slist<ValBox>*> operands(cx, frame->operands());
+    Local<ScopeObject*> callerScope(cx, frame->ancestorEntryFrame()->scope());
 
-    return cx->setError(RuntimeError::InternalError,
-                "InvokeApplicativeFrame::StepChildImpl not implemented.");
+    uint32_t length = operands->length();
+    LocalArray<ValBox> args(cx, length);
+
+    // Fill in args (reverse order).
+    Slist<ValBox>* curArg = operands;
+    for (uint32_t i = 0; i < length; i++) {
+        WH_ASSERT(curArg);
+
+        uint32_t idx = (length - 1) - i;
+        args[idx] = curArg->value();
+
+        curArg = curArg->rest();
+    }
+
+    // Invoke the applicative function.
+    Local<CallResult> result(cx, Interp::InvokeApplicativeFunction(
+            cx, frame, callerScope, callee, calleeFunc, args));
+
+    if (result->isError())
+        return ErrorVal();
+
+    Local<Frame*> parent(cx, frame->parent());
+    if (result->isException()) {
+        return Frame::ResolveChild(cx, parent, frame,
+                        EvalResult::Exception(result->throwingFrame()));
+    }
+
+    if (result->isValue()) {
+        return Frame::ResolveChild(cx, parent, frame,
+                        EvalResult::Value(result->value()));
+    }
+
+    if (result->isVoid())
+        return Frame::ResolveChild(cx, parent, frame, EvalResult::Void());
+
+    if (result->isContinue())
+        return StepResult::Continue(result->continueFrame());
+
+    WH_UNREACHABLE("Invalid CallResult.");
+    return cx->setError(RuntimeError::InternalError, "Got bad CallResult.");
 }
 
 

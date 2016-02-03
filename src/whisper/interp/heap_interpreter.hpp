@@ -42,19 +42,11 @@ Result<VM::Frame*> CreateInvokeSyntaxFrame(
 Maybe<VM::FunctionObject*> FunctionObjectForValue(ThreadContext* cx,
                                                   Handle<VM::ValBox> value);
 
-VM::CallResult InvokeValue(
+VM::CallResult InvokeOperativeValue(
         ThreadContext* cx,
         Handle<VM::Frame*> frame,
         Handle<VM::ScopeObject*> callerScope,
         Handle<VM::ValBox> callee,
-        ArrayHandle<VM::SyntaxTreeFragment*> args);
-
-VM::CallResult InvokeFunction(
-        ThreadContext* cx,
-        Handle<VM::Frame*> frame,
-        Handle<VM::ScopeObject*> callerScope,
-        Handle<VM::ValBox> callee,
-        Handle<VM::FunctionObject*> calleeFunc,
         ArrayHandle<VM::SyntaxTreeFragment*> args);
 
 VM::CallResult InvokeOperativeFunction(
@@ -65,13 +57,20 @@ VM::CallResult InvokeOperativeFunction(
         Handle<VM::FunctionObject*> calleeFunc,
         ArrayHandle<VM::SyntaxTreeFragment*> args);
 
+VM::CallResult InvokeApplicativeValue(
+        ThreadContext* cx,
+        Handle<VM::Frame*> frame,
+        Handle<VM::ScopeObject*> callerScope,
+        Handle<VM::ValBox> callee,
+        ArrayHandle<VM::ValBox> args);
+
 VM::CallResult InvokeApplicativeFunction(
         ThreadContext* cx,
         Handle<VM::Frame*> frame,
         Handle<VM::ScopeObject*> callerScope,
         Handle<VM::ValBox> callee,
         Handle<VM::FunctionObject*> calleeFunc,
-        ArrayHandle<VM::SyntaxTreeFragment*> args);
+        ArrayHandle<VM::ValBox> args);
 
 // Property lookup helpers.
 class PropertyLookupResult

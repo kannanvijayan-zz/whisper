@@ -138,33 +138,22 @@ FunctionObjectForValue(ThreadContext* cx,
 }
 
 VM::CallResult
-InvokeValue(ThreadContext* cx,
-            Handle<VM::Frame*> frame,
-            Handle<VM::ScopeObject*> callerScope,
-            Handle<VM::ValBox> callee,
-            ArrayHandle<VM::SyntaxTreeFragment*> args)
+InvokeOperativeValue(ThreadContext* cx,
+                     Handle<VM::Frame*> frame,
+                     Handle<VM::ScopeObject*> callerScope,
+                     Handle<VM::ValBox> callee,
+                     ArrayHandle<VM::SyntaxTreeFragment*> args)
 {
-    Local<VM::FunctionObject*> rootedCallee(cx);
-    if (!rootedCallee.setMaybe(FunctionObjectForValue(cx, callee)))
+    Local<VM::FunctionObject*> calleeFunc(cx);
+    if (!calleeFunc.setMaybe(FunctionObjectForValue(cx, callee)))
         return ErrorVal();
-    return InvokeFunction(cx, frame, callerScope, callee, rootedCallee, args);
-}
-
-VM::CallResult
-InvokeFunction(ThreadContext* cx,
-               Handle<VM::Frame*> frame,
-               Handle<VM::ScopeObject*> callerScope,
-               Handle<VM::ValBox> callee,
-               Handle<VM::FunctionObject*> calleeFunc,
-               ArrayHandle<VM::SyntaxTreeFragment*> args)
-{
-    if (calleeFunc->isOperative()) {
-        return InvokeOperativeFunction(cx, frame, callerScope,
-                                       callee, calleeFunc, args);
-    } else {
-        return InvokeApplicativeFunction(cx, frame, callerScope,
-                                         callee, calleeFunc, args);
+    if (!calleeFunc->isOperative()) {
+        return cx->setError(RuntimeError::InternalError,
+                            "InvokeOperativeValue: Function is not an "
+                            "operative.");
     }
+    return InvokeOperativeFunction(cx, frame, callerScope,
+                                   callee, calleeFunc, args);
 }
 
 VM::CallResult
@@ -206,14 +195,60 @@ InvokeOperativeFunction(ThreadContext* cx,
 }
 
 VM::CallResult
+InvokeApplicativeValue(ThreadContext* cx,
+                       Handle<VM::Frame*> frame,
+                       Handle<VM::ScopeObject*> callerScope,
+                       Handle<VM::ValBox> callee,
+                       ArrayHandle<VM::ValBox> args)
+{
+    Local<VM::FunctionObject*> calleeFunc(cx);
+    if (!calleeFunc.setMaybe(FunctionObjectForValue(cx, callee)))
+        return ErrorVal();
+    if (!calleeFunc->isApplicative()) {
+        return cx->setError(RuntimeError::InternalError,
+                            "InvokeApplicativeValue: Function is not an "
+                            "operative.");
+    }
+    return InvokeApplicativeFunction(cx, frame, callerScope,
+                                     callee, calleeFunc, args);
+}
+
+VM::CallResult
 InvokeApplicativeFunction(ThreadContext* cx,
                           Handle<VM::Frame*> frame,
                           Handle<VM::ScopeObject*> callerScope,
                           Handle<VM::ValBox> callee,
                           Handle<VM::FunctionObject*> calleeFunc,
-                          ArrayHandle<VM::SyntaxTreeFragment*> args)
+                          ArrayHandle<VM::ValBox> args)
 {
-    return cx->setInternalError("InvokeApplicativeFunction not implemented.");
+    WH_ASSERT(calleeFunc->isApplicative());
+
+    // Check for native callee function.
+    Local<VM::Function*> func(cx, calleeFunc->func());
+    if (func->isNative()) {
+        Local<VM::LookupState*> lookupState(cx, calleeFunc->lookupState());
+        Local<VM::ValBox> receiver(cx, calleeFunc->receiver());
+
+        Local<VM::NativeCallInfo> callInfo(cx,
+            VM::NativeCallInfo(frame, lookupState,
+                               callerScope, calleeFunc, receiver));
+
+        // Call the function. (FIXME).
+        VM::NativeApplicativeFuncPtr apNatF = func->asNative()->applicative();
+        return apNatF(cx, callInfo, args);
+    }
+
+    // If scripted, interpret the scripted function.
+    if (func->isScripted()) {
+        WH_ASSERT("Cannot interpret scripted applicatives yet!");
+        return cx->setError(RuntimeError::InternalError,
+                            "Cannot interpret scripted operatives yet!");
+    }
+
+    WH_UNREACHABLE("Unknown function type!");
+    return cx->setError(RuntimeError::InternalError,
+                        "Unknown function type seen!",
+                        HeapThing::From(func.get()));
 }
 
 
