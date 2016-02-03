@@ -187,6 +187,9 @@ class Slab
     uint8_t* tailEndAlloc() const {
         return tailAlloc_;
     }
+    uint32_t unallocatedBytes() const {
+        return tailEndAlloc() - headEndAlloc();
+    }
 
     // Allocate memory from Top
     uint8_t* allocateHead(uint32_t amount) {

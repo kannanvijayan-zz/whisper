@@ -2,6 +2,7 @@
 #define WHISPER__RUNTIME_INLINES_HPP
 
 #include "runtime.hpp"
+#include "spew.hpp"
 
 #include <new>
 
@@ -81,6 +82,9 @@ AllocationContext::allocate(uint32_t size, HeapFormat fmt)
         cx_->setError(RuntimeError::MemAllocFailed);
         return nullptr;
     }
+
+    SpewMemoryNote("Allocated %d bytes from %p, leaving %d bytes",
+                   size, slab_, slab_->unallocatedBytes());
 
     // Figure out the card number.
     uint32_t cardNo = slab_->calculateCardNumber(mem);
