@@ -206,6 +206,27 @@ class CallResult
         WH_ASSERT(isContinue());
         return frame_;
     }
+
+    Maybe<EvalResult> maybeAsEvalResult() const {
+        if (isError()) {
+            return Maybe<EvalResult>::Some(EvalResult::Error());
+
+        } else if (isException()) {
+            return Maybe<EvalResult>::Some(
+                EvalResult::Exception(throwingFrame()));
+
+        } else if (isValue()) {
+            return Maybe<EvalResult>::Some(EvalResult::Value(value()));
+
+        } else if (isVoid()) {
+            return Maybe<EvalResult>::Some(EvalResult::Void());
+
+        } else if (isContinue()) {
+            return Maybe<EvalResult>::None();
+        }
+        WH_UNREACHABLE("Invalid EvalResult outcome.");
+        return Maybe<EvalResult>::None();
+    }
 };
 
 // Result of a step function.

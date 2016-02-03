@@ -426,6 +426,26 @@ CallExprSyntaxFrame::CreateFirstArg(AllocationContext acx,
 }
 
 /* static */ Result<CallExprSyntaxFrame*>
+CallExprSyntaxFrame::CreateNextArg(AllocationContext acx,
+                                   Handle<CallExprSyntaxFrame*> calleeFrame,
+                                   Handle<Slist<ValBox>*> operands)
+{
+    Local<Frame*> parent(acx, calleeFrame->parent());
+    Local<EntryFrame*> entryFrame(acx, calleeFrame->entryFrame());
+    Local<SyntaxTreeFragment*> stFrag(acx, calleeFrame->stFrag());
+    Local<ValBox> callee(acx, calleeFrame->callee());
+    Local<FunctionObject*> calleeFunc(acx, calleeFrame->calleeFunc());
+    uint16_t argNo = calleeFrame->argNo() + 1;
+    return acx.create<CallExprSyntaxFrame>(parent.handle(),
+                                           entryFrame.handle(),
+                                           stFrag.handle(),
+                                           State::Arg, argNo,
+                                           callee.handle(),
+                                           calleeFunc.handle(),
+                                           operands);
+}
+
+/* static */ Result<CallExprSyntaxFrame*>
 CallExprSyntaxFrame::CreateInvoke(AllocationContext acx,
                                   Handle<CallExprSyntaxFrame*> frame,
                                   Handle<Slist<ValBox>*> operands)
@@ -442,6 +462,23 @@ CallExprSyntaxFrame::CreateInvoke(AllocationContext acx,
                                            callee.handle(),
                                            calleeFunc.handle(),
                                            operands);
+}
+
+/* static */ Result<CallExprSyntaxFrame*>
+CallExprSyntaxFrame::CreateInvoke(AllocationContext acx,
+                                  Handle<CallExprSyntaxFrame*> frame,
+                                  Handle<ValBox> callee,
+                                  Handle<FunctionObject*> calleeFunc,
+                                  Handle<Slist<ValBox>*> operands)
+{
+    Local<Frame*> parent(acx, frame->parent());
+    Local<EntryFrame*> entryFrame(acx, frame->entryFrame());
+    Local<SyntaxTreeFragment*> stFrag(acx, frame->stFrag());
+    return acx.create<CallExprSyntaxFrame>(parent.handle(),
+                                           entryFrame.handle(),
+                                           stFrag.handle(),
+                                           State::Invoke, 0,
+                                           callee, calleeFunc, operands);
 }
 
 /* static */ StepResult
@@ -526,17 +563,22 @@ CallExprSyntaxFrame::ResolveCalleeChild(
                             "create invocation frame for operative.");
     }
 
+    Local<CallExprSyntaxFrame*> nextFrame(cx);
+
     // If the function is an applicative, check the arity of the call.
     WH_ASSERT(calleeObj->isApplicative());
     if (callExprNode->numArgs() == 0) {
-        // For an applicative function with zero arguments, we can
-        // invoke immediately.
-        return cx->setError(RuntimeError::InternalError,
-                            "TODO: CallExprSyntaxFrame::ResolveCalleeChild - "
-                            "create invocation frame for zero-arg call.");
+        // Zero-argument applicative can be invoked immediately.
+        Local<Slist<ValBox>*> operands(cx, nullptr);
+        if (!nextFrame.setResult(CallExprSyntaxFrame::CreateInvoke(
+                cx->inHatchery(), frame, calleeBox, calleeObj, operands)))
+        {
+            return ErrorVal();
+        }
+
+        return StepResult::Continue(nextFrame.get());
     }
 
-    Local<CallExprSyntaxFrame*> nextFrame(cx);
     if (!nextFrame.setResult(CallExprSyntaxFrame::CreateFirstArg(
             cx->inHatchery(), frame, calleeBox, calleeObj)))
     {
@@ -590,20 +632,23 @@ CallExprSyntaxFrame::ResolveArgChild(
 
     uint32_t nextArgNo = frame->argNo() + 1;
     WH_ASSERT(nextArgNo <= callExprNode->numArgs());
+    Local<CallExprSyntaxFrame*> invokeFrame(cx);
+
     if (nextArgNo == callExprNode->numArgs()) {
-        Local<CallExprSyntaxFrame*> invokeFrame(cx);
         if (!invokeFrame.setResult(CallExprSyntaxFrame::CreateInvoke(
                 cx->inHatchery(), frame, operands)))
         {
             return ErrorVal();
         }
-
-        return StepResult::Continue(invokeFrame.get());
+    } else {
+        if (!invokeFrame.setResult(CallExprSyntaxFrame::CreateNextArg(
+                cx->inHatchery(), frame, operands)))
+        {
+            return ErrorVal();
+        }
     }
 
-    return cx->setError(RuntimeError::InternalError,
-                        "TODO: CallExprSyntaxFrame::ResolveArgChild - "
-                        "create evaluation frame for next argument.");
+    return StepResult::Continue(invokeFrame.get());
 }
 
 /* static */ StepResult
@@ -752,8 +797,8 @@ InvokeApplicativeFrame::ResolveChildImpl(ThreadContext* cx,
                                          Handle<Frame*> childFrame,
                                          Handle<EvalResult> result)
 {
-    return cx->setError(RuntimeError::InternalError,
-                "InvokeApplicativeFrame::ResolveChildImpl not implemented.");
+    Local<Frame*> parent(cx, frame->parent());
+    return Frame::ResolveChild(cx, parent, frame, result);
 }
 
 /* static */ StepResult
@@ -803,8 +848,9 @@ InvokeApplicativeFrame::StepImpl(ThreadContext* cx,
     if (result->isContinue())
         return StepResult::Continue(result->continueFrame());
 
-    WH_UNREACHABLE("Invalid CallResult.");
-    return cx->setError(RuntimeError::InternalError, "Got bad CallResult.");
+    WH_UNREACHABLE("Unknown CallResult outcome.");
+    return cx->setError(RuntimeError::InternalError,
+                        "Unknown CallResult outcome.");
 }
 
 

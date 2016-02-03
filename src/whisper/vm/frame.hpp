@@ -373,9 +373,21 @@ class CallExprSyntaxFrame : public SyntaxFrame
             Handle<ValBox> callee,
             Handle<FunctionObject*> calleeFunc);
 
+    static Result<CallExprSyntaxFrame*> CreateNextArg(
+            AllocationContext acx,
+            Handle<CallExprSyntaxFrame*> calleeFrame,
+            Handle<Slist<ValBox>*> operands);
+
     static Result<CallExprSyntaxFrame*> CreateInvoke(
             AllocationContext acx,
             Handle<CallExprSyntaxFrame*> frame,
+            Handle<Slist<ValBox>*> operands);
+
+    static Result<CallExprSyntaxFrame*> CreateInvoke(
+            AllocationContext acx,
+            Handle<CallExprSyntaxFrame*> frame,
+            Handle<ValBox> callee,
+            Handle<FunctionObject*> calleeFunc,
             Handle<Slist<ValBox>*> operands);
 
     static StepResult ResolveChildImpl(ThreadContext* cx,
