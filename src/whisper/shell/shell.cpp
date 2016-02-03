@@ -116,6 +116,10 @@ main(int argc, char** argv)
         exit(1);
     }
 
+    bool runClean = false;
+    if (argc >= 3 && !strcmp(argv[2], "clean"))
+        runClean = true;
+
     // Initialize static tables.
     InitializeRuntime();
 
@@ -189,10 +193,12 @@ main(int argc, char** argv)
         return 1;
     }
 
-    fprintf(stderr, "digraph G {\n");
-    HeapPrintVisitor visitor;
-    trace_heap(cx, &visitor);
-    fprintf(stderr, "}\n");
+    if (!runClean) {
+        fprintf(stderr, "digraph G {\n");
+        HeapPrintVisitor visitor;
+        trace_heap(cx, &visitor);
+        fprintf(stderr, "}\n");
+    }
 
     return 0;
 }
