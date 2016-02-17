@@ -1,3 +1,3 @@
 
-print(3);
-testOperative();
+print(print(3));
+testOperative(print(4));
