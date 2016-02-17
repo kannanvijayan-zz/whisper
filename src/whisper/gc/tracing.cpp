@@ -12,6 +12,7 @@
 #include "vm/string.hpp"
 #include "vm/properties.hpp"
 #include "vm/array.hpp"
+#include "vm/slist.hpp"
 #include "vm/error.hpp"
 #include "vm/source_file.hpp"
 #include "vm/runtime_state.hpp"
@@ -25,6 +26,7 @@
 #include "vm/lookup_state.hpp"
 #include "vm/function.hpp"
 #include "vm/frame.hpp"
+#include "vm/self_traced.hpp"
 
 namespace Whisper {
 

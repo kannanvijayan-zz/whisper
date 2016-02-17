@@ -50,6 +50,7 @@
     _(BoxSlist)                 \
     _(ValBoxSlist)              \
     _(Error)                    \
+    _(BaseSelfTraced)           \
     _(RuntimeState)             \
     _(ThreadState)              \
     _(PackedSyntaxTree)         \
