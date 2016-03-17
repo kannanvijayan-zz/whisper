@@ -4,6 +4,7 @@
 
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
+#include "vm/box.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -40,6 +41,29 @@ class InternalException : public Exception
         for (uint32_t i = 0; i < numArguments; i++) {
             arguments_[i].init(arguments[i], this);
         }
+    }
+
+    static uint32_t CalculateSize(uint32_t numArguments) {
+        return sizeof(InternalException) +
+                (numArguments * sizeof(HeapField<ValBox>));
+    }
+
+    static Result<InternalException*> Create(AllocationContext acx,
+                                 char const* message,
+                                 uint32_t numArguments,
+                                 ArrayHandle<ValBox> const& arguments);
+
+    char const* message() const {
+        return message_;
+    }
+
+    uint32_t numArguments() const {
+        return numArguments_;
+    }
+
+    ValBox const& argument(uint32_t argNo) const {
+        WH_ASSERT(argNo < numArguments_);
+        return arguments_[argNo];
     }
 };
 

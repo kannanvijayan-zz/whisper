@@ -322,6 +322,10 @@ class ArrayHandle
         return valAddr_;
     }
 
+    inline operator T const*() const {
+        return ptr();
+    }
+
     inline uint32_t length() const {
         return length_;
     }
