@@ -16,6 +16,7 @@
 #include "vm/error.hpp"
 #include "vm/source_file.hpp"
 #include "vm/runtime_state.hpp"
+#include "vm/exception.hpp"
 #include "vm/box.hpp"
 #include "vm/packed_syntax_tree.hpp"
 #include "vm/property_dict.hpp"

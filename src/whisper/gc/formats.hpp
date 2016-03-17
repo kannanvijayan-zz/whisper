@@ -52,6 +52,7 @@
     _(Error)                    \
     _(BaseSelfTraced)           \
     _(RuntimeState)             \
+    _(InternalException)        \
     _(ThreadState)              \
     _(PackedSyntaxTree)         \
     _(SyntaxNode)               \
