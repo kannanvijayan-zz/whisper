@@ -67,9 +67,10 @@ GenString(Gen gen)
       case Gen::Nursery:     return "Nursery";
       case Gen::Mature:      return "Mature";
       case Gen::Tenured:     return "Tenured";
+      case Gen::Immortal:    return "Immortal";
       case Gen::LIMIT:       return "LIMIT";
-      default:               return "UNKNOWN";
     }
+    return "UNKNOWN";
 }
 
 
