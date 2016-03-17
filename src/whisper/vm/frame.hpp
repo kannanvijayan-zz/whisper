@@ -4,6 +4,7 @@
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
 #include "vm/box.hpp"
+#include "vm/exception.hpp"
 #include "vm/control_flow.hpp"
 #include "vm/slist.hpp"
 #include "parser/packed_syntax.hpp"
@@ -66,6 +67,22 @@ class Frame
         EntryFrame* result = maybeAncestorEntryFrame();
         WH_ASSERT(result);
         return result;
+    }
+
+    template <typename T>
+    EvalResult raiseInternalException(AllocationContext acx,
+                                      char const* string,
+                                      Handle<T*> heapThing)
+    {
+        Local<Frame*> frame(acx, this);
+        Local<Box> args(acx, Box::Pointer(heapThing));
+        Local<InternalException*> exc;
+        if (!exc.setResult(InternalException::Create(acx, string, args))) {
+            acx.threadContext()->setError(RuntimeError::MemAllocFailed);
+            return EvalResult::Error();
+        }
+
+        return EvalResult::Exception(frame);
     }
 
 #define FRAME_KIND_METHODS_(name) \

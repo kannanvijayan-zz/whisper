@@ -9,11 +9,11 @@ namespace VM {
 /* static */ Result<InternalException*>
 InternalException::Create(AllocationContext acx,
                           char const* message,
-                          uint32_t numArguments,
-                          ArrayHandle<ValBox> const& arguments)
+                          ArrayHandle<Box> const& arguments)
 {
+    uint32_t numArguments = arguments.length();
     return acx.createSized<InternalException>(CalculateSize(numArguments),
-                                   message, numArguments, arguments);
+                message, numArguments, arguments);
 }
 
 

@@ -20,7 +20,7 @@ class Exception
 };
 
 //
-// An internal has a string message, and zero or more ValBox arguments
+// An internal has a string message, and zero or more Box arguments
 // indicating the exception data.
 //
 class InternalException : public Exception
@@ -29,12 +29,12 @@ class InternalException : public Exception
   private:
     char const* message_;
     uint32_t numArguments_;
-    HeapField<ValBox> arguments_[0];
+    HeapField<Box> arguments_[0];
 
   public:
     InternalException(char const* message,
                       uint32_t numArguments,
-                      ValBox const* arguments)
+                      Box const* arguments)
       : message_(message),
         numArguments_(numArguments)
     {
@@ -45,13 +45,12 @@ class InternalException : public Exception
 
     static uint32_t CalculateSize(uint32_t numArguments) {
         return sizeof(InternalException) +
-                (numArguments * sizeof(HeapField<ValBox>));
+                (numArguments * sizeof(HeapField<Box>));
     }
 
     static Result<InternalException*> Create(AllocationContext acx,
                                  char const* message,
-                                 uint32_t numArguments,
-                                 ArrayHandle<ValBox> const& arguments);
+                                 ArrayHandle<Box> const& arguments);
 
     char const* message() const {
         return message_;
@@ -61,7 +60,7 @@ class InternalException : public Exception
         return numArguments_;
     }
 
-    ValBox const& argument(uint32_t argNo) const {
+    Box const& argument(uint32_t argNo) const {
         WH_ASSERT(argNo < numArguments_);
         return arguments_[argNo];
     }
