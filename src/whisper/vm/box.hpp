@@ -66,6 +66,7 @@ class Box
 
   public:
     Box() : value_(InvalidValue) {}
+    Box(Box const& box) : value_(box.value_) {}
 
     bool isInvalid() const {
         return value_ == InvalidValue;
@@ -177,6 +178,7 @@ class ValBox : public Box
 
   public:
     ValBox() : Box() {}
+    ValBox(ValBox const& valBox) : Box(valBox) {}
     explicit ValBox(Box const& box);
 
     static ValBox Invalid() {

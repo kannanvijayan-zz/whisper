@@ -4,6 +4,7 @@
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
 #include "vm/box.hpp"
+#include "vm/exception.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -17,31 +18,33 @@ class EvalResult
   public:
     enum class Outcome {
         Error,
-        Exception,
+        Exc,
         Value,
         Void
     };
 
   private:
     Outcome outcome_;
-    StackField<VM::ValBox> value_;
-    StackField<VM::Frame*> frame_;
+    StackField<ValBox> value_;
+    StackField<Frame*> frame_;
+    StackField<Exception*> exception_;
 
     EvalResult(Outcome outcome)
       : outcome_(outcome),
         value_()
     {}
 
-    EvalResult(Outcome outcome, VM::ValBox const& value)
+    EvalResult(Outcome outcome, ValBox const& value)
       : outcome_(outcome),
         value_(value),
         frame_(nullptr)
     {}
 
-    EvalResult(Outcome outcome, VM::Frame* frame)
+    EvalResult(Outcome outcome, Frame* frame, Exception* exception)
       : outcome_(outcome),
         value_(),
-        frame_(frame)
+        frame_(frame),
+        exception_(exception)
     {}
 
   public:
@@ -52,10 +55,10 @@ class EvalResult
     static EvalResult Error() {
         return EvalResult(Outcome::Error);
     }
-    static EvalResult Exception(VM::Frame* frame) {
-        return EvalResult(Outcome::Exception, frame);
+    static EvalResult Exc(Frame* frame, Exception* exception) {
+        return EvalResult(Outcome::Exc, frame, exception);
     }
-    static EvalResult Value(VM::ValBox const& value) {
+    static EvalResult Value(ValBox const& value) {
         return EvalResult(Outcome::Value, value);
     }
     static EvalResult Void() {
@@ -71,7 +74,7 @@ class EvalResult
     static char const* OutcomeString(Outcome outcome) {
         switch (outcome) {
           case Outcome::Error:       return "Error";
-          case Outcome::Exception:   return "Exception";
+          case Outcome::Exc:         return "Exc";
           case Outcome::Value:       return "Value";
           case Outcome::Void:        return "Void";
           default:
@@ -83,8 +86,8 @@ class EvalResult
     bool isError() const {
         return outcome() == Outcome::Error;
     }
-    bool isException() const {
-        return outcome() == Outcome::Exception;
+    bool isExc() const {
+        return outcome() == Outcome::Exc;
     }
     bool isValue() const {
         return outcome() == Outcome::Value;
@@ -98,8 +101,12 @@ class EvalResult
         return value_;
     }
     Handle<Frame*> throwingFrame() const {
-        WH_ASSERT(isException());
+        WH_ASSERT(isExc());
         return frame_;
+    }
+    Handle<Exception*> exception() const {
+        WH_ASSERT(isExc());
+        return exception_;
     }
 };
 
@@ -110,7 +117,7 @@ class CallResult
   public:
     enum class Outcome {
         Error,
-        Exception,
+        Exc,
         Value,
         Void,
         Continue
@@ -120,6 +127,7 @@ class CallResult
     Outcome outcome_;
     StackField<ValBox> value_;
     StackField<Frame*> frame_;
+    StackField<Exception*> exception_;
 
     CallResult(Outcome outcome)
       : outcome_(outcome),
@@ -135,7 +143,15 @@ class CallResult
     CallResult(Outcome outcome, Frame* frame)
       : outcome_(outcome),
         value_(),
-        frame_(frame)
+        frame_(frame),
+        exception_()
+    {}
+
+    CallResult(Outcome outcome, Frame* frame, Exception* exception)
+      : outcome_(outcome),
+        value_(),
+        frame_(frame),
+        exception_(exception)
     {}
 
   public:
@@ -146,8 +162,8 @@ class CallResult
     static CallResult Error() {
         return CallResult(Outcome::Error);
     }
-    static CallResult Exception(Frame* frame) {
-        return CallResult(Outcome::Exception, frame);
+    static CallResult Exc(Frame* frame, Exception* exception) {
+        return CallResult(Outcome::Exc, frame, exception);
     }
     static CallResult Value(ValBox const& value) {
         return CallResult(Outcome::Value, value);
@@ -168,7 +184,7 @@ class CallResult
     static char const* OutcomeString(Outcome outcome) {
         switch (outcome) {
           case Outcome::Error:       return "Error";
-          case Outcome::Exception:   return "Exception";
+          case Outcome::Exc:         return "Exc";
           case Outcome::Value:       return "Value";
           case Outcome::Void:        return "Void";
           case Outcome::Continue:    return "Continue";
@@ -181,8 +197,8 @@ class CallResult
     bool isError() const {
         return outcome() == Outcome::Error;
     }
-    bool isException() const {
-        return outcome() == Outcome::Exception;
+    bool isExc() const {
+        return outcome() == Outcome::Exc;
     }
     bool isValue() const {
         return outcome() == Outcome::Value;
@@ -199,33 +215,56 @@ class CallResult
         return value_;
     }
     Handle<Frame*> throwingFrame() const {
-        WH_ASSERT(isException());
+        WH_ASSERT(isExc());
         return frame_;
     }
     Handle<Frame*> continueFrame() const {
         WH_ASSERT(isContinue());
         return frame_;
     }
+    Handle<Exception*> exception() const {
+        WH_ASSERT(isExc());
+        return exception_;
+    }
 
-    Maybe<EvalResult> maybeAsEvalResult() const {
+    EvalResult errorAsEvalResult() const {
+        WH_ASSERT(isError());
+        return EvalResult::Error();
+    }
+    EvalResult valueAsEvalResult() const {
+        WH_ASSERT(isValue());
+        return EvalResult::Value(value());
+    }
+    EvalResult excAsEvalResult() const {
+        WH_ASSERT(isExc());
+        return EvalResult::Exc(throwingFrame(), exception());
+    }
+    EvalResult voidAsEvalResult() const {
+        WH_ASSERT(isVoid());
+        return EvalResult::Void();
+    }
+
+    EvalResult asEvalResult() const {
+        WH_ASSERT(isError() || isExc() || isValue() || isVoid());
+
         if (isError()) {
-            return Maybe<EvalResult>::Some(EvalResult::Error());
+            return errorAsEvalResult();
 
-        } else if (isException()) {
-            return Maybe<EvalResult>::Some(
-                EvalResult::Exception(throwingFrame()));
+        } else if (isExc()) {
+            return excAsEvalResult();
 
         } else if (isValue()) {
-            return Maybe<EvalResult>::Some(EvalResult::Value(value()));
+            return valueAsEvalResult();
 
         } else if (isVoid()) {
-            return Maybe<EvalResult>::Some(EvalResult::Void());
+            return voidAsEvalResult();
 
         } else if (isContinue()) {
-            return Maybe<EvalResult>::None();
+            WH_UNREACHABLE("Invalid EvalResult outcome: Continue");
+
         }
-        WH_UNREACHABLE("Invalid EvalResult outcome.");
-        return Maybe<EvalResult>::None();
+        WH_UNREACHABLE("Invalid EvalResult outcome");
+        return EvalResult::Void();
     }
 };
 
@@ -340,6 +379,7 @@ struct TraceTraits<VM::CallResult>
     {
         cr.value_.scan(scanner, start, end);
         cr.frame_.scan(scanner, start, end);
+        cr.exception_.scan(scanner, start, end);
     }
 
     template <typename Updater>
@@ -348,6 +388,7 @@ struct TraceTraits<VM::CallResult>
     {
         cr.value_.update(updater, start, end);
         cr.frame_.update(updater, start, end);
+        cr.exception_.update(updater, start, end);
     }
 };
 

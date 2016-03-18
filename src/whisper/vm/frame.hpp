@@ -69,22 +69,6 @@ class Frame
         return result;
     }
 
-    template <typename T>
-    EvalResult raiseInternalException(AllocationContext acx,
-                                      char const* string,
-                                      Handle<T*> heapThing)
-    {
-        Local<Frame*> frame(acx, this);
-        Local<Box> args(acx, Box::Pointer(heapThing));
-        Local<InternalException*> exc;
-        if (!exc.setResult(InternalException::Create(acx, string, args))) {
-            acx.threadContext()->setError(RuntimeError::MemAllocFailed);
-            return EvalResult::Error();
-        }
-
-        return EvalResult::Exception(frame);
-    }
-
 #define FRAME_KIND_METHODS_(name) \
     bool is##name() const { \
         return HeapThing::From(this)->is##name(); \

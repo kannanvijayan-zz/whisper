@@ -140,8 +140,13 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 IMPL_SYNTAX_FN_(File)
 {
     if (args.length() != 1) {
-        return cx->setExceptionRaised(
-            "@File called with wrong number of arguments.");
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                           "@File called with wrong number of arguments")))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
     WH_ASSERT(args.get(0)->isNode());
@@ -177,8 +182,13 @@ IMPL_SYNTAX_FN_(File)
 IMPL_SYNTAX_FN_(ExprStmt)
 {
     if (args.length() != 1) {
-        return cx->setExceptionRaised(
-            "@ExprStmt called with wrong number of arguments.");
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                       "@ExprStmt called with wrong number of arguments.")))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
     WH_ASSERT(args.get(0)->isNode());
@@ -216,8 +226,13 @@ IMPL_SYNTAX_FN_(ExprStmt)
 IMPL_SYNTAX_FN_(CallExpr)
 {
     if (args.length() != 1) {
-        return cx->setExceptionRaised(
-            "@ExprStmt called with wrong number of arguments.");
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                       "@CallStmt called with wrong number of arguments.")))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
     WH_ASSERT(args.get(0)->isNode());
@@ -244,8 +259,13 @@ IMPL_SYNTAX_FN_(CallExpr)
 IMPL_SYNTAX_FN_(NameExpr)
 {
     if (args.length() != 1) {
-        return cx->setExceptionRaised(
-            "@ExprStmt called with wrong number of arguments.");
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                       "@NameExpr called with wrong number of arguments.")))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
     WH_ASSERT(args.get(0)->isNode());
@@ -275,8 +295,15 @@ IMPL_SYNTAX_FN_(NameExpr)
         SpewInterpNote("Syntax_NameExpr -"
                        " lookupResult returned notFound -"
                        " raising exception!");
-        cx->setExceptionRaised("Name binding not found.", name.get());
-        return VM::CallResult::Exception(frame.get());
+
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                           "Name binding not found",
+                           name.handle())))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(frame, exc);
     }
 
     if (lookupResult.isFound()) {
@@ -316,8 +343,13 @@ IMPL_SYNTAX_FN_(NameExpr)
 IMPL_SYNTAX_FN_(IntegerExpr)
 {
     if (args.length() != 1) {
-        return cx->setExceptionRaised(
-            "@ExprStmt called with wrong number of arguments.");
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                       "@IntegerExpr called with wrong number of arguments.")))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
     WH_ASSERT(args.get(0)->isNode());

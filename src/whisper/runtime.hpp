@@ -276,20 +276,6 @@ class ThreadContext
         return setError(RuntimeError::InternalError, string, nullptr);
     }
 
-    ErrorT_ setExceptionRaised(char const* string) {
-        return setError(RuntimeError::ExceptionRaised, string);
-    }
-    ErrorT_ setExceptionRaised(char const* string, HeapThing* thing) {
-        return setError(RuntimeError::ExceptionRaised, string, thing);
-    }
-    ErrorT_ setExceptionRaised(char const* string, VM::Box const& thing) {
-        return setError(RuntimeError::ExceptionRaised, string, thing);
-    }
-    template <typename T>
-    ErrorT_ setExceptionRaised(char const* string, T* thing) {
-        return setError<T>(RuntimeError::ExceptionRaised, string, thing);
-    }
-
     size_t formatError(char* buf, size_t bufSize);
 
     AllocationContext inHatchery();

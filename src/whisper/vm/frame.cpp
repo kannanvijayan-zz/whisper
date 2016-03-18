@@ -109,7 +109,7 @@ EntryFrame::ResolveChildImpl(ThreadContext* cx,
     if (childFrame->isSyntaxNameLookupFrame()) {
         Local<Frame*> parent(cx, frame->parent());
 
-        if (result->isError() || result->isException())
+        if (result->isError() || result->isExc())
             return Frame::ResolveChild(cx, parent, frame, result);
 
         if (result->isVoid()) {
@@ -118,10 +118,17 @@ EntryFrame::ResolveChildImpl(ThreadContext* cx,
                            " raising exception.");
             Local<String*> name(cx,
                 cx->runtimeState()->syntaxHandlerName(frame->stFrag()));
-            cx->setExceptionRaised("Syntax method binding not found.",
-                                   name.get());
+
+            Local<Exception*> exc(cx);
+            if (!exc.setResult(InternalException::Create(cx->inHatchery(),
+                               "Syntax method binding not found",
+                               name.handle())))
+            {
+                return Frame::ResolveChild(cx, parent, frame,
+                                           EvalResult::Error());
+            }
             return Frame::ResolveChild(cx, parent, frame,
-                            EvalResult::Exception(childFrame));
+                                       EvalResult::Exc(frame, exc));
         }
 
         // Create invocation frame for the looked up value.
@@ -199,7 +206,7 @@ SyntaxNameLookupFrame::StepImpl(ThreadContext* cx,
     if (lookupResult.isError()) {
         SpewInterpNote("SyntaxNameLookupFrame::StepImpl -"
                        " lookupResult returned error!");
-        return ResolveChild(cx, parent, frame, ErrorVal());
+        return ResolveChild(cx, parent, frame, EvalResult::Error());
     }
 
     if (lookupResult.isNotFound()) {
@@ -279,18 +286,19 @@ InvokeSyntaxFrame::StepImpl(ThreadContext* cx,
     Local<CallResult> result(cx, Interp::InvokeOperativeValue(
             cx, frame, callerScope, syntaxHandler, stFrag));
 
-    if (result->isError())
-        return ErrorVal();
-
     Local<Frame*> parent(cx, frame->parent());
-    if (result->isException()) {
+
+    if (result->isError())
+        return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+
+    if (result->isExc()) {
         return Frame::ResolveChild(cx, parent, frame,
-                            EvalResult::Exception(result->throwingFrame()));
+                                   result->excAsEvalResult());
     }
 
     if (result->isValue()) {
         return Frame::ResolveChild(cx, parent, frame,
-                            EvalResult::Value(result->value()));
+                                   result->valueAsEvalResult());
     }
 
     if (result->isVoid())
@@ -348,7 +356,7 @@ FileSyntaxFrame::ResolveChildImpl(
     Local<Frame*> rootedParent(cx, frame->parent());
 
     // If result is an error, resolve to parent.
-    if (result->isError() || result->isException())
+    if (result->isError() || result->isExc())
         return Frame::ResolveChild(cx, rootedParent, frame, result);
 
     // Otherwise, create new file syntax frame for executing next
@@ -497,7 +505,7 @@ CallExprSyntaxFrame::ResolveChildImpl(
     Local<VM::Frame*> parent(cx, frame->parent());
 
     // Always forward errors or exceptions.
-    if (result->isError() || result->isException())
+    if (result->isError() || result->isExc())
         return Frame::ResolveChild(cx, parent, frame, result);
 
     // Switch on state to handle rest of behaviour.
@@ -541,18 +549,32 @@ CallExprSyntaxFrame::ResolveCalleeChild(
         {
             return ErrorVal();
         }
-        cx->setExceptionRaised("Call callee expression yielded void.",
-                               subNode.get());
+
+        Local<Exception*> exc(cx);
+        if (!exc.setResult(InternalException::Create(cx->inHatchery(),
+                           "Callee expression yielded void",
+                           subNode.handle())))
+        {
+            return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+        }
+
         return Frame::ResolveChild(cx, parent, frame,
-                        EvalResult::Exception(frame.get()));
+                                   EvalResult::Exc(frame, exc));
     }
 
     WH_ASSERT(result->isValue());
     Local<ValBox> calleeBox(cx, result->value());
     Local<FunctionObject*> calleeObj(cx);
     if (!calleeObj.setMaybe(Interp::FunctionObjectForValue(cx, calleeBox))) {
-        return cx->setExceptionRaised("Callee value is not callable.",
-                                      calleeBox.get());
+        Local<Exception*> exc(cx);
+        if (!exc.setResult(InternalException::Create(cx->inHatchery(),
+                           "Callee expression is not callable",
+                           calleeBox.handle())))
+        {
+            return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+        }
+        return Frame::ResolveChild(cx, parent, frame,
+                                   EvalResult::Exc(frame, exc));
     }
 
     Local<CallExprSyntaxFrame*> nextFrame(cx);
@@ -621,10 +643,16 @@ CallExprSyntaxFrame::ResolveArgChild(
         {
             return ErrorVal();
         }
-        cx->setExceptionRaised("Call arg expression yielded void.",
-                               subNode.get());
+
+        Local<Exception*> exc(cx);
+        if (!exc.setResult(InternalException::Create(cx->inHatchery(),
+                           "Callee arg expression yielded void",
+                           subNode.handle())))
+        {
+            return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+        }
         return Frame::ResolveChild(cx, parent, frame,
-                        EvalResult::Exception(frame.get()));
+                                   EvalResult::Exc(frame, exc));
     }
 
     // Prepend the value to the operands list.
@@ -838,18 +866,19 @@ InvokeApplicativeFrame::StepImpl(ThreadContext* cx,
     Local<CallResult> result(cx, Interp::InvokeApplicativeFunction(
             cx, frame, callerScope, callee, calleeFunc, args));
 
-    if (result->isError())
-        return ErrorVal();
-
     Local<Frame*> parent(cx, frame->parent());
-    if (result->isException()) {
+
+    if (result->isError())
+        return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+
+    if (result->isExc()) {
         return Frame::ResolveChild(cx, parent, frame,
-                        EvalResult::Exception(result->throwingFrame()));
+                                   result->excAsEvalResult());
     }
 
     if (result->isValue()) {
         return Frame::ResolveChild(cx, parent, frame,
-                        EvalResult::Value(result->value()));
+                                   result->valueAsEvalResult());
     }
 
     if (result->isVoid())
@@ -913,19 +942,19 @@ InvokeOperativeFrame::StepImpl(ThreadContext* cx,
     // Invoke the applicative function.
     Local<CallResult> result(cx, Interp::InvokeOperativeFunction(
             cx, frame, callerScope, callee, calleeFunc, operandExprs));
+    Local<Frame*> parent(cx, frame->parent());
 
     if (result->isError())
-        return ErrorVal();
+        return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
 
-    Local<Frame*> parent(cx, frame->parent());
-    if (result->isException()) {
+    if (result->isExc()) {
         return Frame::ResolveChild(cx, parent, frame,
-                        EvalResult::Exception(result->throwingFrame()));
+                                   result->excAsEvalResult());
     }
 
     if (result->isValue()) {
         return Frame::ResolveChild(cx, parent, frame,
-                        EvalResult::Value(result->value()));
+                                   result->valueAsEvalResult());
     }
 
     if (result->isVoid())

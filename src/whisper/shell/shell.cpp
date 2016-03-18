@@ -184,7 +184,7 @@ main(int argc, char** argv)
         return 1;
     }
 
-    if (result->isException()) {
+    if (result->isExc()) {
         std::cerr << "Exception raised while interpreting code!" << std::endl;
         WH_ASSERT(cx->hasError());
         char buf[512];

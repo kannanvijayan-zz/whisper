@@ -49,8 +49,38 @@ class InternalException : public Exception
     }
 
     static Result<InternalException*> Create(AllocationContext acx,
-                                 char const* message,
-                                 ArrayHandle<Box> const& arguments);
+                                             char const* message,
+                                             ArrayHandle<Box> const& args);
+
+    static Result<InternalException*> Create(AllocationContext acx,
+                                             char const* message)
+    {
+        return Create(acx, message, ArrayHandle<Box>::Empty());
+    }
+
+    template <typename T>
+    static Result<InternalException*> Create(AllocationContext acx,
+                                             char const* message,
+                                             Handle<T*> arg)
+    {
+        Local<Box> args(acx, Box::Pointer(arg.get()));
+        return Create(acx, message, ArrayHandle<Box>(args));
+    }
+
+    static Result<InternalException*> Create(AllocationContext acx,
+                                             char const* message,
+                                             Handle<Box> arg)
+    {
+        return Create(acx, message, ArrayHandle<Box>(arg));
+    }
+
+    static Result<InternalException*> Create(AllocationContext acx,
+                                             char const* message,
+                                             Handle<ValBox> arg)
+    {
+        Local<Box> args(acx, arg.get());
+        return Create(acx, message, ArrayHandle<Box>(args));
+    }
 
     char const* message() const {
         return message_;
