@@ -153,9 +153,7 @@ IMPL_SYNTAX_FN_(File)
     WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::File);
 
     Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
-    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
-    Local<AST::PackedFileNode> fileNode(cx,
-        AST::PackedFileNode(pst->data(), stRef->offset()));
+    Local<AST::PackedFileNode> fileNode(cx, stRef->astFile());
 
     SpewInterpNote("Syntax_File: Interpreting %u statements",
                    unsigned(fileNode->numStatements()));
@@ -196,8 +194,7 @@ IMPL_SYNTAX_FN_(ExprStmt)
 
     Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
-    Local<AST::PackedExprStmtNode> exprStmtNode(cx,
-        AST::PackedExprStmtNode(pst->data(), stRef->offset()));
+    Local<AST::PackedExprStmtNode> exprStmtNode(cx, stRef->astExprStmt());
 
     SpewInterpNote("Syntax_ExprStmt: Interpreting");
 
@@ -270,9 +267,9 @@ IMPL_SYNTAX_FN_(NameExpr)
 
     WH_ASSERT(args.get(0)->isNode());
     WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::NameExpr);
-    Local<VM::PackedSyntaxTree*> pst(cx, args.get(0)->pst());
-    Local<AST::PackedNameExprNode> nameExprNode(cx,
-        AST::PackedNameExprNode(pst->data(), args.get(0)->offset()));
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedNameExprNode> nameExprNode(cx, stRef->astNameExpr());
 
     Local<VM::String*> name(cx,
         pst->getConstantString(nameExprNode->nameCid()));
@@ -354,9 +351,9 @@ IMPL_SYNTAX_FN_(IntegerExpr)
 
     WH_ASSERT(args.get(0)->isNode());
     WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::IntegerExpr);
-    Local<VM::PackedSyntaxTree*> pst(cx, args.get(0)->pst());
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
     Local<AST::PackedIntegerExprNode> integerExprNode(cx,
-        AST::PackedIntegerExprNode(pst->data(), args.get(0)->offset()));
+                                                  stRef->astIntegerExpr());
 
     int32_t intVal = integerExprNode->value();
 
