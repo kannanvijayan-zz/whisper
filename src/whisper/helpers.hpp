@@ -454,6 +454,32 @@ class Bitfield : public BaseBitfield<WordT, FieldT, Bits, Shift>
     }
 };
 
+template <typename F>
+class ScopeExit
+{
+  private:
+    F f_;
+    bool disabled_;
+
+  public:
+    ScopeExit(F f) : f_(f), disabled_(false) {}
+
+    ~ScopeExit() {
+        if (!disabled_)
+            f_();
+    }
+
+    void disable() {
+        disabled_ = true;
+    }
+};
+
+template <typename F>
+inline ScopeExit<F>
+MakeScopeExit(F f) {
+    return ScopeExit<F>(f);
+}
+
 
 } // namespace Whisper
 
