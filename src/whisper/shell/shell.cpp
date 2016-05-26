@@ -186,10 +186,10 @@ main(int argc, char** argv)
 
     if (result->isExc()) {
         std::cerr << "Exception raised while interpreting code!" << std::endl;
-        WH_ASSERT(cx->hasError());
+        Local<VM::Exception*> exc(cx, result->exception());
         char buf[512];
-        cx->formatError(buf, 512);
-        std::cerr << "ERROR: " << buf << std::endl;
+        exc->snprint(buf, 512);
+        std::cerr << "EXCEPTION: " << buf << std::endl;
         return 1;
     }
 

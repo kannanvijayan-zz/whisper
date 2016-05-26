@@ -17,6 +17,18 @@ class Exception
 {
   protected:
     Exception() {}
+
+  public:
+    bool isInternalException() const {
+        return HeapThing::From(this)->isInternalException();
+    }
+
+    InternalException* toInternalException() {
+        WH_ASSERT(isInternalException());
+        return reinterpret_cast<InternalException*>(this);
+    }
+
+    size_t snprint(char* buf, size_t n);
 };
 
 //
@@ -94,6 +106,8 @@ class InternalException : public Exception
         WH_ASSERT(argNo < numArguments_);
         return arguments_[argNo];
     }
+
+    size_t snprint(char* buf, size_t n);
 };
 
 
