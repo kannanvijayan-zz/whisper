@@ -6,37 +6,33 @@ namespace Whisper {
 namespace VM {
 
 
-void
+size_t
 Box::snprint(char* buf, size_t n) const
 {
     if (isPointer()) {
         HeapThing* ht = pointer<HeapThing>();
         if (ht->isString()) {
             String* str = reinterpret_cast<String*>(ht);
-            snprintf(buf, n, "ptr(%s:%p:%s)", ht->formatString(), ht,
+            return snprintf(buf, n, "ptr(%s:%p:%s)", ht->formatString(), ht,
                                               str->c_chars());
         } else {
-            snprintf(buf, n, "ptr(%s:%p)", ht->formatString(), ht);
+            return snprintf(buf, n, "ptr(%s:%p)", ht->formatString(), ht);
         }
-        return;
     }
-    if (isInteger()) {
-        snprintf(buf, n, "int(%lld)", (long long) integer());
-        return;
-    }
-    if (isUndefined()) {
-        snprintf(buf, n, "undef");
-        return;
-    }
-    if (isBoolean()) {
-        snprintf(buf, n, "bool(%s)", boolean() ? "true" : "false");
-        return;
-    }
-    if (isInvalid()) {
-        snprintf(buf, n, "invalid");
-        return;
-    }
+    if (isInteger())
+        return snprintf(buf, n, "int(%lld)", (long long) integer());
+
+    if (isUndefined())
+        return snprintf(buf, n, "undef");
+
+    if (isBoolean())
+        return snprintf(buf, n, "bool(%s)", boolean() ? "true" : "false");
+
+    if (isInvalid())
+        return snprintf(buf, n, "invalid");
+
     WH_UNREACHABLE("Unknown box kind.");
+    return std::numeric_limits<size_t>::max();
 }
 
 ValBox::ValBox(Box const& box)

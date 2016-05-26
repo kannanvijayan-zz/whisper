@@ -151,7 +151,7 @@ class Box
         return Box((val ? BooleanBit : 0u) | BooleanTag);
     }
 
-    void snprint(char* buf, size_t n) const;
+    size_t snprint(char* buf, size_t n) const;
 
   protected:
     template <typename T>
