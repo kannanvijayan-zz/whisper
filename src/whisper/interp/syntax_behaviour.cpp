@@ -33,7 +33,9 @@ namespace Interp {
 
   /*
     DECLARE_SYNTAX_FN_(ReturnStmt)
+  */
     DECLARE_SYNTAX_FN_(DefStmt)
+  /*
     DECLARE_SYNTAX_FN_(ConstStmt)
     DECLARE_SYNTAX_FN_(VarStmt)
   */
@@ -105,7 +107,9 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(ExprStmt);
 /*
     BIND_GLOBAL_METHOD_(ReturnStmt);
+*/
     BIND_GLOBAL_METHOD_(DefStmt);
+/*
     BIND_GLOBAL_METHOD_(ConstStmt);
     BIND_GLOBAL_METHOD_(VarStmt);
 */
@@ -218,6 +222,51 @@ IMPL_SYNTAX_FN_(ExprStmt)
     }
 
     return VM::CallResult::Continue(exprEntryFrame);
+}
+
+IMPL_SYNTAX_FN_(DefStmt)
+{
+    if (args.length() != 1) {
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                       "@DefStmt called with wrong number of arguments.")))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(callInfo->frame(), exc);
+    }
+
+    WH_ASSERT(args.get(0)->isNode());
+    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::DefStmt);
+
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedDefStmtNode> defStmtNode(cx, stRef->astDefStmt());
+
+    Local<VM::String*> name(cx,
+        pst->getConstantString(defStmtNode->nameCid()));
+
+    SpewInterpNote("Syntax_DefStmt: Interpreting");
+
+    Local<VM::Function*> func(cx);
+    if (!func.setResult(VM::ScriptedFunction::Create(
+                            cx->inHatchery(), stRef, callInfo->callerScope(),
+                            /* isOperative = */ false)))
+    {
+        WH_ASSERT(cx->hasError());
+        return ErrorVal();
+    }
+    Local<VM::PropertyDescriptor> descr(cx, VM::PropertyDescriptor(func));
+
+    // Bind the function to the receiver.
+    Local<VM::ValBox> receiver(cx, callInfo->receiver());
+    if (!DefValueProperty(cx, receiver, name, descr)) {
+        WH_ASSERT(cx->hasError());
+        return ErrorVal();
+    }
+
+    // Def statements always yield void.
+    return VM::CallResult::Void();
 }
 
 IMPL_SYNTAX_FN_(CallExpr)

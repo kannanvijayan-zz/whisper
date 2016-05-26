@@ -223,6 +223,12 @@ class ScriptedFunction : public Function
             Handle<ScopeObject*> scopeChain,
             bool isOperative);
 
+    static Result<ScriptedFunction*> Create(
+            AllocationContext acx,
+            Handle<SyntaxNodeRef> nodeRef,
+            Handle<ScopeObject*> scopeChain,
+            bool isOperative);
+
     bool isApplicative() const {
         return (header().userData() & OperativeFlag) == 0;
     }

@@ -46,6 +46,17 @@ ScriptedFunction::Create(AllocationContext acx,
     return acx.create<ScriptedFunction>(pst, offset, scopeChain, isOperative);
 }
 
+/* static */ Result<ScriptedFunction*>
+ScriptedFunction::Create(AllocationContext acx,
+                         Handle<SyntaxNodeRef> nodeRef,
+                         Handle<ScopeObject*> scopeChain,
+                         bool isOperative)
+{
+    WH_ASSERT(nodeRef->nodeType() == AST::DefStmt);
+    return Create(acx, nodeRef->pst(), nodeRef->offset(),
+                  scopeChain, isOperative);
+}
+
 
 /* static */ Result<FunctionObject*>
 FunctionObject::Create(AllocationContext acx,

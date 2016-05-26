@@ -312,5 +312,33 @@ GetObjectProperty(ThreadContext* cx,
 }
 
 
+
+OkResult
+DefValueProperty(ThreadContext* cx,
+                 Handle<VM::ValBox> value,
+                 Handle<VM::String*> name,
+                 Handle<VM::PropertyDescriptor> descr)
+{
+    // Check if the value is an object.
+    if (value->isPointer()) {
+        Local<VM::Wobject*> object(cx, value->objectPointer());
+        return VM::Wobject::DefineProperty(cx->inHatchery(), object,
+                                           name, descr);
+    }
+
+    return cx->setInternalError("Cannot set property on a given "
+                                "primitive value");
+}
+
+OkResult
+DefObjectProperty(ThreadContext* cx,
+                  Handle<VM::Wobject*> object,
+                  Handle<VM::String*> name,
+                  Handle<VM::PropertyDescriptor> descr)
+{
+    return VM::Wobject::DefineProperty(cx->inHatchery(), object, name, descr);
+}
+
+
 } // namespace Interp
 } // namespace Whisper

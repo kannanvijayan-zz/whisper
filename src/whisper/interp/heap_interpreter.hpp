@@ -149,6 +149,16 @@ PropertyLookupResult GetObjectProperty(ThreadContext* cx,
                                        Handle<VM::Wobject*> object,
                                        Handle<VM::String*> name);
 
+OkResult DefValueProperty(ThreadContext* cx,
+                          Handle<VM::ValBox> value,
+                          Handle<VM::String*> name,
+                          Handle<VM::PropertyDescriptor> descr);
+
+OkResult DefObjectProperty(ThreadContext* cx,
+                           Handle<VM::Wobject*> object,
+                           Handle<VM::String*> name,
+                           Handle<VM::PropertyDescriptor> descr);
+
 
 } // namespace Interp
 } // namespace Whisper
