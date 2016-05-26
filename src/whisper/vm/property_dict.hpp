@@ -106,7 +106,7 @@ struct TraceTraits<VM::PropertyDict>
     static void Scan(Scanner& scanner, VM::PropertyDict const& pd,
                      void const* start, void const* end)
     {
-        for (uint32_t i = 0; i < pd.size_; i++) {
+        for (uint32_t i = 0; i < pd.capacity_; i++) {
             if (!pd.isValidEntry(i))
                 continue;
             pd.entries_[i].name.scan(scanner, start, end);
@@ -118,7 +118,7 @@ struct TraceTraits<VM::PropertyDict>
     static void Update(Updater& updater, VM::PropertyDict& pd,
                        void const* start, void const* end)
     {
-        for (uint32_t i = 0; i < pd.size_; i++) {
+        for (uint32_t i = 0; i < pd.capacity_; i++) {
             if (!pd.isValidEntry(i))
                 continue;
             pd.entries_[i].name.update(updater, start, end);
