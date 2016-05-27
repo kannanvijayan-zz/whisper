@@ -11,119 +11,78 @@
 namespace Whisper {
 namespace VM {
 
+//
+// The SelfTraced type allows the use of values which can be traced,
+// but whose types do not need to have corresponding entries in the
+// StackFormat or HeapFormat enums.
+//
+// SelfTraced accomplishes this by using a single format enum,
+// but lifting the tracing responsbility into virtual methods.
+//
+// This leads to more space usage for storing SelfTraced values,
+// due to the overhead of having a vtable.
+//
+
 class BaseSelfTraced
 {
   friend class TraceTraits<BaseSelfTraced>;
   protected:
-    void* valuePtr_;
-
-    BaseSelfTraced(void* valuePtr) : valuePtr_(valuePtr) {}
+    BaseSelfTraced() {}
 
   public:
-    template <typename Scanner>
-    inline void scan(Scanner& scanner, void const* start, void const* end)
-        const;
+    virtual void scan(AbstractScanner& scanner,
+                      void const* start,
+                      void const* end) const = 0;
 
-    template <typename Updater>
-    inline void update(Updater& updater, void const* start, void const* end);
+    virtual void update(AbstractUpdater& updater,
+                        void const* start,
+                        void const* end) = 0;
 };
 
 //
-// A Self-Traced value is a traced value embedding another
-// traced value.  It knows how to trace the embedded value
-// using provided tracer functions.
+// A Self-Traced a wrapper around a custom-traced
+// value.  The wrapped value must have TraceTraits
+// specialized for its type.
+//
+// SelfTraced frees the definer of a traced type
+// from having to declare a HeapFormat for the
 //
 template <typename T>
 class SelfTraced : public BaseSelfTraced
 {
+  static_assert(TraceTraits<T>::Specialized,
+                "Wrapped type is not specialized for TraceTraits.");
+
   friend class TraceTraits<SelfTraced<T>>;
-  public:
-    class SelfScanner {
-        virtual void operator ()(void const* addr, HeapThing* ptr) = 0;
-    };
-    class SelfUpdater {
-        virtual void operator ()(void* addr, HeapThing* ptr) = 0;
-    };
-
-    typedef void (*ScanFuncPtr)(SelfScanner& scanner, T const& obj,
-                                void const* start, void const* end);
-    typedef void (*UpdateFuncPtr)(SelfUpdater& updater, T& obj,
-                                  void const* start, void const* end);
-
   protected:
-    ScanFuncPtr scanFunc_;
-    UpdateFuncPtr updateFunc_;
     T value_;
 
   public:
-    SelfTraced(T const& value, ScanFuncPtr scanFunc, UpdateFuncPtr updateFunc)
-      : BaseSelfTraced(&value_),
-        scanFunc_(scanFunc),
-        updateFunc_(updateFunc),
+    SelfTraced(T const& value)
+      : BaseSelfTraced(),
         value_(value)
     {}
 
-  private:
-    template <typename Scanner>
-    struct SelfScannerImpl : public SelfScanner
-    {
-        Scanner& scanner;
-        SelfScannerImpl(Scanner& scanner) : scanner(scanner) {}
-        virtual void operator ()(void const* addr, HeapThing* ptr) override {
-            scanner(addr, ptr);
-        }
-    };
-    template <typename Updater>
-    struct SelfUpdaterImpl : public SelfUpdater
-    {
-        Updater& updater;
-        SelfUpdaterImpl(Updater& updater) : updater(updater) {}
-        virtual void operator ()(void* addr, HeapThing* ptr) override {
-            updater(addr, ptr);
-        }
-    };
+    SelfTraced(T&& value)
+      : BaseSelfTraced(),
+        value_(std::move(value))
+    {}
 
   public:
-    template <typename Scanner>
-    void scanImpl(Scanner& scanner, void const* start, void const* end) const
+    virtual void scan(AbstractScanner& scanner,
+                      void const* start,
+                      void const* end) const override
     {
-        SelfScannerImpl<Scanner> scannerImpl(scanner);
-        T const& obj = *reinterpret_cast<T const*>(valuePtr_);
-        scanFunc_(scannerImpl, obj, start, end);
+        TraceTraits<T>::Scan(scanner, value_, start, end);
     }
 
-    template <typename Updater>
-    void updateImpl(Updater& updater, void const* start, void const* end)
+    virtual void update(AbstractUpdater& updater,
+                        void const* start,
+                        void const* end) override
     {
-        SelfUpdaterImpl<Updater> updaterImpl(updater);
-        T& obj = *reinterpret_cast<T*>(valuePtr_);
-        updateFunc_(updaterImpl, obj, start, end);
+        TraceTraits<T>::Update(updater, value_, start, end);
     }
 };
-
-// Just use SelfTraced<HeapThing> as the surrogate type for
-// specializing during scanning.  The actual update and tracing
-// functions will be coordinated with the actual type of the
-// object being scanned or updated.
-
-template <typename Scanner>
-inline void
-BaseSelfTraced::scan(Scanner& scanner, void const* start, void const* end)
-const
-{
-    SelfTraced<HeapThing> const* specializedThis =
-        reinterpret_cast<SelfTraced<HeapThing> const*>(this);
-    return specializedThis->scanImpl(scanner, start, end);
-}
-
-template <typename Updater>
-inline void
-BaseSelfTraced::update(Updater& updater, void const* start, void const* end)
-{
-    SelfTraced<HeapThing>* specializedThis =
-        reinterpret_cast<SelfTraced<HeapThing>*>(this);
-    return specializedThis->updateImpl(updater, start, end);
-}
 
 
 } // namespace VM
@@ -139,9 +98,12 @@ BaseSelfTraced::update(Updater& updater, void const* start, void const* end)
 template <typename T>
 struct HeapTraits<VM::SelfTraced<T>>
 {
+    static_assert(HeapTraits<T>::Specialized,
+                  "Wrapped type is not designated for heap allocation.");
     HeapTraits() = delete;
     static constexpr bool Specialized = true;
-    static const HeapFormat ArrayFormat = HeapFormat::BaseSelfTraced;
+    static constexpr HeapFormat Format = HeapFormat::BaseSelfTraced;
+    static constexpr bool VarSized = false;
 };
 
 template <>
@@ -156,16 +118,19 @@ struct TraceTraits<VM::BaseSelfTraced>
     static void Scan(Scanner& scanner, VM::BaseSelfTraced const& selfTraced,
                      void const* start, void const* end)
     {
-        selfTraced.scan(scanner, start, end);
+        GC::ScannerBoxFor<Scanner> scannerBox(scanner);
+        selfTraced.scan(scannerBox, start, end);
     }
 
     template <typename Updater>
     static void Update(Updater& updater, VM::BaseSelfTraced& selfTraced,
                        void const* start, void const* end)
     {
-        selfTraced.update(updater, start, end);
+        GC::UpdaterBoxFor<Updater> updaterBox(updater);
+        selfTraced.update(updaterBox, start, end);
     }
 };
+
 
 template <typename T>
 struct TraceTraits<VM::SelfTraced<T>>
@@ -179,14 +144,16 @@ struct TraceTraits<VM::SelfTraced<T>>
     static void Scan(Scanner& scanner, VM::SelfTraced<T> const& selfTraced,
                      void const* start, void const* end)
     {
-        selfTraced.scanImpl(scanner, start, end);
+        GC::ScannerBoxFor<Scanner> scannerBox(scanner);
+        selfTraced.scan(scannerBox, start, end);
     }
 
     template <typename Updater>
     static void Update(Updater& updater, VM::SelfTraced<T>& selfTraced,
                        void const* start, void const* end)
     {
-        selfTraced.updateImpl(updater, start, end);
+        GC::UpdaterBoxFor<Updater> updaterBox(updater);
+        selfTraced.update(updaterBox, start, end);
     }
 };
 
