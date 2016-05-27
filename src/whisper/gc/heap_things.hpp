@@ -100,21 +100,21 @@ char const* GenString(Gen gen);
 //        10 bits   |       8 bits   10 bits
 //           |      |        |         |
 //           |      |        |         |
-//      ---------- ---   -------- ----------
+//      ---------- ---       ---- ----------
 //
-//      FFFFFFFFFF GGG 0 UUUUUUUU CCCCCCCCCC
+//      FFFFFFFFFF GGG 00000 UUUU CCCCCCCCCC
 //      bit 31                          bit 0
 //
 //
 //      The low 10 bits indicates the card this object lives on.
 //
-//      The next 6 bits are "userdata", free for use by specific formats
+//      The next 4 bits are "userdata", free for use by specific formats
 //      to stow away a few state bits without needing to use an extra
 //      word in the object.
 //
-//      The next 2 bits are zero.
+//      The next 5 bits are unused.
 //
-//      The next 3 bits specify the GC value for the structure,
+//      The next 3 bits specify the GC generation for the structure,
 //      which indicates its allocation site.
 //
 //      The high 10 bits specify the HeapFormat for the structure.
@@ -126,7 +126,7 @@ class alignas(8) HeapHeader
     uint32_t size_;
 
     typedef Bitfield<uint32_t, uint16_t, 10, 0> CardBitfield;
-    typedef Bitfield<uint32_t, uint8_t, 8, 10> UserBitfield;
+    typedef Bitfield<uint32_t, uint8_t, 4, 10> UserBitfield;
     typedef Bitfield<uint32_t, uint8_t, 3, 19> GcBitfield;
     typedef Bitfield<uint32_t, uint16_t, 10, 22> FormatBitfield;
 
