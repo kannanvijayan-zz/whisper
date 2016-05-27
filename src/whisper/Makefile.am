@@ -39,6 +39,7 @@ shared_cpp = \
     vm/frame.cpp \
     interp/syntax_behaviour.cpp \
     interp/object_behaviour.cpp \
+    interp/native_call_utils.cpp \
     interp/heap_interpreter.cpp
 
 whisper_SOURCES = \

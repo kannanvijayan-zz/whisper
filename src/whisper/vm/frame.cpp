@@ -968,6 +968,84 @@ InvokeOperativeFrame::StepImpl(ThreadContext* cx,
                         "Unknown CallResult outcome.");
 }
 
+/* static */ Result<NativeCallResumeFrame*>
+NativeCallResumeFrame::Create(AllocationContext acx,
+                              Handle<Frame*> parent,
+                              Handle<NativeCallInfo> callInfo,
+                              Handle<ScopeObject*> evalScope,
+                              Handle<SyntaxTreeFragment*> syntaxFragment,
+                              NativeCallResumeFuncPtr resumeFunc,
+                              Handle<HeapThing*> resumeState)
+{
+    return acx.create<NativeCallResumeFrame>(parent, callInfo, evalScope,
+                                             syntaxFragment, resumeFunc,
+                                             resumeState);
+}
+
+/* static */ StepResult
+NativeCallResumeFrame::ResolveChildImpl(ThreadContext* cx,
+                                        Handle<NativeCallResumeFrame*> frame,
+                                        Handle<Frame*> childFrame,
+                                        Handle<EvalResult> result)
+{
+    Local<Frame*> parent(cx, frame->parent());
+
+    // When the child completes, call into the native resume func.
+    NativeCallResumeFuncPtr resumeFunc = frame->resumeFunc();
+
+    Local<NativeCallInfo> callInfo(cx,
+        NativeCallInfo(parent,
+                       frame->lookupState(),
+                       frame->callerScope(),
+                       frame->calleeFunc(),
+                       frame->receiver()));
+    Local<HeapThing*> resumeState(cx, frame->resumeState());
+
+    Local<CallResult> resumeResult(cx,
+        resumeFunc(cx, callInfo, resumeState, result));
+
+    if (resumeResult->isError())
+        return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+
+    if (resumeResult->isExc()) {
+        return Frame::ResolveChild(cx, parent, frame,
+                                   resumeResult->excAsEvalResult());
+    }
+
+    if (resumeResult->isValue()) {
+        return Frame::ResolveChild(cx, parent, frame,
+                                   resumeResult->valueAsEvalResult());
+    }
+
+    if (resumeResult->isVoid())
+        return Frame::ResolveChild(cx, parent, frame, EvalResult::Void());
+
+    if (resumeResult->isContinue())
+        return StepResult::Continue(resumeResult->continueFrame());
+
+    WH_UNREACHABLE("Unknown CallResult.");
+    return ErrorVal();
+}
+
+/* static */ StepResult
+NativeCallResumeFrame::StepImpl(ThreadContext* cx,
+                                Handle<NativeCallResumeFrame*> frame)
+{
+    Local<VM::SyntaxTreeFragment*> stFrag(cx, frame->syntaxFragment());
+    Local<VM::ScopeObject*> evalScope(cx, frame->evalScope());
+
+    // Create an EntryFrame for the evaluation of the syntax tree fragment.
+    Local<EntryFrame*> entryFrame(cx);
+    if (!entryFrame.setResult(EntryFrame::Create(cx->inHatchery(),
+                                                 frame, stFrag, evalScope)))
+    {
+        return ErrorVal();
+    }
+
+    // Continue to it.
+    return StepResult::Continue(entryFrame);
+}
+
 
 } // namespace VM
 } // namespace Whisper

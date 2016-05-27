@@ -7,6 +7,7 @@
 #include "vm/exception.hpp"
 #include "vm/control_flow.hpp"
 #include "vm/slist.hpp"
+#include "vm/function.hpp"
 #include "parser/packed_syntax.hpp"
 
 namespace Whisper {
@@ -20,7 +21,8 @@ namespace VM {
     _(FileSyntaxFrame)              \
     _(CallExprSyntaxFrame)          \
     _(InvokeApplicativeFrame)       \
-    _(InvokeOperativeFrame)
+    _(InvokeOperativeFrame)         \
+    _(NativeCallResumeFrame)
 
 
 #define PREDECLARE_FRAME_CLASSES_(name) class name;
@@ -523,6 +525,90 @@ class InvokeOperativeFrame : public Frame
                                Handle<InvokeOperativeFrame*> frame);
 };
 
+typedef VM::CallResult (*NativeCallResumeFuncPtr)(
+        ThreadContext* cx,
+        Handle<NativeCallInfo> callInfo,
+        Handle<HeapThing*> state,
+        Handle<VM::EvalResult> evalResult);
+
+class NativeCallResumeFrame : public Frame
+{
+    friend class TraceTraits<NativeCallResumeFrame>;
+  private:
+    HeapField<LookupState*> lookupState_;
+    HeapField<ScopeObject*> callerScope_;
+    HeapField<FunctionObject*> calleeFunc_;
+    HeapField<ValBox> receiver_;
+    HeapField<ScopeObject*> evalScope_;
+    HeapField<SyntaxTreeFragment*> syntaxFragment_;
+    NativeCallResumeFuncPtr resumeFunc_;
+    HeapField<HeapThing*> resumeState_;
+
+  public:
+    NativeCallResumeFrame(Frame* parent,
+                          NativeCallInfo const& callInfo,
+                          ScopeObject* evalScope,
+                          SyntaxTreeFragment* syntaxFragment,
+                          NativeCallResumeFuncPtr resumeFunc,
+                          HeapThing* resumeState)
+      : Frame(parent),
+        lookupState_(callInfo.lookupState()),
+        calleeFunc_(callInfo.calleeFunc()),
+        receiver_(callInfo.receiver()),
+        evalScope_(evalScope),
+        syntaxFragment_(syntaxFragment),
+        resumeFunc_(resumeFunc),
+        resumeState_(resumeState)
+    {}
+
+    LookupState* lookupState() const {
+        return lookupState_;
+    }
+
+    ScopeObject* callerScope() const {
+        return callerScope_;
+    }
+
+    FunctionObject* calleeFunc() const {
+        return calleeFunc_;
+    }
+
+    ValBox const& receiver() const {
+        return receiver_;
+    }
+
+    ScopeObject* evalScope() const {
+        return evalScope_;
+    }
+
+    SyntaxTreeFragment* syntaxFragment() const {
+        return syntaxFragment_;
+    }
+
+    NativeCallResumeFuncPtr resumeFunc() const {
+        return resumeFunc_;
+    }
+
+    HeapThing* resumeState() const {
+        return resumeState_;
+    }
+
+    static Result<NativeCallResumeFrame*> Create(
+            AllocationContext acx,
+            Handle<Frame*> parent,
+            Handle<NativeCallInfo> callInfo,
+            Handle<ScopeObject*> evalScope,
+            Handle<SyntaxTreeFragment*> syntaxFragment,
+            NativeCallResumeFuncPtr resumeFunc,
+            Handle<HeapThing*> resumeState);
+
+    static StepResult ResolveChildImpl(ThreadContext* cx,
+                                       Handle<NativeCallResumeFrame*> frame,
+                                       Handle<Frame*> childFrame,
+                                       Handle<EvalResult> result);
+    static StepResult StepImpl(ThreadContext* cx,
+                               Handle<NativeCallResumeFrame*> frame);
+};
 
 
 } // namespace VM
@@ -788,6 +874,43 @@ struct TraceTraits<VM::InvokeOperativeFrame>
         obj.callee_.update(updater, start, end);
         obj.calleeFunc_.update(updater, start, end);
         obj.stFrag_.update(updater, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::NativeCallResumeFrame>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::NativeCallResumeFrame const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::Frame>::Scan<Scanner>(scanner, obj, start, end);
+        obj.lookupState_.scan(scanner, start, end);
+        obj.callerScope_.scan(scanner, start, end);
+        obj.calleeFunc_.scan(scanner, start, end);
+        obj.receiver_.scan(scanner, start, end);
+        obj.evalScope_.scan(scanner, start, end);
+        obj.syntaxFragment_.scan(scanner, start, end);
+        obj.resumeState_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::NativeCallResumeFrame& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
+        obj.lookupState_.update(updater, start, end);
+        obj.callerScope_.update(updater, start, end);
+        obj.calleeFunc_.update(updater, start, end);
+        obj.receiver_.update(updater, start, end);
+        obj.evalScope_.update(updater, start, end);
+        obj.syntaxFragment_.update(updater, start, end);
+        obj.resumeState_.update(updater, start, end);
     }
 };
 
