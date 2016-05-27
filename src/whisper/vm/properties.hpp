@@ -80,6 +80,26 @@ class PropertyName
     }
 };
 
+class PropertySlotInfo
+{
+  private:
+    bool isWritable_;
+
+  public:
+    PropertySlotInfo() : isWritable_(false) {}
+
+    bool isWritable() const {
+        return isWritable_;
+    }
+    void setWritable(bool writable) {
+        isWritable_ = true;
+    }
+    PropertySlotInfo& withWritable(bool writable) {
+        setWritable(writable);
+        return *this;
+    }
+};
+
 class PropertyDescriptor
 {
   friend class TraceTraits<PropertyDescriptor>;
@@ -90,20 +110,45 @@ class PropertyDescriptor
         Method
     };
 
+    typedef Bitfield<uint8_t, uint8_t, 1, 0> SlotIsWritableBitfield;
+
     StackField<Box> value_;
     Kind kind_;
+    uint8_t flags_;
 
     PropertyDescriptor(Kind kind, Box const& value)
-      : value_(value), kind_(kind)
+      : value_(value), kind_(kind), flags_(0)
     {}
+
+    PropertyDescriptor(Kind kind, Box const& value, uint8_t flags)
+      : value_(value), kind_(kind), flags_(flags)
+    {}
+
+    static uint8_t SlotInfoToFlags(PropertySlotInfo info) {
+        uint8_t flags = 0;
+        SlotIsWritableBitfield(flags).initValue(info.isWritable());
+        return flags;
+    }
+    static PropertySlotInfo FlagsToSlotInfo(uint8_t flags) {
+        PropertySlotInfo result;
+        result.setWritable(SlotIsWritableBitfield(flags).value());
+        return result;
+    }
 
   public:
     PropertyDescriptor()
-      : value_(), kind_(Kind::Invalid)
+      : value_(), kind_(Kind::Invalid), flags_(0)
     {}
 
     static PropertyDescriptor MakeSlot(ValBox const& value) {
-        return PropertyDescriptor(Kind::Slot, value);
+        return PropertyDescriptor(Kind::Slot, value,
+                                    SlotInfoToFlags(PropertySlotInfo()));
+    }
+    static PropertyDescriptor MakeSlot(ValBox const& value,
+                                       PropertySlotInfo slotInfo)
+    {
+        return PropertyDescriptor(Kind::Slot, value,
+                                  SlotInfoToFlags(slotInfo));
     }
     static PropertyDescriptor MakeMethod(Function* func) {
         return PropertyDescriptor(Kind::Method, Box::Pointer(func));
@@ -122,6 +167,10 @@ class PropertyDescriptor
     ValBox slotValue() const {
         WH_ASSERT(isSlot());
         return ValBox(value_);
+    }
+    PropertySlotInfo slotInfo() const {
+        WH_ASSERT(isSlot());
+        return FlagsToSlotInfo(flags_);
     }
     Function* methodFunction() const {
         WH_ASSERT(isMethod());
