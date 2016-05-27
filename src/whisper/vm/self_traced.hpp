@@ -41,8 +41,10 @@ class BaseSelfTraced
 
 //
 // A Self-Traced a wrapper around a custom-traced
-// value.  The wrapped value must have TraceTraits
-// specialized for its type.
+// value.  The wrapped value must define a trace()
+// and update() method, with the following signatures:
+//      scan(AbstractScanner* scanner, void const* start, void const* end);
+//      update(AbstractUpdater* updater, void const* start, void const* end);
 //
 // SelfTraced frees the definer of a traced type
 // from having to declare a HeapFormat for the
@@ -73,14 +75,14 @@ class SelfTraced : public BaseSelfTraced
                       void const* start,
                       void const* end) const override
     {
-        TraceTraits<T>::Scan(scanner, value_, start, end);
+        value_.scan(scanner, start, end);
     }
 
     virtual void update(AbstractUpdater& updater,
                         void const* start,
                         void const* end) override
     {
-        TraceTraits<T>::Update(updater, value_, start, end);
+        value_.update(updater, start, end);
     }
 };
 
