@@ -75,7 +75,7 @@ GenString(Gen gen)
 
 
 void
-GC::ScanStackThingImpl(ScannerBox& scanner, StackThing const* thing,
+GC::ScanStackThingImpl(AbstractScanner& scanner, StackThing const* thing,
                        void const* start, void const* end)
 {
     WH_ASSERT(thing != nullptr);
@@ -84,7 +84,7 @@ GC::ScanStackThingImpl(ScannerBox& scanner, StackThing const* thing,
     case StackFormat::fmtName: {\
         typedef StackFormatTraits<StackFormat::fmtName>::Type T; \
         T const* tptr = reinterpret_cast<T const*>(thing); \
-        TraceTraits<T>::Scan<ScannerBox>(scanner, *tptr, start, end); \
+        TraceTraits<T>::Scan<AbstractScanner>(scanner, *tptr, start, end); \
         break; \
     }
       WHISPER_DEFN_GC_STACK_FORMATS(SWITCH_)
@@ -96,7 +96,7 @@ GC::ScanStackThingImpl(ScannerBox& scanner, StackThing const* thing,
 }
 
 void
-GC::UpdateStackThingImpl(UpdaterBox& updater, StackThing* thing,
+GC::UpdateStackThingImpl(AbstractUpdater& updater, StackThing* thing,
                          void const* start, void const* end)
 {
     WH_ASSERT(thing != nullptr);
@@ -105,7 +105,7 @@ GC::UpdateStackThingImpl(UpdaterBox& updater, StackThing* thing,
     case StackFormat::fmtName: {\
         typedef StackFormatTraits<StackFormat::fmtName>::Type T; \
         T* tptr = reinterpret_cast<T*>(thing); \
-        TraceTraits<T>::Update<UpdaterBox>(updater, *tptr, start, end); \
+        TraceTraits<T>::Update<AbstractUpdater>(updater, *tptr, start, end); \
         break; \
     }
       WHISPER_DEFN_GC_STACK_FORMATS(SWITCH_)
@@ -117,7 +117,7 @@ GC::UpdateStackThingImpl(UpdaterBox& updater, StackThing* thing,
 }
 
 void
-GC::ScanHeapThingImpl(ScannerBox& scanner, HeapThing const* thing,
+GC::ScanHeapThingImpl(AbstractScanner& scanner, HeapThing const* thing,
                       void const* start, void const* end)
 {
     WH_ASSERT(thing != nullptr);
@@ -126,7 +126,7 @@ GC::ScanHeapThingImpl(ScannerBox& scanner, HeapThing const* thing,
     case HeapFormat::fmtName: {\
         typedef HeapFormatTraits<HeapFormat::fmtName>::Type T; \
         T const* tptr = reinterpret_cast<T const*>(thing); \
-        TraceTraits<T>::Scan<ScannerBox>(scanner, *tptr, start, end); \
+        TraceTraits<T>::Scan<AbstractScanner>(scanner, *tptr, start, end); \
         break; \
     }
       WHISPER_DEFN_GC_HEAP_FORMATS(SWITCH_)
@@ -138,7 +138,7 @@ GC::ScanHeapThingImpl(ScannerBox& scanner, HeapThing const* thing,
 }
 
 void
-GC::UpdateHeapThingImpl(UpdaterBox& updater, HeapThing* thing,
+GC::UpdateHeapThingImpl(AbstractUpdater& updater, HeapThing* thing,
                         void const* start, void const* end)
 {
     WH_ASSERT(thing != nullptr);
@@ -147,7 +147,7 @@ GC::UpdateHeapThingImpl(UpdaterBox& updater, HeapThing* thing,
     case HeapFormat::fmtName: {\
         typedef HeapFormatTraits<HeapFormat::fmtName>::Type T; \
         T* tptr = reinterpret_cast<T*>(thing); \
-        TraceTraits<T>::Update<UpdaterBox>(updater, *tptr, start, end); \
+        TraceTraits<T>::Update<AbstractUpdater>(updater, *tptr, start, end); \
         break; \
     }
       WHISPER_DEFN_GC_HEAP_FORMATS(SWITCH_)

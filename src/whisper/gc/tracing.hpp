@@ -212,6 +212,26 @@ struct UntracedTraceTraits
     {}
 };
 
+class AbstractScanner
+{
+  protected:
+    AbstractScanner() {}
+    virtual ~AbstractScanner() {}
+
+  public:
+    virtual void operator () (void const* addr, HeapThing* ptr) = 0;
+};
+
+class AbstractUpdater
+{
+  protected:
+    AbstractUpdater() {}
+    virtual ~AbstractUpdater() {}
+
+  public:
+    virtual HeapThing* operator () (void* addr, HeapThing* ptr) = 0;
+};
+
 // DerefTraits<T>
 //
 // Often, we wish to use underlying structure's methods on the wrapped
@@ -252,78 +272,52 @@ struct DerefTraits
 namespace GC {
 
 //
-// ScannerBox, ScannerBoxFor<T>, UpdaterBox, and UpdaterBoxFor<T>
-// serve to abstract the scanning and update protocol so the actual logic
-// can be pushed into a cpp file instead of in a header.
+// ScannerBoxFor<T>, and UpdaterBoxFor<T> serve to abstract the scanning
+// and update protocol so the actual logic can be pushed into a cpp
+// file instead of in a header.
 //
 
-class ScannerBox
-{
-  protected:
-    ScannerBox() {}
-
-  public:
-    virtual void scanImpl(void const* addr, HeapThing* ptr) = 0;
-
-    inline void operator () (void const* addr, HeapThing* ptr) {
-        scanImpl(addr, ptr);
-    }
-};
-
 template <typename Scanner>
-class ScannerBoxFor : public ScannerBox
+class ScannerBoxFor : public AbstractScanner
 {
   private:
     Scanner& scanner_;
 
   public:
     ScannerBoxFor(Scanner& scanner)
-      : ScannerBox(),
+      : AbstractScanner(),
         scanner_(scanner)
     {}
 
-    virtual void scanImpl(void const* addr, HeapThing* ptr) {
+    virtual void operator ()(void const* addr, HeapThing* ptr) override {
         scanner_(addr, ptr);
     }
 };
 
-class UpdaterBox
-{
-  protected:
-    UpdaterBox() {}
-
-  public:
-    virtual HeapThing* updateImpl(void* addr, HeapThing* ptr) = 0;
-
-    inline HeapThing* operator () (void* addr, HeapThing* ptr) {
-        return updateImpl(addr, ptr);
-    }
-};
-
 template <typename Updater>
-class UpdaterBoxFor : public UpdaterBox
+class UpdaterBoxFor : public AbstractUpdater
 {
   private:
     Updater& updater_;
 
   public:
     UpdaterBoxFor(Updater& updater)
-      : UpdaterBox(),
+      : AbstractUpdater(),
         updater_(updater)
     {}
 
-    virtual HeapThing* updateImpl(void* addr, HeapThing* ptr) {
+    virtual HeapThing* operator ()(void* addr, HeapThing* ptr) override {
         return updater_(addr, ptr);
     }
 };
 
 
 void
-ScanStackThingImpl(ScannerBox& scanner, StackThing const* thing,
+ScanStackThingImpl(AbstractScanner& scanner, StackThing const* thing,
                    void const* start, void const* end);
 
 void
-UpdateStackThingImpl(UpdaterBox& updater, StackThing* thing,
+UpdateStackThingImpl(AbstractUpdater& updater, StackThing* thing,
                      void const* start, void const* end);
 
 template <typename Scanner>
@@ -346,11 +340,11 @@ UpdateStackThing(Updater& updater, StackThing* thing,
 
 
 void
-ScanHeapThingImpl(ScannerBox& scanner, HeapThing const* thing,
+ScanHeapThingImpl(AbstractScanner& scanner, HeapThing const* thing,
                   void const* start, void const* end);
 
 void
-UpdateHeapThingImpl(UpdaterBox& updater, HeapThing* thing,
+UpdateHeapThingImpl(AbstractUpdater& updater, HeapThing* thing,
                     void const* start, void const* end);
 
 template <typename Scanner>
