@@ -16,47 +16,47 @@ namespace Whisper {
 namespace Interp {
 
 
-// Declare a lift function for each syntax node type.
-#define DECLARE_SYNTAX_FN_(name) \
+// Helper macro to declare native functions for syntax lifting.
+#define IMPL_SYNTAX_FN_(name) \
     static VM::CallResult Syntax_##name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
-        ArrayHandle<VM::SyntaxTreeFragment*> args);
+        ArrayHandle<VM::SyntaxTreeFragment*> args)
 
-    DECLARE_SYNTAX_FN_(File)
+#define DECLARE_SYNTAX_FN_(name) IMPL_SYNTAX_FN_(name);
 
-  /*
-    DECLARE_SYNTAX_FN_(EmptyStmt)
-  */
+DECLARE_SYNTAX_FN_(File)
 
-    DECLARE_SYNTAX_FN_(ExprStmt)
+/*
+DECLARE_SYNTAX_FN_(EmptyStmt)
+*/
 
-  /*
-    DECLARE_SYNTAX_FN_(ReturnStmt)
-  */
-    DECLARE_SYNTAX_FN_(DefStmt)
-  /*
-    DECLARE_SYNTAX_FN_(ConstStmt)
-    DECLARE_SYNTAX_FN_(VarStmt)
-  */
+DECLARE_SYNTAX_FN_(ExprStmt)
 
-    DECLARE_SYNTAX_FN_(CallExpr)
+/*
+DECLARE_SYNTAX_FN_(ReturnStmt)
+*/
+DECLARE_SYNTAX_FN_(DefStmt)
+/*
+DECLARE_SYNTAX_FN_(ConstStmt)
+DECLARE_SYNTAX_FN_(VarStmt)
+*/
 
-  /*
-    DECLARE_SYNTAX_FN_(DotExpr)
-    DECLARE_SYNTAX_FN_(ArrowExpr)
-    DECLARE_SYNTAX_FN_(PosExpr)
-    DECLARE_SYNTAX_FN_(NegExpr)
-    DECLARE_SYNTAX_FN_(AddExpr)
-    DECLARE_SYNTAX_FN_(SubExpr)
-    DECLARE_SYNTAX_FN_(MulExpr)
-    DECLARE_SYNTAX_FN_(DivExpr)
-    DECLARE_SYNTAX_FN_(ParenExpr)
-  */
-    DECLARE_SYNTAX_FN_(NameExpr)
-    DECLARE_SYNTAX_FN_(IntegerExpr)
+DECLARE_SYNTAX_FN_(CallExpr)
 
-#undef DECLARE_SYNTAX_FN_
+/*
+DECLARE_SYNTAX_FN_(DotExpr)
+DECLARE_SYNTAX_FN_(ArrowExpr)
+DECLARE_SYNTAX_FN_(PosExpr)
+DECLARE_SYNTAX_FN_(NegExpr)
+DECLARE_SYNTAX_FN_(AddExpr)
+DECLARE_SYNTAX_FN_(SubExpr)
+DECLARE_SYNTAX_FN_(MulExpr)
+DECLARE_SYNTAX_FN_(DivExpr)
+DECLARE_SYNTAX_FN_(ParenExpr)
+*/
+DECLARE_SYNTAX_FN_(NameExpr)
+DECLARE_SYNTAX_FN_(IntegerExpr)
 
 static OkResult
 BindGlobalMethod(AllocationContext acx,
@@ -135,12 +135,6 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 
     return OkVal();
 }
-
-#define IMPL_SYNTAX_FN_(name) \
-    static VM::CallResult Syntax_##name( \
-        ThreadContext* cx, \
-        Handle<VM::NativeCallInfo> callInfo, \
-        ArrayHandle<VM::SyntaxTreeFragment*> args)
 
 IMPL_SYNTAX_FN_(File)
 {
