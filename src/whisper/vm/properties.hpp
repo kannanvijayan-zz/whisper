@@ -84,27 +84,40 @@ class PropertyDescriptor
 {
   friend class TraceTraits<PropertyDescriptor>;
   private:
-    StackField<Box> value_;
+    enum class Kind : uint8_t {
+        Invalid,
+        Slot,
+        Method
+    };
 
-    PropertyDescriptor(Box const& value)
-      : value_(value)
+    StackField<Box> value_;
+    Kind kind_;
+
+    PropertyDescriptor(Kind kind, Box const& value)
+      : value_(value), kind_(kind)
     {}
 
   public:
     PropertyDescriptor()
-      : value_()
+      : value_(), kind_(Kind::Invalid)
     {}
 
     static PropertyDescriptor MakeSlot(ValBox const& value) {
-        return PropertyDescriptor(value);
+        return PropertyDescriptor(Kind::Slot, value);
     }
     static PropertyDescriptor MakeMethod(Function* func) {
-        return PropertyDescriptor(Box::Pointer(func));
+        return PropertyDescriptor(Kind::Method, Box::Pointer(func));
     }
 
-    bool isValid() const;
-    bool isSlot() const;
-    bool isMethod() const;
+    bool isValid() const {
+        return kind_ != Kind::Invalid;
+    }
+    bool isSlot() const {
+        return kind_ == Kind::Slot;
+    }
+    bool isMethod() const {
+        return kind_ == Kind::Method;
+    }
 
     ValBox slotValue() const {
         WH_ASSERT(isSlot());
