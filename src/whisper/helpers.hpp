@@ -462,7 +462,7 @@ class ScopeExit
     bool disabled_;
 
   public:
-    ScopeExit(F f) : f_(f), disabled_(false) {}
+    explicit ScopeExit(F f) : f_(f), disabled_(false) {}
 
     ~ScopeExit() {
         if (!disabled_)
