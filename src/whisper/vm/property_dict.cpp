@@ -10,13 +10,16 @@ namespace VM {
 PropertyDescriptor
 PropertyDict::Entry::descriptor() const
 {
-    if (value->isPointer() &&
-        Function::IsFunction(value->pointer<HeapThing>()))
-    {
-        return PropertyDescriptor::MakeMethod(value->pointer<Function>());
+    uint8_t kindValue = KindBitfield::Const(flags_).value();
+    if (kindValue == SLOT_KIND) {
+        PropertySlotInfo slotInfo;
+        slotInfo.setWritable(SlotIsWritableBitfield::Const(flags_).value());
+
+        return PropertyDescriptor::MakeSlot(ValBox(value), slotInfo);
     }
 
-    return PropertyDescriptor::MakeSlot(ValBox(value));
+    WH_ASSERT(kindValue == METHOD_KIND);
+    return PropertyDescriptor::MakeMethod(value->pointer<Function>());
 }
 
 void
@@ -31,21 +34,16 @@ void
 PropertyDict::Entry::initDescriptor(PropertyDescriptor const& descr,
                                     PropertyDict* holderDict)
 {
+    flags_ = 0;
     if (descr.isSlot()) {
+        KindBitfield(flags_).setValue(SLOT_KIND);
         value.init(descr.slotValue(), holderDict);
-    } else {
-        value.init(Box::Pointer(descr.methodFunction()), holderDict);
-    }
-}
 
-void
-PropertyDict::Entry::setDescriptor(PropertyDescriptor const& descr,
-                                   PropertyDict* holderDict)
-{
-    if (descr.isSlot()) {
-        value.set(descr.slotValue(), holderDict);
+        PropertySlotInfo slotInfo = descr.slotInfo();
+        SlotIsWritableBitfield(flags_).setValue(slotInfo.isWritable());
     } else {
-        value.set(Box::Pointer(descr.methodFunction()), holderDict);
+        KindBitfield(flags_).setValue(METHOD_KIND);
+        value.init(Box::Pointer(descr.methodFunction()), holderDict);
     }
 }
 

@@ -21,16 +21,21 @@ class PropertyDict
 
     struct Entry
     {
+        typedef Bitfield<uint8_t, uint8_t, 1, 0> KindBitfield;
+        typedef Bitfield<uint8_t, uint8_t, 1, 1> SlotIsWritableBitfield;
+
+        static constexpr uint8_t SLOT_KIND = 0;
+        static constexpr uint8_t METHOD_KIND = 1;
+
         HeapField<String*> name;
         HeapField<Box> value;
+        uint8_t flags_;
 
         PropertyDescriptor descriptor() const;
         void init(String* name, PropertyDescriptor const& descr,
                   PropertyDict* holderDict);
         void initDescriptor(PropertyDescriptor const& descr,
                             PropertyDict* holderDict);
-        void setDescriptor(PropertyDescriptor const& descr,
-                           PropertyDict* holderDict);
     };
 
     uint32_t capacity_;
