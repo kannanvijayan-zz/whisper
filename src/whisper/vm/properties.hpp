@@ -15,7 +15,8 @@ class PropertyName
 {
   friend class TraceTraits<PropertyName>;
   private:
-    // Low bits of pointer determine whether
+    // Low bits of |val_| determine whether it is a VM::String pointer
+    // or a raw char pointer.
     uintptr_t val_;
     uint32_t length_;
 
