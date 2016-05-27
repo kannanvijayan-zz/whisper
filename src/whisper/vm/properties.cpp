@@ -27,7 +27,7 @@ PropertyDescriptor::isValid() const
 }
 
 bool
-PropertyDescriptor::isValue() const
+PropertyDescriptor::isSlot() const
 {
     WH_ASSERT(isValid());
     if (!value_->isPointer())

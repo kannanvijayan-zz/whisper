@@ -222,9 +222,9 @@ SyntaxNameLookupFrame::StepImpl(ThreadContext* cx,
         Local<LookupState*> lookupState(cx, lookupResult.lookupState());
 
         // Handle a value binding by returning the value.
-        if (descriptor->isValue()) {
+        if (descriptor->isSlot()) {
             return ResolveChild(cx, parent, frame,
-                EvalResult::Value(descriptor->valBox()));
+                EvalResult::Value(descriptor->slotValue()));
         }
 
         // Handle a method binding by creating a bound FunctionObject
@@ -232,7 +232,7 @@ SyntaxNameLookupFrame::StepImpl(ThreadContext* cx,
         if (descriptor->isMethod()) {
             // Create a new function object bound to the scope.
             Local<ValBox> scopeVal(cx, ValBox::Object(scope.get()));
-            Local<Function*> func(cx, descriptor->method());
+            Local<Function*> func(cx, descriptor->methodFunction());
             Local<FunctionObject*> funcObj(cx);
             if (!funcObj.setResult(FunctionObject::Create(
                     cx->inHatchery(), func, scopeVal, lookupState)))

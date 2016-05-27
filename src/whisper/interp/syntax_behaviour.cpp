@@ -360,8 +360,8 @@ IMPL_SYNTAX_FN_(NameExpr)
         Local<VM::LookupState*> lookupState(cx, lookupResult.lookupState());
 
         // Handle a value binding by returning the value.
-        if (descriptor->isValue())
-            return VM::CallResult::Value(descriptor->valBox());
+        if (descriptor->isSlot())
+            return VM::CallResult::Value(descriptor->slotValue());
 
         // Handle a method binding by creating a bound FunctionObject
         // from the method.
@@ -369,7 +369,7 @@ IMPL_SYNTAX_FN_(NameExpr)
             // Create a new function object bound to the scope, which
             // is the receiver object.
             Local<VM::ValBox> scopeVal(cx, VM::ValBox::Object(scope.get()));
-            Local<VM::Function*> func(cx, descriptor->method());
+            Local<VM::Function*> func(cx, descriptor->methodFunction());
             Local<VM::FunctionObject*> funcObj(cx);
             if (!funcObj.setResult(VM::FunctionObject::Create(
                     cx->inHatchery(), func, scopeVal, lookupState)))

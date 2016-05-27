@@ -25,6 +25,12 @@ class PropertyDict
         HeapField<Box> value;
 
         PropertyDescriptor descriptor() const;
+        void init(String* name, PropertyDescriptor const& descr,
+                  PropertyDict* holderDict);
+        void initDescriptor(PropertyDescriptor const& descr,
+                            PropertyDict* holderDict);
+        void setDescriptor(PropertyDescriptor const& descr,
+                           PropertyDict* holderDict);
     };
 
     uint32_t capacity_;
@@ -76,7 +82,14 @@ class PropertyDict
 
     void setDescriptor(uint32_t idx, PropertyDescriptor const& descr) {
         WH_ASSERT(idx < size());
-        entries_[idx].value.set(descr.value(), this);
+        Box box;
+        if (descr.isSlot()) {
+            box = descr.slotValue();
+        } else {
+            WH_ASSERT(descr.isMethod());
+            box = Box::Pointer(descr.methodFunction());
+        }
+        entries_[idx].value.set(box, this);
     }
 
     bool canAddEntry() const {

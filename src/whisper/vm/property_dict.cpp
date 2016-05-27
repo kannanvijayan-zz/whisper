@@ -16,7 +16,37 @@ PropertyDict::Entry::descriptor() const
         return PropertyDescriptor::MakeMethod(value->pointer<Function>());
     }
 
-    return PropertyDescriptor::MakeValue(ValBox(value));
+    return PropertyDescriptor::MakeSlot(ValBox(value));
+}
+
+void
+PropertyDict::Entry::init(String* name, PropertyDescriptor const& descr,
+                          PropertyDict* holderDict)
+{
+    this->name.init(name, holderDict);
+    initDescriptor(descr, holderDict);
+}
+
+void
+PropertyDict::Entry::initDescriptor(PropertyDescriptor const& descr,
+                                    PropertyDict* holderDict)
+{
+    if (descr.isSlot()) {
+        value.init(descr.slotValue(), holderDict);
+    } else {
+        value.init(Box::Pointer(descr.methodFunction()), holderDict);
+    }
+}
+
+void
+PropertyDict::Entry::setDescriptor(PropertyDescriptor const& descr,
+                                   PropertyDict* holderDict)
+{
+    if (descr.isSlot()) {
+        value.set(descr.slotValue(), holderDict);
+    } else {
+        value.set(Box::Pointer(descr.methodFunction()), holderDict);
+    }
 }
 
 /* static */ Result<PropertyDict*>
@@ -124,8 +154,7 @@ PropertyDict::addEntry(String* name, PropertyDescriptor const& descr)
             continue;
 
         // Empty entry found.  Set it.
-        entries_[probe].name.init(name, this);
-        entries_[probe].value.init(descr.box(), this);
+        entries_[probe].init(name, descr, this);
         size_++;
 
         return Maybe<uint32_t>::Some(probe);

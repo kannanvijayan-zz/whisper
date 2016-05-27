@@ -95,7 +95,7 @@ class PropertyDescriptor
       : value_()
     {}
 
-    static PropertyDescriptor MakeValue(ValBox const& value) {
+    static PropertyDescriptor MakeSlot(ValBox const& value) {
         return PropertyDescriptor(value);
     }
     static PropertyDescriptor MakeMethod(Function* func) {
@@ -103,25 +103,16 @@ class PropertyDescriptor
     }
 
     bool isValid() const;
-    bool isValue() const;
+    bool isSlot() const;
     bool isMethod() const;
 
-    Box const& box() const {
-        WH_ASSERT(isValid());
-        return value_;
+    ValBox slotValue() const {
+        WH_ASSERT(isSlot());
+        return ValBox(value_);
     }
-    Box const& value() const {
-        WH_ASSERT(isValue());
-        return value_;
-    }
-    Function* method() const {
+    Function* methodFunction() const {
         WH_ASSERT(isMethod());
         return value_->pointer<Function>();
-    }
-
-    ValBox valBox() const {
-        WH_ASSERT(isValue());
-        return ValBox(value_);
     }
 };
 
