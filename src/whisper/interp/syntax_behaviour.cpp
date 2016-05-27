@@ -70,7 +70,8 @@ BindGlobalMethod(AllocationContext acx,
     Local<VM::NativeFunction*> natF(acx);
     if (!natF.setResult(VM::NativeFunction::Create(acx, opFunc)))
         return ErrorVal();
-    Local<VM::PropertyDescriptor> desc(acx, VM::PropertyDescriptor(natF.get()));
+    Local<VM::PropertyDescriptor> desc(acx,
+        VM::PropertyDescriptor::MakeMethod(natF.get()));
 
     // Bind method on global.
     if (!VM::Wobject::DefineProperty(acx, obj.convertTo<VM::Wobject*>(),
@@ -256,7 +257,8 @@ IMPL_SYNTAX_FN_(DefStmt)
         WH_ASSERT(cx->hasError());
         return ErrorVal();
     }
-    Local<VM::PropertyDescriptor> descr(cx, VM::PropertyDescriptor(func));
+    Local<VM::PropertyDescriptor> descr(cx,
+        VM::PropertyDescriptor::MakeMethod(func));
 
     // Bind the function to the receiver.
     Local<VM::ValBox> receiver(cx, callInfo->receiver());

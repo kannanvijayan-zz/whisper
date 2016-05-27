@@ -1,10 +1,23 @@
 
 #include "runtime_inlines.hpp"
+#include "vm/function.hpp"
 #include "vm/property_dict.hpp"
 
 namespace Whisper {
 namespace VM {
 
+
+PropertyDescriptor
+PropertyDict::Entry::descriptor() const
+{
+    if (value->isPointer() &&
+        Function::IsFunction(value->pointer<HeapThing>()))
+    {
+        return PropertyDescriptor::MakeMethod(value->pointer<Function>());
+    }
+
+    return PropertyDescriptor::MakeValue(ValBox(value));
+}
 
 /* static */ Result<PropertyDict*>
 PropertyDict::Create(AllocationContext acx, uint32_t capacity)
@@ -28,7 +41,7 @@ PropertyDict::CreateEnlarged(AllocationContext acx,
         if (!ent.name.get() || ent.name.get() == SENTINEL())
             continue;
 
-        newDict->addEntry(ent.name.get(), PropertyDescriptor(ent.value.get()));
+        newDict->addEntry(ent.name.get(), ent.descriptor());
     }
     return OkVal(newDict.get());
 }
@@ -79,6 +92,13 @@ PropertyDict::lookup(String const* name) const
         // Found matching name.
         return Maybe<uint32_t>::Some(probe);
     }
+}
+
+PropertyDescriptor
+PropertyDict::descriptor(uint32_t idx) const
+{
+    WH_ASSERT(isValidEntry(idx));
+    return entries_[idx].descriptor();
 }
 
 Maybe<uint32_t>

@@ -83,7 +83,7 @@ HashObject::GetProperty(AllocationContext acx,
     if (!maybeIdx.hasValue())
         return false;
 
-    result = PropertyDescriptor(obj->dict_->value(maybeIdx.value()));
+    result = obj->dict_->descriptor(maybeIdx.value());
     return true;
 }
 
@@ -98,7 +98,7 @@ HashObject::DefineProperty(AllocationContext acx,
         uint32_t idx = maybeIdx.value();
         // Override existing definition.
         WH_ASSERT(name->equals(obj->dict_->name(idx)));
-        obj->dict_->setValue(idx, defn);
+        obj->dict_->setDescriptor(idx, defn);
         return OkVal();
     }
 

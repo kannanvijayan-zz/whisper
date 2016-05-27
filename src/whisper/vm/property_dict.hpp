@@ -23,6 +23,8 @@ class PropertyDict
     {
         HeapField<String*> name;
         HeapField<Box> value;
+
+        PropertyDescriptor descriptor() const;
     };
 
     uint32_t capacity_;
@@ -70,12 +72,9 @@ class PropertyDict
         WH_ASSERT(isValidEntry(idx));
         return entries_[idx].name;
     }
-    Box value(uint32_t idx) const {
-        WH_ASSERT(isValidEntry(idx));
-        return entries_[idx].value;
-    }
+    PropertyDescriptor descriptor(uint32_t idx) const;
 
-    void setValue(uint32_t idx, PropertyDescriptor const& descr) {
+    void setDescriptor(uint32_t idx, PropertyDescriptor const& descr) {
         WH_ASSERT(idx < size());
         entries_[idx].value.set(descr.value(), this);
     }

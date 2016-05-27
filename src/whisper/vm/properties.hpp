@@ -86,19 +86,21 @@ class PropertyDescriptor
   private:
     StackField<Box> value_;
 
+    PropertyDescriptor(Box const& value)
+      : value_(value)
+    {}
+
   public:
     PropertyDescriptor()
       : value_()
     {}
-    explicit PropertyDescriptor(Box const& value)
-      : value_(value)
-    {}
-    explicit PropertyDescriptor(ValBox const& value)
-      : value_(value)
-    {}
-    explicit PropertyDescriptor(Function* func)
-      : value_(Box::Pointer(func))
-    {}
+
+    static PropertyDescriptor MakeValue(ValBox const& value) {
+        return PropertyDescriptor(value);
+    }
+    static PropertyDescriptor MakeMethod(Function* func) {
+        return PropertyDescriptor(Box::Pointer(func));
+    }
 
     bool isValid() const;
     bool isValue() const;

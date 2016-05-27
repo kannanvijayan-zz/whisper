@@ -225,7 +225,8 @@ BindShellGlobal(AllocationContext acx,
     Local<VM::NativeFunction*> natF(acx);
     if (!natF.setResult(VM::NativeFunction::Create(acx, appFunc)))
         return ErrorVal();
-    Local<VM::PropertyDescriptor> desc(acx, VM::PropertyDescriptor(natF.get()));
+    Local<VM::PropertyDescriptor> desc(acx,
+        VM::PropertyDescriptor::MakeMethod(natF.get()));
 
     // Bind method on global.
     if (!VM::Wobject::DefineProperty(acx, obj.convertTo<VM::Wobject*>(),
@@ -249,7 +250,8 @@ BindShellGlobal(AllocationContext acx,
     Local<VM::NativeFunction*> natF(acx);
     if (!natF.setResult(VM::NativeFunction::Create(acx, opFunc)))
         return ErrorVal();
-    Local<VM::PropertyDescriptor> desc(acx, VM::PropertyDescriptor(natF.get()));
+    Local<VM::PropertyDescriptor> desc(acx,
+        VM::PropertyDescriptor::MakeMethod(natF.get()));
 
     // Bind method on global.
     if (!VM::Wobject::DefineProperty(acx, obj.convertTo<VM::Wobject*>(),
