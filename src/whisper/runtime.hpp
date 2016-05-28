@@ -127,10 +127,10 @@ class AllocationContext
     AllocationContext(ThreadContext* cx, Slab* slab);
 
     template <typename ObjT, typename... Args>
-    inline Result<ObjT*> create(Args... args);
+    inline Result<ObjT*> create(Args const&... args);
 
     template <typename ObjT, typename... Args>
-    inline Result<ObjT*> createSized(uint32_t size, Args... args);
+    inline Result<ObjT*> createSized(uint32_t size, Args const&... args);
 
     ThreadContext* threadContext() const {
         return cx_;

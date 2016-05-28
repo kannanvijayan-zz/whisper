@@ -15,7 +15,7 @@ namespace Whisper {
 
 template <typename ObjT, typename... Args>
 inline Result<ObjT*>
-AllocationContext::create(Args... args)
+AllocationContext::create(Args const&... args)
 {
     static_assert(HeapTraits<ObjT>::Specialized,
                   "HeapTraits not specialized for ObjT.");
@@ -33,14 +33,14 @@ AllocationContext::create(Args... args)
         return ErrorVal();
 
     // Construct object in memory.
-    new (mem) ObjT(std::forward<Args>(args)...);
+    new (mem) ObjT(std::forward<Args const&>(args)...);
 
     return OkVal(reinterpret_cast<ObjT*>(mem));
 }
 
 template <typename ObjT, typename... Args>
 inline Result<ObjT*>
-AllocationContext::createSized(uint32_t size, Args... args)
+AllocationContext::createSized(uint32_t size, Args const&... args)
 {
     static_assert(HeapTraits<ObjT>::Specialized,
                   "HeapTraits not specialized for ObjT.");
@@ -58,7 +58,7 @@ AllocationContext::createSized(uint32_t size, Args... args)
         return ErrorVal();
 
     // Construct object in memory.
-    new (mem) ObjT(std::forward<Args>(args)...);
+    new (mem) ObjT(std::forward<Args const&>(args)...);
 
     return OkVal(reinterpret_cast<ObjT*>(mem));
 }
