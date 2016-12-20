@@ -175,6 +175,23 @@ class CallResult
         return CallResult(Outcome::Continue, frame);
     }
 
+    static CallResult FromEvalResult(EvalResult const& evalResult) {
+        if (evalResult.isError())
+            return Error();
+
+        if (evalResult.isExc())
+            return Exc(evalResult.throwingFrame(), evalResult.exception());
+
+        if (evalResult.isValue())
+            return Value(evalResult.value());
+
+        if (evalResult.isVoid())
+            return Void();
+
+        WH_UNREACHABLE("Unknown evalResult kind.");
+        return Error();
+    }
+
     Outcome outcome() const {
         return outcome_;
     }
