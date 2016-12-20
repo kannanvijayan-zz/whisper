@@ -75,8 +75,10 @@ AllocationContext::allocate(uint32_t size, HeapFormat fmt)
                           : slab_->allocateTail(allocSize);
 
     if (!mem) {
-        if (cx_->suppressGC())
+        if (cx_->suppressGC()) {
+            cx_->setError(RuntimeError::MemAllocFailed);
             return nullptr;
+        }
 
         cx_->setError(RuntimeError::MemAllocFailed);
         return nullptr;

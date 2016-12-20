@@ -177,8 +177,8 @@ Runtime::threadContext()
 // AllocationContext
 //
 
-AllocationContext::AllocationContext(ThreadContext* cx, Slab* slab)
-  : cx_(cx), slab_(slab)
+AllocationContext::AllocationContext(ThreadContext* cx, Gen gen, Slab* slab)
+  : cx_(cx), gen_(gen), slab_(slab)
 {}
 
 
@@ -354,14 +354,14 @@ ThreadContext::formatError(char* buf, size_t bufSize)
 AllocationContext
 ThreadContext::inHatchery()
 {
-    return AllocationContext(this, hatchery_);
+    return AllocationContext(this, Gen::Hatchery, hatchery_);
 }
 
 
 AllocationContext
 ThreadContext::inTenured()
 {
-    return AllocationContext(this, tenured_);
+    return AllocationContext(this, Gen::Tenured, tenured_);
 }
 
 int
