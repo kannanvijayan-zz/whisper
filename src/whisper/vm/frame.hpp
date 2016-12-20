@@ -553,6 +553,7 @@ class NativeCallResumeFrame : public Frame
                           HeapThing* resumeState)
       : Frame(parent),
         lookupState_(callInfo.lookupState()),
+        callerScope_(callInfo.callerScope()),
         calleeFunc_(callInfo.calleeFunc()),
         receiver_(callInfo.receiver()),
         evalScope_(evalScope),
