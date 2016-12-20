@@ -337,7 +337,8 @@ static VM::CallResult Shell_TestOperative(
         }
     }
 
-    Interp::NativeCallEval nce(cx, callInfo, args[0],
+    Interp::NativeCallEval nce(cx, callInfo,
+                               stList->value().pointer<VM::SyntaxTreeFragment>(),
                                Shell_TestOperative_Resume,
                                HeapThing::From(stList.get()));
     return nce;
