@@ -50,11 +50,13 @@ class NativeCallEval
         resumeState_(resumeState)
     {}
 
-    NativeCallEval(VM::NativeCallInfo const& callInfo,
+    NativeCallEval(ThreadContext* cx,
+                   VM::NativeCallInfo const& callInfo,
                    VM::SyntaxTreeFragment* syntaxFragment,
                    VM::NativeCallResumeFuncPtr resumeFunc,
                    HeapThing* resumeState)
-      : callInfo_(callInfo),
+      : cx_(cx),
+        callInfo_(callInfo),
         evalScope_(callInfo.callerScope()),
         syntaxFragment_(syntaxFragment),
         resumeFunc_(resumeFunc),
