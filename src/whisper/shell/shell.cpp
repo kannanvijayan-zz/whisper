@@ -31,6 +31,7 @@
 #include "vm/control_flow.hpp"
 #include "interp/syntax_behaviour.hpp"
 #include "interp/heap_interpreter.hpp"
+#include "interp/native_call_utils.hpp"
 
 #include "shell/shell_tracer.hpp"
 
@@ -304,6 +305,12 @@ static VM::CallResult Shell_Print(
     return VM::CallResult::Value(VM::ValBox::Undefined());
 }
 
+static VM::CallResult Shell_TestOperative_Resume(
+    ThreadContext* cx,
+    Handle<VM::NativeCallInfo> callInfo,
+    Handle<HeapThing*> state,
+    Handle<VM::EvalResult> evalResult);
+
 static VM::CallResult Shell_TestOperative(
     ThreadContext* cx,
     Handle<VM::NativeCallInfo> callInfo,
@@ -311,5 +318,31 @@ static VM::CallResult Shell_TestOperative(
 {
     std::cout << "Shell_TestOperative called with " << args.length()
               << " args" << std::endl;
-    return VM::CallResult::Value(VM::ValBox::Undefined());
+
+    // If no args, return undefined immediately.
+    if (args.length() == 0)
+        return VM::CallResult::Value(VM::ValBox::Undefined());
+
+    // Otherwise, evaluate first argument's syntax.
+    Local<VM::Array<uint32_t>*> boxArray(cx);
+    if (!boxArray.setResult(VM::Array<uint32_t>::CreateFill(
+            cx->inHatchery(), 1, 0)))
+    {
+        return ErrorVal();
+    }
+
+    Interp::NativeCallEval nce(cx, callInfo, args[0],
+                               Shell_TestOperative_Resume,
+                               HeapThing::From(boxArray.get()));
+    return nce;
+}
+
+static VM::CallResult Shell_TestOperative_Resume(
+    ThreadContext* cx,
+    Handle<VM::NativeCallInfo> callInfo,
+    Handle<HeapThing*> state,
+    Handle<VM::EvalResult> evalResult)
+{
+    std::cout << "Shell_TestOperative_Resume" << std::endl;
+    return VM::CallResult::FromEvalResult(evalResult);
 }
