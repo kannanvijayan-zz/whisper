@@ -323,17 +323,23 @@ static VM::CallResult Shell_TestOperative(
     if (args.length() == 0)
         return VM::CallResult::Value(VM::ValBox::Undefined());
 
-    // Otherwise, evaluate first argument's syntax.
-    Local<VM::Array<uint32_t>*> boxArray(cx);
-    if (!boxArray.setResult(VM::Array<uint32_t>::CreateFill(
-            cx->inHatchery(), 1, 0)))
-    {
-        return ErrorVal();
+    // Build an slist of all the syntax tree fragments.
+    Local<VM::Slist<VM::Box>*> stList(cx);
+    for (uint32_t i = 0; i < args.length(); i++) {
+        uint32_t idx = args.length() - (i + 1);
+        Local<VM::Box> boxSt(cx, VM::Box::Pointer(args[idx]));
+        if (!stList.setResult(VM::Slist<VM::Box>::Create(
+                cx->inHatchery(),
+                boxSt,
+                stList)))
+        {
+            return ErrorVal();
+        }
     }
 
     Interp::NativeCallEval nce(cx, callInfo, args[0],
                                Shell_TestOperative_Resume,
-                               HeapThing::From(boxArray.get()));
+                               HeapThing::From(stList.get()));
     return nce;
 }
 
@@ -344,5 +350,19 @@ static VM::CallResult Shell_TestOperative_Resume(
     Handle<VM::EvalResult> evalResult)
 {
     std::cout << "Shell_TestOperative_Resume" << std::endl;
-    return VM::CallResult::FromEvalResult(evalResult);
+
+    // State must be non-null.
+    Local<VM::Slist<VM::Box>*> stList(cx, state->to<VM::Slist<VM::Box>>());
+    Local<VM::Slist<VM::Box>*> stRest(cx, stList->rest());
+    if (!stRest.get())
+        return VM::CallResult::FromEvalResult(evalResult);
+
+    // Evaluate rest.
+    Local<VM::SyntaxTreeFragment*> nextSt(cx,
+        stRest->value().pointer<VM::SyntaxTreeFragment>());
+
+    Interp::NativeCallEval nce(cx, callInfo, nextSt,
+                               Shell_TestOperative_Resume,
+                               HeapThing::From(stRest.get()));
+    return nce;
 }
