@@ -77,7 +77,7 @@ class PackedWriter
 {
     friend class TraceTraits<PackedWriter>;
   public:
-    typedef uint32_t* Position;
+    typedef uint32_t Position;
 
     // The maximum number size of the packed buffer and
     // the constant array, is 0x0fffffff == ((1 << 28) - 1).
@@ -161,12 +161,16 @@ class PackedWriter
         write(static_cast<uint32_t>(-1));
     }
 
+    uint32_t currentOffset() const {
+        return cursor_ - start_;
+    }
+
     void writeAt(Position pos, uint32_t word) {
-        WH_ASSERT(pos >= start_ && pos < cursor_);
-        *pos = word;
+        WH_ASSERT(pos < currentOffset());
+        start_[pos] = word;
     }
     void writeOffsetDistance(Position* writePos, bool increment=true) {
-        writeAt(*writePos, cursor_ - *writePos);
+        writeAt(*writePos, currentOffset() - *writePos);
         if (increment)
             ++*writePos;
     }
@@ -179,11 +183,11 @@ class PackedWriter
     }
 
     Position position() const {
-        return cursor_;
+        return currentOffset();
     }
     uint32_t distanceFromPosition(Position pos) {
-        WH_ASSERT(pos >= start_ && pos < cursor_);
-        return cursor_ - pos;
+        WH_ASSERT(pos < currentOffset());
+        return currentOffset() - pos;
     }
 
     bool hasError() const {
