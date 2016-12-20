@@ -113,6 +113,10 @@ class Box
         WH_ASSERT(IsPtrAligned(ptr, PointerAlign));
         return Box(reinterpret_cast<uint64_t>(ptr));
     }
+    template <typename T>
+    static Box Pointer(Handle<T*> const& ptrHandle) {
+        return Pointer<T>(ptrHandle.get());
+    }
 
     bool isUndefined() const {
         return (value_ & UndefinedTagMask) == UndefinedTag;
