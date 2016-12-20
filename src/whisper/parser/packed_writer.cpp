@@ -62,16 +62,16 @@ PackedWriter::expandBuffer()
 uint32_t
 PackedWriter::addIdentifier(IdentifierToken const& ident)
 {
-    // Ensure capacity in const pool.
-    if (constPoolSize_ == constPoolCapacity_)
-        expandConstPool();
-
     // Check identifier map.
     uint32_t bytes = ident.length();
     IdentifierKey key(ident.text(src_), bytes);
     IdentifierMap::const_iterator iter = identifierMap_.find(key);
     if (iter != identifierMap_.end())
         return iter->second;
+
+    // Ensure capacity in const pool.
+    if (constPoolSize_ == constPoolCapacity_)
+        expandConstPool();
 
     Result<VM::String*> str =
         VM::String::Create(acx_, bytes, ident.text(src_));
