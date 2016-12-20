@@ -78,7 +78,6 @@ AllocationContext::allocate(uint32_t size, HeapFormat fmt)
         if (cx_->suppressGC())
             return nullptr;
 
-        WH_ASSERT(!"GC infrastructure not yet implemented.");
         cx_->setError(RuntimeError::MemAllocFailed);
         return nullptr;
     }
