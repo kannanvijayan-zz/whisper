@@ -70,9 +70,11 @@ AllocationContext::allocate(uint32_t size, HeapFormat fmt)
     uint32_t allocSize = AlignIntUp<uint32_t>(size, Slab::AllocAlign)
                          + sizeof(HeapHeader);
 
+    Slab* slab = *slabLocation_;
+
     // Allocate the space.
-    uint8_t* mem = Traced ? slab_->allocateHead(allocSize)
-                          : slab_->allocateTail(allocSize);
+    uint8_t* mem = Traced ? slab->allocateHead(allocSize)
+                          : slab->allocateTail(allocSize);
 
     if (!mem) {
         // Check for a large single-slab object.
@@ -88,20 +90,21 @@ AllocationContext::allocate(uint32_t size, HeapFormat fmt)
             WH_ASSERT(cx_->hasError());
             return nullptr;
         }
-        slab_ = newSlab;
-        mem = Traced ? slab_->allocateHead(allocSize)
-                     : slab_->allocateTail(allocSize);
+        WH_ASSERT(newSlab == *slabLocation_);
+        slab = newSlab;
+        mem = Traced ? slab->allocateHead(allocSize)
+                     : slab->allocateTail(allocSize);
         WH_ASSERT(mem != nullptr);
     }
 
     SpewMemoryNote("Allocated %d bytes from %p, leaving %d bytes",
-                   size, slab_, slab_->unallocatedBytes());
+                   size, slab, slab->unallocatedBytes());
 
     // Figure out the card number.
-    uint32_t cardNo = slab_->calculateCardNumber(mem);
+    uint32_t cardNo = slab->calculateCardNumber(mem);
 
     // Initialize the header.
-    HeapHeader* hdr = new (mem) HeapHeader(fmt, slab_->gen(), cardNo, size);
+    HeapHeader* hdr = new (mem) HeapHeader(fmt, gen_, cardNo, size);
     return reinterpret_cast<uint8_t*>(hdr->payload());
 }
 

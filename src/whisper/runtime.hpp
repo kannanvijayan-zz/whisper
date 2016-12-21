@@ -122,10 +122,10 @@ class AllocationContext
   private:
     ThreadContext* cx_;
     Gen gen_;
-    Slab* slab_;
+    Slab** slabLocation_;
 
   public:
-    AllocationContext(ThreadContext* cx, Gen gen, Slab* slab);
+    AllocationContext(ThreadContext* cx, Gen gen, Slab** slabLocation);
 
     template <typename ObjT, typename... Args>
     inline Result<ObjT*> create(Args const&... args);
