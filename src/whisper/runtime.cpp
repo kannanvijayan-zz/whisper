@@ -234,7 +234,9 @@ ThreadContext::ThreadContext(Runtime* runtime, uint32_t rtid,
   : runtime_(runtime),
     rtid_(rtid),
     hatchery_(hatchery),
+    hatcheryList_(),
     nursery_(nullptr),
+    nurseryList_(),
     tenured_(tenured),
     tenuredList_(),
     locals_(nullptr),
@@ -244,6 +246,9 @@ ThreadContext::ThreadContext(Runtime* runtime, uint32_t rtid,
     spoiler_((randInt() & 0xffffU) | ((randInt() & 0xffffU) << 16))
 {
     WH_ASSERT(runtime != nullptr);
+
+    if (hatchery)
+        hatcheryList_.addSlab(hatchery);
 
     if (tenured)
         tenuredList_.addSlab(tenured);
@@ -362,6 +367,46 @@ AllocationContext
 ThreadContext::inTenured()
 {
     return AllocationContext(this, Gen::Tenured, tenured_);
+}
+
+Slab*
+ThreadContext::allocateStandardSlab(Gen gen)
+{
+    if (suppressGC()) {
+        setError(RuntimeError::MemAllocFailed,
+                 "Standard slab allocation requested during suppressGC.");
+        return nullptr;
+    }
+
+    if (gen == Gen::Hatchery) {
+        Slab* newHatchery = Slab::AllocateStandard(Gen::Hatchery);
+        if (!newHatchery) {
+            setError(RuntimeError::MemAllocFailed,
+                     "Failed to allocate standard slab");
+            return nullptr;
+        }
+        SpewMemoryNote("Allocated new standard hatchery slab for %p.", this);
+        hatcheryList_.addSlab(newHatchery);
+        hatchery_ = newHatchery;
+        return newHatchery;
+    }
+
+    if (gen == Gen::Tenured) {
+        Slab* newTenured = Slab::AllocateStandard(Gen::Tenured);
+        if (!newTenured) {
+            setError(RuntimeError::MemAllocFailed,
+                     "Failed to allocate standard slab");
+            return nullptr;
+        }
+        SpewMemoryNote("Allocated new standard tenured slab for %p.", this);
+        tenuredList_.addSlab(newTenured);
+        tenured_ = newTenured;
+        return newTenured;
+    }
+
+    setError(RuntimeError::InternalError,
+             "Bad generation passed to ThreadContext::allocateStandardSlab()");
+    return nullptr;
 }
 
 int

@@ -174,7 +174,11 @@ class ThreadContext
     uint32_t rtid_;
 
     Slab* hatchery_;
+    SlabList hatcheryList_;
+
     Slab* nursery_;
+    SlabList nurseryList_;
+
     Slab* tenured_;
     SlabList tenuredList_;
     LocalBase* locals_;
@@ -281,6 +285,8 @@ class ThreadContext
 
     AllocationContext inHatchery();
     AllocationContext inTenured();
+
+    Slab* allocateStandardSlab(Gen gen);
 
     int randInt();
 

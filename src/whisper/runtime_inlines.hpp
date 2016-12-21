@@ -75,13 +75,23 @@ AllocationContext::allocate(uint32_t size, HeapFormat fmt)
                           : slab_->allocateTail(allocSize);
 
     if (!mem) {
-        if (cx_->suppressGC()) {
+        // Check for a large single-slab object.
+        if (allocSize > Slab::StandardSlabMaxObjectSize()) {
+            SpewMemoryError("Cannot allocate large single-page objects yet.");
             cx_->setError(RuntimeError::MemAllocFailed);
             return nullptr;
         }
 
-        cx_->setError(RuntimeError::MemAllocFailed);
-        return nullptr;
+        // Otherwise, ask for a new slab to allocate in.
+        Slab* newSlab = cx_->allocateStandardSlab(gen_);
+        if (!newSlab) {
+            WH_ASSERT(cx_->hasError());
+            return nullptr;
+        }
+        slab_ = newSlab;
+        mem = Traced ? slab_->allocateHead(allocSize)
+                     : slab_->allocateTail(allocSize);
+        WH_ASSERT(mem != nullptr);
     }
 
     SpewMemoryNote("Allocated %d bytes from %p, leaving %d bytes",
