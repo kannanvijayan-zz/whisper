@@ -1,5 +1,6 @@
 
 print(print(3));
+;
 testOperative(print(4), print(5), print(6), print(7), print(8), print(9));
 testOperative(print(4), print(5), print(6), print(7), print(8), print(9));
 testOperative(print(4), print(5), print(6), print(7), print(8), print(9));

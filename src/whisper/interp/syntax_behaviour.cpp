@@ -26,11 +26,7 @@ namespace Interp {
 #define DECLARE_SYNTAX_FN_(name) IMPL_SYNTAX_FN_(name);
 
 DECLARE_SYNTAX_FN_(File)
-
-/*
 DECLARE_SYNTAX_FN_(EmptyStmt)
-*/
-
 DECLARE_SYNTAX_FN_(ExprStmt)
 
 /*
@@ -101,10 +97,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     } while(false)
 
     BIND_GLOBAL_METHOD_(File);
-
-/*
     BIND_GLOBAL_METHOD_(EmptyStmt);
-*/
     BIND_GLOBAL_METHOD_(ExprStmt);
 /*
     BIND_GLOBAL_METHOD_(ReturnStmt);
@@ -174,6 +167,30 @@ IMPL_SYNTAX_FN_(File)
     }
 
     return VM::CallResult::Continue(fileSyntaxFrame);
+}
+
+IMPL_SYNTAX_FN_(EmptyStmt)
+{
+    if (args.length() != 1) {
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                       "@EmptyStmt called with wrong number of arguments.")))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(callInfo->frame(), exc);
+    }
+
+    WH_ASSERT(args.get(0)->isNode());
+    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::EmptyStmt);
+
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedEmptyStmtNode> exprStmtNode(cx, stRef->astEmptyStmt());
+
+    SpewInterpNote("Syntax_EmptyStmt: Interpreting");
+
+    return VM::CallResult::Void();
 }
 
 IMPL_SYNTAX_FN_(ExprStmt)
