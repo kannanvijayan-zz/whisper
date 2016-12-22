@@ -250,7 +250,7 @@ InvokeApplicativeFunction(ThreadContext* cx,
     if (func->isScripted()) {
         WH_ASSERT("Cannot interpret scripted applicatives yet!");
         return cx->setError(RuntimeError::InternalError,
-                            "Cannot interpret scripted operatives yet!");
+                            "Cannot interpret scripted applicatives yet!");
     }
 
     WH_UNREACHABLE("Unknown function type!");
