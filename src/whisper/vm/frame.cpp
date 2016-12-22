@@ -394,7 +394,7 @@ FileSyntaxFrame::StepImpl(ThreadContext* cx,
     }
 
     // Create a new entry frame for the interpretation of the statement.
-    Local<ScopeObject*> scope(cx, frame->scope());
+    Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
     Local<VM::EntryFrame*> entryFrame(cx);
     if (!entryFrame.setResult(VM::EntryFrame::Create(
             cx->inHatchery(), frame, stmtNode, scope)))
@@ -804,7 +804,7 @@ CallExprSyntaxFrame::StepSubexpr(ThreadContext* cx,
     if (!node.setResult(nodeRef->createSyntaxNode(cx->inHatchery())))
         return ErrorVal();
 
-    Local<ScopeObject*> scope(cx, frame->scope());
+    Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
 
     // Create and return entry frame.
     Local<EntryFrame*> entryFrame(cx);

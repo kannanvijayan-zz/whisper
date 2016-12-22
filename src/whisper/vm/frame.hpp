@@ -203,9 +203,6 @@ class SyntaxFrame : public Frame
     SyntaxTreeFragment* stFrag() const {
         return stFrag_;
     }
-    ScopeObject* scope() const {
-        return entryFrame_->scope();
-    }
 };
 
 class SyntaxNameLookupFrame : public SyntaxFrame
