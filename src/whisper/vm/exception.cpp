@@ -15,6 +15,11 @@ Exception::snprint(char* buf, size_t n)
 {
     if (this->isInternalException())
         return this->toInternalException()->snprint(buf, n);
+#define EXCEPTION_KIND_SNPRINT_(name) \
+    if (this->is##name()) \
+        return this->to##name()->snprint(buf, n);
+    WHISPER_DEFN_EXCEPTION_KINDS(EXCEPTION_KIND_SNPRINT_)
+#undef EXCEPTION_KIND_SNPRINT_
 
     WH_UNREACHABLE("Unknown exception variant.");
     return std::numeric_limits<size_t>::max();

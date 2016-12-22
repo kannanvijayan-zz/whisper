@@ -9,6 +9,15 @@
 namespace Whisper {
 namespace VM {
 
+#define WHISPER_DEFN_EXCEPTION_KINDS(_) \
+    _(InternalException)            \
+    _(NameLookupFailedException)    \
+    _(FunctionNotOperativeException)
+
+#define PREDECLARE_EXCEPTION_CLASSES_(name) class name;
+    WHISPER_DEFN_EXCEPTION_KINDS(PREDECLARE_EXCEPTION_CLASSES_)
+#undef PREDECLARE_EXCEPTION_CLASSES_
+
 
 //
 // Base class for exceptions.
@@ -20,14 +29,20 @@ class Exception
     Exception() {}
 
   public:
-    bool isInternalException() const {
-        return HeapThing::From(this)->isInternalException();
+#define EXCEPTION_KIND_METHODS_(name) \
+    bool is##name() const { \
+        return HeapThing::From(this)->is##name(); \
+    } \
+    name const* to##name() const { \
+        WH_ASSERT(is##name()); \
+        return reinterpret_cast<name const*>(this); \
+    } \
+    name* to##name() { \
+        WH_ASSERT(is##name()); \
+        return reinterpret_cast<name*>(this); \
     }
-
-    InternalException* toInternalException() {
-        WH_ASSERT(isInternalException());
-        return reinterpret_cast<InternalException*>(this);
-    }
+    WHISPER_DEFN_EXCEPTION_KINDS(EXCEPTION_KIND_METHODS_)
+#undef EXCEPTION_KIND_METHODS_
 
     size_t snprint(char* buf, size_t n);
 };
