@@ -96,6 +96,7 @@ Wobject::LookupProperty(
     }
 
     // If we got here, no property was found.
+    stateOut.set(lookupState);
     return OkVal(false);
 }
 
