@@ -102,49 +102,6 @@ EntryFrame::ResolveChildImpl(ThreadContext* cx,
                              Handle<Frame*> childFrame,
                              Handle<EvalResult> result)
 {
-    WH_ASSERT(childFrame->isSyntaxNameLookupFrame() ||
-              childFrame->isInvokeSyntaxFrame());
-
-    // If a SyntaxNameLookup operation resolved,
-    // forward its result to a InvokeSyntax operation.
-    if (childFrame->isSyntaxNameLookupFrame()) {
-        Local<Frame*> parent(cx, frame->parent());
-
-        if (result->isError() || result->isExc())
-            return Frame::ResolveChild(cx, parent, frame, result);
-
-        if (result->isVoid()) {
-            SpewInterpNote("EntryFrame::ResolveChildImpl -"
-                           " SyntaxNameLookup resolved with notFound -"
-                           " raising exception.");
-            Local<String*> name(cx,
-                cx->runtimeState()->syntaxHandlerName(frame->stFrag()));
-
-            Local<Exception*> exc(cx);
-            if (!exc.setResult(InternalException::Create(cx->inHatchery(),
-                               "Syntax method binding not found",
-                               name.handle())))
-            {
-                return Frame::ResolveChild(cx, parent, frame,
-                                           EvalResult::Error());
-            }
-            return Frame::ResolveChild(cx, parent, frame,
-                                       EvalResult::Exc(frame, exc));
-        }
-
-        // Create invocation frame for the looked up value.
-        Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
-        Local<Frame*> invokeFrame(cx);
-        if (!invokeFrame.setResult(Interp::CreateInvokeSyntaxFrame(cx,
-                frame, frame, stFrag, result->value())))
-        {
-            return ErrorVal();
-        }
-
-        return StepResult::Continue(invokeFrame);
-    }
-
-    WH_ASSERT(childFrame->isInvokeSyntaxFrame());
     // Resolve parent frame with the same result.
     Local<Frame*> rootedParent(cx, frame->parent());
     return Frame::ResolveChild(cx, rootedParent, frame, result);

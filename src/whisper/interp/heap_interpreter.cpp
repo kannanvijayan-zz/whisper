@@ -99,14 +99,14 @@ CreateInitialSyntaxFrame(ThreadContext* cx,
 {
     Local<VM::SyntaxTreeFragment*> stFrag(cx, entryFrame->stFrag());
 
-    Local<VM::SyntaxNameLookupFrame*> stFrame(cx);
-    if (!stFrame.setResult(VM::SyntaxNameLookupFrame::Create(cx->inHatchery(),
-            parent, entryFrame, stFrag)))
+    Local<VM::InvokeSyntaxNodeFrame*> syntaxFrame(cx);
+    if (!syntaxFrame.setResult(VM::InvokeSyntaxNodeFrame::Create(
+            cx->inHatchery(), parent, entryFrame, stFrag)))
     {
         return ErrorVal();
     }
 
-    return OkVal(stFrame.get());
+    return OkVal(syntaxFrame.get());
 }
 
 Result<VM::Frame*>
