@@ -10,6 +10,7 @@
     _(SyntaxBlockRef)           \
     _(PropertyName)             \
     _(PropertyDescriptor)       \
+    _(PropertyLookupResult)     \
     _(Box)                      \
     _(ValBox)                   \
     _(PackedSyntaxElement)      \
@@ -53,6 +54,8 @@
     _(BaseSelfTraced)           \
     _(RuntimeState)             \
     _(InternalException)        \
+    _(NameLookupFailedException)\
+    _(FunctionNotOperativeException)\
     _(ThreadState)              \
     _(PackedSyntaxTree)         \
     _(SyntaxNode)               \
@@ -74,6 +77,7 @@
     _(EntryFrame)               \
     _(SyntaxNameLookupFrame)    \
     _(InvokeSyntaxFrame)        \
+    _(InvokeSyntaxNodeFrame)    \
     _(FileSyntaxFrame)          \
     _(CallExprSyntaxFrame)      \
     _(InvokeApplicativeFrame)   \

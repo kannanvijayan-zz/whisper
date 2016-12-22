@@ -20,24 +20,24 @@
       }; \
     }
 
-#define PREDECLARE_STACK_OBJ_FMT_(name, fmtName) \
+#define PREDECLARE_STACK_OBJ_FMT_(ns, name, fmtName) \
     namespace Whisper { \
-      namespace VM { \
+      namespace ns { \
         class name; \
       } \
-      template <> struct StackTraits<VM::name> { \
+      template <> struct StackTraits<ns::name> { \
         StackTraits() = delete; \
         static constexpr bool Specialized = true; \
         static constexpr StackFormat Format = StackFormat::fmtName; \
       }; \
       template <> struct StackFormatTraits<StackFormat::fmtName> { \
         StackFormatTraits() = delete; \
-        typedef VM::name Type; \
+        typedef ns::name Type; \
       }; \
     }
 
 #define PREDECLARE_STACK_OBJ_(name) \
-    PREDECLARE_STACK_OBJ_FMT_(name, name)
+    PREDECLARE_STACK_OBJ_FMT_(VM, name, name)
 
 #define PREDECLARE_FIXSIZED_HEAP_OBJ_(name) \
     PREDECLARE_HEAP_OBJ_(name, name, false)
@@ -79,6 +79,7 @@ PREDECLARE_STACK_OBJ_(SyntaxBlockRef);
 
 PREDECLARE_STACK_OBJ_(PropertyName);
 PREDECLARE_STACK_OBJ_(PropertyDescriptor);
+PREDECLARE_STACK_OBJ_FMT_(Interp, PropertyLookupResult, PropertyLookupResult);
 
 PREDECLARE_FIXSIZED_HEAP_OBJ_(RuntimeState);
 PREDECLARE_FIXSIZED_HEAP_OBJ_(ThreadState);
@@ -89,6 +90,8 @@ PREDECLARE_FIXSIZED_HEAP_OBJ_(LookupState);
 
 PREDECLARE_BASE_HEAP_TYPE_(Exception);
 PREDECLARE_VARSIZED_HEAP_OBJ_(InternalException);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(NameLookupFailedException);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(FunctionNotOperativeException);
 
 PREDECLARE_BASE_HEAP_TYPE_(Wobject);
 PREDECLARE_BASE_HEAP_TYPE_(HashObject);
@@ -112,6 +115,7 @@ PREDECLARE_FIXSIZED_HEAP_OBJ_(EntryFrame);
 PREDECLARE_BASE_HEAP_TYPE_(SyntaxFrame);
 PREDECLARE_FIXSIZED_HEAP_OBJ_(SyntaxNameLookupFrame);
 PREDECLARE_FIXSIZED_HEAP_OBJ_(InvokeSyntaxFrame);
+PREDECLARE_FIXSIZED_HEAP_OBJ_(InvokeSyntaxNodeFrame);
 PREDECLARE_FIXSIZED_HEAP_OBJ_(FileSyntaxFrame);
 PREDECLARE_FIXSIZED_HEAP_OBJ_(CallExprSyntaxFrame);
 PREDECLARE_FIXSIZED_HEAP_OBJ_(InvokeApplicativeFrame);

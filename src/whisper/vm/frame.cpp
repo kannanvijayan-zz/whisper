@@ -5,6 +5,7 @@
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
 #include "vm/frame.hpp"
+#include "vm/exception.hpp"
 #include "vm/runtime_state.hpp"
 #include "vm/function.hpp"
 #include "interp/heap_interpreter.hpp"
@@ -310,6 +311,90 @@ InvokeSyntaxFrame::StepImpl(ThreadContext* cx,
     WH_UNREACHABLE("Unknown CallResult.");
     return ErrorVal();
 }
+
+
+/* static */ Result<InvokeSyntaxNodeFrame*>
+InvokeSyntaxNodeFrame::Create(AllocationContext acx,
+                              Handle<Frame*> parent,
+                              Handle<EntryFrame*> entryFrame,
+                              Handle<SyntaxTreeFragment*> stFrag)
+{
+    return acx.create<InvokeSyntaxNodeFrame>(parent, entryFrame, stFrag);
+}
+
+/* static */ StepResult
+InvokeSyntaxNodeFrame::ResolveChildImpl(
+        ThreadContext* cx,
+        Handle<InvokeSyntaxNodeFrame*> frame,
+        Handle<Frame*> childFrame,
+        Handle<EvalResult> result)
+{
+    // Resolve parent frame with the same result.
+    Local<Frame*> rootedParent(cx, frame->parent());
+    return Frame::ResolveChild(cx, rootedParent, frame, result);
+}
+
+/* static */ StepResult
+InvokeSyntaxNodeFrame::StepImpl(ThreadContext* cx,
+                                Handle<InvokeSyntaxNodeFrame*> frame)
+{
+    // Get the name of the syntax handler method.
+    Local<String*> name(cx,
+        cx->runtimeState()->syntaxHandlerName(frame->stFrag()));
+    if (name.get() == nullptr) {
+        WH_UNREACHABLE("Handler name not found for SyntaxTreeFragment.");
+        cx->setInternalError("Handler name not found for SyntaxTreeFragment.");
+        return ErrorVal();
+    }
+
+    // Look up the property on the scope object.
+    Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
+    Local<Interp::PropertyLookupResult> lookupResult(cx,
+        Interp::GetObjectProperty(cx, scope.handle().convertTo<Wobject*>(),
+                                      name));
+
+    Local<Frame*> parent(cx, frame->parent());
+    Local<EvalResult> lookupEvalResult(cx,
+        lookupResult->toEvalResult(cx, frame));
+
+    WH_ASSERT(lookupEvalResult->isError() || lookupEvalResult->isExc() ||
+              lookupEvalResult->isValue());
+
+    if (!lookupEvalResult->isValue()) {
+        return Frame::ResolveChild(cx, parent, frame, lookupEvalResult.get());
+    }
+
+    // Invoke the syntax handler.
+    Local<ValBox> syntaxHandler(cx, lookupEvalResult->value());
+    Local<ScopeObject*> callerScope(cx, frame->entryFrame()->scope());
+    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
+    Local<CallResult> result(cx, Interp::InvokeOperativeValue(
+            cx, frame, callerScope, syntaxHandler, stFrag));
+
+    // Forward result from syntax handler.
+    if (result->isError())
+        return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+
+    if (result->isExc()) {
+        return Frame::ResolveChild(cx, parent, frame,
+                                   result->excAsEvalResult());
+    }
+
+    if (result->isValue()) {
+        return Frame::ResolveChild(cx, parent, frame,
+                                   result->valueAsEvalResult());
+    }
+
+    if (result->isVoid())
+        return Frame::ResolveChild(cx, parent, frame, EvalResult::Void());
+
+    if (result->isContinue())
+        return StepResult::Continue(result->continueFrame());
+
+    WH_UNREACHABLE("Unknown CallResult.");
+    return ErrorVal();
+}
+
 
 
 /* static */ Result<FileSyntaxFrame*>

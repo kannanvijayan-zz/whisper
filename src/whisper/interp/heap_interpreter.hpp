@@ -75,6 +75,7 @@ VM::CallResult InvokeApplicativeFunction(
 // Property lookup helpers.
 class PropertyLookupResult
 {
+  friend class TraceTraits<PropertyLookupResult>;
   public:
     enum class Outcome {
         Error,
@@ -139,6 +140,9 @@ class PropertyLookupResult
         WH_ASSERT(isFound());
         return descriptor_;
     }
+
+    VM::EvalResult toEvalResult(ThreadContext* cx,
+                                Handle<VM::Frame*> frame) const;
 };
 
 PropertyLookupResult GetValueProperty(ThreadContext* cx,
@@ -161,6 +165,37 @@ OkResult DefObjectProperty(ThreadContext* cx,
 
 
 } // namespace Interp
+
+
+//
+// GC Specializations
+//
+
+template <>
+struct TraceTraits<Interp::PropertyLookupResult>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, Interp::PropertyLookupResult const& obj,
+                     void const* start, void const* end)
+    {
+        obj.lookupState_.scan(scanner, start, end);
+        obj.descriptor_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, Interp::PropertyLookupResult& obj,
+                       void const* start, void const* end)
+    {
+        obj.lookupState_.update(updater, start, end);
+        obj.descriptor_.update(updater, start, end);
+    }
+};
+
 } // namespace Whisper
 
 #endif // WHISPER__INTERP__HEAP_INTERPRETER_HPP

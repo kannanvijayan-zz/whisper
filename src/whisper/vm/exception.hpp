@@ -15,6 +15,7 @@ namespace VM {
 //
 class Exception
 {
+  friend class TraceTraits<Exception>;
   protected:
     Exception() {}
 
@@ -47,7 +48,8 @@ class InternalException : public Exception
     InternalException(char const* message,
                       uint32_t numArguments,
                       Box const* arguments)
-      : message_(message),
+      : Exception(),
+        message_(message),
         numArguments_(numArguments)
     {
         for (uint32_t i = 0; i < numArguments; i++) {
@@ -110,6 +112,71 @@ class InternalException : public Exception
     size_t snprint(char* buf, size_t n);
 };
 
+//
+// Exception raised when a lexical name lookup fails.
+//
+class NameLookupFailedException : public Exception
+{
+  friend class TraceTraits<NameLookupFailedException>;
+  private:
+    // Object name was looked up on.
+    HeapField<Wobject*> object_;
+
+    // Name that failed to be looked up.
+    HeapField<String*> name_;
+
+  public:
+    NameLookupFailedException(Wobject* object, String* name)
+      : Exception(),
+        object_(object),
+        name_(name)
+    {
+    }
+
+    static Result<NameLookupFailedException*> Create(
+            AllocationContext acx,
+            Handle<Wobject*> object,
+            Handle<String*> name);
+
+    Wobject* object() const {
+        return object_;
+    }
+
+    String* name() const {
+        return name_;
+    }
+
+    size_t snprint(char* buf, size_t n);
+};
+
+//
+// Exception raised when a non-operative function is used
+// in an operative context.
+//
+class FunctionNotOperativeException : public Exception
+{
+  friend class TraceTraits<FunctionNotOperativeException>;
+  private:
+    // The function object in question.
+    HeapField<FunctionObject*> func_;
+
+  public:
+    FunctionNotOperativeException(FunctionObject* func)
+      : Exception(),
+        func_(func)
+    {}
+
+    static Result<FunctionNotOperativeException*> Create(
+            AllocationContext acx,
+            Handle<FunctionObject*> func);
+
+    FunctionObject* func() const {
+        return func_;
+    }
+
+    size_t snprint(char* buf, size_t n);
+};
+
 
 } // namespace VM
 
@@ -120,8 +187,24 @@ class InternalException : public Exception
 
 template <>
 struct TraceTraits<VM::Exception>
-  : public UntracedTraceTraits<VM::Exception>
-{};
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::Exception const& obj,
+                     void const* start, void const* end)
+    {
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::Exception& obj,
+                       void const* start, void const* end)
+    {
+    }
+};
 
 template <>
 struct TraceTraits<VM::InternalException>
@@ -149,6 +232,58 @@ struct TraceTraits<VM::InternalException>
         for (uint32_t i = 0; i < obj.numArguments_; i++) {
             obj.arguments_[i].update(updater, start, end);
         }
+    }
+};
+
+template <>
+struct TraceTraits<VM::NameLookupFailedException>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::NameLookupFailedException const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::Exception>::Scan<Scanner>(scanner, obj, start, end);
+        obj.object_.scan(scanner, start, end);
+        obj.name_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::NameLookupFailedException& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::Exception>::Update<Updater>(updater, obj, start, end);
+        obj.object_.update(updater, start, end);
+        obj.name_.update(updater, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::FunctionNotOperativeException>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::FunctionNotOperativeException const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::Exception>::Scan<Scanner>(scanner, obj, start, end);
+        obj.func_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::FunctionNotOperativeException& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::Exception>::Update<Updater>(updater, obj, start, end);
+        obj.func_.update(updater, start, end);
     }
 };
 
