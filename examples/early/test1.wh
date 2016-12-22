@@ -1,7 +1,8 @@
 
-def foo(a, b) {
+def foo(a, b, c) {
     print(a);
     print(b);
+    print(c);
 }
 
-foo(print(33), print(44));
+foo(print(33), print(44), 55);
