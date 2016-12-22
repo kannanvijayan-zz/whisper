@@ -269,9 +269,6 @@ class InvokeSyntaxNodeFrame : public SyntaxFrame
 {
     friend class TraceTraits<InvokeSyntaxNodeFrame>;
   public:
-    enum class State : uint8_t { Lookup, Invoke };
-
-  public:
     InvokeSyntaxNodeFrame(Frame* parent,
                           EntryFrame* entryFrame,
                           SyntaxTreeFragment* stFrag)
