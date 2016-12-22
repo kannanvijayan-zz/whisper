@@ -396,7 +396,6 @@ InvokeSyntaxNodeFrame::StepImpl(ThreadContext* cx,
 }
 
 
-
 /* static */ Result<FileSyntaxFrame*>
 FileSyntaxFrame::Create(AllocationContext acx,
                         Handle<Frame*> parent,
@@ -478,16 +477,17 @@ FileSyntaxFrame::StepImpl(ThreadContext* cx,
         return ErrorVal();
     }
 
-    // Create a new entry frame for the interpretation of the statement.
+    // Create a new InvokeSyntaxNode frame for interpreting each statement.
     Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
-    Local<VM::EntryFrame*> entryFrame(cx);
-    if (!entryFrame.setResult(VM::EntryFrame::Create(
-            cx->inHatchery(), frame, stmtNode, scope)))
+    Local<VM::EntryFrame*> entryFrame(cx, frame->entryFrame());
+    Local<VM::InvokeSyntaxNodeFrame*> syntaxFrame(cx);
+    if (!syntaxFrame.setResult(VM::InvokeSyntaxNodeFrame::Create(
+            cx->inHatchery(), frame, entryFrame, stmtNode)))
     {
         return ErrorVal();
     }
 
-    return StepResult::Continue(entryFrame);
+    return StepResult::Continue(syntaxFrame);
 }
 
 
@@ -892,14 +892,15 @@ CallExprSyntaxFrame::StepSubexpr(ThreadContext* cx,
     Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
 
     // Create and return entry frame.
-    Local<EntryFrame*> entryFrame(cx);
-    if (!entryFrame.setResult(VM::EntryFrame::Create(
-            cx->inHatchery(), frame, node.handle(), scope)))
+    Local<EntryFrame*> entryFrame(cx, frame->entryFrame());
+    Local<VM::InvokeSyntaxNodeFrame*> syntaxFrame(cx);
+    if (!syntaxFrame.setResult(VM::InvokeSyntaxNodeFrame::Create(
+            cx->inHatchery(), frame, entryFrame, node.handle())))
     {
         return ErrorVal();
     }
 
-    return StepResult::Continue(entryFrame);
+    return StepResult::Continue(syntaxFrame);
 }
 
 /* static */ Result<InvokeApplicativeFrame*>

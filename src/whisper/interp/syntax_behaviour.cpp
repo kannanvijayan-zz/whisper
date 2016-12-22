@@ -214,7 +214,7 @@ IMPL_SYNTAX_FN_(ExprStmt)
 
     SpewInterpNote("Syntax_ExprStmt: Interpreting");
 
-    // Create a new entry frame for evaluating the ExprStmt's child.
+    // Create a new syntax frame for evaluating the ExprStmt's child.
     Local<AST::PackedBaseNode> exprBaseNode(cx, exprStmtNode->expression());
     Local<VM::SyntaxTreeFragment*> exprStRef(cx);
     if (!exprStRef.setResult(VM::SyntaxNode::Create(
@@ -224,16 +224,17 @@ IMPL_SYNTAX_FN_(ExprStmt)
         return ErrorVal();
     }
 
-    Local<VM::EntryFrame*> exprEntryFrame(cx);
-    if (!exprEntryFrame.setResult(VM::EntryFrame::Create(
-            cx->inHatchery(), callInfo->frame(), exprStRef,
-            callInfo->callerScope())))
+    Local<VM::Frame*> frame(cx, callInfo->frame());
+    Local<VM::EntryFrame*> entryFrame(cx, frame->ancestorEntryFrame());
+    Local<VM::InvokeSyntaxNodeFrame*> syntaxFrame(cx);
+    if (!syntaxFrame.setResult(VM::InvokeSyntaxNodeFrame::Create(
+            cx->inHatchery(), frame, entryFrame, exprStRef)))
     {
         WH_ASSERT(cx->hasError());
         return ErrorVal();
     }
 
-    return VM::CallResult::Continue(exprEntryFrame);
+    return VM::CallResult::Continue(syntaxFrame);
 }
 
 IMPL_SYNTAX_FN_(DefStmt)
