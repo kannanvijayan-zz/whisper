@@ -16,8 +16,6 @@ namespace VM {
 #define WHISPER_DEFN_FRAME_KINDS(_) \
     _(TerminalFrame)                \
     _(EntryFrame)                   \
-    _(SyntaxNameLookupFrame)        \
-    _(InvokeSyntaxFrame)            \
     _(InvokeSyntaxNodeFrame)        \
     _(FileSyntaxFrame)              \
     _(CallExprSyntaxFrame)          \
@@ -204,65 +202,6 @@ class SyntaxFrame : public Frame
     SyntaxTreeFragment* stFrag() const {
         return stFrag_;
     }
-};
-
-class SyntaxNameLookupFrame : public SyntaxFrame
-{
-    friend class TraceTraits<SyntaxNameLookupFrame>;
-
-  public:
-    SyntaxNameLookupFrame(Frame* parent,
-                          EntryFrame* entryFrame,
-                          SyntaxTreeFragment* stFrag)
-      : SyntaxFrame(parent, entryFrame, stFrag)
-    {}
-
-    static Result<SyntaxNameLookupFrame*> Create(
-            AllocationContext acx,
-            Handle<Frame*> parent,
-            Handle<EntryFrame*> entryFrame,
-            Handle<SyntaxTreeFragment*> stFrag);
-
-    static StepResult ResolveChildImpl(ThreadContext* cx,
-                                       Handle<SyntaxNameLookupFrame*> frame,
-                                       Handle<Frame*> childFrame,
-                                       Handle<EvalResult> result);
-    static StepResult StepImpl(ThreadContext* cx,
-                               Handle<SyntaxNameLookupFrame*> frame);
-};
-
-class InvokeSyntaxFrame : public SyntaxFrame
-{
-    friend class TraceTraits<InvokeSyntaxFrame>;
-  private:
-    HeapField<ValBox> syntaxHandler_;
-
-  public:
-    InvokeSyntaxFrame(Frame* parent,
-                      EntryFrame* entryFrame,
-                      SyntaxTreeFragment* stFrag,
-                      ValBox syntaxHandler)
-      : SyntaxFrame(parent, entryFrame, stFrag),
-        syntaxHandler_(syntaxHandler)
-    {}
-
-    ValBox const& syntaxHandler() const {
-        return syntaxHandler_;
-    }
-
-    static Result<InvokeSyntaxFrame*> Create(
-            AllocationContext acx,
-            Handle<Frame*> parent,
-            Handle<EntryFrame*> entryFrame,
-            Handle<SyntaxTreeFragment*> stFrag,
-            Handle<ValBox> syntaxHandler);
-
-    static StepResult ResolveChildImpl(ThreadContext* cx,
-                                       Handle<InvokeSyntaxFrame*> frame,
-                                       Handle<Frame*> childFrame,
-                                       Handle<EvalResult> result);
-    static StepResult StepImpl(ThreadContext* cx,
-                               Handle<InvokeSyntaxFrame*> frame);
 };
 
 class InvokeSyntaxNodeFrame : public SyntaxFrame
@@ -742,54 +681,6 @@ struct TraceTraits<VM::SyntaxFrame>
         TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
         obj.entryFrame_.update(updater, start, end);
         obj.stFrag_.update(updater, start, end);
-    }
-};
-
-template <>
-struct TraceTraits<VM::SyntaxNameLookupFrame>
-{
-    TraceTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = false;
-
-    template <typename Scanner>
-    static void Scan(Scanner& scanner, VM::SyntaxNameLookupFrame const& obj,
-                     void const* start, void const* end)
-    {
-        TraceTraits<VM::SyntaxFrame>::Scan<Scanner>(scanner, obj, start, end);
-    }
-
-    template <typename Updater>
-    static void Update(Updater& updater, VM::SyntaxNameLookupFrame& obj,
-                       void const* start, void const* end)
-    {
-        TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
-    }
-};
-
-template <>
-struct TraceTraits<VM::InvokeSyntaxFrame>
-{
-    TraceTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = false;
-
-    template <typename Scanner>
-    static void Scan(Scanner& scanner, VM::InvokeSyntaxFrame const& obj,
-                     void const* start, void const* end)
-    {
-        TraceTraits<VM::SyntaxFrame>::Scan<Scanner>(scanner, obj, start, end);
-        obj.syntaxHandler_.scan(scanner, start, end);
-    }
-
-    template <typename Updater>
-    static void Update(Updater& updater, VM::InvokeSyntaxFrame& obj,
-                       void const* start, void const* end)
-    {
-        TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
-        obj.syntaxHandler_.update(updater, start, end);
     }
 };
 

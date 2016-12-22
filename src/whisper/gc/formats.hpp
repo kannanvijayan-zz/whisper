@@ -75,8 +75,6 @@
     _(FunctionObject)           \
     _(TerminalFrame)            \
     _(EntryFrame)               \
-    _(SyntaxNameLookupFrame)    \
-    _(InvokeSyntaxFrame)        \
     _(InvokeSyntaxNodeFrame)    \
     _(FileSyntaxFrame)          \
     _(CallExprSyntaxFrame)      \
