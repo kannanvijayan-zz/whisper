@@ -336,13 +336,22 @@ BlockSyntaxFrame::ResolveChildImpl(
     WH_ASSERT(frame->stFrag()->isBlock());
     Local<SyntaxBlockRef> blockRef(cx,
         SyntaxBlockRef(frame->stFrag()->toBlock()));
-    WH_ASSERT(frame->statementNo() < blockRef->astBlock().numStatements());
+
+    uint32_t stmtNo = frame->statementNo();
+    uint32_t numStmts = blockRef->astBlock().numStatements();
+    WH_ASSERT(stmtNo < numStmts);
 
     Local<Frame*> rootedParent(cx, frame->parent());
 
     // If result is an error, resolve to parent.
     if (result->isError() || result->isExc())
         return Frame::ResolveChild(cx, rootedParent, frame, result);
+
+    // Otherwise, if all statements have been evaluated, yield the
+    // result of the last one.
+    if (stmtNo + 1 == numStmts) {
+        return Frame::ResolveChild(cx, rootedParent, frame, result);
+    }
 
     // Otherwise, create new block syntax frame for executing next
     // statement.
@@ -362,12 +371,9 @@ BlockSyntaxFrame::StepImpl(ThreadContext* cx,
     WH_ASSERT(frame->stFrag()->isBlock());
     Local<SyntaxBlockRef> blockRef(cx,
         SyntaxBlockRef(frame->stFrag()->toBlock()));
-    WH_ASSERT(frame->statementNo() <= blockRef->astBlock().numStatements());
+    WH_ASSERT(frame->statementNo() < blockRef->astBlock().numStatements());
 
     Local<Frame*> rootedParent(cx, frame->parent());
-
-    if (frame->statementNo() == blockRef->astBlock().numStatements())
-        return Frame::ResolveChild(cx, rootedParent, frame, EvalResult::Void());
 
     // Get SyntaxTreeFragment for next statement node.
     Local<SyntaxTreeFragment*> stmtNode(cx);

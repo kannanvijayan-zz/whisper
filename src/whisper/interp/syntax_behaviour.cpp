@@ -191,6 +191,11 @@ IMPL_SYNTAX_FN_(Block)
     SpewInterpNote("Syntax_Block: Interpreting %u statements",
                    unsigned(astBlock->numStatements()));
 
+    // An empty block resolves immediately with a void result.
+    if (astBlock->numStatements() == 0) {
+        return VM::CallResult::Void();
+    }
+
     Local<VM::Frame*> frame(cx, callInfo->frame());
     Local<VM::EntryFrame*> entryFrame(cx, frame->ancestorEntryFrame());
     Local<VM::SyntaxTreeFragment*> stFrag(cx);

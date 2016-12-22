@@ -3,6 +3,7 @@ def foo(a, b, c) {
     print(a);
     print(b);
     print(c);
+    c;
 }
 
-foo(print(33), print(44), 55);
+print(foo(print(33), print(44), 55));
