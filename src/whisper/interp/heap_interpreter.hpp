@@ -57,6 +57,14 @@ VM::CallResult InvokeApplicativeValue(
         Handle<VM::ValBox> callee,
         ArrayHandle<VM::ValBox> args);
 
+VM::CallResult InvokeScriptedApplicativeFunction(
+        ThreadContext* cx,
+        Handle<VM::Frame*> frame,
+        Handle<VM::ScopeObject*> callerScope,
+        Handle<VM::ValBox> callee,
+        Handle<VM::ScriptedFunction*> calleeScript,
+        ArrayHandle<VM::ValBox> args);
+
 VM::CallResult InvokeApplicativeFunction(
         ThreadContext* cx,
         Handle<VM::Frame*> frame,
@@ -99,8 +107,8 @@ class PropertyLookupResult
         return PropertyLookupResult(Outcome::Error, nullptr,
                                     VM::PropertyDescriptor());
     }
-    static PropertyLookupResult NotFound() {
-        return PropertyLookupResult(Outcome::NotFound, nullptr,
+    static PropertyLookupResult NotFound(VM::LookupState* lookupState) {
+        return PropertyLookupResult(Outcome::NotFound, lookupState,
                                     VM::PropertyDescriptor());
     }
     static PropertyLookupResult Found(

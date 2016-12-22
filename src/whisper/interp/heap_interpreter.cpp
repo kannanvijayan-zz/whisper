@@ -4,6 +4,8 @@
 #include "vm/function.hpp"
 #include "vm/exception.hpp"
 #include "vm/runtime_state.hpp"
+#include "vm/properties.hpp"
+#include "vm/wobject.hpp"
 #include "interp/heap_interpreter.hpp"
 
 namespace Whisper {
@@ -224,22 +226,91 @@ InvokeApplicativeFunction(ThreadContext* cx,
             VM::NativeCallInfo(frame, lookupState,
                                callerScope, calleeFunc, receiver));
 
-        // Call the function. (FIXME).
+        // Call the function.
         VM::NativeApplicativeFuncPtr apNatF = func->asNative()->applicative();
         return apNatF(cx, callInfo, args);
     }
 
     // If scripted, interpret the scripted function.
     if (func->isScripted()) {
-        WH_ASSERT("Cannot interpret scripted applicatives yet!");
-        return cx->setError(RuntimeError::InternalError,
-                            "Cannot interpret scripted applicatives yet!");
+        // Get the scripted function.
+        Local<VM::ScriptedFunction*> calleeScript(cx, func->asScripted());
+        return InvokeScriptedApplicativeFunction(cx, frame, callerScope,
+                                                 callee, calleeScript, args);
     }
 
     WH_UNREACHABLE("Unknown function type!");
     return cx->setError(RuntimeError::InternalError,
                         "Unknown function type seen!",
                         HeapThing::From(func.get()));
+}
+
+VM::CallResult
+InvokeScriptedApplicativeFunction(ThreadContext* cx,
+                                  Handle<VM::Frame*> frame,
+                                  Handle<VM::ScopeObject*> callerScope,
+                                  Handle<VM::ValBox> callee,
+                                  Handle<VM::ScriptedFunction*> calleeScript,
+                                  ArrayHandle<VM::ValBox> args)
+{
+    // Ensure arguments match parameter spec.
+    if (calleeScript->numParams() != args.length()) {
+        // FIXME: Replace with a more specialized exception.
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                           "Call arguments don't match function spec.")))
+        {
+            return ErrorVal();
+        }
+
+        return VM::CallResult::Exc(frame, exc);
+    }
+
+    // Create a new scope for the activation.
+    Local<VM::ScopeObject*> enclosingScope(cx, calleeScript->scopeChain());
+    Local<VM::ScopeObject*> scope(cx);
+    if (!scope.setResult(VM::CallScope::Create(
+            cx->inHatchery(), enclosingScope, calleeScript)))
+    {
+        return ErrorVal();
+    }
+
+    // Bind the arguments in the scope.
+    uint32_t params = calleeScript->numParams();
+    // Ensure arguments match parameter spec.
+    for (uint32_t i = 0; i < params; i++) {
+        Local<VM::String*> paramName(cx, calleeScript->paramName(i));
+        Local<VM::PropertyDescriptor> propDesc(cx,
+            VM::PropertyDescriptor::MakeSlot(args[i]));
+        if (!VM::Wobject::DefineProperty(
+                cx->inHatchery(),
+                scope.handle(),
+                paramName,
+                propDesc))
+        {
+            return ErrorVal();
+        }
+    }
+
+    // Create a SyntaxBlock to evaluate.
+    Local<VM::SyntaxBlockRef> stBlockRef(cx, calleeScript->bodyBlockRef());
+    Local<VM::SyntaxTreeFragment*> stFrag(cx);
+    if (!stFrag.setResult(VM::SyntaxBlock::Create(
+            cx->inHatchery(), stBlockRef)))
+    {
+        return ErrorVal();
+    }
+
+    // Create an EntryFrame for the block to evaluate.
+    Local<VM::EntryFrame*> entryFrame(cx);
+    if (!entryFrame.setResult(VM::EntryFrame::Create(
+            cx->inHatchery(), frame, stFrag, scope)))
+    {
+        return ErrorVal();
+    }
+
+    // Continue with the EntryFrame.
+    return VM::CallResult::Continue(entryFrame.get());
 }
 
 
@@ -259,7 +330,7 @@ GetPropertyHelper(ThreadContext* cx,
 
     // If binding not found, return void control flow.
     if (!lookupResult.value())
-        return PropertyLookupResult::NotFound();
+        return PropertyLookupResult::NotFound(lookupState.get());
 
     // Found binding.
     WH_ASSERT(propDesc->isValid());
