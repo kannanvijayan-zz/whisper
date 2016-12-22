@@ -35,7 +35,7 @@ class CallScope : public ScopeObject
     {}
 
     static Result<CallScope*> Create(AllocationContext acx,
-                                     Handle<ScopeObject*> callerScope,
+                                     Handle<ScopeObject*> enclosingScope,
                                      Handle<Function*> function);
 
     WobjectHooks const* getCallScopeHooks() const;
@@ -55,7 +55,7 @@ class BlockScope : public ScopeObject
     {}
 
     static Result<BlockScope*> Create(AllocationContext acx,
-                                      Handle<ScopeObject*> callerScope);
+                                      Handle<ScopeObject*> enclosingScope);
 
     WobjectHooks const* getBlockScopeHooks() const;
 };

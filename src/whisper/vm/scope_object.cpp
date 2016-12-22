@@ -9,14 +9,14 @@ namespace VM {
 
 /* static */ Result<CallScope*>
 CallScope::Create(AllocationContext acx,
-                  Handle<ScopeObject*> callerScope,
+                  Handle<ScopeObject*> enclosingScope,
                   Handle<Function*> function)
 {
     // Allocate array of delegates containing caller scope.
     Local<Array<Wobject*>*> delegates(acx);
     if (!delegates.setResult(Array<Wobject*>::CreateFill(acx, 1, nullptr)))
         return ErrorVal();
-    delegates->set(0, callerScope.get());
+    delegates->set(0, enclosingScope.get());
 
     // Allocate a dictionary.
     Local<PropertyDict*> props(acx);
@@ -35,13 +35,13 @@ CallScope::getCallScopeHooks() const
 
 /* static */ Result<BlockScope*>
 BlockScope::Create(AllocationContext acx,
-                   Handle<ScopeObject*> callerScope)
+                   Handle<ScopeObject*> enclosingScope)
 {
     // Allocate array of delegates containing caller scope.
     Local<Array<Wobject*>*> delegates(acx);
     if (!delegates.setResult(Array<Wobject*>::CreateFill(acx, 1, nullptr)))
         return ErrorVal();
-    delegates->set(0, callerScope.get());
+    delegates->set(0, enclosingScope.get());
 
     // Allocate a dictionary.
     Local<PropertyDict*> props(acx);
