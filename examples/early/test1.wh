@@ -1,8 +1,7 @@
 
 def foo(a, b) {
-    return a;
+    print(a);
+    print(b);
 }
 
-const zz = 33;
-var x;
-foo(zz, x);
+foo(print(33), print(44));
