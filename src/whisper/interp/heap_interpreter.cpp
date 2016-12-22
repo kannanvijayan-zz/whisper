@@ -109,23 +109,6 @@ CreateInitialSyntaxFrame(ThreadContext* cx,
     return OkVal(syntaxFrame.get());
 }
 
-Result<VM::Frame*>
-CreateInvokeSyntaxFrame(ThreadContext* cx,
-                        Handle<VM::Frame*> parentFrame,
-                        Handle<VM::EntryFrame*> entryFrame,
-                        Handle<VM::SyntaxTreeFragment*> stFrag,
-                        Handle<VM::ValBox> syntaxHandler)
-{
-    Local<VM::InvokeSyntaxFrame*> stFrame(cx);
-    if (!stFrame.setResult(VM::InvokeSyntaxFrame::Create(cx->inHatchery(),
-            parentFrame, entryFrame, stFrag, syntaxHandler)))
-    {
-        return ErrorVal();
-    }
-
-    return OkVal(stFrame.get());
-}
-
 Maybe<VM::FunctionObject*>
 FunctionObjectForValue(ThreadContext* cx,
                        Handle<VM::ValBox> value)

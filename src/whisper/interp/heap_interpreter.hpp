@@ -32,13 +32,6 @@ Result<VM::Frame*> CreateInitialSyntaxFrame(
         Handle<VM::Frame*> parent,
         Handle<VM::EntryFrame*> entryFrame);
 
-Result<VM::Frame*> CreateInvokeSyntaxFrame(
-        ThreadContext* cx,
-        Handle<VM::Frame*> parentFrame,
-        Handle<VM::EntryFrame*> entryFrame,
-        Handle<VM::SyntaxTreeFragment*> stFrag,
-        Handle<VM::ValBox> syntaxHandler);
-
 Maybe<VM::FunctionObject*> FunctionObjectForValue(ThreadContext* cx,
                                                   Handle<VM::ValBox> value);
 
