@@ -26,6 +26,7 @@ namespace Interp {
 #define DECLARE_SYNTAX_FN_(name) IMPL_SYNTAX_FN_(name);
 
 DECLARE_SYNTAX_FN_(File)
+DECLARE_SYNTAX_FN_(Block)
 DECLARE_SYNTAX_FN_(EmptyStmt)
 DECLARE_SYNTAX_FN_(ExprStmt)
 
@@ -97,6 +98,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     } while(false)
 
     BIND_GLOBAL_METHOD_(File);
+    BIND_GLOBAL_METHOD_(Block);
     BIND_GLOBAL_METHOD_(EmptyStmt);
     BIND_GLOBAL_METHOD_(ExprStmt);
 /*
@@ -159,6 +161,45 @@ IMPL_SYNTAX_FN_(File)
 
     Local<VM::Frame*> fileSyntaxFrame(cx);
     if (!fileSyntaxFrame.setResult(VM::FileSyntaxFrame::Create(
+            cx->inHatchery(), frame, entryFrame,
+            stFrag.handle().convertTo<VM::SyntaxTreeFragment*>(),
+            0)))
+    {
+        return ErrorVal();
+    }
+
+    return VM::CallResult::Continue(fileSyntaxFrame);
+}
+
+IMPL_SYNTAX_FN_(Block)
+{
+    if (args.length() != 1) {
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                           "@Block called with wrong number of arguments")))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(callInfo->frame(), exc);
+    }
+
+    WH_ASSERT(args.get(0)->isBlock());
+
+    Local<VM::SyntaxBlockRef> stRef(cx, args.get(0)->toBlock());
+    Local<AST::PackedBlock> astBlock(cx, stRef->astBlock());
+
+    SpewInterpNote("Syntax_Block: Interpreting %u statements",
+                   unsigned(astBlock->numStatements()));
+
+    Local<VM::Frame*> frame(cx, callInfo->frame());
+    Local<VM::EntryFrame*> entryFrame(cx, frame->ancestorEntryFrame());
+    Local<VM::SyntaxTreeFragment*> stFrag(cx);
+    if (!stFrag.setResult(VM::SyntaxBlock::Create(cx->inHatchery(), stRef))) {
+        return ErrorVal();
+    }
+
+    Local<VM::Frame*> fileSyntaxFrame(cx);
+    if (!fileSyntaxFrame.setResult(VM::BlockSyntaxFrame::Create(
             cx->inHatchery(), frame, entryFrame,
             stFrag.handle().convertTo<VM::SyntaxTreeFragment*>(),
             0)))

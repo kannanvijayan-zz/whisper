@@ -216,7 +216,7 @@ FileSyntaxFrame::Create(AllocationContext acx,
 
 /* static */ Result<FileSyntaxFrame*>
 FileSyntaxFrame::CreateNext(AllocationContext acx,
-                        Handle<FileSyntaxFrame*> curFrame)
+                            Handle<FileSyntaxFrame*> curFrame)
 {
     WH_ASSERT(curFrame->stFrag()->isNode());
     Local<SyntaxNodeRef> fileNode(acx,
@@ -280,6 +280,100 @@ FileSyntaxFrame::StepImpl(ThreadContext* cx,
     if (!stmtNode.setResult(SyntaxNode::Create(
             cx->inHatchery(), fileNode->pst(),
             fileNode->astFile().statement(frame->statementNo()).offset())))
+    {
+        return ErrorVal();
+    }
+
+    // Create a new InvokeSyntaxNode frame for interpreting each statement.
+    Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
+    Local<VM::EntryFrame*> entryFrame(cx, frame->entryFrame());
+    Local<VM::InvokeSyntaxNodeFrame*> syntaxFrame(cx);
+    if (!syntaxFrame.setResult(VM::InvokeSyntaxNodeFrame::Create(
+            cx->inHatchery(), frame, entryFrame, stmtNode)))
+    {
+        return ErrorVal();
+    }
+
+    return StepResult::Continue(syntaxFrame);
+}
+
+
+/* static */ Result<BlockSyntaxFrame*>
+BlockSyntaxFrame::Create(AllocationContext acx,
+                         Handle<Frame*> parent,
+                         Handle<EntryFrame*> entryFrame,
+                         Handle<SyntaxTreeFragment*> stFrag,
+                         uint32_t statementNo)
+{
+    return acx.create<BlockSyntaxFrame>(parent, entryFrame, stFrag,
+                                       statementNo);
+}
+
+/* static */ Result<BlockSyntaxFrame*>
+BlockSyntaxFrame::CreateNext(AllocationContext acx,
+                             Handle<BlockSyntaxFrame*> curFrame)
+{
+    WH_ASSERT(curFrame->stFrag()->isBlock());
+    Local<SyntaxBlockRef> blockRef(acx,
+        SyntaxBlockRef(curFrame->stFrag()->toBlock()));
+    WH_ASSERT(curFrame->statementNo() < blockRef->astBlock().numStatements());
+
+    Local<Frame*> parent(acx, curFrame->parent());
+    Local<EntryFrame*> entryFrame(acx, curFrame->entryFrame());
+    Local<SyntaxTreeFragment*> stFrag(acx, curFrame->stFrag());
+    uint32_t nextStatementNo = curFrame->statementNo() + 1;
+
+    return Create(acx, parent, entryFrame, stFrag, nextStatementNo);
+}
+
+/* static */ StepResult
+BlockSyntaxFrame::ResolveChildImpl(
+        ThreadContext* cx,
+        Handle<BlockSyntaxFrame*> frame,
+        Handle<Frame*> childFrame,
+        Handle<EvalResult> result)
+{
+    WH_ASSERT(frame->stFrag()->isBlock());
+    Local<SyntaxBlockRef> blockRef(cx,
+        SyntaxBlockRef(frame->stFrag()->toBlock()));
+    WH_ASSERT(frame->statementNo() < blockRef->astBlock().numStatements());
+
+    Local<Frame*> rootedParent(cx, frame->parent());
+
+    // If result is an error, resolve to parent.
+    if (result->isError() || result->isExc())
+        return Frame::ResolveChild(cx, rootedParent, frame, result);
+
+    // Otherwise, create new block syntax frame for executing next
+    // statement.
+    Local<BlockSyntaxFrame*> nextBlockFrame(cx);
+    if (!nextBlockFrame.setResult(BlockSyntaxFrame::CreateNext(
+            cx->inHatchery(), frame)))
+    {
+        return ErrorVal();
+    }
+    return StepResult::Continue(nextBlockFrame);
+}
+
+/* static */ StepResult
+BlockSyntaxFrame::StepImpl(ThreadContext* cx,
+                           Handle<BlockSyntaxFrame*> frame)
+{
+    WH_ASSERT(frame->stFrag()->isBlock());
+    Local<SyntaxBlockRef> blockRef(cx,
+        SyntaxBlockRef(frame->stFrag()->toBlock()));
+    WH_ASSERT(frame->statementNo() <= blockRef->astBlock().numStatements());
+
+    Local<Frame*> rootedParent(cx, frame->parent());
+
+    if (frame->statementNo() == blockRef->astBlock().numStatements())
+        return Frame::ResolveChild(cx, rootedParent, frame, EvalResult::Void());
+
+    // Get SyntaxTreeFragment for next statement node.
+    Local<SyntaxTreeFragment*> stmtNode(cx);
+    if (!stmtNode.setResult(SyntaxNode::Create(
+            cx->inHatchery(), blockRef->pst(),
+            blockRef->astBlock().statement(frame->statementNo()).offset())))
     {
         return ErrorVal();
     }

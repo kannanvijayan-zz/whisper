@@ -77,6 +77,7 @@
     _(EntryFrame)               \
     _(InvokeSyntaxNodeFrame)    \
     _(FileSyntaxFrame)          \
+    _(BlockSyntaxFrame)         \
     _(CallExprSyntaxFrame)      \
     _(InvokeApplicativeFrame)   \
     _(InvokeOperativeFrame)     \
