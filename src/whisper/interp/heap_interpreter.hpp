@@ -73,86 +73,13 @@ VM::CallResult InvokeApplicativeFunction(
         Handle<VM::FunctionObject*> calleeFunc,
         ArrayHandle<VM::ValBox> args);
 
-// Property lookup helpers.
-class PropertyLookupResult
-{
-  friend class TraceTraits<PropertyLookupResult>;
-  public:
-    enum class Outcome {
-        Error,
-        NotFound,
-        Found
-    };
+VM::PropertyLookupResult GetValueProperty(ThreadContext* cx,
+                                          Handle<VM::ValBox> value,
+                                          Handle<VM::String*> name);
 
-  private:
-    Outcome outcome_;
-    StackField<VM::LookupState*> lookupState_;
-    StackField<VM::PropertyDescriptor> descriptor_;
-
-    PropertyLookupResult(Outcome outcome,
-                         VM::LookupState* lookupState,
-                         VM::PropertyDescriptor const& descriptor)
-      : outcome_(outcome),
-        lookupState_(lookupState),
-        descriptor_(descriptor)
-    {}
-
-  public:
-    PropertyLookupResult(ErrorT_ const& error)
-      : PropertyLookupResult(Outcome::Error, nullptr,
-                             VM::PropertyDescriptor())
-    {}
-
-    static PropertyLookupResult Error() {
-        return PropertyLookupResult(Outcome::Error, nullptr,
-                                    VM::PropertyDescriptor());
-    }
-    static PropertyLookupResult NotFound(VM::LookupState* lookupState) {
-        return PropertyLookupResult(Outcome::NotFound, lookupState,
-                                    VM::PropertyDescriptor());
-    }
-    static PropertyLookupResult Found(
-            VM::LookupState* lookupState,
-            VM::PropertyDescriptor const& descriptor)
-    {
-        WH_ASSERT(lookupState != nullptr);
-        WH_ASSERT(descriptor.isValid());
-        return PropertyLookupResult(Outcome::Found, lookupState, descriptor);
-    }
-
-    Outcome outcome() const {
-        return outcome_;
-    }
-    bool isError() const {
-        return outcome() == Outcome::Error;
-    }
-    bool isNotFound() const {
-        return outcome() == Outcome::NotFound;
-    }
-    bool isFound() const {
-        return outcome() == Outcome::Found;
-    }
-
-    VM::LookupState *lookupState() const {
-        WH_ASSERT(isFound());
-        return lookupState_;
-    }
-    VM::PropertyDescriptor const& descriptor() const {
-        WH_ASSERT(isFound());
-        return descriptor_;
-    }
-
-    VM::EvalResult toEvalResult(ThreadContext* cx,
-                                Handle<VM::Frame*> frame) const;
-};
-
-PropertyLookupResult GetValueProperty(ThreadContext* cx,
-                                      Handle<VM::ValBox> value,
-                                      Handle<VM::String*> name);
-
-PropertyLookupResult GetObjectProperty(ThreadContext* cx,
-                                       Handle<VM::Wobject*> object,
-                                       Handle<VM::String*> name);
+VM::PropertyLookupResult GetObjectProperty(ThreadContext* cx,
+                                           Handle<VM::Wobject*> object,
+                                           Handle<VM::String*> name);
 
 OkResult DefValueProperty(ThreadContext* cx,
                           Handle<VM::ValBox> value,
@@ -166,37 +93,6 @@ OkResult DefObjectProperty(ThreadContext* cx,
 
 
 } // namespace Interp
-
-
-//
-// GC Specializations
-//
-
-template <>
-struct TraceTraits<Interp::PropertyLookupResult>
-{
-    TraceTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = false;
-
-    template <typename Scanner>
-    static void Scan(Scanner& scanner, Interp::PropertyLookupResult const& obj,
-                     void const* start, void const* end)
-    {
-        obj.lookupState_.scan(scanner, start, end);
-        obj.descriptor_.scan(scanner, start, end);
-    }
-
-    template <typename Updater>
-    static void Update(Updater& updater, Interp::PropertyLookupResult& obj,
-                       void const* start, void const* end)
-    {
-        obj.lookupState_.update(updater, start, end);
-        obj.descriptor_.update(updater, start, end);
-    }
-};
-
 } // namespace Whisper
 
 #endif // WHISPER__INTERP__HEAP_INTERPRETER_HPP

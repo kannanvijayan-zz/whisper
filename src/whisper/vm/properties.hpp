@@ -178,7 +178,6 @@ class PropertyDescriptor
     }
 };
 
-
 } // namespace VM
 
 
@@ -239,6 +238,107 @@ struct TraceTraits<VM::PropertyDescriptor>
                        void const* start, void const* end)
     {
         propDesc.value_.update(updater, start, end);
+    }
+};
+
+
+namespace VM {
+
+// Property lookup helpers.
+class PropertyLookupResult
+{
+  friend class TraceTraits<PropertyLookupResult>;
+  public:
+    enum class Outcome {
+        Error,
+        NotFound,
+        Found
+    };
+
+  private:
+    Outcome outcome_;
+    StackField<LookupState*> lookupState_;
+    StackField<PropertyDescriptor> descriptor_;
+
+    PropertyLookupResult(Outcome outcome,
+                         LookupState* lookupState,
+                         PropertyDescriptor const& descriptor)
+      : outcome_(outcome),
+        lookupState_(lookupState),
+        descriptor_(descriptor)
+    {}
+
+  public:
+    PropertyLookupResult(ErrorT_ const& error)
+      : PropertyLookupResult(Outcome::Error, nullptr, PropertyDescriptor())
+    {}
+
+    static PropertyLookupResult Error() {
+        return PropertyLookupResult(Outcome::Error, nullptr,
+                                    PropertyDescriptor());
+    }
+    static PropertyLookupResult NotFound(LookupState* lookupState) {
+        return PropertyLookupResult(Outcome::NotFound, lookupState,
+                                    PropertyDescriptor());
+    }
+    static PropertyLookupResult Found(
+            LookupState* lookupState,
+            PropertyDescriptor const& descriptor)
+    {
+        WH_ASSERT(lookupState != nullptr);
+        WH_ASSERT(descriptor.isValid());
+        return PropertyLookupResult(Outcome::Found, lookupState, descriptor);
+    }
+
+    Outcome outcome() const {
+        return outcome_;
+    }
+    bool isError() const {
+        return outcome() == Outcome::Error;
+    }
+    bool isNotFound() const {
+        return outcome() == Outcome::NotFound;
+    }
+    bool isFound() const {
+        return outcome() == Outcome::Found;
+    }
+
+    LookupState *lookupState() const {
+        WH_ASSERT(isFound());
+        return lookupState_;
+    }
+    PropertyDescriptor const& descriptor() const {
+        WH_ASSERT(isFound());
+        return descriptor_;
+    }
+
+    EvalResult toEvalResult(ThreadContext* cx, Handle<Frame*> frame) const;
+};
+
+} // namespace VM
+
+template <>
+struct TraceTraits<VM::PropertyLookupResult>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::PropertyLookupResult const& obj,
+                     void const* start, void const* end)
+    {
+        obj.lookupState_.scan(scanner, start, end);
+        obj.descriptor_.scan(scanner, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::PropertyLookupResult& obj,
+                       void const* start, void const* end)
+    {
+        obj.lookupState_.update(updater, start, end);
+        obj.descriptor_.update(updater, start, end);
     }
 };
 

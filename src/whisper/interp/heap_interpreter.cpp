@@ -314,7 +314,7 @@ InvokeScriptedApplicativeFunction(ThreadContext* cx,
 }
 
 
-static PropertyLookupResult
+static VM::PropertyLookupResult
 GetPropertyHelper(ThreadContext* cx,
                   Handle<VM::ValBox> receiver,
                   Handle<VM::Wobject*> object,
@@ -326,73 +326,18 @@ GetPropertyHelper(ThreadContext* cx,
     Result<bool> lookupResult = VM::Wobject::LookupProperty(
         cx->inHatchery(), object, name, &lookupState, &propDesc);
     if (!lookupResult)
-        return PropertyLookupResult::Error();
+        return VM::PropertyLookupResult::Error();
 
     // If binding not found, return void control flow.
     if (!lookupResult.value())
-        return PropertyLookupResult::NotFound(lookupState.get());
+        return VM::PropertyLookupResult::NotFound(lookupState.get());
 
     // Found binding.
     WH_ASSERT(propDesc->isValid());
-    return PropertyLookupResult::Found(lookupState.get(), propDesc.get());
+    return VM::PropertyLookupResult::Found(lookupState.get(), propDesc.get());
 }
 
-VM::EvalResult
-PropertyLookupResult::toEvalResult(ThreadContext* cx,
-                                   Handle<VM::Frame*> frame)
-  const
-{
-    if (isError()) {
-        return VM::EvalResult::Error();
-    }
-
-    if (isNotFound()) {
-        // Throw NameLookupFailedException
-        Local<VM::Wobject*> object(cx, lookupState_->receiver());
-        Local<VM::String*> name(cx, lookupState_->name());
-
-        Local<VM::NameLookupFailedException*> exc(cx);
-        if (!exc.setResult(VM::NameLookupFailedException::Create(
-                cx->inHatchery(), object, name)))
-        {
-            return VM::EvalResult::Error();
-        }
-
-        return VM::EvalResult::Exc(frame, exc.get());
-    }
-
-    if (isFound()) {
-        // Handle a value binding by returning the value.
-        if (descriptor_->isSlot()) {
-            return VM::EvalResult::Value(descriptor_->slotValue());
-        }
-
-        // Handle a method binding by creating a bound FunctionObject
-        // from the method and returning that.
-        if (descriptor_->isMethod()) {
-            // Create a new function object bound to the scope.
-            Local<VM::Wobject*> obj(cx, lookupState_->receiver());
-            Local<VM::ValBox> objVal(cx, VM::ValBox::Object(obj.get()));
-            Local<VM::Function*> func(cx, descriptor_->methodFunction());
-            Local<VM::FunctionObject*> funcObj(cx);
-            if (!funcObj.setResult(VM::FunctionObject::Create(
-                    cx->inHatchery(), func, objVal, lookupState_)))
-            {
-                return VM::EvalResult::Error();
-            }
-
-            return VM::EvalResult::Value(VM::ValBox::Object(funcObj.get()));
-        }
-
-        WH_UNREACHABLE("PropertyDescriptor not one of Value, Method.");
-        return VM::EvalResult::Error();
-    }
-
-    WH_UNREACHABLE("PropertyDescriptor state not Error, NotFound, or Found.");
-    return VM::EvalResult::Error();
-}
-
-PropertyLookupResult
+VM::PropertyLookupResult
 GetValueProperty(ThreadContext* cx,
                  Handle<VM::ValBox> value,
                  Handle<VM::String*> name)
@@ -419,7 +364,7 @@ GetValueProperty(ThreadContext* cx,
                                 "primitive value");
 }
 
-PropertyLookupResult
+VM::PropertyLookupResult
 GetObjectProperty(ThreadContext* cx,
                   Handle<VM::Wobject*> object,
                   Handle<VM::String*> name)

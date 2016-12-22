@@ -156,7 +156,7 @@ InvokeSyntaxNodeFrame::StepImpl(ThreadContext* cx,
 
     // Look up the property on the scope object.
     Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
-    Local<Interp::PropertyLookupResult> lookupResult(cx,
+    Local<PropertyLookupResult> lookupResult(cx,
         Interp::GetObjectProperty(cx, scope.handle().convertTo<Wobject*>(),
                                       name));
 

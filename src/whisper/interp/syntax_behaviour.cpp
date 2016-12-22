@@ -384,15 +384,15 @@ IMPL_SYNTAX_FN_(NameExpr)
     Local<VM::Frame*> parent(cx, frame->parent());
     Local<VM::ScopeObject*> scope(cx, frame->ancestorEntryFrame()->scope());
 
-    PropertyLookupResult lookupResult = GetObjectProperty(cx,
-        scope.handle(), name);
+    Local<VM::PropertyLookupResult> lookupResult(cx,
+        GetObjectProperty(cx, scope.handle(), name));
 
-    if (lookupResult.isError()) {
+    if (lookupResult->isError()) {
         SpewInterpNote("Syntax_NameExpr - lookupResult returned error!");
         return VM::CallResult::Error();
     }
 
-    if (lookupResult.isNotFound()) {
+    if (lookupResult->isNotFound()) {
         SpewInterpNote("Syntax_NameExpr -"
                        " lookupResult returned notFound -"
                        " raising exception!");
@@ -407,10 +407,11 @@ IMPL_SYNTAX_FN_(NameExpr)
         return VM::CallResult::Exc(frame, exc);
     }
 
-    if (lookupResult.isFound()) {
+    if (lookupResult->isFound()) {
         SpewInterpNote("Syntax_NameExpr - lookupResult returned found");
-        Local<VM::PropertyDescriptor> descriptor(cx, lookupResult.descriptor());
-        Local<VM::LookupState*> lookupState(cx, lookupResult.lookupState());
+        Local<VM::PropertyDescriptor> descriptor(cx,
+                                        lookupResult->descriptor());
+        Local<VM::LookupState*> lookupState(cx, lookupResult->lookupState());
 
         // Handle a value binding by returning the value.
         if (descriptor->isSlot())

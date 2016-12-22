@@ -79,7 +79,7 @@ PREDECLARE_STACK_OBJ_(SyntaxBlockRef);
 
 PREDECLARE_STACK_OBJ_(PropertyName);
 PREDECLARE_STACK_OBJ_(PropertyDescriptor);
-PREDECLARE_STACK_OBJ_FMT_(Interp, PropertyLookupResult, PropertyLookupResult);
+PREDECLARE_STACK_OBJ_(PropertyLookupResult);
 
 PREDECLARE_FIXSIZED_HEAP_OBJ_(RuntimeState);
 PREDECLARE_FIXSIZED_HEAP_OBJ_(ThreadState);
