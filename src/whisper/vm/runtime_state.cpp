@@ -40,7 +40,7 @@ RuntimeState::syntaxHandlerName(SyntaxTreeFragment const* stFrag) const
         return syntaxHandlerName(stFrag->toNode()->nodeType());
 
     if (stFrag->isBlock())
-        return nullptr;
+        return nm_AtBlock();
 
     WH_UNREACHABLE("SyntaxTreeFragment is neither node nor block.");
     return nullptr;

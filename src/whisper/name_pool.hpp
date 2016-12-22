@@ -6,6 +6,7 @@
 
 #define WHISPER_DEFN_NAME_POOL(_) \
     _(AtFile,           "@File"         ) \
+    _(AtBlock,          "@Block"        ) \
     _(AtEmptyStmt,      "@EmptyStmt"    ) \
     _(AtExprStmt,       "@ExprStmt"     ) \
     _(AtReturnStmt,     "@ReturnStmt"   ) \
