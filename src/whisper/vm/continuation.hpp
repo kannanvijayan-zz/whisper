@@ -4,6 +4,7 @@
 #include "vm/core.hpp"
 #include "vm/predeclare.hpp"
 #include "vm/frame.hpp"
+#include "vm/control_flow.hpp"
 
 namespace Whisper {
 namespace VM {
@@ -26,6 +27,8 @@ class Continuation
 
     static Result<Continuation*> Create(AllocationContext cx,
                                         Handle<Frame*> frame);
+
+    StepResult continueWith(ThreadContext* cx, Handle<ValBox> value) const;
 };
 
 
