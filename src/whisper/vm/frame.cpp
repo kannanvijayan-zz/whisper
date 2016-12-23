@@ -17,15 +17,11 @@ namespace VM {
 /* static */ StepResult
 Frame::ResolveChild(ThreadContext* cx,
                     Handle<Frame*> frame,
-                    Handle<Frame*> childFrame,
                     Handle<EvalResult> result)
 {
-    WH_ASSERT(childFrame->parent() == frame);
-
 #define RESOLVE_CHILD_CASE_(name) \
     if (frame->is##name()) \
-        return name::ResolveChildImpl(cx, frame.upConvertTo<name*>(), \
-                                      childFrame, result);
+        return name::ResolveChildImpl(cx, frame.upConvertTo<name*>(), result);
 
     WHISPER_DEFN_FRAME_KINDS(RESOLVE_CHILD_CASE_)
 
@@ -69,7 +65,6 @@ TerminalFrame::Create(AllocationContext acx)
 /* static */ StepResult
 TerminalFrame::ResolveChildImpl(ThreadContext* cx,
                                 Handle<TerminalFrame*> frame,
-                                Handle<Frame*> childFrame,
                                 Handle<EvalResult> result)
 {
     // Any resolving of a child of this frame just continues with
@@ -99,12 +94,11 @@ EntryFrame::Create(AllocationContext acx,
 /* static */ StepResult
 EntryFrame::ResolveChildImpl(ThreadContext* cx,
                              Handle<EntryFrame*> frame,
-                             Handle<Frame*> childFrame,
                              Handle<EvalResult> result)
 {
     // Resolve parent frame with the same result.
     Local<Frame*> rootedParent(cx, frame->parent());
-    return Frame::ResolveChild(cx, rootedParent, frame, result);
+    return Frame::ResolveChild(cx, rootedParent, result);
 }
 
 /* static */ StepResult
@@ -133,12 +127,11 @@ InvokeSyntaxNodeFrame::Create(AllocationContext acx,
 InvokeSyntaxNodeFrame::ResolveChildImpl(
         ThreadContext* cx,
         Handle<InvokeSyntaxNodeFrame*> frame,
-        Handle<Frame*> childFrame,
         Handle<EvalResult> result)
 {
     // Resolve parent frame with the same result.
     Local<Frame*> rootedParent(cx, frame->parent());
-    return Frame::ResolveChild(cx, rootedParent, frame, result);
+    return Frame::ResolveChild(cx, rootedParent, result);
 }
 
 /* static */ StepResult
@@ -168,7 +161,7 @@ InvokeSyntaxNodeFrame::StepImpl(ThreadContext* cx,
               lookupEvalResult->isValue());
 
     if (!lookupEvalResult->isValue()) {
-        return Frame::ResolveChild(cx, parent, frame, lookupEvalResult.get());
+        return Frame::ResolveChild(cx, parent, lookupEvalResult.get());
     }
 
     // Invoke the syntax handler.
@@ -180,20 +173,16 @@ InvokeSyntaxNodeFrame::StepImpl(ThreadContext* cx,
 
     // Forward result from syntax handler.
     if (result->isError())
-        return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+        return Frame::ResolveChild(cx, parent, EvalResult::Error());
 
-    if (result->isExc()) {
-        return Frame::ResolveChild(cx, parent, frame,
-                                   result->excAsEvalResult());
-    }
+    if (result->isExc())
+        return Frame::ResolveChild(cx, parent, result->excAsEvalResult());
 
-    if (result->isValue()) {
-        return Frame::ResolveChild(cx, parent, frame,
-                                   result->valueAsEvalResult());
-    }
+    if (result->isValue())
+        return Frame::ResolveChild(cx, parent, result->valueAsEvalResult());
 
     if (result->isVoid())
-        return Frame::ResolveChild(cx, parent, frame, EvalResult::Void());
+        return Frame::ResolveChild(cx, parent, EvalResult::Void());
 
     if (result->isContinue())
         return StepResult::Continue(result->continueFrame());
@@ -236,7 +225,6 @@ FileSyntaxFrame::CreateNext(AllocationContext acx,
 FileSyntaxFrame::ResolveChildImpl(
         ThreadContext* cx,
         Handle<FileSyntaxFrame*> frame,
-        Handle<Frame*> childFrame,
         Handle<EvalResult> result)
 {
     WH_ASSERT(frame->stFrag()->isNode());
@@ -248,7 +236,7 @@ FileSyntaxFrame::ResolveChildImpl(
 
     // If result is an error, resolve to parent.
     if (result->isError() || result->isExc())
-        return Frame::ResolveChild(cx, rootedParent, frame, result);
+        return Frame::ResolveChild(cx, rootedParent, result);
 
     // Otherwise, create new file syntax frame for executing next
     // statement.
@@ -273,7 +261,7 @@ FileSyntaxFrame::StepImpl(ThreadContext* cx,
     Local<Frame*> rootedParent(cx, frame->parent());
 
     if (frame->statementNo() == fileNode->astFile().numStatements())
-        return Frame::ResolveChild(cx, rootedParent, frame, EvalResult::Void());
+        return Frame::ResolveChild(cx, rootedParent, EvalResult::Void());
 
     // Get SyntaxTreeFragment for next statement node.
     Local<SyntaxTreeFragment*> stmtNode(cx);
@@ -330,7 +318,6 @@ BlockSyntaxFrame::CreateNext(AllocationContext acx,
 BlockSyntaxFrame::ResolveChildImpl(
         ThreadContext* cx,
         Handle<BlockSyntaxFrame*> frame,
-        Handle<Frame*> childFrame,
         Handle<EvalResult> result)
 {
     WH_ASSERT(frame->stFrag()->isBlock());
@@ -345,12 +332,12 @@ BlockSyntaxFrame::ResolveChildImpl(
 
     // If result is an error, resolve to parent.
     if (result->isError() || result->isExc())
-        return Frame::ResolveChild(cx, rootedParent, frame, result);
+        return Frame::ResolveChild(cx, rootedParent, result);
 
     // Otherwise, if all statements have been evaluated, yield the
     // result of the last one.
     if (stmtNo + 1 == numStmts) {
-        return Frame::ResolveChild(cx, rootedParent, frame, result);
+        return Frame::ResolveChild(cx, rootedParent, result);
     }
 
     // Otherwise, create new block syntax frame for executing next
@@ -412,7 +399,6 @@ VarSyntaxFrame::Create(AllocationContext acx,
 VarSyntaxFrame::ResolveChildImpl(
         ThreadContext* cx,
         Handle<VarSyntaxFrame*> frame,
-        Handle<Frame*> childFrame,
         Handle<EvalResult> result)
 {
     Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
@@ -430,7 +416,7 @@ VarSyntaxFrame::ResolveChildImpl(
 
     // If result is an error, resolve to parent.
     if (result->isError() || result->isExc())
-        return Frame::ResolveChild(cx, rootedParent, frame, result);
+        return Frame::ResolveChild(cx, rootedParent, result);
 
     if (result->isVoid()) {
         WH_UNREACHABLE("Got void eval result for expression.");
@@ -482,9 +468,8 @@ VarSyntaxFrame::ResolveChildImpl(
     }
 
     // Check if all done with bindings.
-    if (bindingNo == numBindings) {
-        return Frame::ResolveChild(cx, rootedParent, frame, result);
-    }
+    if (bindingNo == numBindings)
+        return Frame::ResolveChild(cx, rootedParent, result);
 
     // Otherwise, create var syntax frame for evaluating next binding expr.
     Local<EntryFrame*> entryFrame(cx, frame->entryFrame());
@@ -541,7 +526,7 @@ VarSyntaxFrame::StepImpl(ThreadContext* cx,
 
     // Check if all done with bindings.
     if (bindingNo == numBindings) {
-        return Frame::ResolveChild(cx, rootedParent, frame,
+        return Frame::ResolveChild(cx, rootedParent,
                         EvalResult::Value(ValBox::Undefined()));
     }
 
@@ -657,7 +642,6 @@ CallExprSyntaxFrame::CreateInvoke(AllocationContext acx,
 CallExprSyntaxFrame::ResolveChildImpl(
         ThreadContext* cx,
         Handle<CallExprSyntaxFrame*> frame,
-        Handle<Frame*> childFrame,
         Handle<EvalResult> result)
 {
     Local<SyntaxNodeRef> callNodeRef(cx, frame->stFrag()->toNode());
@@ -670,7 +654,7 @@ CallExprSyntaxFrame::ResolveChildImpl(
 
     // Always forward errors or exceptions.
     if (result->isError() || result->isExc())
-        return Frame::ResolveChild(cx, parent, frame, result);
+        return Frame::ResolveChild(cx, parent, result);
 
     // Switch on state to handle rest of behaviour.
     switch (frame->state_) {
@@ -719,11 +703,10 @@ CallExprSyntaxFrame::ResolveCalleeChild(
                            "Callee expression yielded void",
                            subNode.handle())))
         {
-            return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+            return Frame::ResolveChild(cx, parent, EvalResult::Error());
         }
 
-        return Frame::ResolveChild(cx, parent, frame,
-                                   EvalResult::Exc(frame, exc));
+        return Frame::ResolveChild(cx, parent, EvalResult::Exc(frame, exc));
     }
 
     WH_ASSERT(result->isValue());
@@ -735,10 +718,9 @@ CallExprSyntaxFrame::ResolveCalleeChild(
                            "Callee expression is not callable",
                            calleeBox.handle())))
         {
-            return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+            return Frame::ResolveChild(cx, parent, EvalResult::Error());
         }
-        return Frame::ResolveChild(cx, parent, frame,
-                                   EvalResult::Exc(frame, exc));
+        return Frame::ResolveChild(cx, parent, EvalResult::Exc(frame, exc));
     }
 
     Local<CallExprSyntaxFrame*> nextFrame(cx);
@@ -813,10 +795,9 @@ CallExprSyntaxFrame::ResolveArgChild(
                            "Callee arg expression yielded void",
                            subNode.handle())))
         {
-            return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+            return Frame::ResolveChild(cx, parent, EvalResult::Error());
         }
-        return Frame::ResolveChild(cx, parent, frame,
-                                   EvalResult::Exc(frame, exc));
+        return Frame::ResolveChild(cx, parent, EvalResult::Exc(frame, exc));
     }
 
     // Prepend the value to the operands list.
@@ -861,7 +842,7 @@ CallExprSyntaxFrame::ResolveInvokeChild(
     WH_ASSERT(result->isVoid() || result->isValue());
 
     Local<Frame*> parent(cx, frame->parent());
-    return Frame::ResolveChild(cx, parent, frame, result);
+    return Frame::ResolveChild(cx, parent, result);
 }
 
 /* static */ StepResult
@@ -997,11 +978,10 @@ InvokeApplicativeFrame::Create(
 /* static */ StepResult
 InvokeApplicativeFrame::ResolveChildImpl(ThreadContext* cx,
                                          Handle<InvokeApplicativeFrame*> frame,
-                                         Handle<Frame*> childFrame,
                                          Handle<EvalResult> result)
 {
     Local<Frame*> parent(cx, frame->parent());
-    return Frame::ResolveChild(cx, parent, frame, result);
+    return Frame::ResolveChild(cx, parent, result);
 }
 
 /* static */ StepResult
@@ -1034,20 +1014,16 @@ InvokeApplicativeFrame::StepImpl(ThreadContext* cx,
     Local<Frame*> parent(cx, frame->parent());
 
     if (result->isError())
-        return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+        return Frame::ResolveChild(cx, parent, EvalResult::Error());
 
-    if (result->isExc()) {
-        return Frame::ResolveChild(cx, parent, frame,
-                                   result->excAsEvalResult());
-    }
+    if (result->isExc())
+        return Frame::ResolveChild(cx, parent, result->excAsEvalResult());
 
-    if (result->isValue()) {
-        return Frame::ResolveChild(cx, parent, frame,
-                                   result->valueAsEvalResult());
-    }
+    if (result->isValue())
+        return Frame::ResolveChild(cx, parent, result->valueAsEvalResult());
 
     if (result->isVoid())
-        return Frame::ResolveChild(cx, parent, frame, EvalResult::Void());
+        return Frame::ResolveChild(cx, parent, EvalResult::Void());
 
     if (result->isContinue())
         return StepResult::Continue(result->continueFrame());
@@ -1071,11 +1047,10 @@ InvokeOperativeFrame::Create(AllocationContext acx,
 /* static */ StepResult
 InvokeOperativeFrame::ResolveChildImpl(ThreadContext* cx,
                                    Handle<InvokeOperativeFrame*> frame,
-                                   Handle<Frame*> childFrame,
                                    Handle<EvalResult> result)
 {
     Local<Frame*> parent(cx, frame->parent());
-    return Frame::ResolveChild(cx, parent, frame, result);
+    return Frame::ResolveChild(cx, parent, result);
 }
 
 /* static */ StepResult
@@ -1110,20 +1085,16 @@ InvokeOperativeFrame::StepImpl(ThreadContext* cx,
     Local<Frame*> parent(cx, frame->parent());
 
     if (result->isError())
-        return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+        return Frame::ResolveChild(cx, parent, EvalResult::Error());
 
-    if (result->isExc()) {
-        return Frame::ResolveChild(cx, parent, frame,
-                                   result->excAsEvalResult());
-    }
+    if (result->isExc())
+        return Frame::ResolveChild(cx, parent, result->excAsEvalResult());
 
-    if (result->isValue()) {
-        return Frame::ResolveChild(cx, parent, frame,
-                                   result->valueAsEvalResult());
-    }
+    if (result->isValue())
+        return Frame::ResolveChild(cx, parent, result->valueAsEvalResult());
 
     if (result->isVoid())
-        return Frame::ResolveChild(cx, parent, frame, EvalResult::Void());
+        return Frame::ResolveChild(cx, parent, EvalResult::Void());
 
     if (result->isContinue())
         return StepResult::Continue(result->continueFrame());
@@ -1150,7 +1121,6 @@ NativeCallResumeFrame::Create(AllocationContext acx,
 /* static */ StepResult
 NativeCallResumeFrame::ResolveChildImpl(ThreadContext* cx,
                                         Handle<NativeCallResumeFrame*> frame,
-                                        Handle<Frame*> childFrame,
                                         Handle<EvalResult> result)
 {
     Local<Frame*> parent(cx, frame->parent());
@@ -1170,20 +1140,20 @@ NativeCallResumeFrame::ResolveChildImpl(ThreadContext* cx,
         resumeFunc(cx, callInfo, resumeState, result));
 
     if (resumeResult->isError())
-        return Frame::ResolveChild(cx, parent, frame, EvalResult::Error());
+        return Frame::ResolveChild(cx, parent, EvalResult::Error());
 
     if (resumeResult->isExc()) {
-        return Frame::ResolveChild(cx, parent, frame,
+        return Frame::ResolveChild(cx, parent,
                                    resumeResult->excAsEvalResult());
     }
 
     if (resumeResult->isValue()) {
-        return Frame::ResolveChild(cx, parent, frame,
+        return Frame::ResolveChild(cx, parent,
                                    resumeResult->valueAsEvalResult());
     }
 
     if (resumeResult->isVoid())
-        return Frame::ResolveChild(cx, parent, frame, EvalResult::Void());
+        return Frame::ResolveChild(cx, parent, EvalResult::Void());
 
     if (resumeResult->isContinue())
         return StepResult::Continue(resumeResult->continueFrame());
