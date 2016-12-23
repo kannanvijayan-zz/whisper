@@ -28,6 +28,7 @@
 #include "vm/function.hpp"
 #include "vm/frame.hpp"
 #include "vm/self_traced.hpp"
+#include "vm/continuation.hpp"
 #include "interp/heap_interpreter.hpp"
 
 namespace Whisper {

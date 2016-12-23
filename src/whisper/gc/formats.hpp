@@ -82,7 +82,8 @@
     _(CallExprSyntaxFrame)      \
     _(InvokeApplicativeFrame)   \
     _(InvokeOperativeFrame)     \
-    _(NativeCallResumeFrame)
+    _(NativeCallResumeFrame)    \
+    _(Continuation)
 
 
 #endif // WHISPER__GC__FORMATS_HPP

@@ -37,6 +37,7 @@ shared_cpp = \
     vm/lookup_state.cpp \
     vm/function.cpp \
     vm/frame.cpp \
+    vm/continuation.cpp \
     interp/syntax_behaviour.cpp \
     interp/object_behaviour.cpp \
     interp/native_call_utils.cpp \
