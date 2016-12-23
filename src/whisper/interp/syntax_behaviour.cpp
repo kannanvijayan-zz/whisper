@@ -183,9 +183,9 @@ IMPL_SYNTAX_FN_(Block)
     SpewInterpNote("Syntax_Block: Interpreting %u statements",
                    unsigned(astBlock->numStatements()));
 
-    // An empty block resolves immediately with a void result.
+    // An empty block resolves immediately with an undefined value result.
     if (astBlock->numStatements() == 0) {
-        return VM::CallResult::Void();
+        return VM::CallResult::UndefinedValue();
     }
 
     Local<VM::Frame*> frame(cx, callInfo->frame());
@@ -228,7 +228,7 @@ IMPL_SYNTAX_FN_(EmptyStmt)
 
     SpewInterpNote("Syntax_EmptyStmt: Interpreting");
 
-    return VM::CallResult::Void();
+    return VM::CallResult::UndefinedValue();
 }
 
 IMPL_SYNTAX_FN_(ExprStmt)
@@ -353,8 +353,8 @@ IMPL_SYNTAX_FN_(DefStmt)
         return ErrorVal();
     }
 
-    // Def statements always yield void.
-    return VM::CallResult::Void();
+    // Def statements yield undefined.
+    return VM::CallResult::UndefinedValue();
 }
 
 IMPL_SYNTAX_FN_(ConstStmt)

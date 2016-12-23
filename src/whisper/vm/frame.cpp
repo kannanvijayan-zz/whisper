@@ -259,7 +259,7 @@ FileSyntaxFrame::StepImpl(ThreadContext* cx,
     Local<Frame*> rootedParent(cx, frame->parent());
 
     if (frame->statementNo() == fileNode->astFile().numStatements())
-        return Frame::Resolve(cx, rootedParent, EvalResult::Void());
+        return Frame::Resolve(cx, rootedParent, EvalResult::UndefinedValue());
 
     // Get SyntaxTreeFragment for next statement node.
     Local<SyntaxTreeFragment*> stmtNode(cx);

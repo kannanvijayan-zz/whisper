@@ -61,6 +61,9 @@ class EvalResult
     static EvalResult Value(ValBox const& value) {
         return EvalResult(Outcome::Value, value);
     }
+    static EvalResult UndefinedValue() {
+        return Value(ValBox::Undefined());
+    }
     static EvalResult Void() {
         return EvalResult(Outcome::Void);
     }
@@ -167,6 +170,9 @@ class CallResult
     }
     static CallResult Value(ValBox const& value) {
         return CallResult(Outcome::Value, value);
+    }
+    static CallResult UndefinedValue() {
+        return Value(ValBox::Undefined());
     }
     static CallResult Void() {
         return CallResult(Outcome::Void);
