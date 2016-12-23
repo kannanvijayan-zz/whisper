@@ -16,7 +16,7 @@ StepResult
 Continuation::continueWith(ThreadContext* cx, Handle<ValBox> value) const
 {
     Local<Frame*> frame(cx, frame_);
-    return Frame::ResolveChild(cx, frame, EvalResult::Value(value.get()));
+    return Frame::Resolve(cx, frame, EvalResult::Value(value.get()));
 }
 
 
