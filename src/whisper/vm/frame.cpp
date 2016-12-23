@@ -272,9 +272,9 @@ FileSyntaxFrame::StepImpl(ThreadContext* cx,
 
     // Create a new InvokeSyntaxNode frame for interpreting each statement.
     Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
-    Local<VM::EntryFrame*> entryFrame(cx, frame->entryFrame());
-    Local<VM::InvokeSyntaxNodeFrame*> syntaxFrame(cx);
-    if (!syntaxFrame.setResult(VM::InvokeSyntaxNodeFrame::Create(
+    Local<EntryFrame*> entryFrame(cx, frame->entryFrame());
+    Local<InvokeSyntaxNodeFrame*> syntaxFrame(cx);
+    if (!syntaxFrame.setResult(InvokeSyntaxNodeFrame::Create(
             cx->inHatchery(), frame, entryFrame, stmtNode)))
     {
         return ErrorVal();
@@ -370,9 +370,9 @@ BlockSyntaxFrame::StepImpl(ThreadContext* cx,
 
     // Create a new InvokeSyntaxNode frame for interpreting each statement.
     Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
-    Local<VM::EntryFrame*> entryFrame(cx, frame->entryFrame());
-    Local<VM::InvokeSyntaxNodeFrame*> syntaxFrame(cx);
-    if (!syntaxFrame.setResult(VM::InvokeSyntaxNodeFrame::Create(
+    Local<EntryFrame*> entryFrame(cx, frame->entryFrame());
+    Local<InvokeSyntaxNodeFrame*> syntaxFrame(cx);
+    if (!syntaxFrame.setResult(InvokeSyntaxNodeFrame::Create(
             cx->inHatchery(), frame, entryFrame, stmtNode)))
     {
         return ErrorVal();
@@ -557,10 +557,10 @@ VarSyntaxFrame::ResolveImpl(ThreadContext* cx,
     // Bind the resulting value to the scope.
     uint32_t nameCid = isConst ? nodeRef->astConstStmt().varnameCid(bindingNo)
                                : nodeRef->astVarStmt().varnameCid(bindingNo);
-    Local<VM::String*> name(cx, nodeRef->pst()->getConstantString(nameCid));
-    Local<VM::ScopeObject*> scope(cx, frame->entryFrame()->scope());
-    Local<VM::PropertyDescriptor> propDesc(cx,
-            VM::PropertyDescriptor::MakeSlot(value.get(),
+    Local<String*> name(cx, nodeRef->pst()->getConstantString(nameCid));
+    Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
+    Local<PropertyDescriptor> propDesc(cx,
+            PropertyDescriptor::MakeSlot(value.get(),
                 PropertySlotInfo().withWritable(!isConst)));
     if (!Wobject::DefineProperty(cx->inHatchery(), scope.handle(),
                                  name, propDesc))
@@ -582,10 +582,9 @@ VarSyntaxFrame::ResolveImpl(ThreadContext* cx,
 
             // Otherwise, bind undefined to it.
             uint32_t nameCid = varStmt->varnameCid(bindingNo);
-            Local<VM::String*> name(cx,
-                nodeRef->pst()->getConstantString(nameCid));
-            Local<VM::PropertyDescriptor> propDesc(cx,
-                    VM::PropertyDescriptor::MakeSlot(ValBox::Undefined(),
+            Local<String*> name(cx, nodeRef->pst()->getConstantString(nameCid));
+            Local<PropertyDescriptor> propDesc(cx,
+                    PropertyDescriptor::MakeSlot(ValBox::Undefined(),
                         PropertySlotInfo().withWritable(true)));
             if (!Wobject::DefineProperty(cx->inHatchery(), scope.handle(),
                                          name, propDesc))
@@ -630,7 +629,7 @@ VarSyntaxFrame::StepImpl(ThreadContext* cx,
     // For var-expressions only, automatically bind undefined
     // to any uninitialized properties.
     if (!isConst) {
-        Local<VM::ScopeObject*> scope(cx, frame->entryFrame()->scope());
+        Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
         Local<AST::PackedVarStmtNode> varStmt(cx, nodeRef->astVarStmt());
         for ( ; bindingNo < numBindings; bindingNo++) {
             // If there's an expression to evaluate, break out.
@@ -639,10 +638,10 @@ VarSyntaxFrame::StepImpl(ThreadContext* cx,
 
             // Otherwise, bind undefined to it.
             uint32_t nameCid = varStmt->varnameCid(bindingNo);
-            Local<VM::String*> name(cx,
+            Local<String*> name(cx,
                 nodeRef->pst()->getConstantString(nameCid));
-            Local<VM::PropertyDescriptor> propDesc(cx,
-                    VM::PropertyDescriptor::MakeSlot(ValBox::Undefined(),
+            Local<PropertyDescriptor> propDesc(cx,
+                    PropertyDescriptor::MakeSlot(ValBox::Undefined(),
                         PropertySlotInfo().withWritable(true)));
             if (!Wobject::DefineProperty(cx->inHatchery(), scope.handle(),
                                          name, propDesc))
@@ -777,7 +776,7 @@ CallExprSyntaxFrame::ResolveImpl(ThreadContext* cx,
     Local<PackedSyntaxTree*> pst(cx, frame->stFrag()->pst());
     Local<AST::PackedCallExprNode> callExprNode(cx, callNodeRef->astCallExpr());
 
-    Local<VM::Frame*> parent(cx, frame->parent());
+    Local<Frame*> parent(cx, frame->parent());
 
     // Always forward errors or exceptions.
     if (result->isError() || result->isExc())
@@ -808,7 +807,7 @@ CallExprSyntaxFrame::ResolveCallee(ThreadContext* cx,
     WH_ASSERT(frame->state_ == State::Callee);
     WH_ASSERT(result->isVoid() || result->isValue());
 
-    Local<VM::Frame*> parent(cx, frame->parent());
+    Local<Frame*> parent(cx, frame->parent());
 
     uint32_t offset = callExprNode->callee().offset();
 
@@ -899,7 +898,7 @@ CallExprSyntaxFrame::ResolveArg(ThreadContext* cx,
     WH_ASSERT(frame->argNo() < callExprNode->numArgs());
     WH_ASSERT(result->isVoid() || result->isValue());
 
-    Local<VM::Frame*> parent(cx, frame->parent());
+    Local<Frame*> parent(cx, frame->parent());
 
     uint32_t offset = callExprNode->arg(frame->argNo()).offset();
 
@@ -1077,8 +1076,8 @@ CallExprSyntaxFrame::StepSubexpr(ThreadContext* cx,
 
     // Create and return entry frame.
     Local<EntryFrame*> entryFrame(cx, frame->entryFrame());
-    Local<VM::InvokeSyntaxNodeFrame*> syntaxFrame(cx);
-    if (!syntaxFrame.setResult(VM::InvokeSyntaxNodeFrame::Create(
+    Local<InvokeSyntaxNodeFrame*> syntaxFrame(cx);
+    if (!syntaxFrame.setResult(InvokeSyntaxNodeFrame::Create(
             cx->inHatchery(), frame, entryFrame, node.handle())))
     {
         return ErrorVal();
@@ -1286,8 +1285,8 @@ NativeCallResumeFrame::ResolveImpl(ThreadContext* cx,
 NativeCallResumeFrame::StepImpl(ThreadContext* cx,
                                 Handle<NativeCallResumeFrame*> frame)
 {
-    Local<VM::SyntaxTreeFragment*> stFrag(cx, frame->syntaxFragment());
-    Local<VM::ScopeObject*> evalScope(cx, frame->evalScope());
+    Local<SyntaxTreeFragment*> stFrag(cx, frame->syntaxFragment());
+    Local<ScopeObject*> evalScope(cx, frame->evalScope());
 
     // Create an EntryFrame for the evaluation of the syntax tree fragment.
     Local<EntryFrame*> entryFrame(cx);
