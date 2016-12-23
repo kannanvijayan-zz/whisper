@@ -83,6 +83,7 @@
     _(CallExprSyntaxFrame)      \
     _(InvokeApplicativeFrame)   \
     _(InvokeOperativeFrame)     \
+    _(DotExprSyntaxFrame)       \
     _(NativeCallResumeFrame)    \
     _(Continuation)             \
     _(ContObject)

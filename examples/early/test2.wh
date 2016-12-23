@@ -1,6 +1,6 @@
 
 def foo(a, b, c, d) {
-    print(a);
+    print(a.foo);
     print(b);
     print(c);
     return b;

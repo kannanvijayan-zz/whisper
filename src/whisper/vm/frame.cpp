@@ -1152,6 +1152,109 @@ InvokeOperativeFrame::StepImpl(ThreadContext* cx,
                         "Unknown CallResult outcome.");
 }
 
+/* static */ Result<DotExprSyntaxFrame*>
+DotExprSyntaxFrame::Create(AllocationContext acx,
+                           Handle<Frame*> parent,
+                           Handle<EntryFrame*> entryFrame,
+                           Handle<SyntaxTreeFragment*> stFrag)
+{
+    return acx.create<DotExprSyntaxFrame>(parent, entryFrame, stFrag);
+}
+
+/* static */ StepResult
+DotExprSyntaxFrame::ResolveImpl(ThreadContext* cx,
+                                Handle<DotExprSyntaxFrame*> frame,
+                                Handle<EvalResult> result)
+{
+    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
+    WH_ASSERT(stFrag->isNode());
+
+    Local<SyntaxNodeRef> nodeRef(cx, SyntaxNodeRef(stFrag->toNode()));
+
+    Local<Frame*> rootedParent(cx, frame->parent());
+
+    // If result is an error, resolve to parent.
+    if (result->isError() || result->isExc())
+        return Frame::Resolve(cx, rootedParent, result);
+
+    WH_ASSERT(result->isValue());
+    Local<ValBox> targetValue(cx, result->value());
+
+    // Look up "@Dot" on the value.
+    Local<String*> atDotStr(cx, cx->runtimeState()->nm_AtDot());
+    Local<PropertyLookupResult> lookupResult(cx,
+        Interp::GetValueProperty(cx, targetValue, atDotStr));
+
+    if (lookupResult->isError())
+        return ErrorVal();
+
+    if (lookupResult->isNotFound()) {
+        Local<Exception*> exc(cx);
+        if (!exc.setResult(InternalException::Create(cx->inHatchery(),
+                           "@Dot method not defined on target of DotExpr",
+                            targetValue)))
+        {
+            return ErrorVal();
+        }
+        return Frame::Resolve(cx, rootedParent,
+                              EvalResult::Exc(frame.get(), exc));
+    }
+
+    WH_ASSERT(lookupResult->isFound());
+    Local<EvalResult> evalResult(cx, lookupResult->toEvalResult(cx, frame));
+    if (evalResult->isError() || evalResult->isExc())
+        return Frame::Resolve(cx, rootedParent, evalResult.handle());
+
+    WH_ASSERT(evalResult->isValue());
+    Local<ValBox> evalValue(cx, evalResult->value());
+
+    Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
+    LocalArray<SyntaxTreeFragment*> args(cx, 1);
+    args.set(0, stFrag);
+    Local<CallResult> invokeResult(cx, Interp::InvokeOperativeValue(
+            cx, frame, scope, evalValue, args));
+
+    if (invokeResult->isError())
+        return ErrorVal();
+
+    if (invokeResult->isExc() || invokeResult->isValue())
+        return Frame::Resolve(cx, rootedParent, invokeResult->asEvalResult());
+
+    WH_ASSERT(invokeResult->isContinue());
+    return StepResult::Continue(invokeResult->continueFrame());
+}
+
+/* static */ StepResult
+DotExprSyntaxFrame::StepImpl(ThreadContext* cx,
+                             Handle<DotExprSyntaxFrame*> frame)
+{
+    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
+    WH_ASSERT(frame->stFrag()->isNode());
+
+    Local<AST::PackedDotExprNode> dotExpr(cx, stFrag->toNode()->astDotExpr());
+
+    // Create the SyntaxNode for the expression to evaluate.
+    Local<AST::PackedBaseNode> targetExpr(cx, dotExpr->target());
+    Local<PackedSyntaxTree*> pst(cx, stFrag->pst());
+    Local<SyntaxTreeFragment*> targetStFrag(cx);
+    if (!targetStFrag.setResult(SyntaxNode::Create(
+            cx->inHatchery(), pst, targetExpr->offset())))
+    {
+        return ErrorVal();
+    }
+
+    // Create new InvokeSyntaxNodeFrame to evaluate it.
+    Local<EntryFrame*> entryFrame(cx, frame->entryFrame());
+    Local<InvokeSyntaxNodeFrame*> syntaxFrame(cx);
+    if (!syntaxFrame.setResult(InvokeSyntaxNodeFrame::Create(
+            cx->inHatchery(), frame, entryFrame, targetStFrag)))
+    {
+        return ErrorVal();
+    }
+
+    return StepResult::Continue(syntaxFrame);
+}
+
 /* static */ Result<NativeCallResumeFrame*>
 NativeCallResumeFrame::Create(AllocationContext acx,
                               Handle<Frame*> parent,

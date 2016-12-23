@@ -24,6 +24,7 @@ namespace VM {
     _(CallExprSyntaxFrame)          \
     _(InvokeApplicativeFrame)       \
     _(InvokeOperativeFrame)         \
+    _(DotExprSyntaxFrame)           \
     _(NativeCallResumeFrame)
 
 
@@ -585,6 +586,29 @@ class InvokeOperativeFrame : public Frame
                                Handle<InvokeOperativeFrame*> frame);
 };
 
+class DotExprSyntaxFrame : public SyntaxFrame
+{
+    friend class TraceTraits<DotExprSyntaxFrame>;
+  public:
+    DotExprSyntaxFrame(Frame* parent,
+                       EntryFrame* entryFrame,
+                       SyntaxTreeFragment* stFrag)
+      : SyntaxFrame(parent, entryFrame, stFrag)
+    {}
+
+    static Result<DotExprSyntaxFrame*> Create(
+            AllocationContext acx,
+            Handle<Frame*> parent,
+            Handle<EntryFrame*> entryFrame,
+            Handle<SyntaxTreeFragment*> stFrag);
+
+    static StepResult ResolveImpl(ThreadContext* cx,
+                                  Handle<DotExprSyntaxFrame*> frame,
+                                  Handle<EvalResult> result);
+    static StepResult StepImpl(ThreadContext* cx,
+                               Handle<DotExprSyntaxFrame*> frame);
+};
+
 typedef VM::CallResult (*NativeCallResumeFuncPtr)(
         ThreadContext* cx,
         Handle<NativeCallInfo> callInfo,
@@ -920,6 +944,29 @@ struct TraceTraits<VM::CallExprSyntaxFrame>
         TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
         obj.callee_.update(updater, start, end);
         obj.operands_.update(updater, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::DotExprSyntaxFrame>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::DotExprSyntaxFrame const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Scan<Scanner>(scanner, obj, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::DotExprSyntaxFrame& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
     }
 };
 

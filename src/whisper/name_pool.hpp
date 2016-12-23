@@ -27,7 +27,8 @@
     _(AtParenExpr,      "@ParenExpr"    ) \
     _(AtNameExpr,       "@NameExpr"     ) \
     _(AtIntegerExpr,    "@IntegerExpr"  ) \
-    _(AtRetcont,        "@retcont"      )
+    _(AtRetcont,        "@retcont"      ) \
+    _(AtDot,            "@Dot"          ) \
 
 namespace Whisper {
 namespace NamePool {

@@ -37,8 +37,8 @@ DECLARE_SYNTAX_FN_(VarStmt)
 
 DECLARE_SYNTAX_FN_(CallExpr)
 
-/*
 DECLARE_SYNTAX_FN_(DotExpr)
+/*
 DECLARE_SYNTAX_FN_(ArrowExpr)
 DECLARE_SYNTAX_FN_(PosExpr)
 DECLARE_SYNTAX_FN_(NegExpr)
@@ -104,8 +104,8 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 
     BIND_GLOBAL_METHOD_(CallExpr);
 
-/*
     BIND_GLOBAL_METHOD_(DotExpr);
+/*
     BIND_GLOBAL_METHOD_(ArrowExpr);
     BIND_GLOBAL_METHOD_(PosExpr);
     BIND_GLOBAL_METHOD_(NegExpr);
@@ -438,7 +438,7 @@ IMPL_SYNTAX_FN_(CallExpr)
     if (args.length() != 1) {
         Local<VM::Exception*> exc(cx);
         if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
-                       "@CallStmt called with wrong number of arguments.")))
+                       "@CallExpr called with wrong number of arguments.")))
         {
             return ErrorVal();
         }
@@ -464,6 +464,39 @@ IMPL_SYNTAX_FN_(CallExpr)
     }
 
     return VM::CallResult::Continue(callExprSyntaxFrame.get());
+}
+
+IMPL_SYNTAX_FN_(DotExpr)
+{
+    if (args.length() != 1) {
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                       "@DotExpr called with wrong number of arguments.")))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(callInfo->frame(), exc);
+    }
+
+    WH_ASSERT(args.get(0)->isNode());
+    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::DotExpr);
+
+    Local<VM::SyntaxNode*> stNode(cx, args.get(0)->toNode());
+
+    SpewInterpNote("Syntax_DotExpr: Interpreting");
+
+    // Set up a DotExprSyntaxFrame
+    Local<VM::EntryFrame*> entryFrame(cx,
+        callInfo->frame()->ancestorEntryFrame());
+
+    Local<VM::DotExprSyntaxFrame*> dotExprSyntaxFrame(cx);
+    if (!dotExprSyntaxFrame.setResult(VM::DotExprSyntaxFrame::Create(
+            cx->inHatchery(), callInfo->frame(), entryFrame, stNode.handle())))
+    {
+        return ErrorVal();
+    }
+
+    return VM::CallResult::Continue(dotExprSyntaxFrame.get());
 }
 
 IMPL_SYNTAX_FN_(NameExpr)
