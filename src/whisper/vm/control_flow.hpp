@@ -19,8 +19,7 @@ class EvalResult
     enum class Outcome {
         Error,
         Exc,
-        Value,
-        Void
+        Value
     };
 
   private:
@@ -64,9 +63,6 @@ class EvalResult
     static EvalResult UndefinedValue() {
         return Value(ValBox::Undefined());
     }
-    static EvalResult Void() {
-        return EvalResult(Outcome::Void);
-    }
 
     Outcome outcome() const {
         return outcome_;
@@ -79,7 +75,6 @@ class EvalResult
           case Outcome::Error:       return "Error";
           case Outcome::Exc:         return "Exc";
           case Outcome::Value:       return "Value";
-          case Outcome::Void:        return "Void";
           default:
             WH_UNREACHABLE("Unknown outcome");
             return "UNKNOWN";
@@ -94,9 +89,6 @@ class EvalResult
     }
     bool isValue() const {
         return outcome() == Outcome::Value;
-    }
-    bool isVoid() const {
-        return outcome() == Outcome::Void;
     }
 
     Handle<ValBox> value() const {
@@ -122,7 +114,6 @@ class CallResult
         Error,
         Exc,
         Value,
-        Void,
         Continue
     };
 
@@ -174,9 +165,6 @@ class CallResult
     static CallResult UndefinedValue() {
         return Value(ValBox::Undefined());
     }
-    static CallResult Void() {
-        return CallResult(Outcome::Void);
-    }
     static CallResult Continue(Frame* frame) {
         return CallResult(Outcome::Continue, frame);
     }
@@ -190,9 +178,6 @@ class CallResult
 
         if (evalResult.isValue())
             return Value(evalResult.value());
-
-        if (evalResult.isVoid())
-            return Void();
 
         WH_UNREACHABLE("Unknown evalResult kind.");
         return Error();
@@ -209,7 +194,6 @@ class CallResult
           case Outcome::Error:       return "Error";
           case Outcome::Exc:         return "Exc";
           case Outcome::Value:       return "Value";
-          case Outcome::Void:        return "Void";
           case Outcome::Continue:    return "Continue";
           default:
             WH_UNREACHABLE("Unknown outcome");
@@ -225,9 +209,6 @@ class CallResult
     }
     bool isValue() const {
         return outcome() == Outcome::Value;
-    }
-    bool isVoid() const {
-        return outcome() == Outcome::Void;
     }
     bool isContinue() const {
         return outcome() == Outcome::Continue;
@@ -262,13 +243,9 @@ class CallResult
         WH_ASSERT(isExc());
         return EvalResult::Exc(throwingFrame(), exception());
     }
-    EvalResult voidAsEvalResult() const {
-        WH_ASSERT(isVoid());
-        return EvalResult::Void();
-    }
 
     EvalResult asEvalResult() const {
-        WH_ASSERT(isError() || isExc() || isValue() || isVoid());
+        WH_ASSERT(isError() || isExc() || isValue());
 
         if (isError()) {
             return errorAsEvalResult();
@@ -279,15 +256,12 @@ class CallResult
         } else if (isValue()) {
             return valueAsEvalResult();
 
-        } else if (isVoid()) {
-            return voidAsEvalResult();
-
         } else if (isContinue()) {
             WH_UNREACHABLE("Invalid EvalResult outcome: Continue");
 
         }
         WH_UNREACHABLE("Invalid EvalResult outcome");
-        return EvalResult::Void();
+        return EvalResult::UndefinedValue();
     }
 };
 

@@ -104,7 +104,7 @@ class TerminalFrame : public Frame
   public:
     TerminalFrame()
       : Frame(nullptr),
-        result_(EvalResult::Void())
+        result_(EvalResult::UndefinedValue())
     {}
 
     static Result<TerminalFrame*> Create(AllocationContext acx);

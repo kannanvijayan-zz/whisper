@@ -180,9 +180,6 @@ InvokeSyntaxNodeFrame::StepImpl(ThreadContext* cx,
     if (result->isValue())
         return Frame::Resolve(cx, parent, result->valueAsEvalResult());
 
-    if (result->isVoid())
-        return Frame::Resolve(cx, parent, EvalResult::Void());
-
     if (result->isContinue())
         return StepResult::Continue(result->continueFrame());
 
@@ -401,17 +398,6 @@ ReturnStmtSyntaxFrame::ResolveImpl(ThreadContext* cx,
     if (result->isError() || result->isExc())
         return Frame::Resolve(cx, rootedParent, result);
 
-    if (result->isVoid()) {
-        Local<Exception*> exc(cx);
-        if (!exc.setResult(InternalException::Create(cx->inHatchery(),
-                           "return expression yielded void.")))
-        {
-            return ErrorVal();
-        }
-        return Frame::Resolve(cx, rootedParent,
-                              EvalResult::Exc(frame.get(), exc));
-    }
-
     WH_ASSERT(result->isValue());
     Local<ValBox> returnValue(cx, result->value());
 
@@ -545,11 +531,6 @@ VarSyntaxFrame::ResolveImpl(ThreadContext* cx,
     // If result is an error, resolve to parent.
     if (result->isError() || result->isExc())
         return Frame::Resolve(cx, rootedParent, result);
-
-    if (result->isVoid()) {
-        WH_UNREACHABLE("Got void eval result for expression.");
-        return ErrorVal();
-    }
 
     WH_ASSERT(result->isValue());
     Local<ValBox> value(cx, result->value());
@@ -805,36 +786,10 @@ CallExprSyntaxFrame::ResolveCallee(ThreadContext* cx,
                                    Handle<EvalResult> result)
 {
     WH_ASSERT(frame->state_ == State::Callee);
-    WH_ASSERT(result->isVoid() || result->isValue());
+    WH_ASSERT(result->isValue());
 
     Local<Frame*> parent(cx, frame->parent());
 
-    uint32_t offset = callExprNode->callee().offset();
-
-    // A void result is forwarded as an exception.
-    // Involving the syntax tree in question.
-    if (result->isVoid()) {
-        Local<SyntaxNodeRef> subNodeRef(cx,
-            SyntaxNodeRef(pst, offset));
-        Local<SyntaxNode*> subNode(cx);
-        if (!subNode.setResult(subNodeRef->createSyntaxNode(
-                                    cx->inHatchery())))
-        {
-            return ErrorVal();
-        }
-
-        Local<Exception*> exc(cx);
-        if (!exc.setResult(InternalException::Create(cx->inHatchery(),
-                           "Callee expression yielded void",
-                           subNode.handle())))
-        {
-            return Frame::Resolve(cx, parent, EvalResult::Error());
-        }
-
-        return Frame::Resolve(cx, parent, EvalResult::Exc(frame, exc));
-    }
-
-    WH_ASSERT(result->isValue());
     Local<ValBox> calleeBox(cx, result->value());
     Local<FunctionObject*> calleeObj(cx);
     if (!calleeObj.setMaybe(Interp::FunctionObjectForValue(cx, calleeBox))) {
@@ -896,33 +851,9 @@ CallExprSyntaxFrame::ResolveArg(ThreadContext* cx,
 {
     WH_ASSERT(frame->state_ == State::Arg);
     WH_ASSERT(frame->argNo() < callExprNode->numArgs());
-    WH_ASSERT(result->isVoid() || result->isValue());
+    WH_ASSERT(result->isValue());
 
     Local<Frame*> parent(cx, frame->parent());
-
-    uint32_t offset = callExprNode->arg(frame->argNo()).offset();
-
-    // A void result is forwarded as an exception.
-    // Involving the syntax tree in question.
-    if (result->isVoid()) {
-        Local<SyntaxNodeRef> subNodeRef(cx,
-            SyntaxNodeRef(pst, offset));
-        Local<SyntaxNode*> subNode(cx);
-        if (!subNode.setResult(subNodeRef->createSyntaxNode(
-                                    cx->inHatchery())))
-        {
-            return ErrorVal();
-        }
-
-        Local<Exception*> exc(cx);
-        if (!exc.setResult(InternalException::Create(cx->inHatchery(),
-                           "Callee arg expression yielded void",
-                           subNode.handle())))
-        {
-            return Frame::Resolve(cx, parent, EvalResult::Error());
-        }
-        return Frame::Resolve(cx, parent, EvalResult::Exc(frame, exc));
-    }
 
     // Prepend the value to the operands list.
     Local<Slist<ValBox>*> oldOperands(cx, frame->operands());
@@ -962,7 +893,7 @@ CallExprSyntaxFrame::ResolveInvoke(ThreadContext* cx,
                                    Handle<EvalResult> result)
 {
     WH_ASSERT(frame->inInvokeState());
-    WH_ASSERT(result->isVoid() || result->isValue());
+    WH_ASSERT(result->isValue());
 
     Local<Frame*> parent(cx, frame->parent());
     return Frame::Resolve(cx, parent, result);
@@ -1145,9 +1076,6 @@ InvokeApplicativeFrame::StepImpl(ThreadContext* cx,
     if (result->isValue())
         return Frame::Resolve(cx, parent, result->valueAsEvalResult());
 
-    if (result->isVoid())
-        return Frame::Resolve(cx, parent, EvalResult::Void());
-
     if (result->isContinue())
         return StepResult::Continue(result->continueFrame());
 
@@ -1216,9 +1144,6 @@ InvokeOperativeFrame::StepImpl(ThreadContext* cx,
     if (result->isValue())
         return Frame::Resolve(cx, parent, result->valueAsEvalResult());
 
-    if (result->isVoid())
-        return Frame::Resolve(cx, parent, EvalResult::Void());
-
     if (result->isContinue())
         return StepResult::Continue(result->continueFrame());
 
@@ -1270,9 +1195,6 @@ NativeCallResumeFrame::ResolveImpl(ThreadContext* cx,
 
     if (resumeResult->isValue())
         return Frame::Resolve(cx, parent, resumeResult->valueAsEvalResult());
-
-    if (resumeResult->isVoid())
-        return Frame::Resolve(cx, parent, EvalResult::Void());
 
     if (resumeResult->isContinue())
         return StepResult::Continue(resumeResult->continueFrame());
