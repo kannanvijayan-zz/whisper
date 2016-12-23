@@ -282,12 +282,7 @@ InvokeScriptedApplicativeFunction(ThreadContext* cx,
         Local<VM::String*> paramName(cx, calleeScript->paramName(i));
         Local<VM::PropertyDescriptor> propDesc(cx,
             VM::PropertyDescriptor::MakeSlot(args[i]));
-        if (!VM::Wobject::DefineProperty(
-                cx->inHatchery(),
-                scope.handle(),
-                paramName,
-                propDesc))
-        {
+        if (!DefObjectProperty(cx, scope.handle(), paramName, propDesc)) {
             return ErrorVal();
         }
     }

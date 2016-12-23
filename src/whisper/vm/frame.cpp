@@ -398,6 +398,178 @@ BlockSyntaxFrame::StepImpl(ThreadContext* cx,
 }
 
 
+/* static */ Result<VarSyntaxFrame*>
+VarSyntaxFrame::Create(AllocationContext acx,
+                       Handle<Frame*> parent,
+                       Handle<EntryFrame*> entryFrame,
+                       Handle<SyntaxTreeFragment*> stFrag,
+                       uint32_t bindingNo)
+{
+    return acx.create<VarSyntaxFrame>(parent, entryFrame, stFrag, bindingNo);
+}
+
+/* static */ StepResult
+VarSyntaxFrame::ResolveChildImpl(
+        ThreadContext* cx,
+        Handle<VarSyntaxFrame*> frame,
+        Handle<Frame*> childFrame,
+        Handle<EvalResult> result)
+{
+    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
+    WH_ASSERT(stFrag->isNode());
+
+    Local<SyntaxNodeRef> nodeRef(cx, SyntaxNodeRef(stFrag->toNode()));
+
+    bool isConst = frame->isConst();
+    uint32_t bindingNo = frame->bindingNo();
+    uint32_t numBindings = isConst ? nodeRef->astConstStmt().numBindings()
+                                   : nodeRef->astVarStmt().numBindings();
+    WH_ASSERT(bindingNo < numBindings);
+
+    Local<Frame*> rootedParent(cx, frame->parent());
+
+    // If result is an error, resolve to parent.
+    if (result->isError() || result->isExc())
+        return Frame::ResolveChild(cx, rootedParent, frame, result);
+
+    if (result->isVoid()) {
+        WH_UNREACHABLE("Got void eval result for expression.");
+        return ErrorVal();
+    }
+
+    WH_ASSERT(result->isValue());
+    Local<ValBox> value(cx, result->value());
+
+    // Bind the resulting value to the scope.
+    uint32_t nameCid = isConst ? nodeRef->astConstStmt().varnameCid(bindingNo)
+                               : nodeRef->astVarStmt().varnameCid(bindingNo);
+    Local<VM::String*> name(cx, nodeRef->pst()->getConstantString(nameCid));
+    Local<VM::ScopeObject*> scope(cx, frame->entryFrame()->scope());
+    Local<VM::PropertyDescriptor> propDesc(cx,
+            VM::PropertyDescriptor::MakeSlot(value.get(),
+                PropertySlotInfo().withWritable(!isConst)));
+    if (!Wobject::DefineProperty(cx->inHatchery(), scope.handle(),
+                                 name, propDesc))
+    {
+        return ErrorVal();
+    }
+
+    bindingNo += 1;
+
+    // For var-expressions only, automatically bind undefined
+    // to any uninitialized properties.
+    if (!isConst) {
+        Local<AST::PackedVarStmtNode> varStmt(cx, nodeRef->astVarStmt());
+        value.set(ValBox::Undefined());
+        for ( ; bindingNo < numBindings; bindingNo++) {
+            // If there's an expression to evaluate, break out.
+            if (varStmt->hasVarexpr(bindingNo))
+                break;
+
+            // Otherwise, bind undefined to it.
+            uint32_t nameCid = varStmt->varnameCid(bindingNo);
+            Local<VM::String*> name(cx,
+                nodeRef->pst()->getConstantString(nameCid));
+            Local<VM::PropertyDescriptor> propDesc(cx,
+                    VM::PropertyDescriptor::MakeSlot(ValBox::Undefined(),
+                        PropertySlotInfo().withWritable(true)));
+            if (!Wobject::DefineProperty(cx->inHatchery(), scope.handle(),
+                                         name, propDesc))
+            {
+                return ErrorVal();
+            }
+        }
+    }
+
+    // Check if all done with bindings.
+    if (bindingNo == numBindings) {
+        return Frame::ResolveChild(cx, rootedParent, frame, result);
+    }
+
+    // Otherwise, create var syntax frame for evaluating next binding expr.
+    Local<EntryFrame*> entryFrame(cx, frame->entryFrame());
+    Local<VarSyntaxFrame*> nextVarFrame(cx);
+    if (!nextVarFrame.setResult(VarSyntaxFrame::Create(
+            cx->inHatchery(), rootedParent, entryFrame, stFrag, bindingNo)))
+    {
+        return ErrorVal();
+    }
+    return StepResult::Continue(nextVarFrame);
+}
+
+/* static */ StepResult
+VarSyntaxFrame::StepImpl(ThreadContext* cx,
+                         Handle<VarSyntaxFrame*> frame)
+{
+    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
+    WH_ASSERT(frame->stFrag()->isNode());
+
+    Local<SyntaxNodeRef> nodeRef(cx, SyntaxNodeRef(stFrag->toNode()));
+
+    bool isConst = frame->isConst();
+    uint32_t bindingNo = frame->bindingNo();
+    uint32_t numBindings = isConst ? nodeRef->astConstStmt().numBindings()
+                                   : nodeRef->astVarStmt().numBindings();
+    WH_ASSERT(bindingNo < numBindings);
+
+    Local<Frame*> rootedParent(cx, frame->parent());
+
+    // For var-expressions only, automatically bind undefined
+    // to any uninitialized properties.
+    if (!isConst) {
+        Local<VM::ScopeObject*> scope(cx, frame->entryFrame()->scope());
+        Local<AST::PackedVarStmtNode> varStmt(cx, nodeRef->astVarStmt());
+        for ( ; bindingNo < numBindings; bindingNo++) {
+            // If there's an expression to evaluate, break out.
+            if (varStmt->hasVarexpr(bindingNo))
+                break;
+
+            // Otherwise, bind undefined to it.
+            uint32_t nameCid = varStmt->varnameCid(bindingNo);
+            Local<VM::String*> name(cx,
+                nodeRef->pst()->getConstantString(nameCid));
+            Local<VM::PropertyDescriptor> propDesc(cx,
+                    VM::PropertyDescriptor::MakeSlot(ValBox::Undefined(),
+                        PropertySlotInfo().withWritable(true)));
+            if (!Wobject::DefineProperty(cx->inHatchery(), scope.handle(),
+                                         name, propDesc))
+            {
+                return ErrorVal();
+            }
+        }
+    }
+
+    // Check if all done with bindings.
+    if (bindingNo == numBindings) {
+        return Frame::ResolveChild(cx, rootedParent, frame,
+                        EvalResult::Value(ValBox::Undefined()));
+    }
+
+    // Create the SyntaxNode for the expression to evaluate.
+    Local<AST::PackedBaseNode> bindingAstNode(cx,
+        isConst ? nodeRef->astConstStmt().varexpr(bindingNo)
+                : nodeRef->astVarStmt().varexpr(bindingNo));
+    Local<PackedSyntaxTree*> pst(cx, stFrag->pst());
+    Local<SyntaxTreeFragment*> bindingStFrag(cx);
+    if (!bindingStFrag.setResult(SyntaxNode::Create(
+            cx->inHatchery(), pst, bindingAstNode->offset())))
+    {
+        return ErrorVal();
+    }
+
+    // Create new InvokeSyntaxNodeFrame to evaluate it.
+    Local<EntryFrame*> entryFrame(cx, frame->entryFrame());
+    Local<InvokeSyntaxNodeFrame*> syntaxFrame(cx);
+    if (!syntaxFrame.setResult(InvokeSyntaxNodeFrame::Create(
+            cx->inHatchery(), frame, entryFrame, bindingStFrag)))
+    {
+        return ErrorVal();
+    }
+
+    return StepResult::Continue(syntaxFrame);
+}
+
+
 /* static */ Result<CallExprSyntaxFrame*>
 CallExprSyntaxFrame::CreateCallee(AllocationContext acx,
                                   Handle<Frame*> parent,

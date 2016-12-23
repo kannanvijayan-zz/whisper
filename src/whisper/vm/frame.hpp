@@ -19,6 +19,7 @@ namespace VM {
     _(InvokeSyntaxNodeFrame)        \
     _(FileSyntaxFrame)              \
     _(BlockSyntaxFrame)             \
+    _(VarSyntaxFrame)               \
     _(CallExprSyntaxFrame)          \
     _(InvokeApplicativeFrame)       \
     _(InvokeOperativeFrame)         \
@@ -304,6 +305,49 @@ class BlockSyntaxFrame : public SyntaxFrame
                                        Handle<EvalResult> result);
     static StepResult StepImpl(ThreadContext* cx,
                                Handle<BlockSyntaxFrame*> frame);
+};
+
+class VarSyntaxFrame : public SyntaxFrame
+{
+    friend class TraceTraits<VarSyntaxFrame>;
+  private:
+    uint32_t bindingNo_;
+
+  public:
+    VarSyntaxFrame(Frame* parent,
+                   EntryFrame* entryFrame,
+                   SyntaxTreeFragment* stFrag,
+                   uint32_t bindingNo)
+      : SyntaxFrame(parent, entryFrame, stFrag),
+        bindingNo_(bindingNo)
+    {}
+
+    bool isConst() const {
+        WH_ASSERT(stFrag_->isNode());
+        return stFrag()->toNode()->isConstStmt();
+    }
+    bool isVar() const {
+        WH_ASSERT(stFrag_->isNode());
+        return stFrag()->toNode()->isVarStmt();
+    }
+
+    uint32_t bindingNo() const {
+        return bindingNo_;
+    }
+
+    static Result<VarSyntaxFrame*> Create(
+            AllocationContext acx,
+            Handle<Frame*> parent,
+            Handle<EntryFrame*> entryFrame,
+            Handle<SyntaxTreeFragment*> stFrag,
+            uint32_t bindingNo);
+
+    static StepResult ResolveChildImpl(ThreadContext* cx,
+                                       Handle<VarSyntaxFrame*> frame,
+                                       Handle<Frame*> childFrame,
+                                       Handle<EvalResult> result);
+    static StepResult StepImpl(ThreadContext* cx,
+                               Handle<VarSyntaxFrame*> frame);
 };
 
 class CallExprSyntaxFrame : public SyntaxFrame
@@ -786,6 +830,29 @@ struct TraceTraits<VM::BlockSyntaxFrame>
 
     template <typename Updater>
     static void Update(Updater& updater, VM::BlockSyntaxFrame& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::VarSyntaxFrame>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::VarSyntaxFrame const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Scan<Scanner>(scanner, obj, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::VarSyntaxFrame& obj,
                        void const* start, void const* end)
     {
         TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);

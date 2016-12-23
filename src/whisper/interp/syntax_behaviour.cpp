@@ -36,8 +36,8 @@ DECLARE_SYNTAX_FN_(ReturnStmt)
 DECLARE_SYNTAX_FN_(DefStmt)
 /*
 DECLARE_SYNTAX_FN_(ConstStmt)
-DECLARE_SYNTAX_FN_(VarStmt)
 */
+DECLARE_SYNTAX_FN_(VarStmt)
 
 DECLARE_SYNTAX_FN_(CallExpr)
 
@@ -107,8 +107,8 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(DefStmt);
 /*
     BIND_GLOBAL_METHOD_(ConstStmt);
-    BIND_GLOBAL_METHOD_(VarStmt);
 */
+    BIND_GLOBAL_METHOD_(VarStmt);
 
     BIND_GLOBAL_METHOD_(CallExpr);
 
@@ -327,6 +327,44 @@ IMPL_SYNTAX_FN_(DefStmt)
 
     // Def statements always yield void.
     return VM::CallResult::Void();
+}
+
+IMPL_SYNTAX_FN_(VarStmt)
+{
+    if (args.length() != 1) {
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                       "@VarStmt called with wrong number of arguments.")))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(callInfo->frame(), exc);
+    }
+
+    WH_ASSERT(args.get(0)->isNode());
+    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::VarStmt);
+
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedVarStmtNode> varStmtNode(cx, stRef->astVarStmt());
+
+    WH_ASSERT(varStmtNode->numBindings() > 0);
+
+    SpewInterpNote("Syntax_VarStmt: Interpreting");
+
+    // Create a VarSyntaxFrame for it.
+    Local<VM::Frame*> frame(cx, callInfo->frame());
+    Local<VM::EntryFrame*> entryFrame(cx, frame->ancestorEntryFrame());
+    Local<VM::SyntaxTreeFragment*> stFrag(cx, args.get(0));
+    Local<VM::VarSyntaxFrame*> syntaxFrame(cx);
+    if (!syntaxFrame.setResult(VM::VarSyntaxFrame::Create(
+            cx->inHatchery(), frame, entryFrame, stFrag, 0)))
+    {
+        return ErrorVal();
+    }
+
+    // Def statements always yield void.
+    return VM::CallResult::Continue(syntaxFrame.get());
 }
 
 IMPL_SYNTAX_FN_(CallExpr)
