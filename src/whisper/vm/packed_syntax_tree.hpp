@@ -227,6 +227,9 @@ class SyntaxNodeRef : public SyntaxTreeRef
     }
 
 #define VM_STREF_GET_(ntype) \
+    bool is##ntype() const { \
+        return nodeType() == AST::NodeType::ntype; \
+    } \
     AST::Packed##ntype##Node ast##ntype() { \
         return astBaseNode().as##ntype(); \
     }
@@ -363,8 +366,11 @@ class SyntaxNode : public SyntaxTreeFragment
     char const* nodeTypeCString() const;
 
 #define VM_STREF_GET_(ntype) \
+    bool is##ntype() const { \
+        return nodeType() == AST::NodeType::ntype; \
+    } \
     AST::Packed##ntype##Node ast##ntype() { \
-        WH_ASSERT(nodeType() == AST::NodeType::ntype); \
+        WH_ASSERT(is##ntype()); \
         return SyntaxNodeRef(this).ast##ntype(); \
     }
     WHISPER_DEFN_SYNTAX_NODES(VM_STREF_GET_)
