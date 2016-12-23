@@ -1,9 +1,13 @@
 
-def foo(a, b) {
-    return a;
+def foo(a, b, c, d) {
+    print(a);
+    print(b);
+    print(c);
+    print(d);
+    b;
 }
 
-const zz = 33;
-var x;
-foo(zz, x);
-print(zz, x, foo(zz, x));
+var x = 33, y;
+const w = 88, z = 99;
+foo(x, print(y), w, z);
+print(foo(y, x, w, z));
