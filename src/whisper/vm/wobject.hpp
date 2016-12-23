@@ -48,7 +48,8 @@ struct WobjectHooks
     _(BlockScope) \
     _(ModuleScope) \
     _(GlobalScope) \
-    _(FunctionObject)
+    _(FunctionObject) \
+    _(ContObject)
 
 class Wobject
 {
@@ -90,12 +91,10 @@ class Wobject
 
     static bool IsWobjectFormat(HeapFormat format) {
         switch (format) {
-          case HeapFormat::PlainObject:
-          case HeapFormat::CallScope:
-          case HeapFormat::BlockScope:
-          case HeapFormat::ModuleScope:
-          case HeapFormat::GlobalScope:
-          case HeapFormat::FunctionObject:
+#define CASE_WOBJECT_TYPE_(wobjtype) \
+          case HeapFormat::wobjtype:
+    WHISPER_DEFN_WOBJECT_KINDS(CASE_WOBJECT_TYPE_)
+#undef CASE_WOBJECT_TYPE_
             return true;
           default:
             return false;

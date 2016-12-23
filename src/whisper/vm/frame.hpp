@@ -19,6 +19,7 @@ namespace VM {
     _(InvokeSyntaxNodeFrame)        \
     _(FileSyntaxFrame)              \
     _(BlockSyntaxFrame)             \
+    _(ReturnStmtSyntaxFrame)        \
     _(VarSyntaxFrame)               \
     _(CallExprSyntaxFrame)          \
     _(InvokeApplicativeFrame)       \
@@ -298,6 +299,32 @@ class BlockSyntaxFrame : public SyntaxFrame
                                   Handle<EvalResult> result);
     static StepResult StepImpl(ThreadContext* cx,
                                Handle<BlockSyntaxFrame*> frame);
+};
+
+class ReturnStmtSyntaxFrame : public SyntaxFrame
+{
+    friend class TraceTraits<ReturnStmtSyntaxFrame>;
+  private:
+    uint32_t bindingNo_;
+
+  public:
+    ReturnStmtSyntaxFrame(Frame* parent,
+                          EntryFrame* entryFrame,
+                          SyntaxTreeFragment* stFrag)
+      : SyntaxFrame(parent, entryFrame, stFrag)
+    {}
+
+    static Result<ReturnStmtSyntaxFrame*> Create(
+            AllocationContext acx,
+            Handle<Frame*> parent,
+            Handle<EntryFrame*> entryFrame,
+            Handle<SyntaxTreeFragment*> stFrag);
+
+    static StepResult ResolveImpl(ThreadContext* cx,
+                                  Handle<ReturnStmtSyntaxFrame*> frame,
+                                  Handle<EvalResult> result);
+    static StepResult StepImpl(ThreadContext* cx,
+                               Handle<ReturnStmtSyntaxFrame*> frame);
 };
 
 class VarSyntaxFrame : public SyntaxFrame
@@ -817,6 +844,29 @@ struct TraceTraits<VM::BlockSyntaxFrame>
 
     template <typename Updater>
     static void Update(Updater& updater, VM::BlockSyntaxFrame& obj,
+                       void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);
+    }
+};
+
+template <>
+struct TraceTraits<VM::ReturnStmtSyntaxFrame>
+{
+    TraceTraits() = delete;
+
+    static constexpr bool Specialized = true;
+    static constexpr bool IsLeaf = false;
+
+    template <typename Scanner>
+    static void Scan(Scanner& scanner, VM::ReturnStmtSyntaxFrame const& obj,
+                     void const* start, void const* end)
+    {
+        TraceTraits<VM::SyntaxFrame>::Scan<Scanner>(scanner, obj, start, end);
+    }
+
+    template <typename Updater>
+    static void Update(Updater& updater, VM::ReturnStmtSyntaxFrame& obj,
                        void const* start, void const* end)
     {
         TraceTraits<VM::SyntaxFrame>::Update<Updater>(updater, obj, start, end);

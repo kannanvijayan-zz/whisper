@@ -3,6 +3,7 @@
 #include "parser/packed_syntax.hpp"
 #include "vm/function.hpp"
 #include "vm/exception.hpp"
+#include "vm/continuation.hpp"
 #include "vm/runtime_state.hpp"
 #include "vm/properties.hpp"
 #include "vm/wobject.hpp"
@@ -272,6 +273,22 @@ InvokeScriptedApplicativeFunction(ThreadContext* cx,
     if (!scope.setResult(VM::CallScope::Create(
             cx->inHatchery(), enclosingScope, calleeScript)))
     {
+        return ErrorVal();
+    }
+
+    // Bind "@retcont" in the scope to the return continuation.
+    Local<VM::Continuation*> cont(cx);
+    if (!cont.setResult(VM::Continuation::Create(cx->inHatchery(), frame)))
+        return ErrorVal();
+
+    Local<VM::ContObject*> contObj(cx);
+    if (!contObj.setResult(VM::ContObject::Create(cx->inHatchery(), cont)))
+        return ErrorVal();
+
+    Local<VM::String*> retcontName(cx, cx->runtimeState()->nm_AtRetcont());
+    Local<VM::PropertyDescriptor> propDesc(cx,
+        VM::PropertyDescriptor::MakeSlot(VM::ValBox::Object(contObj.get())));
+    if (!DefObjectProperty(cx, scope.handle(), retcontName, propDesc)) {
         return ErrorVal();
     }
 

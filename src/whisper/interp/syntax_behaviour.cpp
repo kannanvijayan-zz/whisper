@@ -30,9 +30,7 @@ DECLARE_SYNTAX_FN_(Block)
 DECLARE_SYNTAX_FN_(EmptyStmt)
 DECLARE_SYNTAX_FN_(ExprStmt)
 
-/*
 DECLARE_SYNTAX_FN_(ReturnStmt)
-*/
 DECLARE_SYNTAX_FN_(DefStmt)
 DECLARE_SYNTAX_FN_(ConstStmt)
 DECLARE_SYNTAX_FN_(VarStmt)
@@ -99,9 +97,7 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
     BIND_GLOBAL_METHOD_(Block);
     BIND_GLOBAL_METHOD_(EmptyStmt);
     BIND_GLOBAL_METHOD_(ExprStmt);
-/*
     BIND_GLOBAL_METHOD_(ReturnStmt);
-*/
     BIND_GLOBAL_METHOD_(DefStmt);
     BIND_GLOBAL_METHOD_(ConstStmt);
     BIND_GLOBAL_METHOD_(VarStmt);
@@ -278,6 +274,42 @@ IMPL_SYNTAX_FN_(ExprStmt)
 
     return VM::CallResult::Continue(syntaxFrame);
 }
+
+IMPL_SYNTAX_FN_(ReturnStmt)
+{
+    if (args.length() != 1) {
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                       "@ReturnStmt called with wrong number of arguments.")))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(callInfo->frame(), exc);
+    }
+
+    WH_ASSERT(args.get(0)->isNode());
+    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::ReturnStmt);
+
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
+    Local<AST::PackedReturnStmtNode> retStmtNode(cx, stRef->astReturnStmt());
+
+    SpewInterpNote("Syntax_ReturnStmt: Interpreting");
+
+    // Create a ReturnStmtSyntaxFrame for it.
+    Local<VM::Frame*> frame(cx, callInfo->frame());
+    Local<VM::EntryFrame*> entryFrame(cx, frame->ancestorEntryFrame());
+    Local<VM::SyntaxTreeFragment*> stFrag(cx, args.get(0));
+    Local<VM::ReturnStmtSyntaxFrame*> syntaxFrame(cx);
+    if (!syntaxFrame.setResult(VM::ReturnStmtSyntaxFrame::Create(
+            cx->inHatchery(), frame, entryFrame, stFrag)))
+    {
+        return ErrorVal();
+    }
+
+    return VM::CallResult::Continue(syntaxFrame.get());
+}
+
 
 IMPL_SYNTAX_FN_(DefStmt)
 {

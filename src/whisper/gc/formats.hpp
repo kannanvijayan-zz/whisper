@@ -78,12 +78,14 @@
     _(InvokeSyntaxNodeFrame)    \
     _(FileSyntaxFrame)          \
     _(BlockSyntaxFrame)         \
+    _(ReturnStmtSyntaxFrame)    \
     _(VarSyntaxFrame)           \
     _(CallExprSyntaxFrame)      \
     _(InvokeApplicativeFrame)   \
     _(InvokeOperativeFrame)     \
     _(NativeCallResumeFrame)    \
-    _(Continuation)
+    _(Continuation)             \
+    _(ContObject)
 
 
 #endif // WHISPER__GC__FORMATS_HPP

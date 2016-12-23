@@ -8,6 +8,7 @@
 #include "vm/exception.hpp"
 #include "vm/runtime_state.hpp"
 #include "vm/function.hpp"
+#include "vm/continuation.hpp"
 #include "interp/heap_interpreter.hpp"
 
 namespace Whisper {
@@ -378,6 +379,138 @@ BlockSyntaxFrame::StepImpl(ThreadContext* cx,
     }
 
     return StepResult::Continue(syntaxFrame);
+}
+
+
+/* static */ Result<ReturnStmtSyntaxFrame*>
+ReturnStmtSyntaxFrame::Create(AllocationContext acx,
+                              Handle<Frame*> parent,
+                              Handle<EntryFrame*> entryFrame,
+                              Handle<SyntaxTreeFragment*> stFrag)
+{
+    return acx.create<ReturnStmtSyntaxFrame>(parent, entryFrame, stFrag);
+}
+
+/* static */ StepResult
+ReturnStmtSyntaxFrame::ResolveImpl(ThreadContext* cx,
+                                   Handle<ReturnStmtSyntaxFrame*> frame,
+                                   Handle<EvalResult> result)
+{
+    Local<Frame*> rootedParent(cx, frame->parent());
+
+    if (result->isError() || result->isExc())
+        return Frame::Resolve(cx, rootedParent, result);
+
+    if (result->isVoid()) {
+        Local<Exception*> exc(cx);
+        if (!exc.setResult(InternalException::Create(cx->inHatchery(),
+                           "return expression yielded void.")))
+        {
+            return ErrorVal();
+        }
+        return Frame::Resolve(cx, rootedParent,
+                              EvalResult::Exc(frame.get(), exc));
+    }
+
+    WH_ASSERT(result->isValue());
+    Local<ValBox> returnValue(cx, result->value());
+
+    // Look up the "@retcont" in the scope.
+    Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
+    Local<String*> retcontStr(cx, cx->runtimeState()->nm_AtRetcont());
+    Local<PropertyLookupResult> retcontResult(cx,
+        Interp::GetObjectProperty(cx, scope.handle(), retcontStr));
+    if (retcontResult->isError())
+        return ErrorVal();
+
+    if (retcontResult->isNotFound()) {
+        Local<Exception*> exc(cx);
+        if (!exc.setResult(InternalException::Create(cx->inHatchery(),
+                           "return used in non-returnable context.")))
+        {
+            return ErrorVal();
+        }
+        return Frame::Resolve(cx, rootedParent,
+                              EvalResult::Exc(frame.get(), exc));
+    }
+
+    WH_ASSERT(retcontResult->isFound());
+
+    Local<EvalResult> retcontEval(cx, retcontResult->toEvalResult(cx, frame));
+    if (retcontEval->isError() || retcontEval->isExc())
+        return Frame::Resolve(cx, rootedParent, retcontEval.handle());
+
+    WH_ASSERT(retcontEval->isValue());
+    Local<ValBox> retcontValue(cx, retcontEval->value());
+    if (!retcontValue->isPointer()) {
+        Local<Exception*> exc(cx);
+        if (!exc.setResult(InternalException::Create(cx->inHatchery(),
+                       "@retcont contains a non-object value.")))
+        {
+            return ErrorVal();
+        }
+        return Frame::Resolve(cx, rootedParent,
+                              EvalResult::Exc(frame.get(), exc));
+    }
+
+    Local<Wobject*> retcontObj(cx, retcontValue->objectPointer());
+    if (!HeapThing::From(retcontObj.get())->isContObject()) {
+        Local<Exception*> exc(cx);
+        if (!exc.setResult(InternalException::Create(cx->inHatchery(),
+                       "@retcont contains a non-continuation object.")))
+        {
+            return ErrorVal();
+        }
+        return Frame::Resolve(cx, rootedParent,
+                              EvalResult::Exc(frame.get(), exc));
+    }
+
+    Local<ContObject*> contObj(cx,
+        reinterpret_cast<ContObject*>(retcontObj.get()));
+    Local<Continuation*> cont(cx, contObj->cont());
+
+    return cont->continueWith(cx, returnValue);
+}
+
+/* static */ StepResult
+ReturnStmtSyntaxFrame::StepImpl(ThreadContext* cx,
+                                Handle<ReturnStmtSyntaxFrame*> frame)
+{
+    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
+    WH_ASSERT(frame->stFrag()->isNode());
+
+    Local<AST::PackedReturnStmtNode> returnStmt(cx,
+        stFrag->toNode()->astReturnStmt());
+
+    // If there is no return expression, resolve self with an undefined value.
+    if (!returnStmt->hasExpression()) {
+        Local<EvalResult> evalResult(cx,
+            EvalResult::Value(ValBox::Undefined()));
+        return ResolveImpl(cx, frame, evalResult);
+    }
+
+    // Otherwise, evaluate the return expression.
+
+    // Create the SyntaxNode for the expression to evaluate.
+    Local<AST::PackedBaseNode> exprNode(cx, returnStmt->expression());
+    Local<PackedSyntaxTree*> pst(cx, stFrag->pst());
+    Local<SyntaxTreeFragment*> exprStFrag(cx);
+    if (!exprStFrag.setResult(SyntaxNode::Create(
+            cx->inHatchery(), pst, exprNode->offset())))
+    {
+        return ErrorVal();
+    }
+
+    // Create the syntax invocation frame.
+    Local<EntryFrame*> entryFrame(cx, frame->entryFrame());
+    Local<InvokeSyntaxNodeFrame*> syntaxFrame(cx);
+    if (!syntaxFrame.setResult(InvokeSyntaxNodeFrame::Create(
+            cx->inHatchery(), frame, entryFrame, exprStFrag)))
+    {
+        return ErrorVal();
+    }
+
+    return StepResult::Continue(syntaxFrame.get());
 }
 
 

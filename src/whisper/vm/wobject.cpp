@@ -5,6 +5,7 @@
 #include "vm/global_scope.hpp"
 #include "vm/function.hpp"
 #include "vm/lookup_state.hpp"
+#include "vm/continuation.hpp"
 #include "vm/properties.hpp"
 
 namespace Whisper {

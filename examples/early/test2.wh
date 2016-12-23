@@ -3,8 +3,8 @@ def foo(a, b, c, d) {
     print(a);
     print(b);
     print(c);
+    return b;
     print(d);
-    b;
 }
 
 var x = 33, y;
