@@ -9,6 +9,7 @@
 #include "vm/function.hpp"
 #include "vm/plain_object.hpp"
 #include "interp/object_behaviour.hpp"
+#include "interp/heap_interpreter.hpp"
 
 namespace Whisper {
 namespace Interp {
@@ -118,20 +119,20 @@ CreateImmBoolDelegate(AllocationContext acx,
 
 // Declare a lift function for each syntax node type.
 #define DECLARE_OPERATIVE_FN_(name) \
-    static VM::ControlFlow name( \
+    static VM::CallResult name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
-        ArrayHandle<VM::SyntaxNodeRef> args);
+        ArrayHandle<VM::SyntaxTreeFragment*> args);
 
 #define DECLARE_APPLICATIVE_FN_(name) \
-    static VM::ControlFlow name( \
+    static VM::CallResult name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::ValBox> args);
 
-  /*
-    DECLARE_OPERATIVE_FN_(ObjSyntax_DotExpr)
+    DECLARE_OPERATIVE_FN_(ObjSyntax_Dot)
 
+  /*
     DECLARE_APPLICATIVE_FN_(ImmInt_PosExpr)
     DECLARE_APPLICATIVE_FN_(ImmInt_NegExpr)
     DECLARE_APPLICATIVE_FN_(ImmInt_AddExpr)
@@ -143,7 +144,6 @@ CreateImmBoolDelegate(AllocationContext acx,
 #undef DECLARE_OPERATIVE_FN_
 #undef DECLARE_APPLICATIVE_FN_
 
-/*
 static OkResult
 BindOperativeMethod(AllocationContext acx,
                     Handle<VM::Wobject*> obj,
@@ -156,7 +156,8 @@ BindOperativeMethod(AllocationContext acx,
     Local<VM::NativeFunction*> natF(acx);
     if (!natF.setResult(VM::NativeFunction::Create(acx, opFunc)))
         return ErrorVal();
-    Local<VM::PropertyDescriptor> desc(acx, VM::PropertyDescriptor(natF.get()));
+    Local<VM::PropertyDescriptor> desc(acx,
+        VM::PropertyDescriptor::MakeMethod(natF.get()));
 
     // Bind method on global.
     if (!VM::Wobject::DefineProperty(acx, obj, rootedName, desc))
@@ -177,7 +178,8 @@ BindApplicativeMethod(AllocationContext acx,
     Local<VM::NativeFunction*> natF(acx);
     if (!natF.setResult(VM::NativeFunction::Create(acx, appFunc)))
         return ErrorVal();
-    Local<VM::PropertyDescriptor> desc(acx, VM::PropertyDescriptor(natF.get()));
+    Local<VM::PropertyDescriptor> desc(acx,
+        VM::PropertyDescriptor::MakeMethod(natF.get()));
 
     // Bind method on global.
     if (!VM::Wobject::DefineProperty(acx, obj, rootedName, desc))
@@ -185,8 +187,6 @@ BindApplicativeMethod(AllocationContext acx,
 
     return OkVal();
 }
-
-*/
 
 static OkResult
 BindRootDelegateMethods(AllocationContext acx, VM::Wobject* obj)
@@ -205,9 +205,7 @@ BindRootDelegateMethods(AllocationContext acx, VM::Wobject* obj)
         } \
     } while(false)
 
-/*
-    BIND_OBJSYNTAX_METHOD_(DotExpr);
-*/
+    BIND_OBJSYNTAX_METHOD_(Dot);
 
 #undef BIND_OBJSYNTAX_METHOD_
 
@@ -270,45 +268,63 @@ BindImmBoolMethods(AllocationContext acx, VM::Wobject* obj)
 }
 
 #define IMPL_OPERATIVE_FN_(name) \
-    static VM::ControlFlow name( \
+    static VM::CallResult name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
-        ArrayHandle<VM::SyntaxNodeRef> args)
+        ArrayHandle<VM::SyntaxTreeFragment*> args)
 
 #define IMPL_APPLICATIVE_FN_(name) \
-    static VM::ControlFlow name( \
+    static VM::CallResult name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
         ArrayHandle<VM::ValBox> args)
 
-/*
-IMPL_OPERATIVE_FN_(ObjSyntax_DotExpr)
+IMPL_OPERATIVE_FN_(ObjSyntax_Dot)
 {
     if (args.length() != 1) {
-        return cx->setExceptionRaised(
-            "object.@DotExpr called with wrong number of arguments.");
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                       "object.@Dot called with wrong number of arguments.")))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
-    WH_ASSERT(args.get(0).nodeType() == AST::DotExpr);
+    WH_ASSERT(args.get(0)->isNode());
+    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::DotExpr);
 
-    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
-    Local<AST::PackedDotExprNode> dotExprNode(cx,
-        AST::PackedDotExprNode(pst->data(), stRef->offset()));
+    Local<AST::PackedDotExprNode> dotExprNode(cx, stRef->astDotExpr());
 
     // Look up the name on the receiver.
     Local<VM::ValBox> receiver(cx, callInfo->receiver());
     Local<VM::String*> name(cx, pst->getConstantString(dotExprNode->nameCid()));
 
-    VM::ControlFlow lookupFlow = GetValueProperty(cx, receiver, name);
-    WH_ASSERT(lookupFlow.isPropertyLookupResult());
+    Local<VM::PropertyLookupResult> lookupResult(cx,
+        GetValueProperty(cx, receiver, name));
+    if (lookupResult->isError())
+        return ErrorVal();
 
-    if (lookupFlow.isVoid())
-        return cx->setExceptionRaised("Name not found on object.");
+    if (lookupResult->isNotFound()) {
+        Local<VM::Exception*> exc(cx);
+        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                       "Property not found.", name.handle())))
+        {
+            return ErrorVal();
+        }
+        return VM::CallResult::Exc(callInfo->frame(), exc);
+    }
 
-    return lookupFlow;
+    WH_ASSERT(lookupResult->isFound());
+    Local<VM::EvalResult> evalResult(cx,
+        lookupResult->toEvalResult(cx, callInfo->frame()));
+
+    return VM::CallResult::FromEvalResult(evalResult.get());
 }
 
+/*
 IMPL_APPLICATIVE_FN_(ImmInt_PosExpr)
 {
     if (args.length() != 0) {
