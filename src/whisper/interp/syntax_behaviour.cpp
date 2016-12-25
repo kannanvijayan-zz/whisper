@@ -10,6 +10,7 @@
 #include "vm/frame.hpp"
 #include "vm/packed_syntax_tree.hpp"
 #include "interp/heap_interpreter.hpp"
+#include "interp/native_call_utils.hpp"
 #include "interp/syntax_behaviour.hpp"
 
 namespace Whisper {
@@ -126,16 +127,13 @@ BindSyntaxHandlers(AllocationContext acx, VM::GlobalScope* scope)
 IMPL_SYNTAX_FN_(File)
 {
     if (args.length() != 1) {
-        Local<VM::Exception*> exc(cx);
-        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
-                           "@File called with wrong number of arguments")))
-        {
-            return ErrorVal();
-        }
-        return VM::CallResult::Exc(callInfo->frame(), exc);
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@File called with wrong number of arguments");
     }
-
-    WH_ASSERT(args.get(0)->isFile());
+    if (!args.get(0)->isFile()) {
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@File not called with File syntax node.");
+    }
 
     Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<AST::PackedFileNode> fileNode(cx, stRef->astFile());
@@ -165,16 +163,13 @@ IMPL_SYNTAX_FN_(File)
 IMPL_SYNTAX_FN_(Block)
 {
     if (args.length() != 1) {
-        Local<VM::Exception*> exc(cx);
-        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
-                           "@Block called with wrong number of arguments")))
-        {
-            return ErrorVal();
-        }
-        return VM::CallResult::Exc(callInfo->frame(), exc);
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@Block called with wrong number of arguments");
     }
-
-    WH_ASSERT(args.get(0)->isBlock());
+    if (!args.get(0)->isBlock()) {
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@Block not called with Block syntax node.");
+    }
 
     Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<AST::PackedBlockNode> astBlock(cx, stRef->astBlock());
@@ -209,16 +204,13 @@ IMPL_SYNTAX_FN_(Block)
 IMPL_SYNTAX_FN_(EmptyStmt)
 {
     if (args.length() != 1) {
-        Local<VM::Exception*> exc(cx);
-        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
-                       "@EmptyStmt called with wrong number of arguments.")))
-        {
-            return ErrorVal();
-        }
-        return VM::CallResult::Exc(callInfo->frame(), exc);
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@EmptyStmt called with wrong number of arguments");
     }
-
-    WH_ASSERT(args.get(0)->isEmptyStmt());
+    if (!args.get(0)->isEmptyStmt()) {
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@EmptyStmt not called with EmptyStmt syntax node.");
+    }
 
     Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
@@ -232,16 +224,13 @@ IMPL_SYNTAX_FN_(EmptyStmt)
 IMPL_SYNTAX_FN_(ExprStmt)
 {
     if (args.length() != 1) {
-        Local<VM::Exception*> exc(cx);
-        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
-                       "@ExprStmt called with wrong number of arguments.")))
-        {
-            return ErrorVal();
-        }
-        return VM::CallResult::Exc(callInfo->frame(), exc);
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@ExprStmt called with wrong number of arguments");
     }
-
-    WH_ASSERT(args.get(0)->isExprStmt());
+    if (!args.get(0)->isExprStmt()) {
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@ExprStmt not called with ExprStmt syntax node.");
+    }
 
     Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
@@ -275,16 +264,13 @@ IMPL_SYNTAX_FN_(ExprStmt)
 IMPL_SYNTAX_FN_(ReturnStmt)
 {
     if (args.length() != 1) {
-        Local<VM::Exception*> exc(cx);
-        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
-                       "@ReturnStmt called with wrong number of arguments.")))
-        {
-            return ErrorVal();
-        }
-        return VM::CallResult::Exc(callInfo->frame(), exc);
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@ReturnStmt called with wrong number of arguments");
     }
-
-    WH_ASSERT(args.get(0)->isReturnStmt());
+    if (!args.get(0)->isReturnStmt()) {
+        return RaiseInternalException(cx, callInfo->frame(),
+                       "@ReturnStmt not called with ReturnStmt syntax node.");
+    }
 
     Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
@@ -310,16 +296,13 @@ IMPL_SYNTAX_FN_(ReturnStmt)
 IMPL_SYNTAX_FN_(DefStmt)
 {
     if (args.length() != 1) {
-        Local<VM::Exception*> exc(cx);
-        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
-                       "@DefStmt called with wrong number of arguments.")))
-        {
-            return ErrorVal();
-        }
-        return VM::CallResult::Exc(callInfo->frame(), exc);
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@DefStmt called with wrong number of arguments");
     }
-
-    WH_ASSERT(args.get(0)->isDefStmt());
+    if (!args.get(0)->isDefStmt()) {
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@DefStmt not called with DefStmt syntax node.");
+    }
 
     Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
@@ -355,16 +338,13 @@ IMPL_SYNTAX_FN_(DefStmt)
 IMPL_SYNTAX_FN_(ConstStmt)
 {
     if (args.length() != 1) {
-        Local<VM::Exception*> exc(cx);
-        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
-                       "@ConstStmt called with wrong number of arguments.")))
-        {
-            return ErrorVal();
-        }
-        return VM::CallResult::Exc(callInfo->frame(), exc);
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@ConstStmt called with wrong number of arguments");
     }
-
-    WH_ASSERT(args.get(0)->isConstStmt());
+    if (!args.get(0)->isConstStmt()) {
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@ConstStmt not called with ConstStmt syntax node.");
+    }
 
     Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
@@ -392,16 +372,13 @@ IMPL_SYNTAX_FN_(ConstStmt)
 IMPL_SYNTAX_FN_(VarStmt)
 {
     if (args.length() != 1) {
-        Local<VM::Exception*> exc(cx);
-        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
-                       "@VarStmt called with wrong number of arguments.")))
-        {
-            return ErrorVal();
-        }
-        return VM::CallResult::Exc(callInfo->frame(), exc);
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@VarStmt called with wrong number of arguments");
     }
-
-    WH_ASSERT(args.get(0)->isVarStmt());
+    if (!args.get(0)->isVarStmt()) {
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@VarStmt not called with VarStmt syntax node.");
+    }
 
     Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
@@ -429,16 +406,13 @@ IMPL_SYNTAX_FN_(VarStmt)
 IMPL_SYNTAX_FN_(CallExpr)
 {
     if (args.length() != 1) {
-        Local<VM::Exception*> exc(cx);
-        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
-                       "@CallExpr called with wrong number of arguments.")))
-        {
-            return ErrorVal();
-        }
-        return VM::CallResult::Exc(callInfo->frame(), exc);
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@CallExpr called with wrong number of arguments");
     }
-
-    WH_ASSERT(args.get(0)->isCallExpr());
+    if (!args.get(0)->isCallExpr()) {
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@CallExpr not called with CallExpr syntax node.");
+    }
 
     Local<VM::SyntaxNode*> stNode(cx, args.get(0));
 
@@ -461,16 +435,13 @@ IMPL_SYNTAX_FN_(CallExpr)
 IMPL_SYNTAX_FN_(DotExpr)
 {
     if (args.length() != 1) {
-        Local<VM::Exception*> exc(cx);
-        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
-                       "@DotExpr called with wrong number of arguments.")))
-        {
-            return ErrorVal();
-        }
-        return VM::CallResult::Exc(callInfo->frame(), exc);
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@DotExpr called with wrong number of arguments");
     }
-
-    WH_ASSERT(args.get(0)->isDotExpr());
+    if (!args.get(0)->isDotExpr()) {
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@DotExpr not called with DotExpr syntax node.");
+    }
 
     Local<VM::SyntaxNode*> stNode(cx, args.get(0));
 
@@ -493,16 +464,14 @@ IMPL_SYNTAX_FN_(DotExpr)
 IMPL_SYNTAX_FN_(NameExpr)
 {
     if (args.length() != 1) {
-        Local<VM::Exception*> exc(cx);
-        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
-                       "@NameExpr called with wrong number of arguments.")))
-        {
-            return ErrorVal();
-        }
-        return VM::CallResult::Exc(callInfo->frame(), exc);
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@NameExpr called with wrong number of arguments");
+    }
+    if (!args.get(0)->isNameExpr()) {
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@NameExpr not called with NameExpr syntax node.");
     }
 
-    WH_ASSERT(args.get(0)->isNameExpr());
     Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedNameExprNode> nameExprNode(cx, stRef->astNameExpr());
@@ -577,16 +546,13 @@ IMPL_SYNTAX_FN_(NameExpr)
 IMPL_SYNTAX_FN_(IntegerExpr)
 {
     if (args.length() != 1) {
-        Local<VM::Exception*> exc(cx);
-        if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
-                       "@IntegerExpr called with wrong number of arguments.")))
-        {
-            return ErrorVal();
-        }
-        return VM::CallResult::Exc(callInfo->frame(), exc);
+        return RaiseInternalException(cx, callInfo->frame(),
+                           "@IntegerExpr called with wrong number of arguments");
     }
-
-    WH_ASSERT(args.get(0)->isIntegerExpr());
+    if (!args.get(0)->isIntegerExpr()) {
+        return RaiseInternalException(cx, callInfo->frame(),
+                   "@IntegerExpr not called with IntegerExpr syntax node.");
+    }
     Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<AST::PackedIntegerExprNode> integerExprNode(cx,
                                                   stRef->astIntegerExpr());

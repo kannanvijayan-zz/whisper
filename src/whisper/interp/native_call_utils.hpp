@@ -13,6 +13,24 @@ namespace Whisper {
 namespace Interp {
 
 
+// Helper method to raise an exception from a native procedure.
+VM::CallResult RaiseInternalException(ThreadContext* cx,
+                                      Handle<VM::Frame*> frame,
+                                      char const* message);
+
+VM::CallResult RaiseInternalException(ThreadContext* cx,
+                                      Handle<VM::Frame*> frame,
+                                      char const* message,
+                                      Handle<HeapThing*> obj);
+
+template <typename T>
+inline VM::CallResult RaiseInternalException(
+    ThreadContext* cx, char const* message, Handle<T*> obj)
+{
+    Local<HeapThing*> ht(cx, HeapThing::From(obj.get()));
+    return RaiseInternalException(cx, message, ht.handle());
+}
+
 // Helper class to re-enter the interpreter evaluator from a native
 // call.
 class NativeCallEval

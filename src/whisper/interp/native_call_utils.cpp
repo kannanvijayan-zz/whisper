@@ -4,6 +4,36 @@
 namespace Whisper {
 namespace Interp {
 
+
+VM::CallResult
+RaiseInternalException(ThreadContext* cx,
+                       Handle<VM::Frame*> frame,
+                       char const* message)
+{
+    Local<VM::Exception*> exc(cx);
+    if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                       "@File called with wrong number of arguments")))
+    {
+        return ErrorVal();
+    }
+    return VM::CallResult::Exc(frame, exc);
+}
+
+VM::CallResult
+RaiseInternalException(ThreadContext* cx,
+                       Handle<VM::Frame*> frame,
+                       char const* message,
+                       Handle<HeapThing*> obj)
+{
+    Local<VM::Exception*> exc(cx);
+    if (!exc.setResult(VM::InternalException::Create(cx->inHatchery(),
+                       "@File called with wrong number of arguments", obj)))
+    {
+        return ErrorVal();
+    }
+    return VM::CallResult::Exc(frame, exc);
+}
+
 NativeCallEval::operator VM::CallResult() const
 {
     // Create a new NativeCallResumeFrame
