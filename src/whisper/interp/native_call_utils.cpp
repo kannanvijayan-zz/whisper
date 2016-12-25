@@ -13,7 +13,7 @@ NativeCallEval::operator VM::CallResult() const
             callInfo_->frame(),
             callInfo_,
             evalScope_,
-            syntaxFragment_,
+            syntaxNode_,
             resumeFunc_,
             resumeState_)))
     {

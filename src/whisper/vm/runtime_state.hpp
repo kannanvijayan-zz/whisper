@@ -15,7 +15,7 @@ namespace VM {
 
 class Wobject;
 class GlobalScope;
-class SyntaxTreeFragment;
+class SyntaxNode;
 
 //
 // A RuntimeState is a vm-allocated object that holds pointers to
@@ -37,7 +37,7 @@ class RuntimeState
 
     static Result<RuntimeState*> Create(AllocationContext acx);
 
-    String* syntaxHandlerName(SyntaxTreeFragment const* stFrag) const;
+    String* syntaxHandlerName(SyntaxNode const* syntaxNode) const;
     String* syntaxHandlerName(AST::NodeType nodeType) const;
 
 #define NAME_METH_(name, str) \

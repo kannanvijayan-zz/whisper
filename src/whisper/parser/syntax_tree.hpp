@@ -42,6 +42,7 @@ template <NodeType TYPE> class BinaryExpression;
 // Concrete pre-declarations.
 
 class FileNode;
+class BlockNode;
 
 class EmptyStmtNode;
 class ExprStmtNode;
@@ -403,16 +404,17 @@ class BindingStatement : public Statement
 };
 
 //
-// Block is a helper type to represent { ... } statement lists.
+// BlockNode represents { ... } statement lists.
 //
-class Block
+class BlockNode : public Statement
 {
   private:
     StatementList statements_;
 
   public:
-    inline Block(StatementList&& statements)
-      : statements_(std::move(statements))
+    inline BlockNode(StatementList&& statements)
+      : Statement(Block),
+        statements_(std::move(statements))
     {}
 
     StatementList const& statements() const {
@@ -484,10 +486,10 @@ class IfStmtNode : public Statement
     {
       private:
         Expression* cond_;
-        Block* block_;
+        BlockNode* block_;
 
       public:
-        CondPair(Expression* cond, Block* block)
+        CondPair(Expression* cond, BlockNode* block)
           : cond_(cond),
             block_(block)
         {
@@ -498,7 +500,7 @@ class IfStmtNode : public Statement
         Expression const* cond() const {
             return cond_;
         }
-        Block const* block() const {
+        BlockNode const* block() const {
             return block_;
         }
     };
@@ -507,12 +509,12 @@ class IfStmtNode : public Statement
   private:
     CondPair ifPair_;
     CondPairList elsifPairs_;
-    Block* elseBlock_;
+    BlockNode* elseBlock_;
 
   public:
     explicit IfStmtNode(CondPair const& ifPair,
                         CondPairList&& elsifPairs,
-                        Block* elseBlock)
+                        BlockNode* elseBlock)
       : Statement(IfStmt),
         ifPair_(ifPair),
         elsifPairs_(std::move(elsifPairs)),
@@ -531,7 +533,7 @@ class IfStmtNode : public Statement
         return elseBlock_ != nullptr;
     }
 
-    Block* elseBlock() const {
+    BlockNode* elseBlock() const {
         WH_ASSERT(hasElseBlock());
         return elseBlock_;
     }
@@ -545,12 +547,12 @@ class DefStmtNode : public Statement
   private:
     IdentifierToken name_;
     IdentifierList paramNames_;
-    Block* bodyBlock_;
+    BlockNode* bodyBlock_;
 
   public:
     explicit DefStmtNode(IdentifierToken const& name,
                          IdentifierList&& paramNames,
-                         Block* bodyBlock)
+                         BlockNode* bodyBlock)
       : Statement(DefStmt),
         name_(name),
         paramNames_(std::move(paramNames)),
@@ -567,7 +569,7 @@ class DefStmtNode : public Statement
         return paramNames_;
     }
 
-    Block const* bodyBlock() const {
+    BlockNode const* bodyBlock() const {
         return bodyBlock_;
     }
 };
@@ -600,17 +602,17 @@ class VarStmtNode : public BindingStatement
 class LoopStmtNode : public Statement
 {
   private:
-    Block* bodyBlock_;
+    BlockNode* bodyBlock_;
 
   public:
-    explicit LoopStmtNode(Block* bodyBlock)
+    explicit LoopStmtNode(BlockNode* bodyBlock)
       : Statement(LoopStmt),
         bodyBlock_(bodyBlock)
     {
         WH_ASSERT(bodyBlock_);
     }
 
-    Block const* bodyBlock() const {
+    BlockNode const* bodyBlock() const {
         return bodyBlock_;
     }
 };

@@ -27,7 +27,7 @@ class NativeCallEval
     StackField<VM::ScopeObject*> evalScope_;
 
     // Syntax tree fragment to evaluate.
-    StackField<VM::SyntaxTreeFragment*> syntaxFragment_;
+    StackField<VM::SyntaxNode*> syntaxNode_;
 
     // Native function to call when complete.
     VM::NativeCallResumeFuncPtr resumeFunc_;
@@ -39,26 +39,26 @@ class NativeCallEval
     NativeCallEval(ThreadContext* cx,
                    VM::NativeCallInfo const& callInfo,
                    VM::ScopeObject* evalScope,
-                   VM::SyntaxTreeFragment* syntaxFragment,
+                   VM::SyntaxNode* syntaxNode,
                    VM::NativeCallResumeFuncPtr resumeFunc,
                    HeapThing* resumeState)
       : cx_(cx),
         callInfo_(callInfo),
         evalScope_(evalScope),
-        syntaxFragment_(syntaxFragment),
+        syntaxNode_(syntaxNode),
         resumeFunc_(resumeFunc),
         resumeState_(resumeState)
     {}
 
     NativeCallEval(ThreadContext* cx,
                    VM::NativeCallInfo const& callInfo,
-                   VM::SyntaxTreeFragment* syntaxFragment,
+                   VM::SyntaxNode* syntaxNode,
                    VM::NativeCallResumeFuncPtr resumeFunc,
                    HeapThing* resumeState)
       : cx_(cx),
         callInfo_(callInfo),
         evalScope_(callInfo.callerScope()),
-        syntaxFragment_(syntaxFragment),
+        syntaxNode_(syntaxNode),
         resumeFunc_(resumeFunc),
         resumeState_(resumeState)
     {}

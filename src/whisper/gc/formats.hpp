@@ -5,15 +5,13 @@
 #define WHISPER_DEFN_GC_STACK_FORMATS(_) \
     _(UntracedPrimitive)        \
     _(NativeCallInfo)           \
-    _(SyntaxTreeRef)            \
     _(SyntaxNodeRef)            \
-    _(SyntaxBlockRef)           \
     _(PropertyName)             \
     _(PropertyDescriptor)       \
     _(PropertyLookupResult)     \
     _(Box)                      \
     _(ValBox)                   \
-    _(PackedSyntaxElement)      \
+    _(PackedBaseNode)           \
     _(PackedWriter)             \
     _(PackedReader)             \
     _(HeapPointer)              \
@@ -59,7 +57,6 @@
     _(ThreadState)              \
     _(PackedSyntaxTree)         \
     _(SyntaxNode)               \
-    _(SyntaxBlock)              \
     _(SourceFile)               \
     _(PropertyDict)             \
     _(PlainObject)              \

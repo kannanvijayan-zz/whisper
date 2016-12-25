@@ -122,7 +122,7 @@ CreateImmBoolDelegate(AllocationContext acx,
     static VM::CallResult name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
-        ArrayHandle<VM::SyntaxTreeFragment*> args);
+        ArrayHandle<VM::SyntaxNode*> args);
 
 #define DECLARE_APPLICATIVE_FN_(name) \
     static VM::CallResult name( \
@@ -271,7 +271,7 @@ BindImmBoolMethods(AllocationContext acx, VM::Wobject* obj)
     static VM::CallResult name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
-        ArrayHandle<VM::SyntaxTreeFragment*> args)
+        ArrayHandle<VM::SyntaxNode*> args)
 
 #define IMPL_APPLICATIVE_FN_(name) \
     static VM::CallResult name( \
@@ -291,10 +291,9 @@ IMPL_OPERATIVE_FN_(ObjSyntax_Dot)
         return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
-    WH_ASSERT(args.get(0)->isNode());
-    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::DotExpr);
+    WH_ASSERT(args.get(0)->isDotExpr());
 
-    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedDotExprNode> dotExprNode(cx, stRef->astDotExpr());
 

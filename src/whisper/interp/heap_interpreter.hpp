@@ -40,7 +40,7 @@ VM::CallResult InvokeOperativeValue(
         Handle<VM::Frame*> frame,
         Handle<VM::ScopeObject*> callerScope,
         Handle<VM::ValBox> callee,
-        ArrayHandle<VM::SyntaxTreeFragment*> args);
+        ArrayHandle<VM::SyntaxNode*> args);
 
 VM::CallResult InvokeOperativeFunction(
         ThreadContext* cx,
@@ -48,7 +48,7 @@ VM::CallResult InvokeOperativeFunction(
         Handle<VM::ScopeObject*> callerScope,
         Handle<VM::ValBox> callee,
         Handle<VM::FunctionObject*> calleeFunc,
-        ArrayHandle<VM::SyntaxTreeFragment*> args);
+        ArrayHandle<VM::SyntaxNode*> args);
 
 VM::CallResult InvokeApplicativeValue(
         ThreadContext* cx,

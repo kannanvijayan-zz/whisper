@@ -21,7 +21,7 @@ namespace Interp {
     static VM::CallResult Syntax_##name( \
         ThreadContext* cx, \
         Handle<VM::NativeCallInfo> callInfo, \
-        ArrayHandle<VM::SyntaxTreeFragment*> args)
+        ArrayHandle<VM::SyntaxNode*> args)
 
 #define DECLARE_SYNTAX_FN_(name) IMPL_SYNTAX_FN_(name);
 
@@ -135,10 +135,9 @@ IMPL_SYNTAX_FN_(File)
         return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
-    WH_ASSERT(args.get(0)->isNode());
-    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::File);
+    WH_ASSERT(args.get(0)->isFile());
 
-    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<AST::PackedFileNode> fileNode(cx, stRef->astFile());
 
     SpewInterpNote("Syntax_File: Interpreting %u statements",
@@ -146,15 +145,15 @@ IMPL_SYNTAX_FN_(File)
 
     Local<VM::Frame*> frame(cx, callInfo->frame());
     Local<VM::EntryFrame*> entryFrame(cx, frame->ancestorEntryFrame());
-    Local<VM::SyntaxNode*> stFrag(cx);
-    if (!stFrag.setResult(VM::SyntaxNode::Create(cx->inHatchery(), stRef))) {
+    Local<VM::SyntaxNode*> sn(cx);
+    if (!sn.setResult(VM::SyntaxNode::Create(cx->inHatchery(), stRef))) {
         return ErrorVal();
     }
 
     Local<VM::Frame*> fileSyntaxFrame(cx);
     if (!fileSyntaxFrame.setResult(VM::FileSyntaxFrame::Create(
             cx->inHatchery(), frame, entryFrame,
-            stFrag.handle().convertTo<VM::SyntaxTreeFragment*>(),
+            sn.handle().convertTo<VM::SyntaxNode*>(),
             0)))
     {
         return ErrorVal();
@@ -177,8 +176,8 @@ IMPL_SYNTAX_FN_(Block)
 
     WH_ASSERT(args.get(0)->isBlock());
 
-    Local<VM::SyntaxBlockRef> stRef(cx, args.get(0)->toBlock());
-    Local<AST::PackedBlock> astBlock(cx, stRef->astBlock());
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
+    Local<AST::PackedBlockNode> astBlock(cx, stRef->astBlock());
 
     SpewInterpNote("Syntax_Block: Interpreting %u statements",
                    unsigned(astBlock->numStatements()));
@@ -190,15 +189,15 @@ IMPL_SYNTAX_FN_(Block)
 
     Local<VM::Frame*> frame(cx, callInfo->frame());
     Local<VM::EntryFrame*> entryFrame(cx, frame->ancestorEntryFrame());
-    Local<VM::SyntaxTreeFragment*> stFrag(cx);
-    if (!stFrag.setResult(VM::SyntaxBlock::Create(cx->inHatchery(), stRef))) {
+    Local<VM::SyntaxNode*> sn(cx);
+    if (!sn.setResult(VM::SyntaxNode::Create(cx->inHatchery(), stRef))) {
         return ErrorVal();
     }
 
     Local<VM::Frame*> fileSyntaxFrame(cx);
     if (!fileSyntaxFrame.setResult(VM::BlockSyntaxFrame::Create(
             cx->inHatchery(), frame, entryFrame,
-            stFrag.handle().convertTo<VM::SyntaxTreeFragment*>(),
+            sn.handle().convertTo<VM::SyntaxNode*>(),
             0)))
     {
         return ErrorVal();
@@ -219,10 +218,9 @@ IMPL_SYNTAX_FN_(EmptyStmt)
         return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
-    WH_ASSERT(args.get(0)->isNode());
-    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::EmptyStmt);
+    WH_ASSERT(args.get(0)->isEmptyStmt());
 
-    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedEmptyStmtNode> exprStmtNode(cx, stRef->astEmptyStmt());
 
@@ -243,10 +241,9 @@ IMPL_SYNTAX_FN_(ExprStmt)
         return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
-    WH_ASSERT(args.get(0)->isNode());
-    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::ExprStmt);
+    WH_ASSERT(args.get(0)->isExprStmt());
 
-    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedExprStmtNode> exprStmtNode(cx, stRef->astExprStmt());
 
@@ -254,7 +251,7 @@ IMPL_SYNTAX_FN_(ExprStmt)
 
     // Create a new syntax frame for evaluating the ExprStmt's child.
     Local<AST::PackedBaseNode> exprBaseNode(cx, exprStmtNode->expression());
-    Local<VM::SyntaxTreeFragment*> exprStRef(cx);
+    Local<VM::SyntaxNode*> exprStRef(cx);
     if (!exprStRef.setResult(VM::SyntaxNode::Create(
             cx->inHatchery(), pst, exprBaseNode->offset())))
     {
@@ -287,10 +284,9 @@ IMPL_SYNTAX_FN_(ReturnStmt)
         return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
-    WH_ASSERT(args.get(0)->isNode());
-    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::ReturnStmt);
+    WH_ASSERT(args.get(0)->isReturnStmt());
 
-    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedReturnStmtNode> retStmtNode(cx, stRef->astReturnStmt());
 
@@ -299,10 +295,10 @@ IMPL_SYNTAX_FN_(ReturnStmt)
     // Create a ReturnStmtSyntaxFrame for it.
     Local<VM::Frame*> frame(cx, callInfo->frame());
     Local<VM::EntryFrame*> entryFrame(cx, frame->ancestorEntryFrame());
-    Local<VM::SyntaxTreeFragment*> stFrag(cx, args.get(0));
+    Local<VM::SyntaxNode*> sn(cx, args.get(0));
     Local<VM::ReturnStmtSyntaxFrame*> syntaxFrame(cx);
     if (!syntaxFrame.setResult(VM::ReturnStmtSyntaxFrame::Create(
-            cx->inHatchery(), frame, entryFrame, stFrag)))
+            cx->inHatchery(), frame, entryFrame, sn)))
     {
         return ErrorVal();
     }
@@ -323,10 +319,9 @@ IMPL_SYNTAX_FN_(DefStmt)
         return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
-    WH_ASSERT(args.get(0)->isNode());
-    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::DefStmt);
+    WH_ASSERT(args.get(0)->isDefStmt());
 
-    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedDefStmtNode> defStmtNode(cx, stRef->astDefStmt());
 
@@ -369,10 +364,9 @@ IMPL_SYNTAX_FN_(ConstStmt)
         return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
-    WH_ASSERT(args.get(0)->isNode());
-    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::ConstStmt);
+    WH_ASSERT(args.get(0)->isConstStmt());
 
-    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedConstStmtNode> constStmtNode(cx, stRef->astConstStmt());
 
@@ -383,10 +377,10 @@ IMPL_SYNTAX_FN_(ConstStmt)
     // Create a ConstSyntaxFrame for it.
     Local<VM::Frame*> frame(cx, callInfo->frame());
     Local<VM::EntryFrame*> entryFrame(cx, frame->ancestorEntryFrame());
-    Local<VM::SyntaxTreeFragment*> stFrag(cx, args.get(0));
+    Local<VM::SyntaxNode*> sn(cx, args.get(0));
     Local<VM::VarSyntaxFrame*> syntaxFrame(cx);
     if (!syntaxFrame.setResult(VM::VarSyntaxFrame::Create(
-            cx->inHatchery(), frame, entryFrame, stFrag, 0)))
+            cx->inHatchery(), frame, entryFrame, sn, 0)))
     {
         return ErrorVal();
     }
@@ -407,10 +401,9 @@ IMPL_SYNTAX_FN_(VarStmt)
         return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
-    WH_ASSERT(args.get(0)->isNode());
-    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::VarStmt);
+    WH_ASSERT(args.get(0)->isVarStmt());
 
-    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedVarStmtNode> varStmtNode(cx, stRef->astVarStmt());
 
@@ -421,10 +414,10 @@ IMPL_SYNTAX_FN_(VarStmt)
     // Create a VarSyntaxFrame for it.
     Local<VM::Frame*> frame(cx, callInfo->frame());
     Local<VM::EntryFrame*> entryFrame(cx, frame->ancestorEntryFrame());
-    Local<VM::SyntaxTreeFragment*> stFrag(cx, args.get(0));
+    Local<VM::SyntaxNode*> sn(cx, args.get(0));
     Local<VM::VarSyntaxFrame*> syntaxFrame(cx);
     if (!syntaxFrame.setResult(VM::VarSyntaxFrame::Create(
-            cx->inHatchery(), frame, entryFrame, stFrag, 0)))
+            cx->inHatchery(), frame, entryFrame, sn, 0)))
     {
         return ErrorVal();
     }
@@ -445,10 +438,9 @@ IMPL_SYNTAX_FN_(CallExpr)
         return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
-    WH_ASSERT(args.get(0)->isNode());
-    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::CallExpr);
+    WH_ASSERT(args.get(0)->isCallExpr());
 
-    Local<VM::SyntaxNode*> stNode(cx, args.get(0)->toNode());
+    Local<VM::SyntaxNode*> stNode(cx, args.get(0));
 
     SpewInterpNote("Syntax_CallExpr: Interpreting");
 
@@ -478,10 +470,9 @@ IMPL_SYNTAX_FN_(DotExpr)
         return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
-    WH_ASSERT(args.get(0)->isNode());
-    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::DotExpr);
+    WH_ASSERT(args.get(0)->isDotExpr());
 
-    Local<VM::SyntaxNode*> stNode(cx, args.get(0)->toNode());
+    Local<VM::SyntaxNode*> stNode(cx, args.get(0));
 
     SpewInterpNote("Syntax_DotExpr: Interpreting");
 
@@ -511,9 +502,8 @@ IMPL_SYNTAX_FN_(NameExpr)
         return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
-    WH_ASSERT(args.get(0)->isNode());
-    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::NameExpr);
-    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    WH_ASSERT(args.get(0)->isNameExpr());
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<VM::PackedSyntaxTree*> pst(cx, stRef->pst());
     Local<AST::PackedNameExprNode> nameExprNode(cx, stRef->astNameExpr());
 
@@ -596,9 +586,8 @@ IMPL_SYNTAX_FN_(IntegerExpr)
         return VM::CallResult::Exc(callInfo->frame(), exc);
     }
 
-    WH_ASSERT(args.get(0)->isNode());
-    WH_ASSERT(args.get(0)->toNode()->nodeType() == AST::IntegerExpr);
-    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0)->toNode());
+    WH_ASSERT(args.get(0)->isIntegerExpr());
+    Local<VM::SyntaxNodeRef> stRef(cx, args.get(0));
     Local<AST::PackedIntegerExprNode> integerExprNode(cx,
                                                   stRef->astIntegerExpr());
 

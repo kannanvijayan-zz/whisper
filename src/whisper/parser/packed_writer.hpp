@@ -223,8 +223,6 @@ class PackedWriter
     void parseHexInteger(IntegerLiteralToken const& token, int32_t* resultOut);
 
     void writeBinaryExpr(Expression const* lhs, Expression const* rhs);
-    void writeBlock(Block const* block);
-    void writeSizedBlock(Block const* block);
 
 #define METHOD_(ntype) void write##ntype(ntype##Node const* n);
     WHISPER_DEFN_SYNTAX_NODES(METHOD_)

@@ -28,18 +28,8 @@ PackedSyntaxTree::Create(AllocationContext acx,
                                         constPoolArray.handle());
 }
 
-SyntaxTreeRef::SyntaxTreeRef(SyntaxNode const* stNode)
-  : SyntaxTreeRef(stNode->pst(), stNode->offset())
-{}
-
-SyntaxTreeRef::SyntaxTreeRef(SyntaxBlock const* stBlock)
-  : SyntaxTreeRef(stBlock->pst(), stBlock->offset(), stBlock->numStatements())
-{}
-
-SyntaxTreeRef::SyntaxTreeRef(SyntaxTreeFragment const* stFrag)
-  : SyntaxTreeRef(stFrag->pst(), stFrag->offset(),
-                  stFrag->isBlock() ? stFrag->toBlock()->numStatements() : 0,
-                  stFrag->isBlock())
+SyntaxNodeRef::SyntaxNodeRef(SyntaxNode const* stNode)
+  : SyntaxNodeRef(stNode->pst(), stNode->offset())
 {}
 
 AST::NodeType
@@ -81,16 +71,6 @@ char const*
 SyntaxNode::nodeTypeCString() const
 {
     return AST::NodeTypeString(nodeType());
-}
-
-
-/* static */ Result<SyntaxBlock*>
-SyntaxBlock::Create(AllocationContext acx,
-                   Handle<PackedSyntaxTree*> pst,
-                   uint32_t offset,
-                   uint32_t numStatements)
-{
-    return acx.create<SyntaxBlock>(pst, offset, numStatements);
 }
 
 

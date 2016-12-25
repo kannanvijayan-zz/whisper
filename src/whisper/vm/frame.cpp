@@ -86,10 +86,10 @@ TerminalFrame::StepImpl(ThreadContext* cx,
 /* static */ Result<EntryFrame*>
 EntryFrame::Create(AllocationContext acx,
                    Handle<Frame*> parent,
-                   Handle<SyntaxTreeFragment*> stFrag,
+                   Handle<SyntaxNode*> syntaxNode,
                    Handle<ScopeObject*> scope)
 {
-    return acx.create<EntryFrame>(parent, stFrag, scope);
+    return acx.create<EntryFrame>(parent, syntaxNode, scope);
 }
 
 /* static */ StepResult
@@ -119,9 +119,9 @@ EntryFrame::StepImpl(ThreadContext* cx, Handle<EntryFrame*> frame)
 InvokeSyntaxNodeFrame::Create(AllocationContext acx,
                               Handle<Frame*> parent,
                               Handle<EntryFrame*> entryFrame,
-                              Handle<SyntaxTreeFragment*> stFrag)
+                              Handle<SyntaxNode*> syntaxNode)
 {
-    return acx.create<InvokeSyntaxNodeFrame>(parent, entryFrame, stFrag);
+    return acx.create<InvokeSyntaxNodeFrame>(parent, entryFrame, syntaxNode);
 }
 
 /* static */ StepResult
@@ -140,10 +140,10 @@ InvokeSyntaxNodeFrame::StepImpl(ThreadContext* cx,
 {
     // Get the name of the syntax handler method.
     Local<String*> name(cx,
-        cx->runtimeState()->syntaxHandlerName(frame->stFrag()));
+        cx->runtimeState()->syntaxHandlerName(frame->syntaxNode()));
     if (name.get() == nullptr) {
-        WH_UNREACHABLE("Handler name not found for SyntaxTreeFragment.");
-        cx->setInternalError("Handler name not found for SyntaxTreeFragment.");
+        WH_UNREACHABLE("Handler name not found for SyntaxNode.");
+        cx->setInternalError("Handler name not found for SyntaxNode.");
         return ErrorVal();
     }
 
@@ -166,9 +166,9 @@ InvokeSyntaxNodeFrame::StepImpl(ThreadContext* cx,
     // Invoke the syntax handler.
     Local<ValBox> syntaxHandler(cx, lookupEvalResult->value());
     Local<ScopeObject*> callerScope(cx, frame->entryFrame()->scope());
-    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
+    Local<SyntaxNode*> syntaxNode(cx, frame->syntaxNode());
     Local<CallResult> result(cx, Interp::InvokeOperativeValue(
-            cx, frame, callerScope, syntaxHandler, stFrag));
+            cx, frame, callerScope, syntaxHandler, syntaxNode));
 
     // Forward result from syntax handler.
     if (result->isError())
@@ -192,10 +192,10 @@ InvokeSyntaxNodeFrame::StepImpl(ThreadContext* cx,
 FileSyntaxFrame::Create(AllocationContext acx,
                         Handle<Frame*> parent,
                         Handle<EntryFrame*> entryFrame,
-                        Handle<SyntaxTreeFragment*> stFrag,
+                        Handle<SyntaxNode*> syntaxNode,
                         uint32_t statementNo)
 {
-    return acx.create<FileSyntaxFrame>(parent, entryFrame, stFrag,
+    return acx.create<FileSyntaxFrame>(parent, entryFrame, syntaxNode,
                                        statementNo);
 }
 
@@ -203,18 +203,16 @@ FileSyntaxFrame::Create(AllocationContext acx,
 FileSyntaxFrame::CreateNext(AllocationContext acx,
                             Handle<FileSyntaxFrame*> curFrame)
 {
-    WH_ASSERT(curFrame->stFrag()->isNode());
-    Local<SyntaxNodeRef> fileNode(acx,
-        SyntaxNodeRef(curFrame->stFrag()->toNode()));
-    WH_ASSERT(fileNode->nodeType() == AST::File);
-    WH_ASSERT(curFrame->statementNo() < fileNode->astFile().numStatements());
+    Local<SyntaxNode*> syntaxNode(acx, curFrame->syntaxNode());
+    Local<SyntaxNodeRef> nodeRef(acx, SyntaxNodeRef(syntaxNode));
+    WH_ASSERT(nodeRef->isFile());
+    WH_ASSERT(curFrame->statementNo() < nodeRef->astFile().numStatements());
 
     Local<Frame*> parent(acx, curFrame->parent());
     Local<EntryFrame*> entryFrame(acx, curFrame->entryFrame());
-    Local<SyntaxTreeFragment*> stFrag(acx, curFrame->stFrag());
     uint32_t nextStatementNo = curFrame->statementNo() + 1;
 
-    return Create(acx, parent, entryFrame, stFrag, nextStatementNo);
+    return Create(acx, parent, entryFrame, syntaxNode, nextStatementNo);
 }
 
 /* static */ StepResult
@@ -222,9 +220,8 @@ FileSyntaxFrame::ResolveImpl(ThreadContext* cx,
                              Handle<FileSyntaxFrame*> frame,
                              Handle<EvalResult> result)
 {
-    WH_ASSERT(frame->stFrag()->isNode());
-    Local<SyntaxNodeRef> fileNode(cx, SyntaxNodeRef(frame->stFrag()->toNode()));
-    WH_ASSERT(fileNode->nodeType() == AST::File);
+    Local<SyntaxNodeRef> fileNode(cx, SyntaxNodeRef(frame->syntaxNode()));
+    WH_ASSERT(fileNode->isFile());
     WH_ASSERT(frame->statementNo() < fileNode->astFile().numStatements());
 
     Local<Frame*> rootedParent(cx, frame->parent());
@@ -246,11 +243,10 @@ FileSyntaxFrame::ResolveImpl(ThreadContext* cx,
 
 /* static */ StepResult
 FileSyntaxFrame::StepImpl(ThreadContext* cx,
-                            Handle<FileSyntaxFrame*> frame)
+                          Handle<FileSyntaxFrame*> frame)
 {
-    WH_ASSERT(frame->stFrag()->isNode());
-    Local<SyntaxNodeRef> fileNode(cx, SyntaxNodeRef(frame->stFrag()->toNode()));
-    WH_ASSERT(fileNode->nodeType() == AST::File);
+    Local<SyntaxNodeRef> fileNode(cx, SyntaxNodeRef(frame->syntaxNode()));
+    WH_ASSERT(fileNode->isFile());
     WH_ASSERT(frame->statementNo() <= fileNode->astFile().numStatements());
 
     Local<Frame*> rootedParent(cx, frame->parent());
@@ -258,8 +254,8 @@ FileSyntaxFrame::StepImpl(ThreadContext* cx,
     if (frame->statementNo() == fileNode->astFile().numStatements())
         return Frame::Resolve(cx, rootedParent, EvalResult::UndefinedValue());
 
-    // Get SyntaxTreeFragment for next statement node.
-    Local<SyntaxTreeFragment*> stmtNode(cx);
+    // Get SyntaxNode for next statement node.
+    Local<SyntaxNode*> stmtNode(cx);
     if (!stmtNode.setResult(SyntaxNode::Create(
             cx->inHatchery(), fileNode->pst(),
             fileNode->astFile().statement(frame->statementNo()).offset())))
@@ -285,28 +281,27 @@ FileSyntaxFrame::StepImpl(ThreadContext* cx,
 BlockSyntaxFrame::Create(AllocationContext acx,
                          Handle<Frame*> parent,
                          Handle<EntryFrame*> entryFrame,
-                         Handle<SyntaxTreeFragment*> stFrag,
+                         Handle<SyntaxNode*> syntaxNode,
                          uint32_t statementNo)
 {
-    return acx.create<BlockSyntaxFrame>(parent, entryFrame, stFrag,
-                                       statementNo);
+    return acx.create<BlockSyntaxFrame>(parent, entryFrame, syntaxNode,
+                                        statementNo);
 }
 
 /* static */ Result<BlockSyntaxFrame*>
 BlockSyntaxFrame::CreateNext(AllocationContext acx,
                              Handle<BlockSyntaxFrame*> curFrame)
 {
-    WH_ASSERT(curFrame->stFrag()->isBlock());
-    Local<SyntaxBlockRef> blockRef(acx,
-        SyntaxBlockRef(curFrame->stFrag()->toBlock()));
-    WH_ASSERT(curFrame->statementNo() < blockRef->astBlock().numStatements());
+    Local<SyntaxNode*> syntaxNode(acx, curFrame->syntaxNode());
+    Local<SyntaxNodeRef> nodeRef(acx, SyntaxNodeRef(syntaxNode));
+    WH_ASSERT(nodeRef->isBlock());
+    WH_ASSERT(curFrame->statementNo() < nodeRef->astBlock().numStatements());
 
     Local<Frame*> parent(acx, curFrame->parent());
     Local<EntryFrame*> entryFrame(acx, curFrame->entryFrame());
-    Local<SyntaxTreeFragment*> stFrag(acx, curFrame->stFrag());
     uint32_t nextStatementNo = curFrame->statementNo() + 1;
 
-    return Create(acx, parent, entryFrame, stFrag, nextStatementNo);
+    return Create(acx, parent, entryFrame, syntaxNode, nextStatementNo);
 }
 
 /* static */ StepResult
@@ -314,12 +309,11 @@ BlockSyntaxFrame::ResolveImpl(ThreadContext* cx,
                               Handle<BlockSyntaxFrame*> frame,
                               Handle<EvalResult> result)
 {
-    WH_ASSERT(frame->stFrag()->isBlock());
-    Local<SyntaxBlockRef> blockRef(cx,
-        SyntaxBlockRef(frame->stFrag()->toBlock()));
+    Local<SyntaxNodeRef> nodeRef(cx, SyntaxNodeRef(frame->syntaxNode()));
+    WH_ASSERT(nodeRef->isBlock());
 
     uint32_t stmtNo = frame->statementNo();
-    uint32_t numStmts = blockRef->astBlock().numStatements();
+    uint32_t numStmts = nodeRef->astBlock().numStatements();
     WH_ASSERT(stmtNo < numStmts);
 
     Local<Frame*> rootedParent(cx, frame->parent());
@@ -349,15 +343,13 @@ BlockSyntaxFrame::ResolveImpl(ThreadContext* cx,
 BlockSyntaxFrame::StepImpl(ThreadContext* cx,
                            Handle<BlockSyntaxFrame*> frame)
 {
-    WH_ASSERT(frame->stFrag()->isBlock());
-    Local<SyntaxBlockRef> blockRef(cx,
-        SyntaxBlockRef(frame->stFrag()->toBlock()));
+    Local<SyntaxNodeRef> blockRef(cx, SyntaxNodeRef(frame->syntaxNode()));
     WH_ASSERT(frame->statementNo() < blockRef->astBlock().numStatements());
 
     Local<Frame*> rootedParent(cx, frame->parent());
 
-    // Get SyntaxTreeFragment for next statement node.
-    Local<SyntaxTreeFragment*> stmtNode(cx);
+    // Get SyntaxNode for next statement node.
+    Local<SyntaxNode*> stmtNode(cx);
     if (!stmtNode.setResult(SyntaxNode::Create(
             cx->inHatchery(), blockRef->pst(),
             blockRef->astBlock().statement(frame->statementNo()).offset())))
@@ -383,9 +375,9 @@ BlockSyntaxFrame::StepImpl(ThreadContext* cx,
 ReturnStmtSyntaxFrame::Create(AllocationContext acx,
                               Handle<Frame*> parent,
                               Handle<EntryFrame*> entryFrame,
-                              Handle<SyntaxTreeFragment*> stFrag)
+                              Handle<SyntaxNode*> syntaxNode)
 {
-    return acx.create<ReturnStmtSyntaxFrame>(parent, entryFrame, stFrag);
+    return acx.create<ReturnStmtSyntaxFrame>(parent, entryFrame, syntaxNode);
 }
 
 /* static */ StepResult
@@ -462,11 +454,9 @@ ReturnStmtSyntaxFrame::ResolveImpl(ThreadContext* cx,
 ReturnStmtSyntaxFrame::StepImpl(ThreadContext* cx,
                                 Handle<ReturnStmtSyntaxFrame*> frame)
 {
-    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
-    WH_ASSERT(frame->stFrag()->isNode());
-
+    Local<SyntaxNode*> syntaxNode(cx, frame->syntaxNode());
     Local<AST::PackedReturnStmtNode> returnStmt(cx,
-        stFrag->toNode()->astReturnStmt());
+        syntaxNode->astReturnStmt());
 
     // If there is no return expression, resolve self with an undefined value.
     if (!returnStmt->hasExpression()) {
@@ -479,8 +469,8 @@ ReturnStmtSyntaxFrame::StepImpl(ThreadContext* cx,
 
     // Create the SyntaxNode for the expression to evaluate.
     Local<AST::PackedBaseNode> exprNode(cx, returnStmt->expression());
-    Local<PackedSyntaxTree*> pst(cx, stFrag->pst());
-    Local<SyntaxTreeFragment*> exprStFrag(cx);
+    Local<PackedSyntaxTree*> pst(cx, syntaxNode->pst());
+    Local<SyntaxNode*> exprStFrag(cx);
     if (!exprStFrag.setResult(SyntaxNode::Create(
             cx->inHatchery(), pst, exprNode->offset())))
     {
@@ -504,10 +494,10 @@ ReturnStmtSyntaxFrame::StepImpl(ThreadContext* cx,
 VarSyntaxFrame::Create(AllocationContext acx,
                        Handle<Frame*> parent,
                        Handle<EntryFrame*> entryFrame,
-                       Handle<SyntaxTreeFragment*> stFrag,
+                       Handle<SyntaxNode*> syntaxNode,
                        uint32_t bindingNo)
 {
-    return acx.create<VarSyntaxFrame>(parent, entryFrame, stFrag, bindingNo);
+    return acx.create<VarSyntaxFrame>(parent, entryFrame, syntaxNode, bindingNo);
 }
 
 /* static */ StepResult
@@ -515,10 +505,8 @@ VarSyntaxFrame::ResolveImpl(ThreadContext* cx,
                             Handle<VarSyntaxFrame*> frame,
                             Handle<EvalResult> result)
 {
-    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
-    WH_ASSERT(stFrag->isNode());
-
-    Local<SyntaxNodeRef> nodeRef(cx, SyntaxNodeRef(stFrag->toNode()));
+    Local<SyntaxNode*> syntaxNode(cx, frame->syntaxNode());
+    Local<SyntaxNodeRef> nodeRef(cx, SyntaxNodeRef(syntaxNode));
 
     bool isConst = frame->isConst();
     uint32_t bindingNo = frame->bindingNo();
@@ -583,7 +571,7 @@ VarSyntaxFrame::ResolveImpl(ThreadContext* cx,
     Local<EntryFrame*> entryFrame(cx, frame->entryFrame());
     Local<VarSyntaxFrame*> nextVarFrame(cx);
     if (!nextVarFrame.setResult(VarSyntaxFrame::Create(
-            cx->inHatchery(), rootedParent, entryFrame, stFrag, bindingNo)))
+            cx->inHatchery(), rootedParent, entryFrame, syntaxNode, bindingNo)))
     {
         return ErrorVal();
     }
@@ -594,10 +582,8 @@ VarSyntaxFrame::ResolveImpl(ThreadContext* cx,
 VarSyntaxFrame::StepImpl(ThreadContext* cx,
                          Handle<VarSyntaxFrame*> frame)
 {
-    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
-    WH_ASSERT(frame->stFrag()->isNode());
-
-    Local<SyntaxNodeRef> nodeRef(cx, SyntaxNodeRef(stFrag->toNode()));
+    Local<SyntaxNode*> syntaxNode(cx, frame->syntaxNode());
+    Local<SyntaxNodeRef> nodeRef(cx, SyntaxNodeRef(syntaxNode));
 
     bool isConst = frame->isConst();
     uint32_t bindingNo = frame->bindingNo();
@@ -642,8 +628,8 @@ VarSyntaxFrame::StepImpl(ThreadContext* cx,
     Local<AST::PackedBaseNode> bindingAstNode(cx,
         isConst ? nodeRef->astConstStmt().varexpr(bindingNo)
                 : nodeRef->astVarStmt().varexpr(bindingNo));
-    Local<PackedSyntaxTree*> pst(cx, stFrag->pst());
-    Local<SyntaxTreeFragment*> bindingStFrag(cx);
+    Local<PackedSyntaxTree*> pst(cx, syntaxNode->pst());
+    Local<SyntaxNode*> bindingStFrag(cx);
     if (!bindingStFrag.setResult(SyntaxNode::Create(
             cx->inHatchery(), pst, bindingAstNode->offset())))
     {
@@ -667,9 +653,9 @@ VarSyntaxFrame::StepImpl(ThreadContext* cx,
 CallExprSyntaxFrame::CreateCallee(AllocationContext acx,
                                   Handle<Frame*> parent,
                                   Handle<EntryFrame*> entryFrame,
-                                  Handle<SyntaxTreeFragment*> stFrag)
+                                  Handle<SyntaxNode*> syntaxNode)
 {
-    return acx.create<CallExprSyntaxFrame>(parent, entryFrame, stFrag,
+    return acx.create<CallExprSyntaxFrame>(parent, entryFrame, syntaxNode,
                                            State::Callee, 0,
                                            ValBox(), nullptr, nullptr);
 }
@@ -682,10 +668,10 @@ CallExprSyntaxFrame::CreateFirstArg(AllocationContext acx,
 {
     Local<Frame*> parent(acx, calleeFrame->parent());
     Local<EntryFrame*> entryFrame(acx, calleeFrame->entryFrame());
-    Local<SyntaxTreeFragment*> stFrag(acx, calleeFrame->stFrag());
+    Local<SyntaxNode*> syntaxNode(acx, calleeFrame->syntaxNode());
     return acx.create<CallExprSyntaxFrame>(parent.handle(),
                                            entryFrame.handle(),
-                                           stFrag.handle(),
+                                           syntaxNode.handle(),
                                            State::Arg, 0,
                                            callee, calleeFunc, nullptr);
 }
@@ -697,13 +683,13 @@ CallExprSyntaxFrame::CreateNextArg(AllocationContext acx,
 {
     Local<Frame*> parent(acx, calleeFrame->parent());
     Local<EntryFrame*> entryFrame(acx, calleeFrame->entryFrame());
-    Local<SyntaxTreeFragment*> stFrag(acx, calleeFrame->stFrag());
+    Local<SyntaxNode*> syntaxNode(acx, calleeFrame->syntaxNode());
     Local<ValBox> callee(acx, calleeFrame->callee());
     Local<FunctionObject*> calleeFunc(acx, calleeFrame->calleeFunc());
     uint16_t argNo = calleeFrame->argNo() + 1;
     return acx.create<CallExprSyntaxFrame>(parent.handle(),
                                            entryFrame.handle(),
-                                           stFrag.handle(),
+                                           syntaxNode.handle(),
                                            State::Arg, argNo,
                                            callee.handle(),
                                            calleeFunc.handle(),
@@ -717,12 +703,12 @@ CallExprSyntaxFrame::CreateInvoke(AllocationContext acx,
 {
     Local<Frame*> parent(acx, frame->parent());
     Local<EntryFrame*> entryFrame(acx, frame->entryFrame());
-    Local<SyntaxTreeFragment*> stFrag(acx, frame->stFrag());
+    Local<SyntaxNode*> syntaxNode(acx, frame->syntaxNode());
     Local<ValBox> callee(acx, frame->callee());
     Local<FunctionObject*> calleeFunc(acx, frame->calleeFunc());
     return acx.create<CallExprSyntaxFrame>(parent.handle(),
                                            entryFrame.handle(),
-                                           stFrag.handle(),
+                                           syntaxNode.handle(),
                                            State::Invoke, 0,
                                            callee.handle(),
                                            calleeFunc.handle(),
@@ -738,10 +724,10 @@ CallExprSyntaxFrame::CreateInvoke(AllocationContext acx,
 {
     Local<Frame*> parent(acx, frame->parent());
     Local<EntryFrame*> entryFrame(acx, frame->entryFrame());
-    Local<SyntaxTreeFragment*> stFrag(acx, frame->stFrag());
+    Local<SyntaxNode*> syntaxNode(acx, frame->syntaxNode());
     return acx.create<CallExprSyntaxFrame>(parent.handle(),
                                            entryFrame.handle(),
-                                           stFrag.handle(),
+                                           syntaxNode.handle(),
                                            State::Invoke, 0,
                                            callee, calleeFunc, operands);
 }
@@ -751,10 +737,10 @@ CallExprSyntaxFrame::ResolveImpl(ThreadContext* cx,
                                  Handle<CallExprSyntaxFrame*> frame,
                                  Handle<EvalResult> result)
 {
-    Local<SyntaxNodeRef> callNodeRef(cx, frame->stFrag()->toNode());
-    WH_ASSERT(callNodeRef->nodeType() == AST::CallExpr);
+    Local<SyntaxNodeRef> callNodeRef(cx, frame->syntaxNode());
+    WH_ASSERT(callNodeRef->isCallExpr());
 
-    Local<PackedSyntaxTree*> pst(cx, frame->stFrag()->pst());
+    Local<PackedSyntaxTree*> pst(cx, frame->syntaxNode()->pst());
     Local<AST::PackedCallExprNode> callExprNode(cx, callNodeRef->astCallExpr());
 
     Local<Frame*> parent(cx, frame->parent());
@@ -903,8 +889,6 @@ CallExprSyntaxFrame::ResolveInvoke(ThreadContext* cx,
 CallExprSyntaxFrame::StepImpl(ThreadContext* cx,
                               Handle<CallExprSyntaxFrame*> frame)
 {
-    WH_ASSERT(frame->stFrag()->isNode());
-
     // On initial step, just set up the entry frame for evaluating the
     // underlying callee or arg expression.
 
@@ -928,10 +912,10 @@ CallExprSyntaxFrame::StepCallee(ThreadContext* cx,
 {
     WH_ASSERT(frame->inCalleeState());
 
-    Local<SyntaxNodeRef> callNodeRef(cx, frame->stFrag()->toNode());
-    WH_ASSERT(callNodeRef->nodeType() == AST::CallExpr);
+    Local<SyntaxNodeRef> callNodeRef(cx, frame->syntaxNode());
+    WH_ASSERT(callNodeRef->isCallExpr());
 
-    Local<PackedSyntaxTree*> pst(cx, frame->stFrag()->pst());
+    Local<PackedSyntaxTree*> pst(cx, frame->syntaxNode()->pst());
     Local<AST::PackedCallExprNode> callExprNode(cx, callNodeRef->astCallExpr());
 
     return StepSubexpr(cx, frame, pst, callExprNode->callee().offset());
@@ -946,10 +930,10 @@ CallExprSyntaxFrame::StepArg(ThreadContext* cx,
     // Only applicatives need evaluation of arguments.
     WH_ASSERT(frame->calleeFunc()->isApplicative());
 
-    Local<SyntaxNodeRef> callNodeRef(cx, frame->stFrag()->toNode());
-    WH_ASSERT(callNodeRef->nodeType() == AST::CallExpr);
+    Local<SyntaxNodeRef> callNodeRef(cx, frame->syntaxNode());
+    WH_ASSERT(callNodeRef->isCallExpr());
 
-    Local<PackedSyntaxTree*> pst(cx, frame->stFrag()->pst());
+    Local<PackedSyntaxTree*> pst(cx, frame->syntaxNode()->pst());
     Local<AST::PackedCallExprNode> callExprNode(cx, callNodeRef->astCallExpr());
 
     uint16_t argNo = frame->argNo();
@@ -980,11 +964,11 @@ CallExprSyntaxFrame::StepInvoke(ThreadContext* cx,
     WH_ASSERT(calleeFunc->isOperative());
     WH_ASSERT(operands.get() == nullptr);
 
-    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
+    Local<SyntaxNode*> syntaxNode(cx, frame->syntaxNode());
 
     Local<InvokeOperativeFrame*> invokeFrame(cx);
     if (!invokeFrame.setResult(InvokeOperativeFrame::Create(
-            cx->inHatchery(), frame, callee, calleeFunc, stFrag)))
+            cx->inHatchery(), frame, callee, calleeFunc, syntaxNode)))
     {
         return ErrorVal();
     }
@@ -1089,10 +1073,10 @@ InvokeOperativeFrame::Create(AllocationContext acx,
                              Handle<Frame*> parent,
                              Handle<ValBox> callee,
                              Handle<FunctionObject*> calleeFunc,
-                             Handle<SyntaxTreeFragment*> stFrag)
+                             Handle<SyntaxNode*> syntaxNode)
 {
     return acx.create<InvokeOperativeFrame>(parent, callee, calleeFunc,
-                                            stFrag);
+                                            syntaxNode);
 }
 
 /* static */ StepResult
@@ -1110,17 +1094,17 @@ InvokeOperativeFrame::StepImpl(ThreadContext* cx,
 {
     Local<ValBox> callee(cx, frame->callee());
     Local<FunctionObject*> calleeFunc(cx, frame->calleeFunc());
-    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
+    Local<SyntaxNode*> syntaxNode(cx, frame->syntaxNode());
     Local<ScopeObject*> callerScope(cx, frame->ancestorEntryFrame()->scope());
 
-    Local<SyntaxNodeRef> callNodeRef(cx, frame->stFrag()->toNode());
-    WH_ASSERT(callNodeRef->nodeType() == AST::CallExpr);
+    Local<SyntaxNodeRef> callNodeRef(cx, frame->syntaxNode());
+    WH_ASSERT(callNodeRef->isCallExpr());
 
-    Local<PackedSyntaxTree*> pst(cx, frame->stFrag()->pst());
+    Local<PackedSyntaxTree*> pst(cx, frame->syntaxNode()->pst());
     Local<AST::PackedCallExprNode> callExprNode(cx, callNodeRef->astCallExpr());
 
-    // Assemble an array of SyntaxTreeFragment pointers.
-    LocalArray<SyntaxTreeFragment*> operandExprs(cx, callExprNode->numArgs());
+    // Assemble an array of SyntaxNode pointers.
+    LocalArray<SyntaxNode*> operandExprs(cx, callExprNode->numArgs());
     for (uint32_t i = 0; i < callExprNode->numArgs(); i++) {
         uint32_t offset = callExprNode->arg(i).offset();
         if (!operandExprs.setResult(i,
@@ -1156,9 +1140,9 @@ InvokeOperativeFrame::StepImpl(ThreadContext* cx,
 DotExprSyntaxFrame::Create(AllocationContext acx,
                            Handle<Frame*> parent,
                            Handle<EntryFrame*> entryFrame,
-                           Handle<SyntaxTreeFragment*> stFrag)
+                           Handle<SyntaxNode*> syntaxNode)
 {
-    return acx.create<DotExprSyntaxFrame>(parent, entryFrame, stFrag);
+    return acx.create<DotExprSyntaxFrame>(parent, entryFrame, syntaxNode);
 }
 
 /* static */ StepResult
@@ -1166,10 +1150,8 @@ DotExprSyntaxFrame::ResolveImpl(ThreadContext* cx,
                                 Handle<DotExprSyntaxFrame*> frame,
                                 Handle<EvalResult> result)
 {
-    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
-    WH_ASSERT(stFrag->isNode());
-
-    Local<SyntaxNodeRef> nodeRef(cx, SyntaxNodeRef(stFrag->toNode()));
+    Local<SyntaxNode*> syntaxNode(cx, frame->syntaxNode());
+    Local<SyntaxNodeRef> nodeRef(cx, SyntaxNodeRef(syntaxNode));
 
     Local<Frame*> rootedParent(cx, frame->parent());
 
@@ -1209,8 +1191,8 @@ DotExprSyntaxFrame::ResolveImpl(ThreadContext* cx,
     Local<ValBox> evalValue(cx, evalResult->value());
 
     Local<ScopeObject*> scope(cx, frame->entryFrame()->scope());
-    LocalArray<SyntaxTreeFragment*> args(cx, 1);
-    args.set(0, stFrag);
+    LocalArray<SyntaxNode*> args(cx, 1);
+    args.set(0, syntaxNode);
     Local<CallResult> invokeResult(cx, Interp::InvokeOperativeValue(
             cx, frame, scope, evalValue, args));
 
@@ -1228,15 +1210,13 @@ DotExprSyntaxFrame::ResolveImpl(ThreadContext* cx,
 DotExprSyntaxFrame::StepImpl(ThreadContext* cx,
                              Handle<DotExprSyntaxFrame*> frame)
 {
-    Local<SyntaxTreeFragment*> stFrag(cx, frame->stFrag());
-    WH_ASSERT(frame->stFrag()->isNode());
-
-    Local<AST::PackedDotExprNode> dotExpr(cx, stFrag->toNode()->astDotExpr());
+    Local<SyntaxNode*> syntaxNode(cx, frame->syntaxNode());
+    Local<AST::PackedDotExprNode> dotExpr(cx, syntaxNode->astDotExpr());
 
     // Create the SyntaxNode for the expression to evaluate.
     Local<AST::PackedBaseNode> targetExpr(cx, dotExpr->target());
-    Local<PackedSyntaxTree*> pst(cx, stFrag->pst());
-    Local<SyntaxTreeFragment*> targetStFrag(cx);
+    Local<PackedSyntaxTree*> pst(cx, syntaxNode->pst());
+    Local<SyntaxNode*> targetStFrag(cx);
     if (!targetStFrag.setResult(SyntaxNode::Create(
             cx->inHatchery(), pst, targetExpr->offset())))
     {
@@ -1260,12 +1240,12 @@ NativeCallResumeFrame::Create(AllocationContext acx,
                               Handle<Frame*> parent,
                               Handle<NativeCallInfo> callInfo,
                               Handle<ScopeObject*> evalScope,
-                              Handle<SyntaxTreeFragment*> syntaxFragment,
+                              Handle<SyntaxNode*> syntaxNode,
                               NativeCallResumeFuncPtr resumeFunc,
                               Handle<HeapThing*> resumeState)
 {
     return acx.create<NativeCallResumeFrame>(parent, callInfo, evalScope,
-                                             syntaxFragment, resumeFunc,
+                                             syntaxNode, resumeFunc,
                                              resumeState);
 }
 
@@ -1310,13 +1290,13 @@ NativeCallResumeFrame::ResolveImpl(ThreadContext* cx,
 NativeCallResumeFrame::StepImpl(ThreadContext* cx,
                                 Handle<NativeCallResumeFrame*> frame)
 {
-    Local<SyntaxTreeFragment*> stFrag(cx, frame->syntaxFragment());
+    Local<SyntaxNode*> syntaxNode(cx, frame->syntaxNode());
     Local<ScopeObject*> evalScope(cx, frame->evalScope());
 
     // Create an EntryFrame for the evaluation of the syntax tree fragment.
     Local<EntryFrame*> entryFrame(cx);
     if (!entryFrame.setResult(EntryFrame::Create(cx->inHatchery(),
-                                                 frame, stFrag, evalScope)))
+                                                 frame, syntaxNode, evalScope)))
     {
         return ErrorVal();
     }

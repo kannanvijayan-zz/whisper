@@ -125,18 +125,18 @@ class PrintingPackedVisitor : public PackedVisitor
         pr("if (");
         reader.visitNode(ifStmt.ifCond(), this);
         pr(") ");
-        visitSizedBlock(reader, ifStmt.ifBlock());
+        visitBlock(reader, ifStmt.ifBlock());
 
         for (uint32_t i = 0; i < ifStmt.numElsifs(); i++) {
             pr(" elsif (");
             reader.visitNode(ifStmt.elsifCond(i), this);
             pr(") ");
-            visitSizedBlock(reader, ifStmt.elsifBlock(i));
+            visitBlock(reader, ifStmt.elsifBlock(i));
         }
 
         if (ifStmt.hasElse()) {
             pr(" else ");
-            visitSizedBlock(reader, ifStmt.elseBlock());
+            visitBlock(reader, ifStmt.elseBlock());
         }
         pr("\n");
     }
@@ -155,7 +155,7 @@ class PrintingPackedVisitor : public PackedVisitor
             visitIdentifier(reader, defStmt.paramCid(i));
         }
         pr(") ");
-        visitSizedBlock(reader, defStmt.bodyBlock());
+        visitBlock(reader, defStmt.bodyBlock());
         pr("\n");
     }
 
@@ -349,12 +349,7 @@ class PrintingPackedVisitor : public PackedVisitor
         }
     }
 
-    void visitSizedBlock(PackedReader const& reader, PackedSizedBlock block)
-    {
-        visitBlock(reader, block.unsizedBlock());
-    }
-
-    void visitBlock(PackedReader const& reader, PackedBlock block)
+    void visitBlock(PackedReader const& reader, PackedBlockNode block)
     {
         pr("{\n");
         tabDepth_++;

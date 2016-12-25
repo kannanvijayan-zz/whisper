@@ -128,7 +128,7 @@ typedef CallResult (*NativeApplicativeFuncPtr)(
 typedef CallResult (*NativeOperativeFuncPtr)(
         ThreadContext* cx,
         Handle<NativeCallInfo> callInfo,
-        ArrayHandle<SyntaxTreeFragment*> args);
+        ArrayHandle<SyntaxNode*> args);
 
 class NativeFunction : public Function
 {
@@ -259,8 +259,8 @@ class ScriptedFunction : public Function
         return pst_->getConstantString(paramCid);
     }
 
-    SyntaxBlockRef bodyBlockRef() const {
-        return SyntaxBlockRef(pst_, stRef().astDefStmt().bodyBlock());
+    SyntaxNodeRef bodyBlockRef() const {
+        return SyntaxNodeRef(pst_, stRef().astDefStmt().bodyBlock());
     }
 };
 

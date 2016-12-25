@@ -396,9 +396,10 @@ PackedWriter::writeReturnStmt(ReturnStmtNode const* node)
 }
 
 void
-PackedWriter::writeBlock(Block const* block)
+PackedWriter::writeBlock(BlockNode const* block)
 {
     WH_ASSERT(block->statements().size() <= MaxBlockStatements);
+    writeTypeExtra(block->statements().size());
     Position offsetPosn = position();
     // First offset is not written.
     for (uint32_t i = 1; i < block->statements().size(); i++)
@@ -411,15 +412,6 @@ PackedWriter::writeBlock(Block const* block)
         writeNode(stmt);
         i++;
     }
-}
-
-void
-PackedWriter::writeSizedBlock(Block const* block)
-{
-    if (block->statements().size() > MaxBlockStatements)
-        emitError("Too many block statements.");
-    write(block->statements().size());
-    writeBlock(block);
 }
 
 void
@@ -449,18 +441,18 @@ PackedWriter::writeIfStmt(IfStmtNode const* node)
 
     writeNode(node->ifPair().cond());
     writeOffsetDistance(&offsetPos);
-    writeSizedBlock(node->ifPair().block());
+    writeNode(node->ifPair().block());
 
     for (IfStmtNode::CondPair const& elsifPair : node->elsifPairs()) {
         writeOffsetDistance(&offsetPos);
         writeNode(elsifPair.cond());
         writeOffsetDistance(&offsetPos);
-        writeSizedBlock(elsifPair.block());
+        writeNode(elsifPair.block());
     }
 
     if (node->hasElseBlock()) {
         writeOffsetDistance(&offsetPos);
-        writeSizedBlock(node->elseBlock());
+        writeNode(node->elseBlock());
     }
 }
 
@@ -481,7 +473,7 @@ PackedWriter::writeDefStmt(DefStmtNode const* node)
         write(paramIdx);
     }
 
-    writeSizedBlock(node->bodyBlock());
+    writeNode(node->bodyBlock());
 }
 
 void
@@ -537,7 +529,7 @@ void
 PackedWriter::writeLoopStmt(LoopStmtNode const* node)
 {
     writeTypeExtra(node->bodyBlock()->statements().size());
-    writeBlock(node->bodyBlock());
+    writeNode(node->bodyBlock());
 }
 
 void

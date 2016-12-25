@@ -39,8 +39,8 @@ HeapInterpretSourceFile(ThreadContext* cx,
     if (!st.setResult(VM::SourceFile::ParseSyntaxTree(cx, file)))
         return ErrorVal();
 
-    // Get SyntaxTreeFragment for the parsed File node.
-    Local<VM::SyntaxTreeFragment*> fileNode(cx);
+    // Get SyntaxNode for the parsed File node.
+    Local<VM::SyntaxNode*> fileNode(cx);
     if (!fileNode.setResult(VM::SyntaxNode::Create(
             cx->inHatchery(), st, st->startOffset())))
     {
@@ -100,11 +100,11 @@ CreateInitialSyntaxFrame(ThreadContext* cx,
                          Handle<VM::Frame*> parent,
                          Handle<VM::EntryFrame*> entryFrame)
 {
-    Local<VM::SyntaxTreeFragment*> stFrag(cx, entryFrame->stFrag());
+    Local<VM::SyntaxNode*> syntaxNode(cx, entryFrame->syntaxNode());
 
     Local<VM::InvokeSyntaxNodeFrame*> syntaxFrame(cx);
     if (!syntaxFrame.setResult(VM::InvokeSyntaxNodeFrame::Create(
-            cx->inHatchery(), parent, entryFrame, stFrag)))
+            cx->inHatchery(), parent, entryFrame, syntaxNode)))
     {
         return ErrorVal();
     }
@@ -129,7 +129,7 @@ InvokeOperativeValue(ThreadContext* cx,
                      Handle<VM::Frame*> frame,
                      Handle<VM::ScopeObject*> callerScope,
                      Handle<VM::ValBox> callee,
-                     ArrayHandle<VM::SyntaxTreeFragment*> args)
+                     ArrayHandle<VM::SyntaxNode*> args)
 {
     Local<VM::FunctionObject*> calleeFunc(cx);
     if (!calleeFunc.setMaybe(FunctionObjectForValue(cx, callee)))
@@ -156,7 +156,7 @@ InvokeOperativeFunction(ThreadContext* cx,
                         Handle<VM::ScopeObject*> callerScope,
                         Handle<VM::ValBox> callee,
                         Handle<VM::FunctionObject*> calleeFunc,
-                        ArrayHandle<VM::SyntaxTreeFragment*> args)
+                        ArrayHandle<VM::SyntaxNode*> args)
 {
     WH_ASSERT(calleeFunc->isOperative());
 
@@ -305,9 +305,9 @@ InvokeScriptedApplicativeFunction(ThreadContext* cx,
     }
 
     // Create a SyntaxBlock to evaluate.
-    Local<VM::SyntaxBlockRef> stBlockRef(cx, calleeScript->bodyBlockRef());
-    Local<VM::SyntaxTreeFragment*> stFrag(cx);
-    if (!stFrag.setResult(VM::SyntaxBlock::Create(
+    Local<VM::SyntaxNodeRef> stBlockRef(cx, calleeScript->bodyBlockRef());
+    Local<VM::SyntaxNode*> syntaxNode(cx);
+    if (!syntaxNode.setResult(VM::SyntaxNode::Create(
             cx->inHatchery(), stBlockRef)))
     {
         return ErrorVal();
@@ -316,7 +316,7 @@ InvokeScriptedApplicativeFunction(ThreadContext* cx,
     // Create an EntryFrame for the block to evaluate.
     Local<VM::EntryFrame*> entryFrame(cx);
     if (!entryFrame.setResult(VM::EntryFrame::Create(
-            cx->inHatchery(), frame, stFrag, scope)))
+            cx->inHatchery(), frame, syntaxNode, scope)))
     {
         return ErrorVal();
     }

@@ -236,7 +236,7 @@ Parser::parseDefStatement()
     if (!checkNextToken<Token::Type::OpenBrace>())
         emitError("Expected '{' after def params.");
 
-    Block* block = parseBlock();
+    BlockNode* block = parseBlock();
 
     return make<DefStmtNode>(name, std::move(paramNames), block);
 }
@@ -269,7 +269,7 @@ Parser::parseIfStatement()
     // List of elsif cond pairs.
     IfStmtNode::CondPairList elsifPairs(allocatorFor<IfStmtNode::CondPair>());
 
-    Block* elseBlock = nullptr;
+    BlockNode* elseBlock = nullptr;
 
     // Check for following 'elsif' or 'else'
     Token::Type type = checkTypeNextToken<Token::Type::ElseKeyword,
@@ -311,7 +311,7 @@ Parser::parseIfCondPair()
     if (!checkNextToken<Token::Type::OpenBrace>())
         emitError("Expected '{' in conditional pair.");
 
-    Block* block = parseBlock();
+    BlockNode* block = parseBlock();
 
     return IfStmtNode::CondPair(expr, block);
 }
@@ -323,11 +323,11 @@ Parser::parseLoopStatement()
     if (!checkNextToken<Token::Type::OpenBrace>())
         emitError("Expected '{' after 'loop' keyword.");
 
-    Block* block = parseBlock();
+    BlockNode* block = parseBlock();
     return make<LoopStmtNode>(block);
 }
 
-Block*
+BlockNode*
 Parser::parseBlock()
 {
     // Parse statements.
@@ -339,7 +339,7 @@ Parser::parseBlock()
         emitError("Expected '}' at end of block.");
 
     // Construct and return a FileNode.
-    return make<Block>(std::move(stmts));
+    return make<BlockNode>(std::move(stmts));
 }
 
 Expression*

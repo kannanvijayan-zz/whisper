@@ -34,16 +34,9 @@ RuntimeState::Create(AllocationContext acx)
 }
 
 String*
-RuntimeState::syntaxHandlerName(SyntaxTreeFragment const* stFrag) const
+RuntimeState::syntaxHandlerName(SyntaxNode const* syntaxNode) const
 {
-    if (stFrag->isNode())
-        return syntaxHandlerName(stFrag->toNode()->nodeType());
-
-    if (stFrag->isBlock())
-        return nm_AtBlock();
-
-    WH_UNREACHABLE("SyntaxTreeFragment is neither node nor block.");
-    return nullptr;
+    return syntaxHandlerName(syntaxNode->nodeType());
 }
 
 String*
@@ -51,6 +44,7 @@ RuntimeState::syntaxHandlerName(AST::NodeType nodeType) const
 {
     switch (nodeType) {
       case AST::File:               return nm_AtFile();
+      case AST::Block:              return nm_AtBlock();
       case AST::EmptyStmt:          return nm_AtEmptyStmt();
       case AST::ExprStmt:           return nm_AtExprStmt();
       case AST::ReturnStmt:         return nm_AtReturnStmt();

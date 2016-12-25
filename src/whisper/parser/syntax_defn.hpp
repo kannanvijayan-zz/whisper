@@ -5,6 +5,7 @@
 #define WHISPER_DEFN_SYNTAX_NODES(_) \
     /* Top level. */                        \
     _(File)              /* done */         \
+    _(Block)             /* done */         \
     \
     /* Statements. */                       \
     _(EmptyStmt)         /* done */         \

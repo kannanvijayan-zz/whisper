@@ -14,17 +14,13 @@ namespace Whisper {
 namespace AST {
 
 
-class PackedBaseNode;
-class PackedBlock;
-class PackedSizedBlock;
-
 #define PACKED_NODE_DEF_(ntype) class Packed##ntype##Node;
     WHISPER_DEFN_SYNTAX_NODES(PACKED_NODE_DEF_)
 #undef PACKED_NODE_DEF_
 
-class PackedSyntaxElement
+class PackedBaseNode
 {
-    friend class TraceTraits<PackedSyntaxElement>;
+    friend class TraceTraits<PackedBaseNode>;
   public:
     class Position {
       private:
@@ -34,15 +30,21 @@ class PackedSyntaxElement
         uint32_t const* ptr() const { return ptr_; }
     };
 
+    typedef typename Bitfield<uint32_t, uint16_t, 12, 0>::Const TypeBitfield;
+    typedef typename Bitfield<uint32_t, uint32_t, 20, 12>::Const ExtraBitfield;
+
   protected:
     StackField<VM::Array<uint32_t>*> text_;
     uint32_t offset_;
 
-    PackedSyntaxElement(VM::Array<uint32_t>* text, uint32_t offset)
+  public:
+    PackedBaseNode(VM::Array<uint32_t>* text, uint32_t offset)
       : text_(text), offset_(offset)
     {}
+    PackedBaseNode(PackedBaseNode const& base)
+      : text_(base.text_), offset_(base.offset_)
+    {}
 
-  public:
     VM::Array<uint32_t> const* text() const {
         return text_;
     }
@@ -60,27 +62,15 @@ class PackedSyntaxElement
         return offset_ + idx;
     }
 
-    inline PackedBaseNode nodeAt(uint32_t idx) const;
-    inline PackedBlock blockAt(uint32_t idx, uint32_t stmts) const;
-    inline PackedSizedBlock sizedBlockAt(uint32_t idx) const;
+    inline PackedBaseNode nodeAt(uint32_t idx) const {
+        return PackedBaseNode(text_, adjustedOffset(idx));
+    }
 
-    inline PackedBaseNode indirectNodeAt(uint32_t idx) const;
-    inline PackedSizedBlock indirectSizedBlockAt(uint32_t idx) const;
-};
-
-class PackedBaseNode : public PackedSyntaxElement
-{
-  protected:
-    typedef typename Bitfield<uint32_t, uint16_t, 12, 0>::Const TypeBitfield;
-    typedef typename Bitfield<uint32_t, uint32_t, 20, 12>::Const ExtraBitfield;
+    inline PackedBaseNode indirectNodeAt(uint32_t idx) const {
+        return nodeAt(idx + valAt(idx));
+    }
 
   public:
-    PackedBaseNode(VM::Array<uint32_t>* text, uint32_t offset)
-      : PackedSyntaxElement(text, offset)
-    {}
-    PackedBaseNode(PackedBaseNode const& base)
-      : PackedSyntaxElement(base.text_, base.offset_)
-    {}
 
     NodeType type() const {
         uint32_t val = valAt(0);
@@ -104,85 +94,6 @@ class PackedBaseNode : public PackedSyntaxElement
 #undef PACKED_NODE_CAST_
 };
 
-class PackedBlock : public PackedSyntaxElement
-{
-  private:
-    uint32_t numStatements_;
-
-  public:
-    PackedBlock(VM::Array<uint32_t>* text,
-                uint32_t offset,
-                uint32_t numStatements)
-      : PackedSyntaxElement(text, offset),
-        numStatements_(numStatements)
-    {}
-
-    uint32_t numStatements() const {
-        return numStatements_;
-    }
-
-    PackedBaseNode statement(uint32_t idx) const {
-        WH_ASSERT(idx < numStatements());
-        if (idx == 0)
-            return nodeAt(numStatements() - 1);
-        return indirectNodeAt(idx - 1);
-    }
-};
-
-class PackedSizedBlock : public PackedSyntaxElement
-{
-  public:
-    PackedSizedBlock(VM::Array<uint32_t>* text, uint32_t offset)
-      : PackedSyntaxElement(text, offset)
-    {}
-
-    uint32_t numStatements() const {
-        return valAt(0);
-    }
-
-    PackedBaseNode statement(uint32_t idx) const {
-        WH_ASSERT(idx < numStatements());
-        if (idx == 0)
-            return nodeAt(numStatements());
-        return indirectNodeAt(idx);
-    }
-
-    PackedBlock unsizedBlock() const {
-        return PackedBlock(text_, adjustedOffset(1), numStatements());
-    }
-};
-
-inline PackedBaseNode
-PackedSyntaxElement::nodeAt(uint32_t idx) const
-{
-    return PackedBaseNode(text_, adjustedOffset(idx));
-}
-
-inline PackedBlock
-PackedSyntaxElement::blockAt(uint32_t idx, uint32_t stmts) const
-{
-    return PackedBlock(text_, adjustedOffset(idx), stmts);
-}
-
-inline PackedSizedBlock
-PackedSyntaxElement::sizedBlockAt(uint32_t idx) const
-{
-    return PackedSizedBlock(text_, adjustedOffset(idx));
-}
-
-inline PackedBaseNode
-PackedSyntaxElement::indirectNodeAt(uint32_t idx) const
-{
-    return nodeAt(idx + valAt(idx));
-}
-
-inline PackedSizedBlock
-PackedSyntaxElement::indirectSizedBlockAt(uint32_t idx) const
-{
-    return sizedBlockAt(idx + valAt(idx));
-}
-
-
 class PackedFileNode : public PackedBaseNode
 {
     // Format:
@@ -201,6 +112,33 @@ class PackedFileNode : public PackedBaseNode
         WH_ASSERT(this->extra() <= MaxStatements);
         return extra();
     }
+    PackedBaseNode statement(uint32_t idx) const {
+        WH_ASSERT(idx < numStatements());
+        if (idx == 0)
+            return nodeAt(numStatements());
+        return indirectNodeAt(idx);
+    }
+};
+
+class PackedBlockNode : public PackedBaseNode
+{
+    // Format:
+    //      { <NumStatements:24 | Type>;
+    //        StmtOffset1; ...; StmtOffsetN-1;
+    //        Stmt0...;
+    //        Stmt1...;
+    //        ...
+    //        StmtN-1... }
+  public:
+    static constexpr uint32_t MaxStatements = 0xffff;
+
+    using PackedBaseNode::PackedBaseNode;
+
+    uint32_t numStatements() const {
+        WH_ASSERT(this->extra() <= MaxStatements);
+        return extra();
+    }
+
     PackedBaseNode statement(uint32_t idx) const {
         WH_ASSERT(idx < numStatements());
         if (idx == 0)
@@ -257,11 +195,11 @@ class PackedIfStmtNode : public PackedBaseNode
     //        ElsifCondOffsetN; ElsifBlockOffsetN;
     //        ElseBlockOffset if HasElse;
     //
-    //        IfCond...; SizedIfBlock...;
-    //        ElsifCond1...; SizedElsifBlock1...;
+    //        IfCond...; IfBlock...;
+    //        ElsifCond1...; ElsifBlock1...;
     //        ...
-    //        ElsifCondN...; SizedElsifBlockN...;
-    //        SizedElseBlock... if HasElse }
+    //        ElsifCondN...; ElsifBlockN...;
+    //        ElseBlock... if HasElse }
   public:
     static constexpr uint32_t MaxElsifs = 0xffff;
 
@@ -278,22 +216,22 @@ class PackedIfStmtNode : public PackedBaseNode
     PackedBaseNode ifCond() const {
         return nodeAt(1 + 1 + (numElsifs() * 2) + (hasElse() ? 1 : 0));
     }
-    PackedSizedBlock ifBlock() const {
-        return indirectSizedBlockAt(1);
+    PackedBlockNode ifBlock() const {
+        return indirectNodeAt(1).asBlock();
     }
 
     PackedBaseNode elsifCond(uint32_t idx) const {
         WH_ASSERT(idx < numElsifs());
         return indirectNodeAt(1 + 1 + (idx * 2));
     }
-    PackedSizedBlock elsifBlock(uint32_t idx) const {
+    PackedBlockNode elsifBlock(uint32_t idx) const {
         WH_ASSERT(idx < numElsifs());
-        return indirectSizedBlockAt(1 + 1 + (idx * 2) + 1);
+        return indirectNodeAt(1 + 1 + (idx * 2) + 1).asBlock();
     }
 
-    PackedSizedBlock elseBlock() const {
+    PackedBlockNode elseBlock() const {
         WH_ASSERT(hasElse());
-        return indirectSizedBlockAt(1 + 1 + (numElsifs() * 2));
+        return indirectNodeAt(1 + 1 + (numElsifs() * 2)).asBlock();
     }
 };
 
@@ -320,8 +258,8 @@ class PackedDefStmtNode : public PackedBaseNode
         WH_ASSERT(paramIdx < numParams());
         return valAt(1 + 1 + paramIdx);
     }
-    PackedSizedBlock bodyBlock() const {
-        return sizedBlockAt(1 + 1 + numParams());
+    PackedBlockNode bodyBlock() const {
+        return nodeAt(1 + 1 + numParams()).asBlock();
     }
 };
 
@@ -394,13 +332,13 @@ class PackedVarStmtNode : public PackedBaseNode
 class PackedLoopStmtNode : public PackedBaseNode
 {
     // Format:
-    //      { <NumStmts:16 | Type>;
+    //      { <Type>;
     //        Block... }
   public:
     using PackedBaseNode::PackedBaseNode;
 
-    PackedBlock bodyBlock() const {
-        return blockAt(1, extra());
+    PackedBlockNode bodyBlock() const {
+        return nodeAt(1).asBlock();
     }
 };
 
@@ -582,13 +520,10 @@ class PackedIntegerExprNode : public PackedBaseNode
         StackTraits() = delete; \
         static constexpr bool Specialized = true; \
         static constexpr StackFormat Format = \
-            StackFormat::PackedSyntaxElement; \
+            StackFormat::PackedBaseNode; \
     };
 
-    PACKEDST_GC_SPECIALIZE_(PackedSyntaxElement)
     PACKEDST_GC_SPECIALIZE_(PackedBaseNode)
-    PACKEDST_GC_SPECIALIZE_(PackedBlock)
-    PACKEDST_GC_SPECIALIZE_(PackedSizedBlock)
 
 #define PACKEDST_GC_SPECIALIZE_NODE_(ntype) \
     PACKEDST_GC_SPECIALIZE_(Packed##ntype##Node)
@@ -598,14 +533,14 @@ class PackedIntegerExprNode : public PackedBaseNode
 #undef PACKEDST_GC_SPECIALIZE_
 
 template <>
-struct StackFormatTraits<StackFormat::PackedSyntaxElement>
+struct StackFormatTraits<StackFormat::PackedBaseNode>
 {
     StackFormatTraits() = delete;
-    typedef AST::PackedSyntaxElement Type;
+    typedef AST::PackedBaseNode Type;
 };
 
 template <>
-struct TraceTraits<AST::PackedSyntaxElement>
+struct TraceTraits<AST::PackedBaseNode>
 {
     TraceTraits() = delete;
 
@@ -613,17 +548,17 @@ struct TraceTraits<AST::PackedSyntaxElement>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner& scanner, AST::PackedSyntaxElement const& pse,
+    static void Scan(Scanner& scanner, AST::PackedBaseNode const& pbn,
                      void const* start, void const* end)
     {
-        pse.text_.scan(scanner, start, end);
+        pbn.text_.scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater& updater, AST::PackedSyntaxElement& pse,
+    static void Update(Updater& updater, AST::PackedBaseNode& pbn,
                        void const* start, void const* end)
     {
-        pse.text_.update(updater, start, end);
+        pbn.text_.update(updater, start, end);
     }
 };
 

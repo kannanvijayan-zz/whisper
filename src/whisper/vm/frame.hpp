@@ -137,17 +137,17 @@ class EntryFrame : public Frame
 
   private:
     // The syntax tree in effect.
-    HeapField<SyntaxTreeFragment*> stFrag_;
+    HeapField<SyntaxNode*> syntaxNode_;
 
     // The scope in effect.
     HeapField<ScopeObject*> scope_;
 
   public:
     EntryFrame(Frame* parent,
-               SyntaxTreeFragment* stFrag,
+               SyntaxNode* syntaxNode,
                ScopeObject* scope)
       : Frame(parent),
-        stFrag_(stFrag),
+        syntaxNode_(syntaxNode),
         scope_(scope)
     {
         WH_ASSERT(parent != nullptr);
@@ -155,11 +155,11 @@ class EntryFrame : public Frame
 
     static Result<EntryFrame*> Create(AllocationContext acx,
                                       Handle<Frame*> parent,
-                                      Handle<SyntaxTreeFragment*> stFrag,
+                                      Handle<SyntaxNode*> syntaxNode,
                                       Handle<ScopeObject*> scope);
 
-    SyntaxTreeFragment* stFrag() const {
-        return stFrag_;
+    SyntaxNode* syntaxNode() const {
+        return syntaxNode_;
     }
     ScopeObject* scope() const {
         return scope_;
@@ -181,26 +181,26 @@ class SyntaxFrame : public Frame
 
     // The syntax tree fargment corresponding to the frame being
     // evaluated.
-    HeapField<SyntaxTreeFragment*> stFrag_;
+    HeapField<SyntaxNode*> syntaxNode_;
 
     SyntaxFrame(Frame* parent,
                 EntryFrame* entryFrame,
-                SyntaxTreeFragment* stFrag)
+                SyntaxNode* syntaxNode)
       : Frame(parent),
         entryFrame_(entryFrame),
-        stFrag_(stFrag)
+        syntaxNode_(syntaxNode)
     {
         WH_ASSERT(parent != nullptr);
         WH_ASSERT(entryFrame != nullptr);
-        WH_ASSERT(stFrag != nullptr);
+        WH_ASSERT(syntaxNode != nullptr);
     }
 
   public:
     EntryFrame* entryFrame() const {
         return entryFrame_;
     }
-    SyntaxTreeFragment* stFrag() const {
-        return stFrag_;
+    SyntaxNode* syntaxNode() const {
+        return syntaxNode_;
     }
 };
 
@@ -210,15 +210,15 @@ class InvokeSyntaxNodeFrame : public SyntaxFrame
   public:
     InvokeSyntaxNodeFrame(Frame* parent,
                           EntryFrame* entryFrame,
-                          SyntaxTreeFragment* stFrag)
-      : SyntaxFrame(parent, entryFrame, stFrag)
+                          SyntaxNode* syntaxNode)
+      : SyntaxFrame(parent, entryFrame, syntaxNode)
     {}
 
     static Result<InvokeSyntaxNodeFrame*> Create(
             AllocationContext acx,
             Handle<Frame*> parent,
             Handle<EntryFrame*> entryFrame,
-            Handle<SyntaxTreeFragment*> stFrag);
+            Handle<SyntaxNode*> syntaxNode);
 
     static StepResult ResolveImpl(ThreadContext* cx,
                                   Handle<InvokeSyntaxNodeFrame*> frame,
@@ -237,9 +237,9 @@ class FileSyntaxFrame : public SyntaxFrame
   public:
     FileSyntaxFrame(Frame* parent,
                     EntryFrame* entryFrame,
-                    SyntaxTreeFragment* stFrag,
+                    SyntaxNode* syntaxNode,
                     uint32_t statementNo)
-      : SyntaxFrame(parent, entryFrame, stFrag),
+      : SyntaxFrame(parent, entryFrame, syntaxNode),
         statementNo_(statementNo)
     {}
 
@@ -251,7 +251,7 @@ class FileSyntaxFrame : public SyntaxFrame
             AllocationContext acx,
             Handle<Frame*> parent,
             Handle<EntryFrame*> entryFrame,
-            Handle<SyntaxTreeFragment*> stFrag,
+            Handle<SyntaxNode*> syntaxNode,
             uint32_t statementNo);
 
     static Result<FileSyntaxFrame*> CreateNext(
@@ -274,9 +274,9 @@ class BlockSyntaxFrame : public SyntaxFrame
   public:
     BlockSyntaxFrame(Frame* parent,
                      EntryFrame* entryFrame,
-                     SyntaxTreeFragment* stFrag,
+                     SyntaxNode* syntaxNode,
                      uint32_t statementNo)
-      : SyntaxFrame(parent, entryFrame, stFrag),
+      : SyntaxFrame(parent, entryFrame, syntaxNode),
         statementNo_(statementNo)
     {}
 
@@ -288,7 +288,7 @@ class BlockSyntaxFrame : public SyntaxFrame
             AllocationContext acx,
             Handle<Frame*> parent,
             Handle<EntryFrame*> entryFrame,
-            Handle<SyntaxTreeFragment*> stFrag,
+            Handle<SyntaxNode*> syntaxNode,
             uint32_t statementNo);
 
     static Result<BlockSyntaxFrame*> CreateNext(
@@ -311,15 +311,15 @@ class ReturnStmtSyntaxFrame : public SyntaxFrame
   public:
     ReturnStmtSyntaxFrame(Frame* parent,
                           EntryFrame* entryFrame,
-                          SyntaxTreeFragment* stFrag)
-      : SyntaxFrame(parent, entryFrame, stFrag)
+                          SyntaxNode* syntaxNode)
+      : SyntaxFrame(parent, entryFrame, syntaxNode)
     {}
 
     static Result<ReturnStmtSyntaxFrame*> Create(
             AllocationContext acx,
             Handle<Frame*> parent,
             Handle<EntryFrame*> entryFrame,
-            Handle<SyntaxTreeFragment*> stFrag);
+            Handle<SyntaxNode*> syntaxNode);
 
     static StepResult ResolveImpl(ThreadContext* cx,
                                   Handle<ReturnStmtSyntaxFrame*> frame,
@@ -337,19 +337,17 @@ class VarSyntaxFrame : public SyntaxFrame
   public:
     VarSyntaxFrame(Frame* parent,
                    EntryFrame* entryFrame,
-                   SyntaxTreeFragment* stFrag,
+                   SyntaxNode* syntaxNode,
                    uint32_t bindingNo)
-      : SyntaxFrame(parent, entryFrame, stFrag),
+      : SyntaxFrame(parent, entryFrame, syntaxNode),
         bindingNo_(bindingNo)
     {}
 
     bool isConst() const {
-        WH_ASSERT(stFrag_->isNode());
-        return stFrag()->toNode()->isConstStmt();
+        return syntaxNode()->isConstStmt();
     }
     bool isVar() const {
-        WH_ASSERT(stFrag_->isNode());
-        return stFrag()->toNode()->isVarStmt();
+        return syntaxNode()->isVarStmt();
     }
 
     uint32_t bindingNo() const {
@@ -360,7 +358,7 @@ class VarSyntaxFrame : public SyntaxFrame
             AllocationContext acx,
             Handle<Frame*> parent,
             Handle<EntryFrame*> entryFrame,
-            Handle<SyntaxTreeFragment*> stFrag,
+            Handle<SyntaxNode*> syntaxNode,
             uint32_t bindingNo);
 
     static StepResult ResolveImpl(ThreadContext* cx,
@@ -386,13 +384,13 @@ class CallExprSyntaxFrame : public SyntaxFrame
   public:
     CallExprSyntaxFrame(Frame* parent,
                         EntryFrame* entryFrame,
-                        SyntaxTreeFragment* stFrag,
+                        SyntaxNode* syntaxNode,
                         State state,
                         uint32_t argNo,
                         ValBox const& callee,
                         FunctionObject* calleeFunc,
                         Slist<ValBox>* operands)
-      : SyntaxFrame(parent, entryFrame, stFrag),
+      : SyntaxFrame(parent, entryFrame, syntaxNode),
         state_(state),
         argNo_(argNo),
         callee_(callee),
@@ -434,7 +432,7 @@ class CallExprSyntaxFrame : public SyntaxFrame
             AllocationContext acx,
             Handle<Frame*> parent,
             Handle<EntryFrame*> entryFrame,
-            Handle<SyntaxTreeFragment*> stFrag);
+            Handle<SyntaxNode*> syntaxNode);
 
     static Result<CallExprSyntaxFrame*> CreateFirstArg(
             AllocationContext acx,
@@ -549,17 +547,17 @@ class InvokeOperativeFrame : public Frame
   private:
     HeapField<ValBox> callee_;
     HeapField<FunctionObject*> calleeFunc_;
-    HeapField<SyntaxTreeFragment*> stFrag_;
+    HeapField<SyntaxNode*> syntaxNode_;
 
   public:
     InvokeOperativeFrame(Frame* parent,
                          ValBox const& callee,
                          FunctionObject* calleeFunc,
-                         SyntaxTreeFragment* stFrag)
+                         SyntaxNode* syntaxNode)
       : Frame(parent),
         callee_(callee),
         calleeFunc_(calleeFunc),
-        stFrag_(stFrag)
+        syntaxNode_(syntaxNode)
     {}
 
     ValBox const& callee() const {
@@ -568,8 +566,8 @@ class InvokeOperativeFrame : public Frame
     FunctionObject* calleeFunc() const {
         return calleeFunc_;
     }
-    SyntaxTreeFragment* stFrag() const {
-        return stFrag_;
+    SyntaxNode* syntaxNode() const {
+        return syntaxNode_;
     }
 
     static Result<InvokeOperativeFrame*> Create(
@@ -577,7 +575,7 @@ class InvokeOperativeFrame : public Frame
             Handle<Frame*> parent,
             Handle<ValBox> callee,
             Handle<FunctionObject*> calleeFunc,
-            Handle<SyntaxTreeFragment*> stFrag);
+            Handle<SyntaxNode*> syntaxNode);
 
     static StepResult ResolveImpl(ThreadContext* cx,
                                   Handle<InvokeOperativeFrame*> frame,
@@ -592,15 +590,15 @@ class DotExprSyntaxFrame : public SyntaxFrame
   public:
     DotExprSyntaxFrame(Frame* parent,
                        EntryFrame* entryFrame,
-                       SyntaxTreeFragment* stFrag)
-      : SyntaxFrame(parent, entryFrame, stFrag)
+                       SyntaxNode* syntaxNode)
+      : SyntaxFrame(parent, entryFrame, syntaxNode)
     {}
 
     static Result<DotExprSyntaxFrame*> Create(
             AllocationContext acx,
             Handle<Frame*> parent,
             Handle<EntryFrame*> entryFrame,
-            Handle<SyntaxTreeFragment*> stFrag);
+            Handle<SyntaxNode*> syntaxNode);
 
     static StepResult ResolveImpl(ThreadContext* cx,
                                   Handle<DotExprSyntaxFrame*> frame,
@@ -624,7 +622,7 @@ class NativeCallResumeFrame : public Frame
     HeapField<FunctionObject*> calleeFunc_;
     HeapField<ValBox> receiver_;
     HeapField<ScopeObject*> evalScope_;
-    HeapField<SyntaxTreeFragment*> syntaxFragment_;
+    HeapField<SyntaxNode*> syntaxNode_;
     NativeCallResumeFuncPtr resumeFunc_;
     HeapField<HeapThing*> resumeState_;
 
@@ -632,7 +630,7 @@ class NativeCallResumeFrame : public Frame
     NativeCallResumeFrame(Frame* parent,
                           NativeCallInfo const& callInfo,
                           ScopeObject* evalScope,
-                          SyntaxTreeFragment* syntaxFragment,
+                          SyntaxNode* syntaxNode,
                           NativeCallResumeFuncPtr resumeFunc,
                           HeapThing* resumeState)
       : Frame(parent),
@@ -641,7 +639,7 @@ class NativeCallResumeFrame : public Frame
         calleeFunc_(callInfo.calleeFunc()),
         receiver_(callInfo.receiver()),
         evalScope_(evalScope),
-        syntaxFragment_(syntaxFragment),
+        syntaxNode_(syntaxNode),
         resumeFunc_(resumeFunc),
         resumeState_(resumeState)
     {}
@@ -666,8 +664,8 @@ class NativeCallResumeFrame : public Frame
         return evalScope_;
     }
 
-    SyntaxTreeFragment* syntaxFragment() const {
-        return syntaxFragment_;
+    SyntaxNode* syntaxNode() const {
+        return syntaxNode_;
     }
 
     NativeCallResumeFuncPtr resumeFunc() const {
@@ -683,7 +681,7 @@ class NativeCallResumeFrame : public Frame
             Handle<Frame*> parent,
             Handle<NativeCallInfo> callInfo,
             Handle<ScopeObject*> evalScope,
-            Handle<SyntaxTreeFragment*> syntaxFragment,
+            Handle<SyntaxNode*> syntaxNode,
             NativeCallResumeFuncPtr resumeFunc,
             Handle<HeapThing*> resumeState);
 
@@ -764,7 +762,7 @@ struct TraceTraits<VM::EntryFrame>
                      void const* start, void const* end)
     {
         TraceTraits<VM::Frame>::Scan<Scanner>(scanner, obj, start, end);
-        obj.stFrag_.scan(scanner, start, end);
+        obj.syntaxNode_.scan(scanner, start, end);
         obj.scope_.scan(scanner, start, end);
     }
 
@@ -773,7 +771,7 @@ struct TraceTraits<VM::EntryFrame>
                        void const* start, void const* end)
     {
         TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
-        obj.stFrag_.update(updater, start, end);
+        obj.syntaxNode_.update(updater, start, end);
         obj.scope_.update(updater, start, end);
     }
 };
@@ -792,7 +790,7 @@ struct TraceTraits<VM::SyntaxFrame>
     {
         TraceTraits<VM::Frame>::Scan<Scanner>(scanner, obj, start, end);
         obj.entryFrame_.scan(scanner, start, end);
-        obj.stFrag_.scan(scanner, start, end);
+        obj.syntaxNode_.scan(scanner, start, end);
     }
 
     template <typename Updater>
@@ -801,7 +799,7 @@ struct TraceTraits<VM::SyntaxFrame>
     {
         TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
         obj.entryFrame_.update(updater, start, end);
-        obj.stFrag_.update(updater, start, end);
+        obj.syntaxNode_.update(updater, start, end);
     }
 };
 
@@ -1014,7 +1012,7 @@ struct TraceTraits<VM::InvokeOperativeFrame>
         TraceTraits<VM::Frame>::Scan<Scanner>(scanner, obj, start, end);
         obj.callee_.scan(scanner, start, end);
         obj.calleeFunc_.scan(scanner, start, end);
-        obj.stFrag_.scan(scanner, start, end);
+        obj.syntaxNode_.scan(scanner, start, end);
     }
 
     template <typename Updater>
@@ -1024,7 +1022,7 @@ struct TraceTraits<VM::InvokeOperativeFrame>
         TraceTraits<VM::Frame>::Update<Updater>(updater, obj, start, end);
         obj.callee_.update(updater, start, end);
         obj.calleeFunc_.update(updater, start, end);
-        obj.stFrag_.update(updater, start, end);
+        obj.syntaxNode_.update(updater, start, end);
     }
 };
 
@@ -1046,7 +1044,7 @@ struct TraceTraits<VM::NativeCallResumeFrame>
         obj.calleeFunc_.scan(scanner, start, end);
         obj.receiver_.scan(scanner, start, end);
         obj.evalScope_.scan(scanner, start, end);
-        obj.syntaxFragment_.scan(scanner, start, end);
+        obj.syntaxNode_.scan(scanner, start, end);
         obj.resumeState_.scan(scanner, start, end);
     }
 
@@ -1060,7 +1058,7 @@ struct TraceTraits<VM::NativeCallResumeFrame>
         obj.calleeFunc_.update(updater, start, end);
         obj.receiver_.update(updater, start, end);
         obj.evalScope_.update(updater, start, end);
-        obj.syntaxFragment_.update(updater, start, end);
+        obj.syntaxNode_.update(updater, start, end);
         obj.resumeState_.update(updater, start, end);
     }
 };

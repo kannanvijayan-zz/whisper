@@ -60,7 +60,7 @@ class Parser
     LoopStmtNode* parseLoopStatement();
     IfStmtNode::CondPair parseIfCondPair();
 
-    Block* parseBlock();
+    BlockNode* parseBlock();
 
     // Enum for expression precedence, from highest precedence to
     // lowest.

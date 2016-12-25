@@ -83,87 +83,38 @@ class PackedSyntaxTree
 };
 
 //
-// A SyntaxTreeRef is a on-stack reference to some element
-// within a packed syntax tree.  It is subclassed by
-// SyntaxNodeRef and SyntaxBlockRef.
+// A SyntaxNodeRef is a on-stack reference to a node within
+// a packed syntax tree.
 //
-class SyntaxTreeRef
+class SyntaxNodeRef
 {
-    friend struct TraceTraits<SyntaxTreeRef>;
+    friend struct TraceTraits<SyntaxNodeRef>;
 
   protected:
     StackField<PackedSyntaxTree*> pst_;
     uint32_t offset_;
-    uint32_t numStatements_;
-    bool isBlock_;
-
-    SyntaxTreeRef()
-      : pst_(nullptr),
-        offset_(0),
-        numStatements_(0),
-        isBlock_(false)
-    {}
-
-    SyntaxTreeRef(PackedSyntaxTree* pst, uint32_t offset)
-      : pst_(pst),
-        offset_(offset),
-        numStatements_(0),
-        isBlock_(false)
-    {
-        WH_ASSERT(pst_.get() != nullptr);
-    }
-
-    SyntaxTreeRef(PackedSyntaxTree* pst,
-                  uint32_t offset,
-                  uint32_t numStatements)
-      : pst_(pst),
-        offset_(offset),
-        numStatements_(numStatements),
-        isBlock_(true)
-    {
-        WH_ASSERT(pst_.get() != nullptr);
-    }
-
-    SyntaxTreeRef(PackedSyntaxTree* pst,
-                  uint32_t offset,
-                  uint32_t numStatements,
-                  bool isBlock)
-      : pst_(pst),
-        offset_(offset),
-        numStatements_(numStatements),
-        isBlock_(isBlock)
-    {
-        WH_ASSERT_IF(!isBlock_, numStatements_ == 0);
-    }
 
   public:
-    SyntaxTreeRef(PackedSyntaxTree* pst, AST::PackedBaseNode const& node)
-      : SyntaxTreeRef(pst, node.offset())
+    SyntaxNodeRef()
+      : pst_(nullptr),
+        offset_(0)
     {}
 
-    SyntaxTreeRef(PackedSyntaxTree* pst, AST::PackedBlock const& packedBlock)
-      : SyntaxTreeRef(pst, packedBlock.offset(), packedBlock.numStatements())
+    SyntaxNodeRef(PackedSyntaxTree* pst, uint32_t offset)
+      : pst_(pst),
+        offset_(offset)
+    {
+        WH_ASSERT(pst_.get() != nullptr);
+    }
+
+    SyntaxNodeRef(PackedSyntaxTree* pst, AST::PackedBaseNode const& node)
+      : SyntaxNodeRef(pst, node.offset())
     {}
 
-    SyntaxTreeRef(PackedSyntaxTree* pst,
-                  AST::PackedSizedBlock const& packedSizedBlock)
-      : SyntaxTreeRef(pst, packedSizedBlock.unsizedBlock())
-    {}
-
-    SyntaxTreeRef(SyntaxNode const* stNode);
-    SyntaxTreeRef(SyntaxBlock const* stBlock);
-    SyntaxTreeRef(SyntaxTreeFragment const* stFrag);
+    SyntaxNodeRef(SyntaxNode const* stNode);
 
     bool isValid() const {
         return pst_.get() != nullptr;
-    }
-    bool isNode() const {
-        WH_ASSERT(isValid());
-        return !isBlock_;
-    }
-    bool isBlock() const {
-        WH_ASSERT(isValid());
-        return isBlock_;
     }
 
     Handle<PackedSyntaxTree*> pst() const {
@@ -174,49 +125,6 @@ class SyntaxTreeRef
         WH_ASSERT(isValid());
         return offset_;
     }
-
-    SyntaxNodeRef const* toNode() const {
-        WH_ASSERT(isNode());
-        return reinterpret_cast<SyntaxNodeRef const*>(this);
-    }
-    SyntaxNodeRef* toNode() {
-        WH_ASSERT(isNode());
-        return reinterpret_cast<SyntaxNodeRef*>(this);
-    }
-
-    SyntaxBlockRef const* toBlock() const {
-        WH_ASSERT(isBlock());
-        return reinterpret_cast<SyntaxBlockRef const*>(this);
-    }
-    SyntaxBlockRef* toBlock() {
-        WH_ASSERT(isBlock());
-        return reinterpret_cast<SyntaxBlockRef*>(this);
-    }
-};
-
-//
-// A SyntaxNodeRef is a on-stack reference to a node in
-// a packed syntax tree.
-//
-class SyntaxNodeRef : public SyntaxTreeRef
-{
-    friend struct TraceTraits<SyntaxNodeRef>;
-
-  public:
-    SyntaxNodeRef() : SyntaxTreeRef() {}
-
-    SyntaxNodeRef(PackedSyntaxTree* pst,
-                  uint32_t offset)
-      : SyntaxTreeRef(pst, offset)
-    {}
-
-    SyntaxNodeRef(PackedSyntaxTree* pst, AST::PackedBaseNode const& node)
-      : SyntaxTreeRef(pst, node)
-    {}
-
-    SyntaxNodeRef(SyntaxNode const* stNode)
-      : SyntaxTreeRef(stNode)
-    {}
 
     AST::NodeType nodeType() const;
     char const* nodeTypeCString() const;
@@ -240,74 +148,26 @@ class SyntaxNodeRef : public SyntaxTreeRef
     Result<SyntaxNode*> createSyntaxNode(AllocationContext acx);
 };
 
+
 //
-// A SyntaxBlockRef is a on-stack reference to a block or
-// sized block in a packed syntax tree.
+// A SyntaxNode is a heap-allocated variant of SyntaxNodeRef
 //
-class SyntaxBlockRef : public SyntaxTreeRef
+class SyntaxNode
 {
-    friend struct TraceTraits<SyntaxBlockRef>;
-  public:
-    SyntaxBlockRef() : SyntaxTreeRef() {}
-
-    SyntaxBlockRef(PackedSyntaxTree* pst,
-                   uint32_t offset,
-                   uint32_t numStatements)
-      : SyntaxTreeRef(pst, offset, numStatements)
-    {}
-
-    SyntaxBlockRef(PackedSyntaxTree* pst,
-                   AST::PackedBlock const& packedBlock)
-      : SyntaxTreeRef(pst, packedBlock)
-    {}
-
-    SyntaxBlockRef(PackedSyntaxTree* pst,
-                   AST::PackedSizedBlock const& packedSizedBlock)
-      : SyntaxTreeRef(pst, packedSizedBlock)
-    {}
-
-    SyntaxBlockRef(SyntaxBlock const* stBlock)
-      : SyntaxTreeRef(stBlock)
-    {}
-
-    uint32_t numStatements() const {
-        return numStatements_;
-    }
-
-    SyntaxNodeRef statement(uint32_t idx) const {
-        WH_ASSERT(idx < numStatements());
-        return SyntaxNodeRef(pst_, astBlock().statement(idx).offset());
-    }
-
-    AST::PackedBlock astBlock() const {
-        return AST::PackedBlock(pst_->data(), offset(), numStatements_);
-    }
-};
-
-
-//
-// A SyntaxTreeFragment combines the following things:
-//
-// A reference to an underlying PackedSyntaxTree.
-// An offset into the data of the PackedSyntaxTree identifying the
-// subtree represented by the fragment.
-//
-class SyntaxTreeFragment
-{
-    friend struct TraceTraits<SyntaxTreeFragment>;
+    friend struct TraceTraits<SyntaxNode>;
 
   protected:
     HeapField<PackedSyntaxTree*> pst_;
     uint32_t offset_;
 
-    SyntaxTreeFragment(PackedSyntaxTree* pst, uint32_t offset)
+  public:
+    SyntaxNode(PackedSyntaxTree* pst, uint32_t offset)
       : pst_(pst),
         offset_(offset)
     {
         WH_ASSERT(pst != nullptr);
     }
 
-  public:
     PackedSyntaxTree* pst() const {
         return pst_;
     }
@@ -315,40 +175,6 @@ class SyntaxTreeFragment
     uint32_t offset() const {
         return offset_;
     }
-
-    bool isNode() const {
-        return HeapThing::From(this)->isSyntaxNode();
-    }
-    SyntaxNode const* toNode() const {
-        WH_ASSERT(isNode());
-        return reinterpret_cast<SyntaxNode const*>(this);
-    }
-    SyntaxNode* toNode() {
-        WH_ASSERT(isNode());
-        return reinterpret_cast<SyntaxNode*>(this);
-    }
-
-    bool isBlock() const {
-        return HeapThing::From(this)->isSyntaxBlock();
-    }
-    SyntaxBlock const* toBlock() const {
-        WH_ASSERT(isBlock());
-        return reinterpret_cast<SyntaxBlock const*>(this);
-    }
-    SyntaxBlock* toBlock() {
-        WH_ASSERT(isBlock());
-        return reinterpret_cast<SyntaxBlock*>(this);
-    }
-};
-
-class SyntaxNode : public SyntaxTreeFragment
-{
-    friend struct TraceTraits<SyntaxNode>;
-
-  public:
-    SyntaxNode(PackedSyntaxTree* pst, uint32_t offset)
-      : SyntaxTreeFragment(pst, offset)
-    {}
 
     static Result<SyntaxNode*> Create(
             AllocationContext acx,
@@ -375,36 +201,6 @@ class SyntaxNode : public SyntaxTreeFragment
     }
     WHISPER_DEFN_SYNTAX_NODES(VM_STREF_GET_)
 #undef VM_STREF_GET_
-};
-
-class SyntaxBlock : public SyntaxTreeFragment
-{
-    friend struct TraceTraits<SyntaxBlock>;
-  protected:
-    uint32_t numStatements_;
-
-  public:
-    SyntaxBlock(PackedSyntaxTree* pst, uint32_t offset, uint32_t numStatements)
-      : SyntaxTreeFragment(pst, offset),
-        numStatements_(numStatements)
-    {}
-
-    static Result<SyntaxBlock*> Create(
-            AllocationContext acx,
-            Handle<PackedSyntaxTree*> pst,
-            uint32_t offset,
-            uint32_t numStatements);
-
-    static Result<SyntaxBlock*> Create(
-            AllocationContext acx,
-            Handle<SyntaxBlockRef> ref)
-    {
-        return Create(acx, ref->pst(), ref->offset(), ref->numStatements());
-    }
-
-    uint32_t numStatements() const {
-        return numStatements_;
-    }
 };
 
 
@@ -441,29 +237,6 @@ struct TraceTraits<VM::PackedSyntaxTree>
 };
 
 template <>
-struct TraceTraits<VM::SyntaxTreeRef>
-{
-    TraceTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = false;
-
-    template <typename Scanner>
-    static void Scan(Scanner& scanner, VM::SyntaxTreeRef const& stRef,
-                     void const* start, void const* end)
-    {
-        stRef.pst_.scan(scanner, start, end);
-    }
-
-    template <typename Updater>
-    static void Update(Updater& updater, VM::SyntaxTreeRef& stRef,
-                       void const* start, void const* end)
-    {
-        stRef.pst_.update(updater, start, end);
-    }
-};
-
-template <>
 struct TraceTraits<VM::SyntaxNodeRef>
 {
     TraceTraits() = delete;
@@ -472,63 +245,17 @@ struct TraceTraits<VM::SyntaxNodeRef>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner& scanner, VM::SyntaxNodeRef const& stRef,
+    static void Scan(Scanner& scanner, VM::SyntaxNodeRef const& snRef,
                      void const* start, void const* end)
     {
-        stRef.pst_.scan(scanner, start, end);
+        snRef.pst_.scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater& updater, VM::SyntaxNodeRef& stRef,
+    static void Update(Updater& updater, VM::SyntaxNodeRef& snRef,
                        void const* start, void const* end)
     {
-        stRef.pst_.update(updater, start, end);
-    }
-};
-
-template <>
-struct TraceTraits<VM::SyntaxBlockRef>
-{
-    TraceTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = false;
-
-    template <typename Scanner>
-    static void Scan(Scanner& scanner, VM::SyntaxBlockRef const& stRef,
-                     void const* start, void const* end)
-    {
-        stRef.pst_.scan(scanner, start, end);
-    }
-
-    template <typename Updater>
-    static void Update(Updater& updater, VM::SyntaxBlockRef& stRef,
-                       void const* start, void const* end)
-    {
-        stRef.pst_.update(updater, start, end);
-    }
-};
-
-template <>
-struct TraceTraits<VM::SyntaxTreeFragment>
-{
-    TraceTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = false;
-
-    template <typename Scanner>
-    static void Scan(Scanner& scanner, VM::SyntaxTreeFragment const& stFrag,
-                     void const* start, void const* end)
-    {
-        stFrag.pst_.scan(scanner, start, end);
-    }
-
-    template <typename Updater>
-    static void Update(Updater& updater, VM::SyntaxTreeFragment& stFrag,
-                       void const* start, void const* end)
-    {
-        stFrag.pst_.update(updater, start, end);
+        snRef.pst_.update(updater, start, end);
     }
 };
 
@@ -541,44 +268,17 @@ struct TraceTraits<VM::SyntaxNode>
     static constexpr bool IsLeaf = false;
 
     template <typename Scanner>
-    static void Scan(Scanner& scanner, VM::SyntaxNode const& stFrag,
+    static void Scan(Scanner& scanner, VM::SyntaxNode const& sn,
                      void const* start, void const* end)
     {
-        TraceTraits<VM::SyntaxTreeFragment>::Scan<Scanner>(
-            scanner, stFrag, start, end);
+        sn.pst_.scan(scanner, start, end);
     }
 
     template <typename Updater>
-    static void Update(Updater& updater, VM::SyntaxNode& stFrag,
+    static void Update(Updater& updater, VM::SyntaxNode& sn,
                        void const* start, void const* end)
     {
-        TraceTraits<VM::SyntaxTreeFragment>::Update<Updater>(
-            updater, stFrag, start, end);
-    }
-};
-
-template <>
-struct TraceTraits<VM::SyntaxBlock>
-{
-    TraceTraits() = delete;
-
-    static constexpr bool Specialized = true;
-    static constexpr bool IsLeaf = false;
-
-    template <typename Scanner>
-    static void Scan(Scanner& scanner, VM::SyntaxBlock const& stFrag,
-                     void const* start, void const* end)
-    {
-        TraceTraits<VM::SyntaxTreeFragment>::Scan<Scanner>(
-            scanner, stFrag, start, end);
-    }
-
-    template <typename Updater>
-    static void Update(Updater& updater, VM::SyntaxBlock& stFrag,
-                       void const* start, void const* end)
-    {
-        TraceTraits<VM::SyntaxTreeFragment>::Update<Updater>(
-            updater, stFrag, start, end);
+        sn.pst_.update(updater, start, end);
     }
 };
 

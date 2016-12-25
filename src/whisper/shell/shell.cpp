@@ -212,7 +212,7 @@ static VM::CallResult Shell_Print(
 static VM::CallResult Shell_TestOperative(
     ThreadContext* cx,
     Handle<VM::NativeCallInfo> callInfo,
-    ArrayHandle<VM::SyntaxTreeFragment*> args);
+    ArrayHandle<VM::SyntaxNode*> args);
 
 static OkResult
 BindShellGlobal(AllocationContext acx,
@@ -314,7 +314,7 @@ static VM::CallResult Shell_TestOperative_Resume(
 static VM::CallResult Shell_TestOperative(
     ThreadContext* cx,
     Handle<VM::NativeCallInfo> callInfo,
-    ArrayHandle<VM::SyntaxTreeFragment*> args)
+    ArrayHandle<VM::SyntaxNode*> args)
 {
     std::cout << "Shell_TestOperative called with " << args.length()
               << " args" << std::endl;
@@ -338,7 +338,7 @@ static VM::CallResult Shell_TestOperative(
     }
 
     Interp::NativeCallEval nce(cx, callInfo,
-                               stList->value().pointer<VM::SyntaxTreeFragment>(),
+                               stList->value().pointer<VM::SyntaxNode>(),
                                Shell_TestOperative_Resume,
                                HeapThing::From(stList.get()));
     return nce;
@@ -359,8 +359,8 @@ static VM::CallResult Shell_TestOperative_Resume(
         return VM::CallResult::FromEvalResult(evalResult);
 
     // Evaluate rest.
-    Local<VM::SyntaxTreeFragment*> nextSt(cx,
-        stRest->value().pointer<VM::SyntaxTreeFragment>());
+    Local<VM::SyntaxNode*> nextSt(cx,
+        stRest->value().pointer<VM::SyntaxNode>());
 
     Interp::NativeCallEval nce(cx, callInfo, nextSt,
                                Shell_TestOperative_Resume,

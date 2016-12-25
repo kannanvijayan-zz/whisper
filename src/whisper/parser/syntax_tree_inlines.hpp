@@ -228,7 +228,7 @@ PrintReturnStmt(SourceReader const& src,
 template <typename Printer>
 static void
 PrintBlock(SourceReader const& src,
-           Block const* block,
+           BlockNode const* block,
            Printer pr, int tabDepth)
 {
     pr("{\n");
